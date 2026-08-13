@@ -82,7 +82,7 @@ export default function CompaniesPage() {
             {/* ── Add / edit form ── */}
             <Card className="overflow-hidden mb-5">
                 <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
-                    <div className="w-9 h-9 rounded-xl bg-[#13B0D1]/10 text-[#0E8CA8] flex items-center justify-center ring-1 ring-inset ring-[#13B0D1]/15 shrink-0">
+                    <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center ring-1 ring-inset ring-[#F59E0B]/15 shrink-0">
                         <Building2 size={17} strokeWidth={2} />
                     </div>
                     <div>
@@ -119,7 +119,7 @@ export default function CompaniesPage() {
                 <div className="px-5 sm:px-6 py-3.5 border-b border-slate-100 flex items-center justify-between gap-3">
                     <h3 className="text-[13px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
                         Company List
-                        <span className="text-[10px] font-black text-[#0E8CA8] bg-[#13B0D1]/10 px-2 py-0.5 rounded-full tabular-nums">{filtered.length}</span>
+                        <span className="text-[10px] font-black text-[#B4780B] bg-[#F59E0B]/10 px-2 py-0.5 rounded-full tabular-nums">{filtered.length}</span>
                     </h3>
                     <div className="relative w-full max-w-[240px]">
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -150,7 +150,7 @@ export default function CompaniesPage() {
                                                 : <span className="text-slate-400">—</span>}
                                         </td>
                                         <td className="px-5 py-3 text-right whitespace-nowrap">
-                                            <button onClick={() => startEdit(c)} className="text-slate-400 hover:text-[#0A6F85] p-1.5 rounded-lg hover:bg-[#13B0D1]/10 transition-colors" title="Edit"><Pencil size={15} /></button>
+                                            <button onClick={() => startEdit(c)} className="text-slate-400 hover:text-[#92600A] p-1.5 rounded-lg hover:bg-[#F59E0B]/10 transition-colors" title="Edit"><Pencil size={15} /></button>
                                             <button onClick={() => remove(c)} className="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors ml-1" title="Delete"><Trash2 size={15} /></button>
                                         </td>
                                     </tr>

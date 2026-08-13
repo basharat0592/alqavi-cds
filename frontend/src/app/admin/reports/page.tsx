@@ -794,7 +794,7 @@ function ReportsEngineInner() {
                                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                                             {([['today', 'Today'], ['week', 'This Week'], ['month', 'This Month'], ['year', 'This Year']] as const).map(([key, label]) => (
                                                 <button key={key} type="button" onClick={() => applyPreset(key)}
-                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-[#13B0D1]/10 hover:text-[#0A6F85] hover:border-[#13B0D1]/25 transition-colors">
+                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-[#F59E0B]/10 hover:text-[#92600A] hover:border-[#F59E0B]/25 transition-colors">
                                                     {label}
                                                 </button>
                                             ))}
@@ -932,7 +932,7 @@ function ReportsEngineInner() {
                     <div className="animate-in fade-in duration-500">
                         <Card className="overflow-hidden">
                             <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#13B0D1]/10 text-[#0E8CA8] border border-[#13B0D1]/15"><DollarSign size={20} /></span>
+                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#B4780B] border border-[#F59E0B]/15"><DollarSign size={20} /></span>
                                 <div>
                                     <h3 className="text-[15px] font-bold text-slate-900">Net Profit</h3>
                                     <p className="text-[12px] text-slate-500">
@@ -985,7 +985,7 @@ function ReportsEngineInner() {
                              </div>
                              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                                  <div className="text-[13px] text-slate-600 font-medium">
-                                     Total Amount: <span className="text-[#0E8CA8] font-black tabular-nums">{formatCurrency(reportResult.reduce((s, r) => s + rowAmount(r), 0))}</span>
+                                     Total Amount: <span className="text-[#B4780B] font-black tabular-nums">{formatCurrency(reportResult.reduce((s, r) => s + rowAmount(r), 0))}</span>
                                  </div>
                                  <div className="text-[13px] text-slate-600 font-medium">
                                      Total Quantity: <span className="text-slate-900 font-black tabular-nums">{reportResult.reduce((s, r) => s + rowQty(r), 0)}</span>
@@ -1009,7 +1009,7 @@ function ReportsEngineInner() {
                                      {reportResult.map((row, idx) => (
                                          <tr key={idx} className="hover:bg-slate-50 transition-colors group text-[10px]">
                                              <RowCheckboxTd sel={sel} id={String(idx)} />
-                                             <td className="px-4 py-2 font-bold text-[#0E8CA8] tabular-nums">
+                                             <td className="px-4 py-2 font-bold text-[#B4780B] tabular-nums">
                                                  #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
                                              </td>
                                              <td className="px-4 py-2 text-slate-500 font-medium">

@@ -45,7 +45,7 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
             )}
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center group">
                 <span className="font-extrabold text-sm tracking-widest text-slate-800 dark:text-white group-hover:opacity-85 transition-opacity">
-                    AL-QAVI <span className="bg-gradient-to-r from-[#13B0D1] to-[#13B0D1] bg-clip-text text-transparent">TRADES</span>
+                    AL-QAVI <span className="bg-gradient-to-r from-[#F59E0B] to-[#F59E0B] bg-clip-text text-transparent">TRADES</span>
                 </span>
             </Link>
             <div className="flex items-center gap-2">
@@ -505,8 +505,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             {/* Search Bar */}
                             <div className="relative flex-1 max-w-2xl" ref={searchRef}>
                                 <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                    className="group flex items-center gap-2.5 h-10 px-4 bg-slate-100/70 border border-slate-200/80 rounded-xl transition-all hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-[#13B0D1] focus-within:ring-4 focus-within:ring-[#13B0D1]/10 focus-within:shadow-sm">
-                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#0A6F85] shrink-0 transition-colors" />
+                                    className="group flex items-center gap-2.5 h-10 px-4 bg-slate-100/70 border border-slate-200/80 rounded-xl transition-all hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-[#F59E0B] focus-within:ring-4 focus-within:ring-[#F59E0B]/10 focus-within:shadow-sm">
+                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#92600A] shrink-0 transition-colors" />
                                     <input type="text" placeholder="Search pages, products, orders..."
                                         className="flex-1 h-full bg-transparent text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 font-medium"
                                         value={searchQuery}
@@ -541,7 +541,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                         className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left transition-colors group"
                                                     >
                                                         <div className="flex items-center gap-2.5 min-w-0">
-                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-[#13B0D1]/10 group-hover:text-[#0A6F85] flex items-center justify-center transition-colors shrink-0">
+                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-[#F59E0B]/10 group-hover:text-[#92600A] flex items-center justify-center transition-colors shrink-0">
                                                                 <FileText size={13} />
                                                             </div>
                                                             <div className="min-w-0">
@@ -554,7 +554,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                                 <CornerDownLeft size={10} /> Enter
                                                             </span>
                                                         ) : (
-                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-[#0A6F85] transition-colors shrink-0" />
+                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-[#92600A] transition-colors shrink-0" />
                                                         )}
                                                     </button>
                                                 ))}
@@ -578,7 +578,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     className={cn(
                                         "hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold select-none",
                                         branchLabel === 'All Branches'
-                                            ? "bg-[#13B0D1]/10 border-[#13B0D1]/25 text-[#0E8CA8]"
+                                            ? "bg-[#F59E0B]/10 border-[#F59E0B]/25 text-[#B4780B]"
                                             : branchLabel === 'No branch'
                                                 ? "bg-rose-50 border-rose-200 text-rose-600"
                                                 : "bg-slate-50 border-slate-200 text-slate-600"
@@ -596,7 +596,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 aria-label={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
                                 aria-pressed={isFullscreen}
                                 className={`hidden md:flex p-2.5 rounded-xl transition-all border ${isFullscreen
-                                    ? 'bg-[#13B0D1]/10 border-[#13B0D1]/30 text-[#0E8CA8]'
+                                    ? 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#B4780B]'
                                     : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white border-transparent'}`}
                             >
                                 {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
@@ -628,7 +628,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <p className="text-slate-800 dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
                                             {adminName} <ChevronDown size={12} className="text-slate-400 dark:text-zinc-500" />
                                         </p>
-                                        <span className="inline-block text-[9px] font-extrabold text-[#0E8CA8] bg-[#13B0D1]/10 dark:text-[#22C3E0] dark:bg-[#13B0D1]/15 px-2 py-0.5 rounded-full border border-[#13B0D1]/20 dark:border-[#13B0D1]/10 mt-1 uppercase tracking-wider">
+                                        <span className="inline-block text-[9px] font-extrabold text-[#B4780B] bg-[#F59E0B]/10 dark:text-[#FBBF24] dark:bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/20 dark:border-[#F59E0B]/10 mt-1 uppercase tracking-wider">
                                             {adminRole}
                                         </span>
                                     </div>

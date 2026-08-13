@@ -205,7 +205,7 @@ export function PaymentPanel({
                     <span className="text-slate-400 tabular-nums">{pct}%{pendingAmt > 0 ? ` · ${fmt(pendingAmt, currency)} awaiting verification` : ''}</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${remaining <= 0 ? 'bg-emerald-500' : 'bg-[#13B0D1]'}`} style={{ width: `${pct}%` }} />
+                    <div className={`h-full rounded-full transition-all ${remaining <= 0 ? 'bg-emerald-500' : 'bg-[#F59E0B]'}`} style={{ width: `${pct}%` }} />
                 </div>
             </div>
 
@@ -218,7 +218,7 @@ export function PaymentPanel({
                     value={localDue || ''}
                     disabled={readOnly || !onDueDateChange}
                     onChange={e => persistDue(e.target.value)}
-                    className="ml-auto h-8 rounded-lg border border-slate-200 px-2.5 text-[12.5px] text-slate-800 outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 disabled:bg-slate-50 disabled:text-slate-400"
+                    className="ml-auto h-8 rounded-lg border border-slate-200 px-2.5 text-[12.5px] text-slate-800 outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 disabled:bg-slate-50 disabled:text-slate-400"
                 />
             </div>
 
@@ -254,7 +254,7 @@ export function PaymentPanel({
                                     </p>
                                 </div>
                                 {it.slip_url && (
-                                    <a href={it.slip_url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-[#0A6F85]" title="View slip">
+                                    <a href={it.slip_url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-[#92600A]" title="View slip">
                                         <Paperclip className="w-3.5 h-3.5" />
                                     </a>
                                 )}
@@ -274,14 +274,14 @@ export function PaymentPanel({
 
             {/* Add payment */}
             {!readOnly && remaining > 0 && (
-                <div className="rounded-xl border border-[#13B0D1]/15 bg-[#13B0D1]/30 p-3 space-y-2.5">
+                <div className="rounded-xl border border-[#F59E0B]/15 bg-[#F59E0B]/30 p-3 space-y-2.5">
                     <div className="flex items-center gap-2">
-                        <Plus className="w-3.5 h-3.5 text-[#0E8CA8]" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#0E8CA8]">Record a Payment</span>
+                        <Plus className="w-3.5 h-3.5 text-[#B4780B]" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#B4780B]">Record a Payment</span>
                         <button
                             type="button"
                             onClick={() => setAmount(String(remaining))}
-                            className="ml-auto text-[10.5px] font-bold text-[#0E8CA8] hover:underline"
+                            className="ml-auto text-[10.5px] font-bold text-[#B4780B] hover:underline"
                         >
                             Pay full ({fmt(remaining, currency)})
                         </button>
@@ -292,25 +292,25 @@ export function PaymentPanel({
                             <input
                                 type="number" min={0} max={remaining} value={amount}
                                 onChange={e => setAmount(e.target.value)} placeholder="0.00"
-                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 tabular-nums"
+                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 tabular-nums"
                             />
                         </div>
                         <div>
                             <label className="block text-[10px] font-bold text-slate-500 mb-1">Method</label>
                             <select value={method} onChange={e => setMethod(e.target.value)}
-                                className="w-full h-9 px-2 rounded-lg border border-slate-200 text-[13px] bg-white outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10">
+                                className="w-full h-9 px-2 rounded-lg border border-slate-200 text-[13px] bg-white outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10">
                                 {METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                             </select>
                         </div>
                         <div>
                             <label className="block text-[10px] font-bold text-slate-500 mb-1">Date &amp; Time</label>
                             <input type="datetime-local" value={paidAt} onChange={e => setPaidAt(e.target.value)}
-                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10" />
+                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10" />
                         </div>
                         <div>
                             <label className="block text-[10px] font-bold text-slate-500 mb-1">Reference / Cheque #</label>
                             <input value={reference} onChange={e => setReference(e.target.value)} placeholder="Optional"
-                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10" />
+                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10" />
                         </div>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
@@ -323,13 +323,13 @@ export function PaymentPanel({
                         {allowVerify && (
                             <label className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-slate-600 cursor-pointer">
                                 <input type="checkbox" checked={needsVerify} onChange={e => setNeedsVerify(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#0E8CA8] focus:ring-[#13B0D1]" />
+                                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B]" />
                                 Needs verification
                             </label>
                         )}
                         <button
                             onClick={addPayment} disabled={saving || !amount}
-                            className="ml-auto inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#13B0D1] hover:bg-[#0E8CA8] text-white text-[12.5px] font-bold disabled:opacity-50 transition-colors"
+                            className="ml-auto inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#F59E0B] hover:bg-[#B4780B] text-white text-[12.5px] font-bold disabled:opacity-50 transition-colors"
                         >
                             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                             Add Payment

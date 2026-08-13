@@ -19,7 +19,7 @@ const LOCATIONS = [
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        primary: 'bg-[#F59E0B] border-[#B4780B] hover:bg-[#B4780B] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -98,7 +98,7 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                             const isActive = activeMenu === menu?.id;
                             return menu ? (
                                 <button key={loc.id} onClick={() => setActiveMenu(menu.id!)}
-                                    className={`w-full text-left px-4 py-3 text-[13px] font-medium border-l-4 transition-all flex items-center justify-between border-b border-[#eee] last:border-0 ${isActive ? 'border-[#13B0D1] bg-[#f8fafc] text-[#111]' : 'border-transparent text-[#64748B] hover:bg-[#f8fafc]'
+                                    className={`w-full text-left px-4 py-3 text-[13px] font-medium border-l-4 transition-all flex items-center justify-between border-b border-[#eee] last:border-0 ${isActive ? 'border-[#F59E0B] bg-[#f8fafc] text-[#111]' : 'border-transparent text-[#64748B] hover:bg-[#f8fafc]'
                                         }`}>
                                     <span>{loc.label.split(' - ')[1] || loc.label}</span>
                                     <span className="text-[11px] font-bold text-[#888]">{menu.items.length}</span>
@@ -164,7 +164,7 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                                                         <p className="text-[12px] text-[#007185] hover:underline cursor-pointer">{item.url}</p>
                                                     </div>
                                                     <div className="flex items-center justify-end gap-2.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
-                                                        <button onClick={() => setEditingItem(item)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                                        <button onClick={() => setEditingItem(item)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
                                                         <span className="text-slate-300">|</span>
                                                         <button onClick={() => deleteItem(item.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                     </div>
@@ -173,7 +173,7 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                                         </div>
                                     ))}
 
-                                        <div className="bg-[#e6f7fb] px-4 md:px-6 py-5 border-t border-[#fbd38d]">
+                                        <div className="bg-[#fef3e2] px-4 md:px-6 py-5 border-t border-[#fbd38d]">
                                             <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                                                 <div className="flex-1 space-y-1 w-full">
                                                     <label className="text-[11px] font-bold text-[#111] uppercase">Link Text</label>

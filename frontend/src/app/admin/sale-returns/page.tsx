@@ -72,7 +72,7 @@ function ReturnDetailModal({ returnData, onClose, onUpdate }: { returnData: any;
                 {/* Meta grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-6 border-b border-slate-100">
                     {[
-                        { label: 'Source Order', value: <span className="text-[#0E8CA8] font-bold">{returnData.order_tracking_id}</span> },
+                        { label: 'Source Order', value: <span className="text-[#B4780B] font-bold">{returnData.order_tracking_id}</span> },
                         { label: 'Client Name', value: returnData.customer_name },
                         { label: 'Lifecycle', value: <Badge tone={getStatusTone(returnData.status)}>{returnData.status}</Badge> },
                         { label: 'Submission', value: formatDateTime(returnData.created_at) },
@@ -107,7 +107,7 @@ function ReturnDetailModal({ returnData, onClose, onUpdate }: { returnData: any;
                             <tbody>
                                 {returnData.items.map((item: any) => (
                                     <tr key={item.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                                        <td className="px-4 py-4 font-bold text-[#0E8CA8]">{item.product_name}</td>
+                                        <td className="px-4 py-4 font-bold text-[#B4780B]">{item.product_name}</td>
                                         <td className="px-4 py-4 text-center font-bold text-slate-900 tabular-nums">{item.quantity} units</td>
                                         <td className="px-4 py-4 text-right font-bold text-rose-600 tabular-nums">Rs. {(item.price * item.quantity).toLocaleString()}</td>
                                     </tr>
@@ -249,7 +249,7 @@ export default function SaleReturnsPage() {
                             <button
                                 key={f}
                                 onClick={() => setStatusFilter(f)}
-                                className={`px-4 h-9 rounded-lg text-[12px] font-bold transition-all border whitespace-nowrap ${statusFilter === f ? 'bg-[#13B0D1] border-[#13B0D1] text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
+                                className={`px-4 h-9 rounded-lg text-[12px] font-bold transition-all border whitespace-nowrap ${statusFilter === f ? 'bg-[#F59E0B] border-[#F59E0B] text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
                             >
                                 {f}
                             </button>
@@ -283,7 +283,7 @@ export default function SaleReturnsPage() {
                                         <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
                                             <RowCheckboxTd sel={sel} id={r.id} />
                                             <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                                <div className="text-[14px] font-bold text-[#0E8CA8] group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
+                                                <div className="text-[14px] font-bold text-[#B4780B] group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
                                                     #{r.return_number}
                                                 </div>
                                                 <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 font-medium">
@@ -329,7 +329,7 @@ export default function SaleReturnsPage() {
                                                 <div className="flex items-center justify-end gap-2.5 transition-opacity">
                                                     {r.status?.toUpperCase() === 'ACCEPTED' && r.refund_status !== 'PAID' && (
                                                         <>
-                                                            <button onClick={() => setPayReturn(r)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Settle</button>
+                                                            <button onClick={() => setPayReturn(r)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Settle</button>
                                                             <span className="text-slate-300">|</span>
                                                         </>
                                                     )}

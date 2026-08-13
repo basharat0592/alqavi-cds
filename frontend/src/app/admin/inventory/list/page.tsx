@@ -23,7 +23,7 @@ import { PageHeader, Card, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBa
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#13B0D1] hover:bg-[#0E8CA8] text-white border-transparent shadow-sm shadow-[#13B0D1]/20',
+        primary: 'bg-[#F59E0B] hover:bg-[#B4780B] text-white border-transparent shadow-sm shadow-[#F59E0B]/20',
         secondary: 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 shadow-sm',
     };
     return (
@@ -151,7 +151,7 @@ const AssignLocationModal = ({ isOpen, onClose, onConfirm, warehouses, loading }
             <div className="bg-white rounded-2xl border border-slate-200 max-w-[450px] w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-[#13B0D1]/10 border border-[#13B0D1]/15 rounded-lg flex items-center justify-center text-[#0E8CA8]">
+                        <div className="w-9 h-9 bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-lg flex items-center justify-center text-[#B4780B]">
                             <MapPin size={18} />
                         </div>
                         <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Assign Branch</h3>
@@ -180,7 +180,7 @@ const AssignLocationModal = ({ isOpen, onClose, onConfirm, warehouses, loading }
                     <button
                         onClick={() => onConfirm(selected)}
                         disabled={!selected || loading}
-                        className="h-10 px-8 bg-[#13B0D1] border border-transparent rounded-lg text-[13px] font-semibold text-white hover:bg-[#0E8CA8] transition-all shadow-sm shadow-[#13B0D1]/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="h-10 px-8 bg-[#F59E0B] border border-transparent rounded-lg text-[13px] font-semibold text-white hover:bg-[#B4780B] transition-all shadow-sm shadow-[#F59E0B]/20 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {loading ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                         Confirm Assignment
@@ -498,7 +498,7 @@ export default function InventoryListPage() {
                             }} className="whitespace-nowrap"><Plus size={14} /> Add Stock</Btn>
                         </>
                     ) : (
-                        <button onClick={() => setView('list')} className="text-[13px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline flex items-center gap-1 font-bold whitespace-nowrap">
+                        <button onClick={() => setView('list')} className="text-[13px] text-[#B4780B] hover:text-[#92600A] hover:underline flex items-center gap-1 font-bold whitespace-nowrap">
                             <ChevronLeft size={14} /> Back to Current Stock
                         </button>
                     )}
@@ -573,7 +573,7 @@ export default function InventoryListPage() {
                         <div className="md:hidden space-y-3 mb-6">
                             {loading && stocks.length === 0 ? (
                                 <Card className="py-16 text-center">
-                                    <Loader2 size={32} className="animate-spin text-[#0E8CA8] mx-auto mb-3" />
+                                    <Loader2 size={32} className="animate-spin text-[#B4780B] mx-auto mb-3" />
                                     <p className="text-[13px] text-slate-500 font-medium italic">Syncing Current Stock...</p>
                                 </Card>
                             ) : paginatedData.length === 0 ? (
@@ -599,11 +599,11 @@ export default function InventoryListPage() {
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-baseline gap-1.5 flex-wrap" onClick={() => router.push(`/admin/inventory/${s.id}`)}>
-                                                    <h3 className="text-[14px] font-bold text-slate-900 hover:text-[#0A6F85] hover:underline cursor-pointer">
+                                                    <h3 className="text-[14px] font-bold text-slate-900 hover:text-[#92600A] hover:underline cursor-pointer">
                                                         {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                     </h3>
                                                     {(s.weight || s.size) && (
-                                                        <span className="text-[9px] text-[#0E8CA8] font-black uppercase tracking-tight shrink-0">
+                                                        <span className="text-[9px] text-[#B4780B] font-black uppercase tracking-tight shrink-0">
                                                             — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
                                                         </span>
                                                     )}
@@ -643,7 +643,7 @@ export default function InventoryListPage() {
                                                 ) : (
                                                     <button
                                                         onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
-                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] hover:bg-[#13B0D1]/15 rounded text-[9px] font-bold transition-all"
+                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] hover:bg-[#F59E0B]/15 rounded text-[9px] font-bold transition-all"
                                                     >
                                                         <Plus size={8} strokeWidth={3} /> Assign Branch
                                                     </button>
@@ -665,7 +665,7 @@ export default function InventoryListPage() {
                                         <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                                             <button
                                                 onClick={() => router.push(reorderUrl(s))}
-                                                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#13B0D1] hover:bg-[#0E8CA8] px-2.5 py-1.5 rounded-lg mr-auto"
+                                                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#F59E0B] hover:bg-[#B4780B] px-2.5 py-1.5 rounded-lg mr-auto"
                                             >
                                                 <ShoppingCart size={12} /> Reorder
                                             </button>
@@ -681,7 +681,7 @@ export default function InventoryListPage() {
                                                     setForm({ product_name: s.product_name, category: s.category || '', supplier: s.supplier, warehouse: s.warehouse, purchase_type: s.purchase_type, cartons: s.cartons || '', items_per_carton: s.items_per_carton || '', total_quantity: s.total_quantity, price_per_carton: s.price_per_carton || '', price_per_item: s.price_per_item, date: s.date, supplier_product_id: '' });
                                                     setIsEditing(true); setEditingId(s.id); setView('form');
                                                 }}
-                                                className="text-[12px] font-bold text-[#0E8CA8] hover:underline"
+                                                className="text-[12px] font-bold text-[#B4780B] hover:underline"
                                             >
                                                 Edit
                                             </button>
@@ -720,7 +720,7 @@ export default function InventoryListPage() {
                                 <tbody className="divide-y divide-slate-100">
                                     {loading && stocks.length === 0 ? (
                                         <tr><td colSpan={8} className="py-24 text-center">
-                                            <Loader2 size={32} className="animate-spin text-[#0E8CA8] mx-auto mb-3" />
+                                            <Loader2 size={32} className="animate-spin text-[#B4780B] mx-auto mb-3" />
                                             <p className="text-[13px] text-slate-500 font-medium italic">Syncing Current Stock...</p>
                                         </td></tr>
                                     ) : paginatedData.length === 0 ? (
@@ -733,7 +733,7 @@ export default function InventoryListPage() {
                                             <tr key={s.id} className="hover:bg-slate-50 transition-colors group text-[12px]">
                                                 <RowCheckboxTd sel={sel} id={s.id} />
                                                 <td className="px-5 py-3">
-                                                    <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-[#13B0D1] transition-colors">
+                                                    <div className="w-10 h-10 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-[#F59E0B] transition-colors">
                                                         {s.product_image ? (
                                                             <img
                                                                 src={getImageUrl(s.product_image)}
@@ -747,11 +747,11 @@ export default function InventoryListPage() {
                                                 </td>
                                                 <td className="px-5 py-3">
                                                     <div className="flex items-baseline gap-1.5 cursor-pointer" onClick={() => router.push(`/admin/inventory/${s.id}`)}>
-                                                        <div className="text-[13px] font-bold text-slate-900 group-hover:text-[#0A6F85] group-hover:underline">
+                                                        <div className="text-[13px] font-bold text-slate-900 group-hover:text-[#92600A] group-hover:underline">
                                                             {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                         </div>
                                                         {(s.weight || s.size) && (
-                                                            <div className="text-[10px] text-[#0E8CA8] font-black uppercase tracking-tight shrink-0">
+                                                            <div className="text-[10px] text-[#B4780B] font-black uppercase tracking-tight shrink-0">
                                                                 — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
                                                             </div>
                                                         )}
@@ -780,7 +780,7 @@ export default function InventoryListPage() {
                                                         ) : (
                                                             <button
                                                                 onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
-                                                                className="inline-flex items-center gap-1.5 mt-1 px-2 py-1 border border-dashed border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] hover:bg-[#13B0D1]/15 hover:border-solid rounded-lg text-[10px] font-bold transition-all animate-pulse shadow-sm"
+                                                                className="inline-flex items-center gap-1.5 mt-1 px-2 py-1 border border-dashed border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] hover:bg-[#F59E0B]/15 hover:border-solid rounded-lg text-[10px] font-bold transition-all animate-pulse shadow-sm"
                                                             >
                                                                 <Plus size={10} strokeWidth={3} /> Assign Branch
                                                             </button>
@@ -800,7 +800,7 @@ export default function InventoryListPage() {
                                                         <button
                                                             onClick={() => router.push(reorderUrl(s))}
                                                             title="Create a purchase order to restock this item"
-                                                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#13B0D1] hover:bg-[#0E8CA8] px-2.5 py-1.5 rounded-lg shadow-sm transition-colors"
+                                                            className="inline-flex items-center gap-1.5 text-[11px] font-bold text-white bg-[#F59E0B] hover:bg-[#B4780B] px-2.5 py-1.5 rounded-lg shadow-sm transition-colors"
                                                         >
                                                             <ShoppingCart size={12} /> Reorder
                                                         </button>
@@ -814,7 +814,7 @@ export default function InventoryListPage() {
                                                         <button onClick={() => {
                                                             setForm({ product_name: s.product_name, category: s.category || '', supplier: s.supplier, warehouse: s.warehouse, purchase_type: s.purchase_type, cartons: s.cartons || '', items_per_carton: s.items_per_carton || '', total_quantity: s.total_quantity, price_per_carton: s.price_per_carton || '', price_per_item: s.price_per_item, date: s.date, supplier_product_id: '' });
                                                             setIsEditing(true); setEditingId(s.id); setView('form');
-                                                        }} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                                        }} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
                                                         <span className="text-slate-300">|</span>
                                                         <button
                                                             onClick={() => setDeleteModal({
@@ -873,7 +873,7 @@ export default function InventoryListPage() {
                                         <button
                                             key={i}
                                             onClick={() => setCurrentPage(i + 1)}
-                                            className={`h-[31px] w-[31px] flex items-center justify-center rounded-lg text-[13px] font-bold transition-all tabular-nums ${currentPage === i + 1 ? 'bg-[#13B0D1] border border-[#13B0D1] text-white shadow-sm shadow-[#13B0D1]/20' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
+                                            className={`h-[31px] w-[31px] flex items-center justify-center rounded-lg text-[13px] font-bold transition-all tabular-nums ${currentPage === i + 1 ? 'bg-[#F59E0B] border border-[#F59E0B] text-white shadow-sm shadow-[#F59E0B]/20' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'}`}
                                         >
                                             {i + 1}
                                         </button>
@@ -1006,13 +1006,13 @@ export default function InventoryListPage() {
                                     <Btn className="w-full h-10 text-[14px] justify-center font-semibold" onClick={handleSave} loading={isSubmitting}>
                                         <Save size={14} /> {isEditing ? 'Update Stock' : 'Save Stock'}
                                     </Btn>
-                                    <button onClick={() => setView('list')} className="w-full text-[12px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline font-bold text-center">
+                                    <button onClick={() => setView('list')} className="w-full text-[12px] text-[#B4780B] hover:text-[#92600A] hover:underline font-bold text-center">
                                         Cancel
                                     </button>
                                 </div>
                             </Card>
 
-                            <div className="bg-[#13B0D1]/10 border border-[#13B0D1]/15 rounded-2xl p-5 text-[12px] text-[#0E8CA8] leading-relaxed shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                            <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-2xl p-5 text-[12px] text-[#B4780B] leading-relaxed shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <p className="font-bold mb-2 uppercase tracking-wide">Stock Policy</p>
                                 Adding stock arrival will automatically increase the recorded units in the specific branch chosen.
                             </div>

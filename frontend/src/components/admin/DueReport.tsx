@@ -128,7 +128,7 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
 
             {/* Aging */}
             <Card className="p-5 mb-6">
-                <h3 className="text-[13px] font-bold text-slate-900 mb-4 flex items-center gap-2"><CalendarClock size={15} className="text-[#0E8CA8]" /> Aging</h3>
+                <h3 className="text-[13px] font-bold text-slate-900 mb-4 flex items-center gap-2"><CalendarClock size={15} className="text-[#B4780B]" /> Aging</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     {AGING.map(a => (
                         <div key={a.k} className={`rounded-xl border p-3 ${a.k.startsWith('d9') || a.k.startsWith('d6') ? 'border-rose-100 bg-rose-50/50' : a.k.startsWith('d') ? 'border-amber-100 bg-amber-50/40' : 'border-slate-200 bg-slate-50/50'}`}>
@@ -176,7 +176,7 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
                                     ) : <span className="text-[12px] text-slate-300">—</span>}
                                 </td>
                                 <td className="px-6 py-4 text-right no-print">
-                                    <Link href={cfg.link(r.type)} className="inline-flex items-center gap-1 text-[12px] font-bold text-[#0E8CA8] hover:underline">
+                                    <Link href={cfg.link(r.type)} className="inline-flex items-center gap-1 text-[12px] font-bold text-[#B4780B] hover:underline">
                                         Open <ArrowRight size={12} />
                                     </Link>
                                 </td>

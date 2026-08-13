@@ -60,7 +60,7 @@ const FAQS = [
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, href }: any) => {
     const styles = {
-        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        primary: 'bg-[#F59E0B] border-[#B4780B] hover:bg-[#B4780B] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     const Comp = href ? 'a' : 'button';
@@ -203,7 +203,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         <>
                             <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
                             <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
-                                <p className="text-[#13B0D1] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
+                                <p className="text-[#F59E0B] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
                                 <h3 className="text-4xl md:text-6xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
                                 <p className="text-slate-300 mt-4 max-w-lg text-sm md:text-base leading-relaxed">{slides[0].description}</p>
                                 <div className="mt-8 flex gap-4">
@@ -330,7 +330,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                 <div className="p-16 bg-[#111] text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#c4550020] via-transparent to-transparent" />
                     <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
-                        <Mail size={40} className="mx-auto text-[#13B0D1] mb-4" />
+                        <Mail size={40} className="mx-auto text-[#F59E0B] mb-4" />
                         <h3 className="text-3xl font-black text-white">{content.title}</h3>
                         <p className="text-slate-400">{content.subtitle}</p>
                         <div className="flex gap-2 max-w-md mx-auto pt-4">
@@ -362,7 +362,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         {[...Array(4)].map((_, i) => (
                             <span key={i} className="text-white font-black text-sm uppercase tracking-[0.3em] flex items-center shrink-0">
                                 {content.text}
-                                <Star size={14} className="mx-8 text-[#13B0D1] fill-[#13B0D1]" />
+                                <Star size={14} className="mx-8 text-[#F59E0B] fill-[#F59E0B]" />
                             </span>
                         ))}
                     </div>

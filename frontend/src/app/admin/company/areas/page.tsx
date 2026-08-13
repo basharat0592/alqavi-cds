@@ -244,7 +244,7 @@ export default function AreasPage() {
                     ) : filtered.map(a => (
                         <div key={a.id} className="bg-white border border-slate-200 rounded-xl shadow-sm p-3.5" style={{ marginLeft: ((a as any)._depth || 0) * 14 }}>
                             <div className="flex items-start gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${(a as any)._depth ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-[#13B0D1]/10 border-[#13B0D1]/15 text-[#0E8CA8]'}`}>
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${(a as any)._depth ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-[#F59E0B]/10 border-[#F59E0B]/15 text-[#B4780B]'}`}>
                                     <MapPin size={18} />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -264,14 +264,14 @@ export default function AreasPage() {
                                     type="button"
                                     onClick={() => toggleActive(a)}
                                     disabled={togglingId === a.id}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 shrink-0 ${a.is_active ? 'bg-[#13B0D1]' : 'bg-slate-300'} ${togglingId === a.id ? 'opacity-50' : ''}`}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 shrink-0 ${a.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'} ${togglingId === a.id ? 'opacity-50' : ''}`}
                                     aria-label="Toggle active"
                                 >
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${a.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                                 </button>
                             </div>
                             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
-                                <button onClick={() => openEdit(a)} className="flex-1 h-9 rounded-lg border border-[#13B0D1]/25 bg-[#13B0D1]/10 text-[12px] font-bold text-[#0E8CA8] hover:bg-[#13B0D1]/15">Edit</button>
+                                <button onClick={() => openEdit(a)} className="flex-1 h-9 rounded-lg border border-[#F59E0B]/25 bg-[#F59E0B]/10 text-[12px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/15">Edit</button>
                                 <button onClick={() => setDeleteTarget(a)} className="flex-1 h-9 rounded-lg border border-rose-200 bg-rose-50 text-[12px] font-bold text-rose-600 hover:bg-rose-100">Delete</button>
                             </div>
                         </div>
@@ -304,7 +304,7 @@ export default function AreasPage() {
                                             <td className="px-6 py-5">
                                                 <div className="flex items-center gap-3" style={{ paddingLeft: ((a as any)._depth || 0) * 24 }}>
                                                     {((a as any)._depth || 0) > 0 && <span className="text-slate-300 text-[15px] -ml-3 select-none">└</span>}
-                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${(a as any)._depth ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-[#13B0D1]/10 border-[#13B0D1]/15 text-[#0E8CA8]'}`}>
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border ${(a as any)._depth ? 'bg-slate-50 border-slate-200 text-slate-400' : 'bg-[#F59E0B]/10 border-[#F59E0B]/15 text-[#B4780B]'}`}>
                                                         <MapPin size={18} />
                                                     </div>
                                                     <div>
@@ -335,7 +335,7 @@ export default function AreasPage() {
                                                     type="button"
                                                     onClick={() => toggleActive(a)}
                                                     disabled={togglingId === a.id}
-                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${a.is_active ? 'bg-[#13B0D1]' : 'bg-slate-300'} ${togglingId === a.id ? 'opacity-50' : ''}`}
+                                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${a.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'} ${togglingId === a.id ? 'opacity-50' : ''}`}
                                                     aria-label="Toggle active"
                                                 >
                                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${a.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -343,7 +343,7 @@ export default function AreasPage() {
                                             </td>
                                             <td className="px-6 py-5 text-right">
                                                 <div className="flex items-center justify-end gap-2.5">
-                                                    <button onClick={() => openEdit(a)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                                    <button onClick={() => openEdit(a)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button onClick={() => setDeleteTarget(a)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
@@ -394,8 +394,8 @@ export default function AreasPage() {
                         </select>
                         <p className="text-[11.5px] text-slate-500 mt-1.5">
                             {form.parent
-                                ? <>This area will be added as <span className="font-bold text-[#0E8CA8]">Level {parentDepth + 1}</span>, nested under the selected parent.</>
-                                : <>This area will be a <span className="font-bold text-[#0E8CA8]">Level 1</span> (top-level) territory.</>}
+                                ? <>This area will be added as <span className="font-bold text-[#B4780B]">Level {parentDepth + 1}</span>, nested under the selected parent.</>
+                                : <>This area will be a <span className="font-bold text-[#B4780B]">Level 1</span> (top-level) territory.</>}
                         </p>
                     </Field>
                     <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200/70 rounded-lg">
@@ -403,7 +403,7 @@ export default function AreasPage() {
                         <button
                             type="button"
                             onClick={() => setForm(f => ({ ...f, is_active: !f.is_active }))}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#13B0D1]' : 'bg-slate-300'}`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}
                         >
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>

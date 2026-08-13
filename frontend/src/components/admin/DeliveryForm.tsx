@@ -114,7 +114,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
 
             <Card className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 mb-5">
-                    <div className="w-8 h-8 rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8] flex items-center justify-center"><Bike size={16} /></div>
+                    <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center"><Bike size={16} /></div>
                     <h3 className="text-[14px] font-bold text-slate-900">Rider Details</h3>
                 </div>
 
@@ -132,7 +132,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
                         <div className="relative">
                             <input type={showPw ? 'text' : 'password'} className={inputCls + ' pr-10'} value={form.password}
                                 onChange={e => handle('password', e.target.value)} placeholder={isEdit ? 'Leave blank to keep' : 'Set a password'} />
-                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0A6F85]">
+                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#92600A]">
                                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                             </button>
                         </div>
@@ -159,17 +159,17 @@ export default function DeliveryForm({ id }: { id?: string }) {
                     <div className="sm:col-span-2 flex items-center justify-between p-3 bg-slate-50 border border-slate-200/70 rounded-lg">
                         <span className="text-[12px] font-bold text-slate-600">Account Active</span>
                         <button type="button" onClick={() => handle('is_active', !form.is_active)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_active ? 'bg-[#13B0D1]' : 'bg-slate-300'}`}>
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>
-                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-[#13B0D1]/50 border border-[#13B0D1]/60 rounded-lg">
+                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-[#F59E0B]/50 border border-[#F59E0B]/60 rounded-lg">
                         <div>
                             <span className="text-[12px] font-bold text-slate-700">System Rider (in-house)</span>
                             <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug max-w-[440px]">Your own salaried rider — visible only to you, shown at the top when dispatching, and no per-delivery charge is offered.</p>
                         </div>
                         <button type="button" onClick={() => handle('is_system', !form.is_system)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.is_system ? 'bg-[#13B0D1]' : 'bg-slate-300'}`}>
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.is_system ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_system ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>

@@ -106,7 +106,7 @@ export default function DeliveryPersonsPage() {
                             <tr key={r.id} className="hover:bg-slate-50 transition-colors text-[13px]">
                                 <td className="px-6 py-4">
                                     <div className="font-bold text-slate-900 flex items-center gap-2">
-                                        <span className="w-8 h-8 rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8] flex items-center justify-center"><User size={15} /></span>
+                                        <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center"><User size={15} /></span>
                                         {r.name}
                                     </div>
                                     <div className="text-[11px] text-slate-400 ml-10">{r.email}</div>
@@ -130,7 +130,7 @@ export default function DeliveryPersonsPage() {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end gap-2.5">
-                                        <button onClick={() => router.push(`/admin/delivery/edit/${r.id}`)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                        <button onClick={() => router.push(`/admin/delivery/edit/${r.id}`)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
                                         <span className="text-slate-300">|</span>
                                         <button onClick={() => setToDelete(r)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                     </div>

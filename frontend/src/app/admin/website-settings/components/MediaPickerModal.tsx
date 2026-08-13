@@ -16,7 +16,7 @@ interface Props {
 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        primary: 'bg-[#F59E0B] border-[#B4780B] hover:bg-[#B4780B] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -144,7 +144,7 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                         <div key={asset.id} onClick={() => setSelectedId(asset.id!)}
                                             className={cn(
                                                 "aspect-square bg-white border-2 rounded-lg overflow-hidden cursor-pointer relative transition-all group",
-                                                selectedId === asset.id ? "border-[#13B0D1] shadow-sm ring-2 ring-[#13B0D1]/20" : "border-transparent hover:border-[#e2e8f0]"
+                                                selectedId === asset.id ? "border-[#F59E0B] shadow-sm ring-2 ring-[#F59E0B]/20" : "border-transparent hover:border-[#e2e8f0]"
                                             )}>
                                             {asset.file_type === 'image' ? (
                                                 <img src={getImageUrl(asset.file) || asset.file} alt={asset.alt_text} className="w-full h-full object-cover" />
@@ -157,7 +157,7 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                                 </div>
                                             )}
                                             {selectedId === asset.id && (
-                                                <div className="absolute top-1 right-1 bg-[#13B0D1] text-white rounded-full p-0.5 shadow-sm">
+                                                <div className="absolute top-1 right-1 bg-[#F59E0B] text-white rounded-full p-0.5 shadow-sm">
                                                     <Check size={12} strokeWidth={3} />
                                                 </div>
                                             )}

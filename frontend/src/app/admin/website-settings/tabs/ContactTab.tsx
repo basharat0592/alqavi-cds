@@ -13,7 +13,7 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        primary: 'bg-[#F59E0B] border-[#B4780B] hover:bg-[#B4780B] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -71,7 +71,7 @@ export default function ContactTab({ settings, onSave, saving }: Props) {
                             <MapPin size={14} className="absolute left-3 top-3 text-slate-400" />
                             <textarea rows={2} value={form.address || ''} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                                 placeholder="Shop #123, Main Market, Lahore, Pakistan"
-                                className="w-full min-h-[60px] px-9 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
+                                className="w-full min-h-[60px] px-9 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
                         </div>
                     </div>
                 </div>

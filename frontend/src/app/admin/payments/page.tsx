@@ -464,7 +464,7 @@ export default function PaymentsPage() {
                             <select
                                 value={flowMonthNum}
                                 onChange={(e) => setFlowMonthNum(e.target.value)}
-                                className="h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#13B0D1] cursor-pointer transition-colors shadow-inner"
+                                className="h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#F59E0B] cursor-pointer transition-colors shadow-inner"
                             >
                                 <option value="">All months</option>
                                 {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map((m, i) => (
@@ -474,7 +474,7 @@ export default function PaymentsPage() {
                             <select
                                 value={flowYear}
                                 onChange={(e) => setFlowYear(e.target.value)}
-                                className="h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#13B0D1] cursor-pointer transition-colors shadow-inner"
+                                className="h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#F59E0B] cursor-pointer transition-colors shadow-inner"
                             >
                                 <option value="">All years</option>
                                 {flowYearOptions.map((y) => (<option key={y} value={y}>{y}</option>))}
@@ -541,8 +541,8 @@ export default function PaymentsPage() {
                                             </tr>
                                         ))}
                                         {branchOverview?.own && (
-                                            <tr className="bg-[#13B0D1]/30 hover:bg-[#0E8CA8]/50">
-                                                <td className="px-5 py-2.5 font-bold text-[#0E8CA8]">My Own Ledger</td>
+                                            <tr className="bg-[#F59E0B]/30 hover:bg-[#B4780B]/50">
+                                                <td className="px-5 py-2.5 font-bold text-[#B4780B]">My Own Ledger</td>
                                                 <td className="px-5 py-2.5 text-right tabular-nums text-emerald-700">{formatCurrency(branchOverview.own.income)}</td>
                                                 <td className="px-5 py-2.5 text-right tabular-nums text-rose-600">{formatCurrency(branchOverview.own.expense)}</td>
                                                 <td className={`px-5 py-2.5 text-right tabular-nums font-bold ${branchOverview.own.net >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{formatCurrency(branchOverview.own.net)}</td>
@@ -568,7 +568,7 @@ export default function PaymentsPage() {
                                                 <td className="px-4 py-2 text-slate-900">All Branches Total</td>
                                                 <td className="px-4 py-2 text-right tabular-nums text-emerald-700">{formatCurrency(branchOverview.totals.income)}</td>
                                                 <td className="px-4 py-2 text-right tabular-nums text-rose-600">{formatCurrency(branchOverview.totals.expense)}</td>
-                                                <td className={`px-4 py-2 text-right tabular-nums ${branchOverview.totals.net >= 0 ? 'text-[#0E8CA8]' : 'text-rose-600'}`}>{formatCurrency(branchOverview.totals.net)}</td>
+                                                <td className={`px-4 py-2 text-right tabular-nums ${branchOverview.totals.net >= 0 ? 'text-[#B4780B]' : 'text-rose-600'}`}>{formatCurrency(branchOverview.totals.net)}</td>
                                                 <td className="px-4 py-2 text-right tabular-nums text-slate-500">{branchOverview.totals.count}</td>
                                             </tr>
                                         </tfoot>
@@ -631,7 +631,7 @@ export default function PaymentsPage() {
                                             key={t.key}
                                             onClick={() => setTypeFilter(t.key)}
                                             className={`flex-1 sm:flex-initial px-3.5 py-1 text-[10.5px] font-bold uppercase rounded-md transition-all whitespace-nowrap relative
-                                                ${typeFilter === t.key ? 'bg-white text-[#0E8CA8] shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-700'}
+                                                ${typeFilter === t.key ? 'bg-white text-[#B4780B] shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-700'}
                                                 ${t.badge && typeFilter !== 'pending' ? 'bg-amber-100/50 text-amber-800' : ''}`}
                                         >
                                             {t.label}
@@ -650,7 +650,7 @@ export default function PaymentsPage() {
                                 <div>
                                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</label>
                                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#13B0D1] cursor-pointer transition-colors shadow-inner">
+                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#F59E0B] cursor-pointer transition-colors shadow-inner">
                                         <option value="all">All Statuses</option>
                                         <option value="paid">Paid</option>
                                         <option value="partial">Partial</option>
@@ -661,7 +661,7 @@ export default function PaymentsPage() {
                                 <div>
                                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">Source</label>
                                     <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}
-                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#13B0D1] cursor-pointer transition-colors shadow-inner">
+                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#F59E0B] cursor-pointer transition-colors shadow-inner">
                                         <option value="all">All Sources</option>
                                         <option value="Sale">Sale</option>
                                         <option value="Purchase">Purchase</option>
@@ -679,7 +679,7 @@ export default function PaymentsPage() {
                                         value={partyFilter}
                                         onChange={(e) => setPartyFilter(e.target.value)}
                                         placeholder="Type a name…"
-                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#13B0D1] transition-colors shadow-inner" />
+                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#F59E0B] transition-colors shadow-inner" />
                                     <datalist id="party-options">
                                         {partyOptions.map(name => (<option key={name} value={name} />))}
                                     </datalist>
@@ -687,12 +687,12 @@ export default function PaymentsPage() {
                                 <div>
                                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">From</label>
                                     <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#13B0D1] cursor-pointer transition-colors shadow-inner" />
+                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#F59E0B] cursor-pointer transition-colors shadow-inner" />
                                 </div>
                                 <div>
                                     <label className="block text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">To</label>
                                     <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#13B0D1] cursor-pointer transition-colors shadow-inner" />
+                                        className="w-full h-8 px-2 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-[11px] outline-none focus:border-[#F59E0B] cursor-pointer transition-colors shadow-inner" />
                                 </div>
                             </div>
                             {(statusFilter !== 'all' || sourceFilter !== 'all' || partyFilter.trim() || dateFrom || dateTo || search || typeFilter !== 'all') && (
@@ -756,7 +756,7 @@ export default function PaymentsPage() {
                                                     <div className="text-[9.5px] text-slate-400 mt-0.5">{payment.isDue ? (payment.date ? `Due ${formatDate(payment.date)}` : 'No due date') : formatDate(payment.date)}</div>
                                                 </td>
                                                 <td className="px-4 py-2 whitespace-nowrap">
-                                                    {(() => { const s = sourceLabel(payment); const tone = s === 'Sale' ? 'bg-emerald-50 text-emerald-700' : s === 'Purchase' ? 'bg-[#13B0D1]/10 text-[#0E8CA8]' : s.includes('Return') ? 'bg-rose-50 text-rose-700' : s === 'Delivery' ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'; return (
+                                                    {(() => { const s = sourceLabel(payment); const tone = s === 'Sale' ? 'bg-emerald-50 text-emerald-700' : s === 'Purchase' ? 'bg-[#F59E0B]/10 text-[#B4780B]' : s.includes('Return') ? 'bg-rose-50 text-rose-700' : s === 'Delivery' ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-500'; return (
                                                         <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${tone}`}>{s}</span>
                                                     ); })()}
                                                 </td>
@@ -813,7 +813,7 @@ export default function PaymentsPage() {
                                                                 {Number(payment.remaining || 0) > 0 && (
                                                                     <button
                                                                         onClick={() => openPay(payment)}
-                                                                        className="px-2 py-0.5 bg-[#13B0D1] hover:bg-[#0E8CA8] text-white text-[10px] font-bold rounded shadow-sm transition-all flex items-center gap-1 shrink-0"
+                                                                        className="px-2 py-0.5 bg-[#F59E0B] hover:bg-[#B4780B] text-white text-[10px] font-bold rounded shadow-sm transition-all flex items-center gap-1 shrink-0"
                                                                     >
                                                                         <Wallet size={10} /> Pay Now
                                                                     </button>
@@ -873,7 +873,7 @@ export default function PaymentsPage() {
                                             onClick={() => setCurrentPage(page)}
                                             className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border ${
                                                 currentPage === page 
-                                                    ? 'bg-[#13B0D1] border-[#13B0D1] text-white font-extrabold' 
+                                                    ? 'bg-[#F59E0B] border-[#F59E0B] text-white font-extrabold' 
                                                     : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                             }`}
                                         >
@@ -1015,7 +1015,7 @@ export default function PaymentsPage() {
                                                 <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 bg-slate-50/50 p-3 rounded-lg border border-slate-100">
                                                     <DetailCell label="Order ID">#{parentOrder.tracking_id || parentOrder.id}</DetailCell>
                                                     <DetailCell label="Order Status">
-                                                        <span className={`inline-block text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded ${parentOrder.status === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700' : 'bg-[#13B0D1]/10 text-[#0E8CA8]'}`}>{parentOrder.status}</span>
+                                                        <span className={`inline-block text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded ${parentOrder.status === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F59E0B]/10 text-[#B4780B]'}`}>{parentOrder.status}</span>
                                                     </DetailCell>
                                                     <DetailCell label="Total Invoice">Rs. {Number(parentOrder.total_amount || 0).toLocaleString()}</DetailCell>
                                                     <DetailCell label="Remaining"><span className="text-rose-600">Rs. {Number(parentOrder.remaining_amount ?? (Number(parentOrder.total_amount) - Number(parentOrder.amount_paid))).toLocaleString()}</span></DetailCell>
@@ -1047,16 +1047,16 @@ export default function PaymentsPage() {
                                     <div className="flex flex-col min-h-[300px] bg-slate-50 border border-slate-100 rounded-xl p-4 overflow-hidden justify-between">
                                         <div className="mb-2 shrink-0 flex items-center justify-between">
                                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Receipt Slip</span>
-                                            <a href={p.slip_url} download target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-[#0E8CA8] hover:underline inline-flex items-center gap-1">
+                                            <a href={p.slip_url} download target="_blank" rel="noopener noreferrer" className="text-[10px] font-bold text-[#B4780B] hover:underline inline-flex items-center gap-1">
                                                 <Download size={10} /> Download
                                             </a>
                                         </div>
                                         <div className="flex-1 flex items-center justify-center border border-slate-200 bg-white rounded-lg p-2 overflow-hidden relative group min-h-[220px]">
                                             {p.slip_url.toLowerCase().endsWith('.pdf') ? (
                                                 <div className="text-center p-3">
-                                                    <FileText size={40} className="mx-auto mb-2 text-[#0E8CA8]" />
+                                                    <FileText size={40} className="mx-auto mb-2 text-[#B4780B]" />
                                                     <p className="text-[11px] text-slate-600 mb-3 font-bold">PDF Slip Receipt Submitted</p>
-                                                    <a href={p.slip_url} target="_blank" rel="noopener noreferrer" className="px-3.5 py-1.5 bg-[#13B0D1] hover:bg-[#0E8CA8] text-white font-bold text-[10px] rounded-lg transition-all shadow-sm inline-flex items-center gap-1">
+                                                    <a href={p.slip_url} target="_blank" rel="noopener noreferrer" className="px-3.5 py-1.5 bg-[#F59E0B] hover:bg-[#B4780B] text-white font-bold text-[10px] rounded-lg transition-all shadow-sm inline-flex items-center gap-1">
                                                         <ExternalLink size={10} /> Open PDF Proof
                                                     </a>
                                                 </div>
@@ -1122,8 +1122,8 @@ export default function PaymentsPage() {
             {/* Toast Hub */}
             {toastState && (
                 <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-right">
-                    <div className={`flex items-center gap-3 px-6 py-3 rounded-xl shadow-2xl border-l-4 ${toastState.type === 'success' ? 'bg-slate-900 border-[#13B0D1] text-white' : 'bg-rose-900 border-rose-500 text-white'}`}>
-                        {toastState.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-[#22C3E0]" /> : <AlertTriangle className="h-5 w-5 text-rose-400" />}
+                    <div className={`flex items-center gap-3 px-6 py-3 rounded-xl shadow-2xl border-l-4 ${toastState.type === 'success' ? 'bg-slate-900 border-[#F59E0B] text-white' : 'bg-rose-900 border-rose-500 text-white'}`}>
+                        {toastState.type === 'success' ? <CheckCircle2 className="h-5 w-5 text-[#FBBF24]" /> : <AlertTriangle className="h-5 w-5 text-rose-400" />}
                         <p className="text-sm font-bold">{toastState.msg}</p>
                         <button onClick={() => setToastState(null)} className="ml-4 opacity-50 hover:opacity-100"><X size={16} /></button>
                     </div>
@@ -1243,7 +1243,7 @@ function CreateView({ onClose, onSuccess, categories, warehouses = [], isSuperAd
         <Card className="overflow-hidden text-left mb-6 shadow-sm border border-slate-100">
             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-[#13B0D1]/10 text-[#0E8CA8] border border-[#13B0D1]/15"><Wallet size={18} /></div>
+                    <div className="p-2 rounded-xl bg-[#F59E0B]/10 text-[#B4780B] border border-[#F59E0B]/15"><Wallet size={18} /></div>
                     <div>
                         <h2 className="text-[16px] font-bold text-slate-900 tracking-tight leading-none">New Payment</h2>
                         <p className="text-[11.5px] text-slate-500 mt-1">Record money coming in or going out of the business.</p>

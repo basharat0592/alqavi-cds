@@ -71,7 +71,7 @@ export default function NotificationsPage() {
         if (action.includes('user')) return 'text-emerald-500 bg-emerald-50';
         if (action.includes('login')) return 'text-amber-500 bg-amber-50';
         if (desc.includes('newsletter')) return 'text-sky-600 bg-sky-50';
-        return 'text-[#0E8CA8] bg-[#13B0D1]/10';
+        return 'text-[#B4780B] bg-[#F59E0B]/10';
     };
 
     return (
@@ -120,13 +120,13 @@ export default function NotificationsPage() {
                         onClick={() => setFilter(tab.id)}
                         className={cn(
                             'flex items-center gap-2 pb-3 text-[14px] font-medium transition-all relative whitespace-nowrap',
-                            filter === tab.id ? 'text-[#0E8CA8]' : 'text-slate-600 hover:text-slate-900'
+                            filter === tab.id ? 'text-[#B4780B]' : 'text-slate-600 hover:text-slate-900'
                         )}
                     >
                         <tab.icon size={16} />
                         {tab.label}
                         {filter === tab.id && (
-                            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#13B0D1]" />
+                            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#F59E0B]" />
                         )}
                     </button>
                 ))}
@@ -136,7 +136,7 @@ export default function NotificationsPage() {
             <Card className="overflow-hidden">
                 {loading ? (
                     <div className="py-20 flex flex-col items-center justify-center gap-4">
-                        <RefreshCw className="h-6 w-6 text-[#0E8CA8] animate-spin" />
+                        <RefreshCw className="h-6 w-6 text-[#B4780B] animate-spin" />
                         <p className="text-[13px] text-slate-600">Updating activity feed...</p>
                     </div>
                 ) : filteredNotifications.length === 0 ? (
@@ -152,12 +152,12 @@ export default function NotificationsPage() {
                             const colorClass = getColor(notif);
                             return (
                                 <div key={notif.id} className="p-5 hover:bg-slate-50 transition-all group flex items-start gap-5">
-                                    <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-slate-200 bg-white shadow-sm group-hover:border-[#13B0D1]/25 transition-colors", colorClass)}>
+                                    <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-slate-200 bg-white shadow-sm group-hover:border-[#F59E0B]/25 transition-colors", colorClass)}>
                                         <Icon size={18} strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-4">
-                                            <p className="text-[14px] font-bold text-slate-900 leading-tight group-hover:text-[#0A6F85] transition-colors">
+                                            <p className="text-[14px] font-bold text-slate-900 leading-tight group-hover:text-[#92600A] transition-colors">
                                                 {notif.action_type || 'System Event'}
                                             </p>
                                             <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-tighter tabular-nums">

@@ -104,7 +104,7 @@ export default function StockViewPage() {
     }, [visibleRows]);
 
     if (loading) {
-        return <div className="flex items-center justify-center py-40"><Loader2 className="w-8 h-8 animate-spin text-[#0E8CA8]" /></div>;
+        return <div className="flex items-center justify-center py-40"><Loader2 className="w-8 h-8 animate-spin text-[#B4780B]" /></div>;
     }
     if (notFound || !stock) {
         return (
@@ -158,7 +158,7 @@ export default function StockViewPage() {
                     </div>
                     <div className="p-4 bg-slate-50">
                         <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5">Total Valuation</p>
-                        <p className="text-[18px] font-bold text-[#0E8CA8] tabular-nums">{formatCurrency(qty * cost)}</p>
+                        <p className="text-[18px] font-bold text-[#B4780B] tabular-nums">{formatCurrency(qty * cost)}</p>
                     </div>
                 </div>
 
@@ -221,7 +221,7 @@ export default function StockViewPage() {
                                                     <div className="font-bold text-slate-900">{new Date(when).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                                                     <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{new Date(when).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
                                                 </td>
-                                                <td className="px-5 py-3 font-semibold text-[#0E8CA8]">{m.ref ? `#${m.ref}` : (m.movement_type_display || m.movement_type)}</td>
+                                                <td className="px-5 py-3 font-semibold text-[#B4780B]">{m.ref ? `#${m.ref}` : (m.movement_type_display || m.movement_type)}</td>
                                                 <td className="px-5 py-3 text-slate-600">{m.supplier}</td>
                                                 <td className={`px-5 py-3 text-right font-black tabular-nums ${isIn ? 'text-emerald-600' : 'text-rose-600'}`}>{isIn ? '+' : '−'}{qtyAbs.toLocaleString()}</td>
                                                 <td className="px-5 py-3 text-right font-semibold text-slate-600 tabular-nums">{rate != null ? formatCurrency(rate) : '—'}</td>

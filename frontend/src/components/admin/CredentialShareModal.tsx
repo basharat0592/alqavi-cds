@@ -53,9 +53,9 @@ export default function CredentialShareModal({ created, subtitle, onDone }: { cr
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Login link</label>
                         <div className="mt-1.5 flex items-center gap-2">
                             <input readOnly value={created.loginUrl} onFocus={e => e.currentTarget.select()}
-                                className="flex-1 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[12px] text-slate-700 outline-none focus:border-[#13B0D1]" />
+                                className="flex-1 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[12px] text-slate-700 outline-none focus:border-[#F59E0B]" />
                             <button type="button" onClick={() => copy('link', created.loginUrl)}
-                                className="h-9 px-3 rounded-lg bg-[#13B0D1] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#0E8CA8] transition-colors shrink-0">
+                                className="h-9 px-3 rounded-lg bg-[#F59E0B] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#B4780B] transition-colors shrink-0">
                                 {copied === 'link' ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                             </button>
                         </div>
@@ -73,7 +73,7 @@ export default function CredentialShareModal({ created, subtitle, onDone }: { cr
                     </div>
 
                     <button type="button" onClick={() => copy('invite', created.invite)}
-                        className="w-full h-10 rounded-xl border border-[#13B0D1]/25 bg-[#13B0D1]/10 text-[#0E8CA8] text-[12px] font-bold inline-flex items-center justify-center gap-2 hover:bg-[#13B0D1]/15 transition-colors">
+                        className="w-full h-10 rounded-xl border border-[#F59E0B]/25 bg-[#F59E0B]/10 text-[#B4780B] text-[12px] font-bold inline-flex items-center justify-center gap-2 hover:bg-[#F59E0B]/15 transition-colors">
                         {copied === 'invite' ? <><Check className="w-4 h-4" /> Copied invite message</> : <><Copy className="w-4 h-4" /> Copy invite (link + credentials)</>}
                     </button>
 

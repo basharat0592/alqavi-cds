@@ -50,7 +50,7 @@ const GRID_MIN = 'min-w-[1000px]';
 const cellCls =
     'w-full h-9 px-2 bg-slate-50 text-[12.5px] font-semibold text-slate-900 outline-none rounded-md ' +
     'border border-slate-200 transition-colors placeholder:text-slate-400 placeholder:font-normal ' +
-    'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-[#13B0D1] focus:ring-2 focus:ring-[#13B0D1]/30';
+    'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/30';
 const cellNum = cellCls + ' text-right tabular-nums no-spinner';
 const cellDisabled = 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed hover:border-slate-200 hover:bg-slate-100';
 
@@ -207,7 +207,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                     }
                 }}
             />
-            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#0E8CA8]' : ''}`} />
+            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#B4780B]' : ''}`} />
 
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
@@ -215,7 +215,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                         {filtered.slice(0, 60).map((p: any) => (
                             <div
                                 key={p.id}
-                                className="px-3 py-2 hover:bg-[#13B0D1]/10 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
+                                className="px-3 py-2 hover:bg-[#F59E0B]/10 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
                                 onClick={() => { onSelect(p.id); setOpen(false); setSearch(''); }}
                             >
                                 <div className="min-w-0">
@@ -266,7 +266,7 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
             </button>
             {open && (
                 <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/20 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/20 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                         {filtered.map((s: any) => (
                             <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[12px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
@@ -309,12 +309,12 @@ const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => 
                     }
                 }}
             />
-            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#0E8CA8]' : ''}`} />
+            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#B4780B]' : ''}`} />
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
                         {filtered.map((c: any) => (
-                            <div key={c.id} className="px-4 py-2 hover:bg-[#13B0D1]/10 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
+                            <div key={c.id} className="px-4 py-2 hover:bg-[#F59E0B]/10 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
                                 <span className="font-semibold text-slate-800 truncate">{c.name}</span>
                                 {c.category && <span className="text-[9px] text-slate-400 uppercase font-bold shrink-0">{c.category}</span>}
                             </div>
@@ -1019,9 +1019,9 @@ export default function AddPurchasePage() {
                         'relative border-b border-slate-200 last:border-b-0 transition-colors ' +
                         // A left rail that lights up on the focused row — makes it obvious
                         // which line you're editing once several are on screen.
-                        'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#13B0D1] ' +
+                        'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#F59E0B] ' +
                         (i % 2 ? 'bg-slate-50/40 ' : 'bg-white ') +
-                        'hover:bg-slate-50 focus-within:bg-[#13B0D1]/[0.06]'
+                        'hover:bg-slate-50 focus-within:bg-[#F59E0B]/[0.06]'
                     }
                 >
                     <div className={GRID_COLS + ' ' + GRID_MIN}>
@@ -1060,7 +1060,7 @@ export default function AddPurchasePage() {
                         </Cell>
                         <Cell>
                             <input
-                                className={cellNum + ' text-[#0E8CA8]' + err(bad.quantity)}
+                                className={cellNum + ' text-[#B4780B]' + err(bad.quantity)}
                                 type="number" min="1"
                                 value={item.quantity || ''}
                                 onChange={e => updateItem(i, 'quantity', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
@@ -1188,7 +1188,7 @@ export default function AddPurchasePage() {
                     <div className="px-2 py-1.5 border-r border-slate-200/80">
                         <button
                             onClick={addItem}
-                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:bg-[#13B0D1]/10 px-2 py-1 rounded-md transition-colors"
+                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#B4780B] hover:text-[#92600A] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
                         >
                             <Plus size={13} /> Add row
                         </button>
@@ -1337,7 +1337,7 @@ export default function AddPurchasePage() {
                     <button
                         type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="text-[12px] font-bold text-[#0E8CA8] hover:text-[#13B0D1] flex items-center gap-1 transition-colors"
+                        className="text-[12px] font-bold text-[#B4780B] hover:text-[#F59E0B] flex items-center gap-1 transition-colors"
                     >
                         {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Freight, Tax, Extra Discount, Balance Date)'}
                     </button>
@@ -1419,7 +1419,7 @@ export default function AddPurchasePage() {
                             onClick={() => router.push('/admin/purchases')}
                             title="Back to Purchases"
                             aria-label="Back to Purchases"
-                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#0E8CA8] hover:border-[#13B0D1]/50 hover:bg-[#13B0D1]/10 flex items-center justify-center transition-colors shadow-sm"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#B4780B] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
                         >
                             <ArrowLeft size={15} />
                         </button>
@@ -1429,7 +1429,7 @@ export default function AddPurchasePage() {
                         <span className="text-slate-300">/</span>
                         <span className="text-slate-600 truncate">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
                     </nav>
-                    {/* Secondary action — amber, so it reads as distinct from the cyan Save CTA. */}
+                    {/* Secondary action — a tint, so it reads as lighter than the solid Save CTA. */}
                     <Btn variant="secondary" className="shrink-0 text-[12px] py-1.5 px-3.5 !bg-[#F59E0B]/10 !border-[#F59E0B]/40 !text-[#B4780B] hover:!bg-[#F59E0B]/20 hover:!border-[#F59E0B]/60" onClick={openAddProduct}>
                         <Plus size={14} /> Add New Products
                     </Btn>
@@ -1452,7 +1452,7 @@ export default function AddPurchasePage() {
                             <div className="flex-1 min-w-0 w-full">
                                 <Card className="overflow-hidden">
                                     <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent flex items-center justify-between gap-3 flex-wrap">
-                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-[#0E8CA8]" /> Previous Purchase History</h3>
+                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-[#B4780B]" /> Previous Purchase History</h3>
                                         <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5" loading={histLoading} onClick={loadPrevHistory}>Show Previous History</Btn>
                                     </div>
                                     <div className="p-4 sm:p-5">
@@ -1552,7 +1552,7 @@ export default function AddPurchasePage() {
                                     </div>
 
                                     <div className="pt-3 space-y-2 border-t border-slate-100 mt-2">
-                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#13B0D1] hover:!bg-[#0E8CA8] shadow-sm shadow-[#13B0D1]/30" loading={saving} onClick={() => handleSave()}>
+                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#F59E0B] hover:!bg-[#B4780B] shadow-sm shadow-[#F59E0B]/30" loading={saving} onClick={() => handleSave()}>
                                             {editId ? 'Update Order' : 'Save Purchase'}
                                         </Btn>
                                         <div className="grid grid-cols-2 gap-2">
@@ -1579,7 +1579,7 @@ export default function AddPurchasePage() {
                         <p className="text-[13px] text-slate-500 mb-6">Your purchase order <b className="text-slate-900">{successOrder?.purchase_number}</b> has been recorded.</p>
                         <div className="flex flex-col gap-2">
                             <Btn className="w-full justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
-                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline">Create Another Order</button>
+                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#B4780B] hover:text-[#92600A] hover:underline">Create Another Order</button>
                         </div>
                     </div>
                 </Modal>

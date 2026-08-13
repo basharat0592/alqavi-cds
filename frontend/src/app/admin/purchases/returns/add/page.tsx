@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   ADMIN DESIGN SYSTEM - ADD RETURN (cyan / amber / slate)
+   ADMIN DESIGN SYSTEM - ADD RETURN (amber / slate)
    ───────────────────────────────────────────────────────────────────────────── */
 const inputCls = ui.inputBase;
 const selectCls = `${inputCls} cursor-pointer`;
@@ -101,7 +101,7 @@ const ProductSelector = ({ value, products, onSelect, disabled }: {
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Search products..."
-                                className="w-full h-9 pl-8 pr-3 text-[13px] bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10"
+                                className="w-full h-9 pl-8 pr-3 text-[13px] bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10"
                             />
                         </div>
                     </div>
@@ -112,7 +112,7 @@ const ProductSelector = ({ value, products, onSelect, disabled }: {
                             <div
                                 key={p.id}
                                 onClick={() => { onSelect(p); setOpen(false); }}
-                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#0E8CA8]/50 cursor-pointer border-b last:border-0 border-slate-100"
+                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#B4780B]/50 cursor-pointer border-b last:border-0 border-slate-100"
                             >
                                 <div className="w-9 h-9 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                                     {p.product_image ? (
@@ -328,7 +328,7 @@ export default function AddPurchaseReturnPage() {
                                     </select>
                                     
                                     <textarea
-                                        className="w-full h-24 px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 resize-none"
+                                        className="w-full h-24 px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 resize-none"
                                         value={form.reason}
                                         onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                                         placeholder="Write detailed manual reason here..."
@@ -343,7 +343,7 @@ export default function AddPurchaseReturnPage() {
                                         <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Return Items</h2>
                                         <p className="text-[12px] text-slate-500">Specify the products being returned and their refund prices.</p>
                                     </div>
-                                    <button onClick={addItem} className="text-[12px] text-[#0E8CA8] hover:text-[#0A6F85] font-bold flex items-center gap-1">
+                                    <button onClick={addItem} className="text-[12px] text-[#B4780B] hover:text-[#92600A] font-bold flex items-center gap-1">
                                         <Plus size={14} /> ADD ITEM
                                     </button>
                                 </div>

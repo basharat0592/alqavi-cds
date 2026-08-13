@@ -64,7 +64,7 @@ export default function AddRolePage() {
                 <form onSubmit={handleSubmit}>
                     <div className="p-6 md:p-8 space-y-6">
                         <div className="flex items-center gap-2 text-slate-900">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8]">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F59E0B]/10 text-[#B4780B]">
                                 <Shield className="h-5 w-5" />
                             </span>
                             <span className="text-[15px] font-bold tracking-tight">Role Details</span>
@@ -95,7 +95,7 @@ export default function AddRolePage() {
                                 onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                                 placeholder="Provide a brief description of what this role entails..."
                                 rows={4}
-                                className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 resize-none"
+                                className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 resize-none"
                             />
                         </div>
                     </div>

@@ -13,7 +13,7 @@ const LABEL = 'block text-[10px] font-bold text-slate-500 mb-1.5 uppercase track
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: any }) => (
     <div className="bg-slate-50/60 px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-        {Icon && <Icon className="w-5 h-5 text-[#0E8CA8]" />}
+        {Icon && <Icon className="w-5 h-5 text-[#B4780B]" />}
         <span className="text-sm font-bold text-slate-900 tracking-tight">{title}</span>
     </div>
 );
@@ -102,7 +102,7 @@ export default function AddCustomerPage() {
                     <SectionHeader title="Customer Details" icon={User} />
                     <div className="p-6 space-y-6">
                         <div className="flex items-center gap-4">
-                            <div className="relative w-20 h-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden group hover:border-[#13B0D1] transition-colors shrink-0">
+                            <div className="relative w-20 h-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden group hover:border-[#F59E0B] transition-colors shrink-0">
                                 {form.avatar ? (
                                     <>
                                         <img src={URL.createObjectURL(form.avatar)} className="w-full h-full object-cover" alt="" />
@@ -110,7 +110,7 @@ export default function AddCustomerPage() {
                                     </>
                                 ) : (
                                     <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
-                                        <Camera className="text-slate-300 group-hover:text-[#22C3E0]" size={18} />
+                                        <Camera className="text-slate-300 group-hover:text-[#FBBF24]" size={18} />
                                         <span className="text-[8px] font-bold uppercase text-slate-400 mt-1">Photo</span>
                                         <input type="file" className="hidden" accept="image/*" onChange={e => handle('avatar', e.target.files?.[0] || null)} />
                                     </label>

@@ -50,7 +50,7 @@ export function PageHeader({
                                     {c.label}
                                 </Link>
                             ) : (
-                                <span className={i === breadcrumbs.length - 1 ? 'text-[#0E8CA8]' : ''}>{c.label}</span>
+                                <span className={i === breadcrumbs.length - 1 ? 'text-[#B4780B]' : ''}>{c.label}</span>
                             )}
                         </React.Fragment>
                     ))}

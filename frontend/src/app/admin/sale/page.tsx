@@ -19,7 +19,7 @@ import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#13B0D1] border-[#13B0D1] hover:bg-[#0E8CA8] hover:border-[#13B0D1] text-white shadow-sm shadow-[#13B0D1]/20',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#B4780B] hover:border-[#F59E0B] text-white shadow-sm shadow-[#F59E0B]/20',
         secondary: 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 shadow-sm',
     };
     return (
@@ -90,7 +90,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0A6F85] transition-colors" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#92600A] transition-colors" />
                 <input
                     className={inputCls + " h-[42px] pl-10 pr-24 bg-white font-bold group-hover:bg-slate-50 transition-all"}
                     placeholder="Type product name or scan..."
@@ -130,9 +130,9 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                 <div
                                     key={p.id}
                                     onClick={() => { onSelect(p); setOpen(false); }}
-                                    className="flex items-center gap-4 p-3 hover:bg-[#0E8CA8]/50 cursor-pointer transition-colors border-b last:border-0 border-slate-100 group"
+                                    className="flex items-center gap-4 p-3 hover:bg-[#B4780B]/50 cursor-pointer transition-colors border-b last:border-0 border-slate-100 group"
                                 >
-                                    <div className="w-10 h-10 bg-white flex items-center justify-center rounded border border-slate-200 shrink-0 overflow-hidden group-hover:border-[#13B0D1]/40 transition-colors">
+                                    <div className="w-10 h-10 bg-white flex items-center justify-center rounded border border-slate-200 shrink-0 overflow-hidden group-hover:border-[#F59E0B]/40 transition-colors">
                                         {(p.image || p.catalog_image) ? (
                                             <img src={getImageUrl(p.image || p.catalog_image)} className="max-w-full max-h-full object-cover" alt="" />
                                         ) : (
@@ -142,7 +142,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-4">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-bold text-slate-900 truncate group-hover:text-[#0A6F85] transition-colors">
+                                                <p className="text-[13px] font-bold text-slate-900 truncate group-hover:text-[#92600A] transition-colors">
                                                     {(p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
                                                     {(p.weight || p.size) && (
                                                         <span className="ml-1.5 text-[10px] text-slate-500 font-normal">
@@ -166,7 +166,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                     </div>
                     <div className="p-2 bg-slate-50 border-t border-slate-100 flex justify-between items-center px-4">
                          <span className="text-[10px] font-bold text-slate-400 uppercase italic">Found {filtered.length} items</span>
-                         <button onClick={() => setOpen(false)} className="text-[11px] font-black text-[#0E8CA8] hover:text-[#0A6F85] hover:underline">Close List</button>
+                         <button onClick={() => setOpen(false)} className="text-[11px] font-black text-[#B4780B] hover:text-[#92600A] hover:underline">Close List</button>
                     </div>
                 </div>
             )}
@@ -203,7 +203,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) =>
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0A6F85]" />
+                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#92600A]" />
                 <input
                     className={inputCls + " pl-10 pr-10 cursor-pointer"}
                     placeholder="Search customer account..."
@@ -229,7 +229,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) =>
                             <div
                                 key={c.id}
                                 onClick={() => { onSelect(c); setOpen(false); }}
-                                className="flex items-center gap-3 p-3 hover:bg-[#0E8CA8]/50 cursor-pointer border-b last:border-0 border-slate-100"
+                                className="flex items-center gap-3 p-3 hover:bg-[#B4780B]/50 cursor-pointer border-b last:border-0 border-slate-100"
                             >
                                 <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
                                     {c.avatar ? (
@@ -667,7 +667,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500 font-medium animate-pulse flex flex-col items-center gap-4">
-                        <Loader2 size={32} className="animate-spin text-[#0E8CA8]" />
+                        <Loader2 size={32} className="animate-spin text-[#B4780B]" />
                         Syncing Terminal Catalog...
                     </div>
                 ) : (
@@ -741,10 +741,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         const gross = (parseInt(item.quantity as any) || 0) * (parseFloat(item.unit_price as any) || 0);
                                         const discAmt = gross - net;
                                         return (
-                                        <div key={i} className="bg-white border border-slate-200/70 rounded-xl p-3 sm:p-4 transition-all hover:border-[#13B0D1]/35 hover:shadow-sm animate-in slide-in-from-left-2 duration-300">
+                                        <div key={i} className="bg-white border border-slate-200/70 rounded-xl p-3 sm:p-4 transition-all hover:border-[#F59E0B]/35 hover:shadow-sm animate-in slide-in-from-left-2 duration-300">
                                             {/* Product + remove */}
                                             <div className="flex items-end gap-2.5">
-                                                <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8] text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-[#13B0D1]/15">{i + 1}</span>
+                                                <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-[#F59E0B]/15">{i + 1}</span>
                                                 <div className="flex-1 min-w-0">
                                                     <ProductSelector
                                                         selectedId={item.product}
@@ -763,7 +763,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 <div>
                                                     <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Qty {item.stock > 0 ? <span className="text-slate-300 normal-case">/ {item.stock}</span> : ''}</label>
                                                     <input
-                                                        className={inputCls + " text-center font-black text-[#0E8CA8]"}
+                                                        className={inputCls + " text-center font-black text-[#B4780B]"}
                                                         type="number" min="1"
                                                         value={item.quantity || ''}
                                                         onChange={e => updateQty(i, parseInt(e.target.value))}
@@ -848,7 +848,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                     key={m}
                                                     type="button"
                                                     onClick={() => setPayMode(m)}
-                                                    className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-[#13B0D1] bg-[#13B0D1]/70 text-[#0E8CA8] shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
+                                                    className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-[#F59E0B] bg-[#F59E0B]/70 text-[#B4780B] shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
                                                 >
                                                     {label}
                                                 </button>
@@ -859,7 +859,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <div className="mt-3">
                                             <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Payment Method</label>
                                             <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-                                                className="w-full h-[38px] px-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 bg-white font-medium">
+                                                className="w-full h-[38px] px-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white font-medium">
                                                 <option value="cash">Cash</option>
                                                 <option value="online">Online Transfer</option>
                                             </select>
@@ -875,7 +875,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                             <input
                                                                 type="number" min={0} max={grandTotal} value={amountPaidNow}
                                                                 onChange={e => setAmountPaidNow(e.target.value)} placeholder="0.00"
-                                                                className="w-full h-9 pl-8 pr-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 tabular-nums bg-white"
+                                                                className="w-full h-9 pl-8 pr-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 tabular-nums bg-white"
                                                             />
                                                         </div>
                                                     </div>
@@ -884,7 +884,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                     <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Balance Due Date</label>
                                                     <input
                                                         type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                                                        className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 bg-white"
+                                                        className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white"
                                                     />
                                                 </div>
                                                 <p className="flex items-start gap-1.5 text-[10.5px] text-amber-700 font-medium leading-snug">
@@ -905,14 +905,14 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                     <button
                                                         type="button"
                                                         onClick={() => setDiscountType('flat')}
-                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'flat' ? 'bg-white text-[#0E8CA8] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'flat' ? 'bg-white text-[#B4780B] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                                                     >
                                                         Rs
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={() => setDiscountType('percent')}
-                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'percent' ? 'bg-white text-[#0E8CA8] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'percent' ? 'bg-white text-[#B4780B] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                                                     >
                                                         %
                                                     </button>
@@ -925,7 +925,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 <input
                                                     type="number" min={0} value={discountVal}
                                                     onChange={e => setDiscountVal(e.target.value)} placeholder="0.00"
-                                                    className="w-full h-[38px] pl-8 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 bg-white transition-all font-medium"
+                                                    className="w-full h-[38px] pl-8 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white transition-all font-medium"
                                                 />
                                             </div>
                                         </div>
@@ -1054,7 +1054,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         </Button>
                         <button
                             onClick={() => setShowConfirm(false)}
-                            className="w-full text-[13px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline font-bold"
+                            className="w-full text-[13px] text-[#B4780B] hover:text-[#92600A] hover:underline font-bold"
                         >
                             Cancel & Review
                         </button>
@@ -1071,9 +1071,9 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">How is this fulfilled?</label>
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => setFinalizeMode('shipped')}
-                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'shipped' ? 'border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] ring-1 ring-[#13B0D1]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Shipped</button>
+                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'shipped' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Shipped</button>
                             <button type="button" onClick={() => setFinalizeMode('delivered')}
-                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'delivered' ? 'border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] ring-1 ring-[#13B0D1]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Mark as Delivered</button>
+                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'delivered' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Mark as Delivered</button>
                         </div>
                     </div>
 
@@ -1091,12 +1091,12 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-sky-600 uppercase tracking-widest"><MapPin size={12} /> Delivery</div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <input value={deliveryCustomerName} onChange={e => setDeliveryCustomerName(e.target.value)} placeholder="Customer name"
-                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#13B0D1] bg-white" />
+                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] bg-white" />
                                             <input value={deliveryCustomerPhone} onChange={e => setDeliveryCustomerPhone(e.target.value)} placeholder="Phone"
-                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#13B0D1] bg-white" />
+                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] bg-white" />
                                         </div>
                                         <textarea rows={2} value={deliveryCustomerAddress} onChange={e => setDeliveryCustomerAddress(e.target.value)} placeholder="Delivery address"
-                                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                     </div>
                                 </div>
                             ); })()}
@@ -1106,14 +1106,14 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Who delivers this?</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     <button type="button" onClick={() => setShipMode('specific')}
-                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] ring-1 ring-[#13B0D1]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Specific rider</button>
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Specific rider</button>
                                     <button type="button" onClick={() => setShipMode('all')}
-                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] ring-1 ring-[#13B0D1]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>All riders</button>
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>All riders</button>
                                 </div>
                             </div>
                             {shipMode === 'specific' ? (
                                 <select value={selectedRider} onChange={e => setSelectedRider(e.target.value)}
-                                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-800 outline-none focus:border-[#13B0D1] bg-white">
+                                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-800 outline-none focus:border-[#F59E0B] bg-white">
                                     <option value="">— Select a rider —</option>
                                     {[...riders].sort((a: any, b: any) => (b.is_system ? 1 : 0) - (a.is_system ? 1 : 0)).map((r: any) => (
                                         <option key={r.id} value={r.id}>{r.is_system ? '★ ' : ''}{r.name}{r.is_system ? ' · system' : ''}{r.phone ? ` · ${r.phone}` : ''}</option>
@@ -1130,7 +1130,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
                                         <input type="number" min="0" step="0.01" value={shipFee} onChange={e => setShipFee(e.target.value)} placeholder="0.00"
-                                            className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#13B0D1] bg-white" />
+                                            className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] bg-white" />
                                     </div>
                                 </div>
                             )}

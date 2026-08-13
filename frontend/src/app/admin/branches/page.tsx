@@ -204,7 +204,7 @@ export default function BranchesPage() {
 
                 {/* Global super admins */}
                 <Card className="p-5 mb-6 flex flex-wrap items-center gap-3">
-                    <span className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-[#0E8CA8]">
+                    <span className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-[#B4780B]">
                         <ShieldCheck size={15} /> Global (all branches)
                     </span>
                     {superAdmins.length === 0 ? (
@@ -261,7 +261,7 @@ export default function BranchesPage() {
                                             <Card key={wh.id} className="overflow-hidden">
                                                 <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
                                                     <div className="flex items-center gap-2.5 min-w-0">
-                                                        <div className="w-9 h-9 rounded-xl bg-[#13B0D1]/10 border border-[#13B0D1]/15 text-[#0E8CA8] flex items-center justify-center shrink-0">
+                                                        <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/15 text-[#B4780B] flex items-center justify-center shrink-0">
                                                             <Building2 size={17} />
                                                         </div>
                                                         <div className="min-w-0">
@@ -271,7 +271,7 @@ export default function BranchesPage() {
                                                     </div>
                                                     <div className="flex items-center gap-1.5 shrink-0">
                                                         <button onClick={() => openEdit(wh)} title="Edit branch"
-                                                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#0A6F85] hover:bg-[#13B0D1]/10 border border-slate-200 hover:border-[#13B0D1]/25 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#92600A] hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
                                                             <Pencil size={12} /> Edit
                                                         </button>
                                                         <button onClick={() => setDeleteTarget(wh)} title="Delete branch"
@@ -294,7 +294,7 @@ export default function BranchesPage() {
                                                             {admins.map(u => (
                                                                 <button key={u.id} onClick={() => router.push(`/admin/users/edit/${u.id}`)}
                                                                     title="View / edit this admin"
-                                                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-[#0E8CA8]/50 hover:border-[#13B0D1]/25 transition-colors text-left group">
+                                                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-[#B4780B]/50 hover:border-[#F59E0B]/25 transition-colors text-left group">
                                                                     <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[12px] font-bold text-slate-500">
                                                                         {u.avatar ? (
                                                                             <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
@@ -311,7 +311,7 @@ export default function BranchesPage() {
                                                                             {u.status && <Badge tone={String(u.status).toLowerCase() === 'active' ? 'green' : 'neutral'}>{u.status}</Badge>}
                                                                         </div>
                                                                     </div>
-                                                                    <ChevronRight size={16} className="text-slate-300 group-hover:text-[#0A6F85] group-hover:translate-x-0.5 transition-all shrink-0" />
+                                                                    <ChevronRight size={16} className="text-slate-300 group-hover:text-[#92600A] group-hover:translate-x-0.5 transition-all shrink-0" />
                                                                 </button>
                                                             ))}
                                                         </div>
@@ -330,7 +330,7 @@ export default function BranchesPage() {
                                                             <button
                                                                 type="button"
                                                                 onClick={() => router.push(`/admin/users/add?warehouse=${wh.id}`)}
-                                                                className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-[#0E8CA8] hover:bg-[#13B0D1]/10 border border-dashed border-[#13B0D1]/25 rounded-lg py-2 transition-colors"
+                                                                className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/25 rounded-lg py-2 transition-colors"
                                                             >
                                                                 <Plus size={13} /> Create new admin
                                                             </button>
@@ -472,7 +472,7 @@ export default function BranchesPage() {
                                     key={u.id}
                                     onClick={() => assignExisting(u, selectFor)}
                                     disabled={!!assigningId}
-                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-[#0E8CA8]/50 hover:border-[#13B0D1]/25 transition-colors text-left disabled:opacity-50"
+                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-[#B4780B]/50 hover:border-[#F59E0B]/25 transition-colors text-left disabled:opacity-50"
                                 >
                                     <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[11px] font-bold text-slate-500">
                                         {u.avatar ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
@@ -487,7 +487,7 @@ export default function BranchesPage() {
                                         </div>
                                     </div>
                                     {assigningId === u.id
-                                        ? <RefreshCw size={15} className="animate-spin text-[#0E8CA8] shrink-0" />
+                                        ? <RefreshCw size={15} className="animate-spin text-[#B4780B] shrink-0" />
                                         : <Plus size={15} className="text-slate-300 shrink-0" />}
                                 </button>
                             ))}

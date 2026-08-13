@@ -73,7 +73,7 @@ const DEFAULT_CONTENT: Record<string, any> = {
 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#13B0D1] hover:bg-[#0E8CA8] text-white border border-transparent shadow-sm shadow-[#13B0D1]/20',
+        primary: 'bg-[#F59E0B] hover:bg-[#B4780B] text-white border border-transparent shadow-sm shadow-[#F59E0B]/20',
         secondary: 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700',
     };
     return (
@@ -275,7 +275,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                     <div className="bg-slate-50/60 border-b border-slate-100 px-6 py-4 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
                             <span className="text-[15px] font-bold text-slate-900">Announcement Bar</span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#13B0D1]/10 text-[#0E8CA8] px-2.5 py-0.5 rounded-full border border-[#13B0D1]/15">Header Notification</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F59E0B]/10 text-[#B4780B] px-2.5 py-0.5 rounded-full border border-[#F59E0B]/15">Header Notification</span>
                         </div>
                         <div className="flex items-center gap-4">
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -286,7 +286,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     checked={!!announcementForm.show_announcement}
                                     onChange={() => setAnnouncementForm(f => ({ ...f, show_announcement: !f.show_announcement }))}
                                 />
-                                <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-[#13B0D1]' : 'bg-slate-300'}`}>
+                                <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
                                     <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
                                 </div>
                             </label>
@@ -365,7 +365,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             checked={!!announcementForm.announcement_scroll}
                                             onChange={() => setAnnouncementForm(f => ({ ...f, announcement_scroll: !f.announcement_scroll }))}
                                         />
-                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-[#13B0D1]' : 'bg-slate-300'}`}>
+                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
                                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.announcement_scroll ? 'left-[20px]' : 'left-0.5'}`} />
                                         </div>
                                     </label>
@@ -377,7 +377,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     value={announcementForm.announcement_scroll_speed}
                                     onChange={e => setAnnouncementForm(f => ({ ...f, announcement_scroll_speed: e.target.value }))}
                                     disabled={!announcementForm.announcement_scroll}
-                                    className="w-full h-9 px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-[#13B0D1] focus:ring-2 focus:ring-[#13B0D1]/20 disabled:bg-slate-50 disabled:text-slate-400"
+                                    className="w-full h-9 px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20 disabled:bg-slate-50 disabled:text-slate-400"
                                 >
                                     <option value="slow">Slow</option>
                                     <option value="medium">Medium</option>
@@ -448,11 +448,11 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                 <div className="bg-white divide-y divide-[#eee]">
                     {/* ── PINNED ANNOUNCEMENT BAR ROW (settings-backed, not a DB section) ── */}
                     {announcementAdded && (
-                        <div className="relative bg-[#13B0D1]/20">
+                        <div className="relative bg-[#F59E0B]/20">
                             {/* DESKTOP */}
                             <div className="hidden md:grid grid-cols-12 items-center px-6 py-4 w-full">
                                 <div className="col-span-1">
-                                    <span className="text-[9px] font-black uppercase tracking-wider text-[#0E8CA8] bg-[#13B0D1]/10 border border-[#13B0D1]/15 px-1.5 py-0.5 rounded">Pinned</span>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-[#B4780B] bg-[#F59E0B]/10 border border-[#F59E0B]/15 px-1.5 py-0.5 rounded">Pinned</span>
                                 </div>
                                 <div className="col-span-1">
                                     <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
@@ -470,7 +470,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     </div>
                                 </div>
                                 <div className="col-span-2 flex items-center justify-end gap-3">
-                                    <button onClick={() => setEditingAnnouncement(true)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                    <button onClick={() => setEditingAnnouncement(true)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
                                     <span className="text-[#e2e8f0]">|</span>
                                     <button onClick={removeAnnouncement} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                 </div>
@@ -479,7 +479,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                             <div className="flex md:hidden flex-col p-4 gap-3 w-full">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black uppercase tracking-wider text-[#0E8CA8] bg-[#13B0D1]/10 border border-[#13B0D1]/15 px-1.5 py-0.5 rounded">Pinned</span>
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-[#B4780B] bg-[#F59E0B]/10 border border-[#F59E0B]/15 px-1.5 py-0.5 rounded">Pinned</span>
                                         <p className="text-[14px] font-bold text-slate-900">Announcement Bar</p>
                                     </div>
                                     <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
@@ -492,7 +492,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         <span className={cn("text-[10px] font-black uppercase", announcementForm.show_announcement ? "text-green-700" : "text-gray-400")}>{announcementForm.show_announcement ? 'Live' : 'Hidden'}</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button onClick={() => setEditingAnnouncement(true)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#0E8CA8] hover:bg-slate-50">Edit</button>
+                                        <button onClick={() => setEditingAnnouncement(true)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#B4780B] hover:bg-slate-50">Edit</button>
                                         <button onClick={removeAnnouncement} className="h-[28px] px-3 border border-[#c40000]/20 rounded-lg text-[12px] font-bold text-[#c40000] hover:bg-red-50/50">Delete</button>
                                     </div>
                                 </div>
@@ -502,7 +502,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                     {sections.length === 0 && !announcementAdded ? (
                         <div className="p-16 text-center text-[#888]">
                             <p className="text-[14px]">No layout sections defined yet.</p>
-                            <button onClick={() => setShowAddModal(true)} className="text-[#0E8CA8] font-bold hover:underline mt-2">Get started by adding a hero section</button>
+                            <button onClick={() => setShowAddModal(true)} className="text-[#B4780B] font-bold hover:underline mt-2">Get started by adding a hero section</button>
                         </div>
                     ) : (
                         sections.map((s: WebsiteSection, idx: number) => {
@@ -543,13 +543,13 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             !s.is_visible && 'opacity-60 bg-slate-50/50',
                                             dragIndex === idx && 'bg-blue-50 border-blue-500 shadow-inner scale-[0.98]',
                                             dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-slate-50',
-                                            previewId === s.id && 'bg-[#13B0D1]/40 border-l-[#13B0D1]'
+                                            previewId === s.id && 'bg-[#F59E0B]/40 border-l-[#F59E0B]'
                                         )}>
 
                                         {/* Drop Indicator */}
                                         {dragOverIndex === idx && dragIndex !== idx && (
                                             <div className={cn(
-                                                "absolute left-0 w-full h-1 bg-[#13B0D1] z-50 rounded-full animate-pulse",
+                                                "absolute left-0 w-full h-1 bg-[#F59E0B] z-50 rounded-full animate-pulse",
                                                 dragIndex! < idx ? "bottom-0" : "top-0"
                                             )} />
                                         )}
@@ -564,14 +564,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                         disabled={idx === 0}
-                                                        className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-[#92600A] disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronUp size={16} strokeWidth={3} />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                         disabled={idx === sections.length - 1}
-                                                        className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-[#92600A] disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronDown size={16} strokeWidth={3} />
                                                     </button>
@@ -626,7 +626,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                 >
                                                     {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 </button>
-                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
                                                 <span className="text-[#e2e8f0]">|</span>
                                                 <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
@@ -643,14 +643,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                             disabled={idx === 0}
-                                                            className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-[#92600A] disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronUp size={16} strokeWidth={3} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                             disabled={idx === sections.length - 1}
-                                                            className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-[#92600A] disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronDown size={16} strokeWidth={3} />
                                                         </button>
@@ -705,7 +705,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     >
                                                         {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                     </button>
-                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#0E8CA8] hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
+                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#B4780B] hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
                                                     <button onClick={() => setDeletingId(s.id!)} className="h-[28px] px-3 border border-[#c40000]/20 rounded-lg text-[12px] font-bold text-[#c40000] hover:bg-red-50/50 transition-all flex items-center justify-center">Delete</button>
                                                 </div>
                                             </div>
@@ -755,7 +755,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {SECTION_TYPES.map(t => (
                                 <button key={t.type} onClick={() => addSection(t.type)}
-                                    className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-[#13B0D1]/35 hover:bg-[#0E8CA8]/40 transition-all group text-left">
+                                    className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-[#F59E0B]/35 hover:bg-[#B4780B]/40 transition-all group text-left">
                                     <span className="text-2xl w-10 h-10 bg-slate-50 flex items-center justify-center border border-slate-100 rounded-xl">{t.icon}</span>
                                     <div>
                                         <p className="font-bold text-slate-900 text-[14px]">{t.label}</p>
@@ -844,7 +844,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                                 <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
                             )}
                             <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
-                                <p className="text-[#13B0D1] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
+                                <p className="text-[#F59E0B] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
                                 <h3 className="text-4xl md:text-5xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
                                 <p className="text-slate-300 mt-4 max-w-lg text-sm leading-relaxed">{slides[0].description}</p>
                             </div>
@@ -1250,7 +1250,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                         <div className="flex flex-col justify-end gap-1.5">
                             <label className="text-[13px] font-bold text-[#111]">Visibility Status</label>
                             <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={form.is_visible} onChange={e => setForm(f => ({ ...f, is_visible: e.target.checked }))} className="rounded text-[#13B0D1] w-4 h-4" />
+                                <input type="checkbox" checked={form.is_visible} onChange={e => setForm(f => ({ ...f, is_visible: e.target.checked }))} className="rounded text-[#F59E0B] w-4 h-4" />
                                 <span className="text-[13px] text-[#64748B]">Show this section on the landing page</span>
                             </label>
                         </div>
@@ -1267,7 +1267,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
                                         <label className="text-[13px] font-bold text-[#111]">Carousel Slides ({(form.content.slides || []).length})</label>
                                         <button onClick={() => updateContent('slides', [...(form.content.slides || []), { title: 'New Slide', subtitle: '', description: '', media_type: 'image', image: '', cta_text: '', cta_link: '', color: '', thumbnail: '' }])}
-                                            className="text-[12px] font-bold text-[#0E8CA8] hover:underline">+ Add Slide</button>
+                                            className="text-[12px] font-bold text-[#B4780B] hover:underline">+ Add Slide</button>
                                     </div>
                                     <div className="space-y-4">
                                         {(form.content.slides || []).map((s: any, i: number) => (
@@ -1314,7 +1314,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             }}
                                                         />
                                                     )}
-                                                    <textarea placeholder="Description Text" rows={2} value={s.description} onChange={e => { const list = [...form.content.slides]; list[i].description = e.target.value; updateContent('slides', list); }} className="md:col-span-2 w-full min-h-[60px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                                    <textarea placeholder="Description Text" rows={2} value={s.description} onChange={e => { const list = [...form.content.slides]; list[i].description = e.target.value; updateContent('slides', list); }} className="md:col-span-2 w-full min-h-[60px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                                 </div>
                                             </div>
                                         ))}
@@ -1359,11 +1359,11 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         <label className="text-[13px] font-bold text-[#111]">Display Toggles</label>
                                         <div className="flex gap-6">
                                             <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#64748B]">
-                                                <input type="checkbox" checked={form.content.show_price} onChange={e => updateContent('show_price', e.target.checked)} className="rounded text-[#13B0D1]" />
+                                                <input type="checkbox" checked={form.content.show_price} onChange={e => updateContent('show_price', e.target.checked)} className="rounded text-[#F59E0B]" />
                                                 Show Prices
                                             </label>
                                             <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#64748B]">
-                                                <input type="checkbox" checked={form.content.show_stock} onChange={e => updateContent('show_stock', e.target.checked)} className="rounded text-[#13B0D1]" />
+                                                <input type="checkbox" checked={form.content.show_stock} onChange={e => updateContent('show_stock', e.target.checked)} className="rounded text-[#F59E0B]" />
                                                 Stock Status
                                             </label>
                                         </div>
@@ -1392,7 +1392,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 onFocus={() => setIsDropdownOpen(true)}
                                                 onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                                className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#13B0D1] text-[13px] shadow-inner"}
+                                                className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#F59E0B] text-[13px] shadow-inner"}
                                             />
 
                                             {/* Dropdown Results */}
@@ -1438,7 +1438,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     const p = products.find((prod: any) => prod.id === id);
                                                     if (!p) return null;
                                                     return (
-                                                        <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#13B0D1]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                        <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#F59E0B]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
                                                             <div className="w-12 h-12 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0">
                                                                 <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                             </div>
@@ -1491,7 +1491,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 {form.content.description !== undefined && (
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-bold text-[#111]">Description</label>
-                                        <textarea rows={3} value={form.content.description} onChange={e => updateContent('description', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                        <textarea rows={3} value={form.content.description} onChange={e => updateContent('description', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                     </div>
                                 )}
                                 <div className="grid md:grid-cols-2 gap-4">
@@ -1529,7 +1529,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         }}
                                                         className={cn(
                                                             "flex items-center gap-3 p-2 border rounded-lg text-left transition-all",
-                                                            isSelected ? "border-[#13B0D1] bg-[#e6f7fb]" : "border-[#e2e8f0] hover:border-[#888]"
+                                                            isSelected ? "border-[#F59E0B] bg-[#fef3e2]" : "border-[#e2e8f0] hover:border-[#888]"
                                                         )}>
                                                         <div className="w-10 h-10 bg-white border border-[#eee] rounded-[2px] overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
@@ -1538,7 +1538,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             <p className="text-[12px] font-bold text-[#111] truncate">{p.name || p.product_name}</p>
                                                             {(p.batch || p.batch_number) && <p className="text-[9px] text-[#888]">Batch: {p.batch || p.batch_number}</p>}
                                                         </div>
-                                                        {isSelected && <div className="ml-auto text-[#13B0D1]"><CheckCircle size={14} /></div>}
+                                                        {isSelected && <div className="ml-auto text-[#F59E0B]"><CheckCircle size={14} /></div>}
                                                     </button>
                                                 );
                                             })}
@@ -1590,7 +1590,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             onFocus={() => setIsDropdownOpen(true)}
                                             onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                            className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#13B0D1] text-[13px] shadow-inner"}
+                                            className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#F59E0B] text-[13px] shadow-inner"}
                                         />
 
                                         {/* Dropdown Results */}
@@ -1636,7 +1636,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 const p = products.find((prod: any) => prod.id === id);
                                                 if (!p) return null;
                                                 return (
-                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#13B0D1]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#F59E0B]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
                                                         <div className="w-12 h-12 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                         </div>
@@ -1673,7 +1673,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 <MediaField label="Banner Image" value={form.content.image} onChange={(url: string) => updateContent('image', url)} />
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Our Story</label>
-                                    <textarea rows={6} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                    <textarea rows={6} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                 </div>
                             </div>
                         )}
@@ -1715,13 +1715,13 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         }}
                                                         className={cn(
                                                             "flex flex-col items-center gap-2 p-3 border rounded-lg text-center transition-all",
-                                                            isSelected ? "border-[#13B0D1] bg-[#e6f7fb]" : "border-[#e2e8f0] hover:border-[#888]"
+                                                            isSelected ? "border-[#F59E0B] bg-[#fef3e2]" : "border-[#e2e8f0] hover:border-[#888]"
                                                         )}>
                                                         <div className="w-12 h-12 bg-white border border-[#eee] rounded-full overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(cat.image)} className="w-full h-full object-cover" />
                                                         </div>
                                                         <p className="text-[11px] font-bold text-[#111] truncate w-full">{cat.name}</p>
-                                                        {isSelected && <CheckCircle size={12} className="text-[#13B0D1]" />}
+                                                        {isSelected && <CheckCircle size={12} className="text-[#F59E0B]" />}
                                                     </button>
                                                 );
                                             })}
@@ -1735,7 +1735,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 const key = form.content.items ? 'items' : 'logos';
                                                 const newItem = key === 'items' ? { title: '', image: '', link: '' } : '';
                                                 updateContent(key, [...(form.content[key] || []), newItem]);
-                                            }} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">+ Add Item</button>
+                                            }} className="text-[12px] font-bold text-[#B4780B] hover:underline">+ Add Item</button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             {(form.content.items || form.content.logos || []).map((item: any, i: number) => (
@@ -1785,7 +1785,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     section.section_type === 'testimonials' ? { name: '', role: '', text: '', rating: 5, image: '' } :
                                                         { title: '', text: '' };
                                             updateContent(key, [...(form.content[key] || []), newItem]);
-                                        }} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">+ Add Entry</button>
+                                        }} className="text-[12px] font-bold text-[#B4780B] hover:underline">+ Add Entry</button>
                                     </div>
                                     <div className="grid gap-3">
                                         {(form.content.items || form.content.reviews || []).map((item: any, i: number) => (
@@ -1833,7 +1833,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.reviews];
                                                             list[i].text = e.target.value;
                                                             updateContent('reviews', list);
-                                                        }} className="md:col-span-2 w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                                        }} className="md:col-span-2 w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                                     </div>
                                                 ) : section.section_type === 'stats' ? (
                                                     <div className="grid md:grid-cols-2 gap-4">
@@ -1865,7 +1865,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.items];
                                                             list[i].a = e.target.value;
                                                             updateContent('items', list);
-                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-3">
@@ -1878,7 +1878,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.items];
                                                             list[i].text = e.target.value;
                                                             updateContent('items', list);
-                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                                     </div>
                                                 )}
                                             </div>
@@ -1892,7 +1892,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                             <div className="space-y-6">
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Scrolling Text</label>
-                                    <textarea rows={3} value={form.content.text} onChange={e => updateContent('text', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                    <textarea rows={3} value={form.content.text} onChange={e => updateContent('text', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Scroll Speed</label>
@@ -1922,7 +1922,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     </div>
                                     <div className="md:col-span-2 space-y-1.5">
                                         <label className="text-[13px] font-bold text-[#111]">Physical Address</label>
-                                        <textarea rows={2} value={form.content.address} onChange={e => updateContent('address', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                        <textarea rows={2} value={form.content.address} onChange={e => updateContent('address', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                     </div>
                                 </div>
                             </div>
@@ -1949,7 +1949,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             }
                                             updateContent('iframe_url', val);
                                         }}
-                                        className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[11px] font-mono outline-none focus:border-[#13B0D1] bg-white resize-none"
+                                        className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[11px] font-mono outline-none focus:border-[#F59E0B] bg-white resize-none"
                                     />
                                     <p className="text-[10px] text-slate-400 italic">Go to Google Maps &gt; Share &gt; Embed a map &gt; Copy HTML and paste it here.</p>
                                 </div>
@@ -1966,13 +1966,13 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-[#111]">Body Text</label>
-                                            <textarea rows={4} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
+                                            <textarea rows={4} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
                                         </div>
                                     </div>
                                     <div className="space-y-6">
                                         <MediaField label="Banner Image" value={form.content.image} onChange={(url: string) => updateContent('image', url)} />
                                         <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={form.content.reversed} onChange={e => updateContent('reversed', e.target.checked)} className="rounded text-[#13B0D1]" />
+                                            <input type="checkbox" checked={form.content.reversed} onChange={e => updateContent('reversed', e.target.checked)} className="rounded text-[#F59E0B]" />
                                             <span className="text-[13px] font-bold text-[#111]">Reverse Layout (Image on Right)</span>
                                         </label>
                                     </div>
@@ -1988,7 +1988,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Custom HTML / Script Code</label>
-                                    <textarea rows={10} value={form.content.code} onChange={e => updateContent('code', e.target.value)} className="w-full font-mono text-[12px] px-3 py-2 border border-[#cbd5e1] rounded-lg outline-none focus:border-[#13B0D1] bg-[#1e1e1e] text-green-400 resize-none" />
+                                    <textarea rows={10} value={form.content.code} onChange={e => updateContent('code', e.target.value)} className="w-full font-mono text-[12px] px-3 py-2 border border-[#cbd5e1] rounded-lg outline-none focus:border-[#F59E0B] bg-[#1e1e1e] text-green-400 resize-none" />
                                 </div>
                             </div>
                         )}
@@ -1996,7 +1996,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                 </div>
 
                 <div className="bg-[#f8fafc] border-t border-[#e2e8f0] px-8 py-4 flex justify-between items-center">
-                    <button onClick={onClose} className="text-[13px] font-bold text-[#0E8CA8] hover:underline">Dismiss Changes</button>
+                    <button onClick={onClose} className="text-[13px] font-bold text-[#B4780B] hover:underline">Dismiss Changes</button>
                     <div className="flex gap-2">
                         <AmazonBtn variant="secondary" onClick={onClose}>Cancel</AmazonBtn>
                         <AmazonBtn onClick={save} loading={saving} className="min-w-[140px]">Update Section</AmazonBtn>

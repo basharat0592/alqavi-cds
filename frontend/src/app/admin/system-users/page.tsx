@@ -154,7 +154,7 @@ export default function SystemUsersPage() {
                                         <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-[#13B0D1]/10 border border-[#13B0D1]/15 text-[#0E8CA8] flex items-center justify-center font-bold text-[13px] shrink-0">
+                                                    <div className="h-10 w-10 rounded-full bg-[#F59E0B]/10 border border-[#F59E0B]/15 text-[#B4780B] flex items-center justify-center font-bold text-[13px] shrink-0">
                                                         {(fullName(u)[0] || 'U').toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0">

@@ -111,7 +111,7 @@ export function Checkbox({
             checked={checked}
             onChange={onChange}
             onClick={(e) => e.stopPropagation()}
-            className={`w-4 h-4 accent-[#0E8CA8] cursor-pointer rounded border-slate-300 ${className}`}
+            className={`w-4 h-4 accent-[#B4780B] cursor-pointer rounded border-slate-300 ${className}`}
         />
     );
 }
@@ -198,7 +198,7 @@ export function BulkBar({
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] animate-in slide-in-from-bottom-4 fade-in duration-300">
                 <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700/50">
                     <div className="flex items-center gap-2 pl-2 pr-3 border-r border-white/15">
-                        <CheckSquare size={16} className="text-[#22C3E0]" />
+                        <CheckSquare size={16} className="text-[#FBBF24]" />
                         <span className="text-[13px] font-bold tabular-nums">{sel.count}</span>
                         <span className="text-[12px] text-slate-300">selected</span>
                     </div>

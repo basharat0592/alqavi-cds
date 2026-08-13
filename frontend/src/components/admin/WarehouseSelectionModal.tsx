@@ -88,7 +88,7 @@ export const WarehouseSelectionModal = ({
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
                             placeholder="Search branch by name or location..."
-                            className="w-full h-[38px] pl-9 pr-3 border border-slate-300 rounded-lg text-[13px] outline-none focus:border-[#13B0D1] focus:ring-1 focus:ring-[#13B0D1]/20 transition-all"
+                            className="w-full h-[38px] pl-9 pr-3 border border-slate-300 rounded-lg text-[13px] outline-none focus:border-[#F59E0B] focus:ring-1 focus:ring-[#F59E0B]/20 transition-all"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             autoFocus
@@ -100,7 +100,7 @@ export const WarehouseSelectionModal = ({
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#fcfcfc] custom-scrollbar">
                     {fetching ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-3">
-                            <Loader2 className="h-8 w-8 text-[#13B0D1] animate-spin" />
+                            <Loader2 className="h-8 w-8 text-[#F59E0B] animate-spin" />
                             <p className="text-[13px] text-slate-500 font-medium">Fetching available branches...</p>
                         </div>
                     ) : filtered.length === 0 ? (
@@ -176,7 +176,7 @@ export const WarehouseSelectionModal = ({
                             h-[31px] px-8 text-[13px] font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all
                             ${!selectedId || loading
                                 ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                                : 'bg-[#13B0D1] border border-[#13B0D1] text-white hover:bg-[#0E8CA8] hover:border-[#0E8CA8] active:shadow-inner'}
+                                : 'bg-[#F59E0B] border border-[#F59E0B] text-white hover:bg-[#B4780B] hover:border-[#B4780B] active:shadow-inner'}
                         `}
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}
