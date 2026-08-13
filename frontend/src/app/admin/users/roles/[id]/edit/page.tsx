@@ -58,7 +58,7 @@ export default function EditRolePage() {
     if (fetching) {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-[#0E8CA8]" />
                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Loading Role</p>
             </div>
         );
@@ -105,7 +105,7 @@ export default function EditRolePage() {
                             onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                             placeholder="Provide a brief description of what this role entails..."
                             rows={4}
-                            className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 resize-none"
+                            className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 resize-none"
                         />
                     </div>
                 </div>

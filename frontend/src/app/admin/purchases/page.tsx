@@ -23,14 +23,14 @@ import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionMo
 import { PageHeader, Card, Button, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, Pagination } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   ADMIN DESIGN SYSTEM - PURCHASES (indigo accent, slate neutrals)
+   ADMIN DESIGN SYSTEM - PURCHASES (cyan accent, amber secondary, slate neutrals)
    ───────────────────────────────────────────────────────────────────────────── */
 const inputCls = ui.inputBase;
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; icon: any; dot: string }> = {
     PENDING: { label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', icon: Clock },
     PROCESSING: { label: 'Processing', cls: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500', icon: RefreshCw },
-    SHIPPED: { label: 'Shipped', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200', dot: 'bg-indigo-500', icon: Truck },
+    SHIPPED: { label: 'Shipped', cls: 'bg-[#13B0D1]/10 text-[#0E8CA8] border-[#13B0D1]/25', dot: 'bg-[#13B0D1]', icon: Truck },
     DELIVERED: { label: 'Delivered', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', icon: CheckCircle },
     RECEIVED: { label: 'Received', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', icon: Package },
     CANCELLED: { label: 'Cancelled', cls: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500', icon: XIcon },
@@ -117,7 +117,7 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
                                         setIsOpen(false);
                                     }}
                                     className={`w-full flex items-center gap-4 px-5 py-2.5 text-[12px] font-bold text-left transition-all
-                                        ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:pl-7'}
+                                        ${isActive ? 'bg-[#13B0D1]/10 text-[#0E8CA8]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 hover:pl-7'}
                                     `}
                                 >
                                     <div className={`p-2 rounded-xl border shadow-sm transition-transform ${cfg.cls} ${isActive ? 'scale-110 shadow-md' : 'group-hover:scale-105'}`}>
@@ -125,7 +125,7 @@ const StatusDropdown = ({ status, onStatusChange }: { status: string; onStatusCh
                                     </div>
                                     <span className="uppercase tracking-wider text-[11px]">{cfg.label}</span>
                                     {isActive && (
-                                        <div className="ml-auto bg-indigo-600 p-1 rounded-full shadow-sm">
+                                        <div className="ml-auto bg-[#13B0D1] p-1 rounded-full shadow-sm">
                                             <Check size={10} className="text-white" strokeWidth={3} />
                                         </div>
                                     )}
@@ -378,7 +378,7 @@ export default function PurchasesPage() {
                             <button
                                 type="button"
                                 onClick={() => setPaymentDropdownOpen(!paymentDropdownOpen)}
-                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 transition-all cursor-pointer select-none text-left"
+                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-[#13B0D1] transition-all cursor-pointer select-none text-left"
                             >
                                 <span className="capitalize">{paymentFilter === 'All' ? 'All Payments' : paymentFilter}</span>
                                 <ChevronDown size={14} className="text-slate-400" />
@@ -394,7 +394,7 @@ export default function PurchasesPage() {
                                                     setPaymentFilter(val);
                                                     setPaymentDropdownOpen(false);
                                                 }}
-                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors capitalize ${paymentFilter === val ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors capitalize ${paymentFilter === val ? 'bg-[#13B0D1]/10 text-[#0E8CA8]' : ''}`}
                                             >
                                                 {val === 'All' ? 'All Payments' : val}
                                             </div>
@@ -410,7 +410,7 @@ export default function PurchasesPage() {
                             <button
                                 type="button"
                                 onClick={() => setSupplierDropdownOpen(!supplierDropdownOpen)}
-                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-indigo-400 transition-all cursor-pointer select-none text-left"
+                                className="w-full h-10 px-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-semibold text-slate-700 outline-none focus:border-[#13B0D1] transition-all cursor-pointer select-none text-left"
                             >
                                 <span className="truncate block max-w-[140px]">
                                     {companyFilter === 'All' ? 'All Companies' : (companies.find((c: any) => String(c.id) === String(companyFilter))?.name || 'All Companies')}
@@ -423,7 +423,7 @@ export default function PurchasesPage() {
                                     <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg z-[110] divide-y divide-slate-100 text-[13px] font-semibold text-slate-700 animate-in fade-in slide-in-from-top-1 duration-150">
                                         <div
                                             onClick={() => { setCompanyFilter('All'); setSupplierDropdownOpen(false); }}
-                                            className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors ${companyFilter === 'All' ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                            className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors ${companyFilter === 'All' ? 'bg-[#13B0D1]/10 text-[#0E8CA8]' : ''}`}
                                         >
                                             All Companies
                                         </div>
@@ -431,7 +431,7 @@ export default function PurchasesPage() {
                                             <div
                                                 key={c.id}
                                                 onClick={() => { setCompanyFilter(String(c.id)); setSupplierDropdownOpen(false); }}
-                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors truncate ${String(companyFilter) === String(c.id) ? 'bg-indigo-50 text-indigo-700' : ''}`}
+                                                className={`px-4 py-2.5 cursor-pointer hover:bg-slate-50 transition-colors truncate ${String(companyFilter) === String(c.id) ? 'bg-[#13B0D1]/10 text-[#0E8CA8]' : ''}`}
                                             >
                                                 {c.name}
                                             </div>
@@ -456,7 +456,7 @@ export default function PurchasesPage() {
                 <div className="md:hidden space-y-3 mb-6">
                     {loading && filtered.length === 0 ? (
                         <Card className="py-16 text-center">
-                            <Loader2 size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
+                            <Loader2 size={32} className="animate-spin text-[#0E8CA8] mx-auto mb-3" />
                             <p className="text-[13px] text-slate-600 font-medium italic">Loading purchases...</p>
                         </Card>
                     ) : filtered.length === 0 ? (
@@ -480,7 +480,7 @@ export default function PurchasesPage() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-2">
-                                            <h3 className="text-[14px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>
+                                            <h3 className="text-[14px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>
                                                 #{p.purchase_number}
                                             </h3>
                                             <div className="text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(p.total_amount)}</div>
@@ -506,14 +506,14 @@ export default function PurchasesPage() {
                                     </div>
                                     <div className="space-y-1 text-right flex flex-col items-end">
                                         <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block">Payment Status</span>
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : p.payment_status?.toLowerCase() === 'partial' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : p.payment_status?.toLowerCase() === 'partial' ? 'text-[#0E8CA8] bg-[#13B0D1]/10 border-[#13B0D1]/25' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>
                                             {p.payment_status || 'UNPAID'}
                                         </span>
 
                                         {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setPayModal({ open: true, purchase: p }); }}
-                                                className="mt-1 text-[9px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2 py-0.5 rounded-lg shadow-sm transition-all uppercase whitespace-nowrap"
+                                                className="mt-1 text-[9px] font-bold bg-[#13B0D1] hover:bg-[#0E8CA8] text-white px-2 py-0.5 rounded-lg shadow-sm transition-all uppercase whitespace-nowrap"
                                             >
                                                 {p.payment_status?.toLowerCase() === 'partial' ? 'Pay Bal' : 'Pay Now'}
                                             </button>
@@ -542,7 +542,7 @@ export default function PurchasesPage() {
                                     <span className="text-slate-300">|</span>
                                     <button
                                         onClick={() => router.push(`/admin/purchases/${p.id}/invoice`)}
-                                        className="text-[12px] font-bold text-indigo-600 hover:underline inline-flex items-center gap-1"
+                                        className="text-[12px] font-bold text-[#0E8CA8] hover:underline inline-flex items-center gap-1"
                                     >
                                         <Printer size={12} /> Print
                                     </button>
@@ -592,10 +592,10 @@ export default function PurchasesPage() {
                                 <tr><td colSpan={8} className="py-20 text-center text-[13px] text-slate-500">No purchases found.</td></tr>
                             ) : (
                                 paginated.map((p: any) => (
-                                    <tr key={p.id} className="hover:bg-indigo-50/40 transition-colors group text-[13px]">
+                                    <tr key={p.id} className="hover:bg-[#0E8CA8]/40 transition-colors group text-[13px]">
                                         <RowCheckboxTd sel={sel} id={p.id} />
                                         <td className="px-6 py-4">
-                                            <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-indigo-400 transition-colors">
+                                            <div className="w-12 h-12 bg-white rounded-lg border border-slate-200 overflow-hidden flex items-center justify-center group-hover:border-[#13B0D1] transition-colors">
                                                 {(() => {
                                                     const img = p.items?.[0]?.product_image;
                                                     return img ? (
@@ -607,7 +607,7 @@ export default function PurchasesPage() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>#{p.purchase_number}</div>
+                                            <div className="font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer" onClick={() => handleViewDetails(p.id)}>#{p.purchase_number}</div>
                                             <div className="text-[11px] text-slate-500 font-bold mt-1 uppercase tracking-tight">{formatDateTime(p.created_at || p.order_date || p.date)}</div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -639,14 +639,14 @@ export default function PurchasesPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col gap-0.5 items-start">
-                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : p.payment_status?.toLowerCase() === 'partial' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>
+                                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${p.payment_status?.toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : p.payment_status?.toLowerCase() === 'partial' ? 'text-[#0E8CA8] bg-[#13B0D1]/10 border-[#13B0D1]/25' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>
                                                     {p.payment_status || 'UNPAID'}
                                                 </span>
 
                                                 {(!p.payment_status || p.payment_status.toLowerCase() !== 'paid') && (
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setPayModal({ open: true, purchase: p }); }}
-                                                        className="mt-1 text-[10px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded-lg shadow-sm transition-all w-fit uppercase"
+                                                        className="mt-1 text-[10px] font-bold bg-[#13B0D1] hover:bg-[#0E8CA8] text-white px-2.5 py-1 rounded-lg shadow-sm transition-all w-fit uppercase"
                                                     >
                                                         {p.payment_status?.toLowerCase() === 'partial' ? 'Pay Balance' : 'Pay Now'}
                                                     </button>
@@ -672,7 +672,7 @@ export default function PurchasesPage() {
                                             <div className="flex items-center justify-end gap-2.5 transition-opacity">
                                                 <button onClick={() => handleViewDetails(p.id)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                 <span className="text-slate-300">|</span>
-                                                <button onClick={() => router.push(`/admin/purchases/${p.id}/invoice`)} className="text-[12px] font-bold text-indigo-600 hover:underline inline-flex items-center gap-1"><Printer size={12} /> Print</button>
+                                                <button onClick={() => router.push(`/admin/purchases/${p.id}/invoice`)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline inline-flex items-center gap-1"><Printer size={12} /> Print</button>
                                                 <span className="text-slate-300">|</span>
                                                 <button onClick={() => setDeleteRow(p)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
@@ -709,7 +709,7 @@ export default function PurchasesPage() {
                         <div className="border-b border-slate-100 px-6 py-4 flex justify-between items-center bg-white shrink-0">
                             <div className="flex flex-col gap-1">
                                 <h2 className="text-[16px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                    Purchase Order <span className="text-indigo-600">#{viewRow.purchase_number}</span>
+                                    Purchase Order <span className="text-[#0E8CA8]">#{viewRow.purchase_number}</span>
                                 </h2>
                                 <p className="text-[11px] text-slate-500 font-semibold flex items-center gap-1.5">
                                     <Calendar size={12} className="text-slate-300" /> {formatDateTime(viewRow.created_at || viewRow.order_date || viewRow.date)}
@@ -771,7 +771,7 @@ export default function PurchasesPage() {
                                                         <td className="px-3 py-2.5 text-right tabular-nums text-slate-700 font-semibold">{formatCurrency(price)}</td>
                                                         <td className="px-3 py-2.5 text-right tabular-nums text-slate-600">{formatCurrency(item.selling_price || 0)}</td>
                                                         <td className="px-3 py-2.5 text-right tabular-nums text-slate-600">{formatCurrency(item.retail_rate || 0)}</td>
-                                                        <td className="px-3 py-2.5 text-right font-bold text-indigo-600 tabular-nums">{formatCurrency(subtotal)}</td>
+                                                        <td className="px-3 py-2.5 text-right font-bold text-[#0E8CA8] tabular-nums">{formatCurrency(subtotal)}</td>
                                                     </tr>
                                                 );
                                             })}
@@ -796,7 +796,7 @@ export default function PurchasesPage() {
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Status</p>
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <StatusPill status={viewRow.status} />
-                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${(viewRow.payment_status || 'UNPAID').toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : (viewRow.payment_status || '').toLowerCase() === 'partial' ? 'text-indigo-700 bg-indigo-50 border-indigo-200' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>{viewRow.payment_status || 'UNPAID'}</span>
+                                            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${(viewRow.payment_status || 'UNPAID').toLowerCase() === 'paid' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : (viewRow.payment_status || '').toLowerCase() === 'partial' ? 'text-[#0E8CA8] bg-[#13B0D1]/10 border-[#13B0D1]/25' : 'text-slate-500 bg-slate-50 border-slate-200'}`}>{viewRow.payment_status || 'UNPAID'}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -809,7 +809,7 @@ export default function PurchasesPage() {
                                     <div className="flex justify-between text-slate-600"><span>Subtotal</span><span className="tabular-nums">{formatCurrency((viewRow.total_amount || 0) - (viewRow.tax_amount || 0) - (viewRow.shipping_cost || 0))}</span></div>
                                     <div className="flex justify-between text-slate-600"><span>Shipping</span><span className="tabular-nums">{formatCurrency(viewRow.shipping_cost || 0)}</span></div>
                                     <div className="flex justify-between text-slate-600"><span>Tax</span><span className="tabular-nums">{formatCurrency(viewRow.tax_amount || 0)}</span></div>
-                                    <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-100 mt-2 text-[15px]"><span>Total</span><span className="text-indigo-600 tabular-nums">{formatCurrency(viewRow.total_amount || 0)}</span></div>
+                                    <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-100 mt-2 text-[15px]"><span>Total</span><span className="text-[#0E8CA8] tabular-nums">{formatCurrency(viewRow.total_amount || 0)}</span></div>
                                 </div>
                                 {(() => {
                                     const total = Number(viewRow.total_amount || 0);
@@ -969,7 +969,7 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                     <div>
                         <h2 className="text-[17px] font-bold text-slate-900 tracking-tight">Record Payment</h2>
                         <p className="text-[13px] text-slate-600 mt-0.5">
-                            Purchase Order <span className="font-bold text-indigo-600">#{purchase.purchase_number}</span> • {formatCurrency(total)}
+                            Purchase Order <span className="font-bold text-[#0E8CA8]">#{purchase.purchase_number}</span> • {formatCurrency(total)}
                             {remaining > 0 && remaining < total && (
                                 <span className="text-rose-600 font-bold"> · Balance {formatCurrency(remaining)}</span>
                             )}
@@ -1045,20 +1045,20 @@ const PaymentModal = ({ isOpen, purchase, onClose, onSubmit, loading }: any) => 
                                             {paymentStatus === 'PAID' ? 'Paying Now (full balance)' : 'This Payment'}
                                         </span>
                                         {paymentStatus === 'PARTIAL' ? (
-                                            <div className="flex items-center text-[20px] font-bold text-indigo-600">
+                                            <div className="flex items-center text-[20px] font-bold text-[#0E8CA8]">
                                                 <span className="mr-1 text-[15px]">Rs.</span>
                                                 <input
                                                     type="number"
                                                     autoFocus
                                                     max={remaining}
-                                                    className="bg-transparent outline-none w-28 text-right border-b border-dotted border-indigo-500 focus:border-solid tabular-nums"
+                                                    className="bg-transparent outline-none w-28 text-right border-b border-dotted border-[#13B0D1] focus:border-solid tabular-nums"
                                                     value={thisPayment || ''}
                                                     placeholder="0"
                                                     onChange={e => setThisPayment(Math.min(remaining, parseFloat(e.target.value) || 0))}
                                                 />
                                             </div>
                                         ) : (
-                                            <span className="text-[20px] font-bold text-indigo-600 tabular-nums">{formatCurrency(remaining)}</span>
+                                            <span className="text-[20px] font-bold text-[#0E8CA8] tabular-nums">{formatCurrency(remaining)}</span>
                                         )}
                                     </div>
                                     <div className="flex items-center justify-between pt-2.5 border-t border-slate-200">

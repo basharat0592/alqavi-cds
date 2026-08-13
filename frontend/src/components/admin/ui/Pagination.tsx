@@ -82,7 +82,7 @@ export function Pagination({
                                 className={cn(
                                     btn,
                                     p === page
-                                        ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/25'
+                                        ? 'bg-[#13B0D1] text-white shadow-sm shadow-[#13B0D1]/25'
                                         : 'text-slate-600 hover:bg-slate-100',
                                 )}
                                 aria-current={p === page ? 'page' : undefined}

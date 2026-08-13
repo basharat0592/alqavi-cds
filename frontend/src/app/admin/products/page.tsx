@@ -239,11 +239,11 @@ export default function ProductsPage() {
                                                         <div>
                                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                                                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                                                                    <div className="text-[14px] font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
+                                                                    <div className="text-[14px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
                                                                         {prod.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                                     </div>
                                                                     {(prod.weight || prod.size) && (
-                                                                        <span className="text-[10px] text-indigo-600 font-black uppercase tracking-tight shrink-0">
+                                                                        <span className="text-[10px] text-[#0E8CA8] font-black uppercase tracking-tight shrink-0">
                                                                             — {prod.weight}{prod.weight && prod.size ? ' • ' : ''}{prod.size}
                                                                         </span>
                                                                     )}
@@ -291,7 +291,7 @@ export default function ProductsPage() {
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
                                                     <div className="flex items-center justify-end gap-2.5 transition-opacity">
-                                                        <button onClick={() => router.push(`/admin/products/edit/${prod.id}`)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                        <button onClick={() => router.push(`/admin/products/edit/${prod.id}`)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
                                                         <span className="text-slate-300">|</span>
                                                         <button onClick={() => setDeleteProd(prod)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                     </div>
@@ -309,9 +309,9 @@ export default function ProductsPage() {
                         <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-200/70 flex items-center justify-between">
                             <p className="text-[11px] text-slate-500 italic">Showing {products.length} of {totalCount} products</p>
                             <div className="flex items-center gap-1">
-                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1 disabled:opacity-30 text-indigo-600 hover:bg-white rounded-lg transition-colors"><ChevronLeft size={20} /></button>
+                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1 disabled:opacity-30 text-[#0E8CA8] hover:bg-white rounded-lg transition-colors"><ChevronLeft size={20} /></button>
                                 <span className="text-[13px] font-bold px-4 text-slate-700 tabular-nums">Page {currentPage} of {totalPages}</span>
-                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1 disabled:opacity-30 text-indigo-600 hover:bg-white rounded-lg transition-colors"><ChevronRight size={20} /></button>
+                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1 disabled:opacity-30 text-[#0E8CA8] hover:bg-white rounded-lg transition-colors"><ChevronRight size={20} /></button>
                             </div>
                         </div>
                     )}
@@ -355,7 +355,7 @@ export default function ProductsPage() {
                         <Button variant="danger" onClick={handleDelete} disabled={deleting} className="w-full">
                             {deleting ? 'Deleting...' : 'Confirm Delete'}
                         </Button>
-                        <button onClick={() => setDeleteProd(null)} className="w-full text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline">
+                        <button onClick={() => setDeleteProd(null)} className="w-full text-[13px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline">
                             Cancel
                         </button>
                     </div>

@@ -193,7 +193,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                         )}
                         <div className="flex justify-between items-center pt-2 mt-1 border-t-2 border-slate-300">
                             <span className="text-slate-900 font-black uppercase text-[11px]">Total Amount</span>
-                            <span className="font-black text-indigo-600 text-[13px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                            <span className="font-black text-[#0E8CA8] text-[13px] tabular-nums">{formatCurrency(totalAmount)}</span>
                         </div>
                         <div className="flex justify-between pt-1">
                             <span className="text-emerald-600 font-bold uppercase text-[10px]">Total Paid</span>

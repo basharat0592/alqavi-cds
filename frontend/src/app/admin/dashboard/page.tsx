@@ -110,7 +110,7 @@ function MobileProfileMenu() {
                 type="button"
                 onClick={() => setOpen(o => !o)}
                 aria-label="Account"
-                className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white shadow-[0_4px_12px_rgba(15,23,42,0.22)] bg-gradient-to-br from-indigo-500 to-violet-600 text-white font-black text-[16px] flex items-center justify-center active:scale-95 transition-transform"
+                className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white shadow-[0_4px_12px_rgba(15,23,42,0.22)] bg-gradient-to-br from-[#13B0D1] to-violet-600 text-white font-black text-[16px] flex items-center justify-center active:scale-95 transition-transform"
             >
                 {avatar
                     ? <img src={getImageUrl(avatar) || ''} alt="Profile" className="w-full h-full object-cover" />
@@ -149,10 +149,10 @@ function MobileWelcomeHero({ subtitle }: { subtitle: string }) {
     return (
         <div className="md:hidden pt-1 flex items-start justify-between gap-3">
             <div className="min-w-0">
-                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-500">Welcome back</p>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#0E8CA8]">Welcome back</p>
                 <h1 className="text-[26px] font-black text-slate-900 leading-[1.15] mt-0.5">
                     {first
-                        ? <>Hi, <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{first}</span> <span className={handCls}>👋</span></>
+                        ? <>Hi, <span className="bg-gradient-to-r from-[#13B0D1] via-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{first}</span> <span className={handCls}>👋</span></>
                         : <>Hello there <span className={handCls}>👋</span></>}
                 </h1>
                 <p className="text-[12.5px] text-slate-500 mt-1">{subtitle}</p>
@@ -293,10 +293,10 @@ export default function AdminDashboard() {
             href: '/admin/sale',
             icon: ScanLine,
             theme: {
-                border: 'hover:border-indigo-500',
-                iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
-                leftBar: 'bg-indigo-600',
-                chevron: 'text-indigo-400 group-hover:text-indigo-600',
+                border: 'hover:border-[#13B0D1]',
+                iconBg: 'bg-[#13B0D1]/10 border-[#13B0D1]/15 text-[#0E8CA8] group-hover:bg-[#0E8CA8] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-[#13B0D1]',
+                chevron: 'text-[#22C3E0] group-hover:text-[#0A6F85]',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
             },
             keywords: ['counter', 'cashier', 'barcode', 'checkout', 'pos', 'sales']
@@ -503,10 +503,10 @@ export default function AdminDashboard() {
             href: '/admin/inventory/list?action=add',
             icon: PackagePlus,
             theme: {
-                border: 'hover:border-indigo-500',
-                iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
-                leftBar: 'bg-indigo-600',
-                chevron: 'text-indigo-400 group-hover:text-indigo-600',
+                border: 'hover:border-[#13B0D1]',
+                iconBg: 'bg-[#13B0D1]/10 border-[#13B0D1]/15 text-[#0E8CA8] group-hover:bg-[#0E8CA8] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-[#13B0D1]',
+                chevron: 'text-[#22C3E0] group-hover:text-[#0A6F85]',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(79,70,229,0.06)]'
             },
             keywords: ['add stock', 'new stock', 'incoming', 'inventory', 'receive']
@@ -545,10 +545,10 @@ export default function AdminDashboard() {
             href: '/admin/branches',
             icon: Building2,
             theme: {
-                border: 'hover:border-indigo-500',
-                iconBg: 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
-                leftBar: 'bg-indigo-600',
-                chevron: 'text-indigo-400 group-hover:text-indigo-600',
+                border: 'hover:border-[#13B0D1]',
+                iconBg: 'bg-[#13B0D1]/10 border-[#13B0D1]/15 text-[#0E8CA8] group-hover:bg-[#0E8CA8] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-[#13B0D1]',
+                chevron: 'text-[#22C3E0] group-hover:text-[#0A6F85]',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
             },
             keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch']
@@ -808,7 +808,7 @@ export default function AdminDashboard() {
     // Products & employees come from the dashboard hook; branches/customers/suppliers
     // from overviewCounts. `value` is null while that count is still loading.
     const businessOverview: { label: string; value: number | null; icon: any; color: string }[] = [
-        { label: 'Total Branches', value: overviewCounts.branches, icon: Building2, color: 'bg-indigo-50 text-indigo-600' },
+        { label: 'Total Branches', value: overviewCounts.branches, icon: Building2, color: 'bg-[#13B0D1]/10 text-[#0E8CA8]' },
         { label: 'Total Admins', value: stats?.activeUsers ?? null, icon: User, color: 'bg-violet-50 text-violet-600' },
         { label: 'Total Products', value: stats?.totalProducts ?? null, icon: Package, color: 'bg-teal-50 text-teal-600' },
         { label: 'Total Customers', value: overviewCounts.customers, icon: Users, color: 'bg-sky-50 text-sky-600' },
@@ -825,11 +825,11 @@ export default function AdminDashboard() {
             <Link
                 key={btn.href}
                 href={btn.href}
-                className={`group relative flex items-center gap-2.5 sm:gap-3 overflow-hidden rounded-xl border border-slate-200/70 bg-white px-3 sm:px-3.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 ease-out hover:-translate-y-0.5 ${theme?.border || 'hover:border-indigo-500'} ${theme?.hoverGlow || 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'}`}
+                className={`group relative flex items-center gap-2.5 sm:gap-3 overflow-hidden rounded-xl border border-slate-200/70 bg-white px-3 sm:px-3.5 py-2 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-300 ease-out hover:-translate-y-0.5 ${theme?.border || 'hover:border-[#13B0D1]'} ${theme?.hoverGlow || 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'}`}
             >
-                <span className={`pointer-events-none absolute left-0 top-0 h-full w-[3px] origin-center scale-y-0 rounded-r-full transition-transform duration-300 ease-out group-hover:scale-y-100 ${theme?.leftBar || 'bg-indigo-600'}`} />
+                <span className={`pointer-events-none absolute left-0 top-0 h-full w-[3px] origin-center scale-y-0 rounded-r-full transition-transform duration-300 ease-out group-hover:scale-y-100 ${theme?.leftBar || 'bg-[#13B0D1]'}`} />
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/0 via-white/0 to-slate-100/0 transition-colors duration-300 group-hover:to-slate-100/70" />
-                <div className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-300 ease-out shrink-0 group-hover:scale-105 group-hover:-rotate-3 ${theme?.iconBg || 'bg-indigo-50 border-indigo-100 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'}`}>
+                <div className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center border ring-1 ring-inset ring-white/40 transition-all duration-300 ease-out shrink-0 group-hover:scale-105 group-hover:-rotate-3 ${theme?.iconBg || 'bg-[#13B0D1]/10 border-[#13B0D1]/15 text-[#0E8CA8] group-hover:bg-[#0E8CA8] group-hover:text-white'}`}>
                     <Icon strokeWidth={1.75} className="w-4 h-4 sm:w-[17px] sm:h-[17px] transition-transform duration-300 group-hover:scale-110" />
                 </div>
                 <div className="relative min-w-0 flex-1">
@@ -846,7 +846,7 @@ export default function AdminDashboard() {
                         </span>
                     )}
                     <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-slate-50 transition-all duration-300 group-hover:bg-white group-hover:shadow-sm">
-                        <ChevronRight className={`w-3.5 h-3.5 sm:w-[15px] sm:h-[15px] text-slate-300 transition-all duration-300 group-hover:translate-x-0.5 ${theme?.chevron || 'group-hover:text-indigo-600'}`} />
+                        <ChevronRight className={`w-3.5 h-3.5 sm:w-[15px] sm:h-[15px] text-slate-300 transition-all duration-300 group-hover:translate-x-0.5 ${theme?.chevron || 'group-hover:text-[#0A6F85]'}`} />
                     </span>
                 </div>
             </Link>
@@ -1112,7 +1112,7 @@ export default function AdminDashboard() {
 
                                     <Link
                                         href="/admin/inventory/list"
-                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
+                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:bg-[#0E8CA8]/50 border-t border-slate-100 transition-colors"
                                     >
                                         View full inventory <ChevronRight size={13} />
                                     </Link>
@@ -1127,14 +1127,14 @@ export default function AdminDashboard() {
                                                 value={dueSearch}
                                                 onChange={(e) => setDueSearch(e.target.value)}
                                                 placeholder="Search…"
-                                                className="w-full h-8 pl-7 pr-2 rounded-lg border border-slate-200 text-[11.5px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white"
+                                                className="w-full h-8 pl-7 pr-2 rounded-lg border border-slate-200 text-[11.5px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 bg-white"
                                             />
                                         </div>
                                         <div className="relative shrink-0">
                                             <select
                                                 value={dueWindow}
                                                 onChange={(e) => setDueWindow(e.target.value)}
-                                                className="h-8 pl-2.5 pr-7 rounded-lg border border-slate-200 text-[11.5px] font-semibold text-slate-700 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white appearance-none cursor-pointer"
+                                                className="h-8 pl-2.5 pr-7 rounded-lg border border-slate-200 text-[11.5px] font-semibold text-slate-700 outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 bg-white appearance-none cursor-pointer"
                                             >
                                                 {DUE_WINDOWS.map((w) => (
                                                     <option key={w.k} value={w.k}>{w.label}</option>
@@ -1189,7 +1189,7 @@ export default function AdminDashboard() {
 
                                     <Link
                                         href="/admin/alerts"
-                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/50 border-t border-slate-100 transition-colors"
+                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:bg-[#0E8CA8]/50 border-t border-slate-100 transition-colors"
                                     >
                                         View all dues <ChevronRight size={13} />
                                     </Link>

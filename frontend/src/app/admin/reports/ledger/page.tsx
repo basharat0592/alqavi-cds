@@ -148,7 +148,7 @@ export default function CustomerLedgerReport() {
                                     <td className="py-2 px-2" colSpan={3}>Closing Balance</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(data.totals.debit)}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(data.totals.credit)}</td>
-                                    <td className="py-2 px-2 text-right tabular-nums text-indigo-700">{formatCurrency(data.closing)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums text-[#0E8CA8]">{formatCurrency(data.closing)}</td>
                                 </tr>
                             </tbody>
                         </table>

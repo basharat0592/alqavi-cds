@@ -4,8 +4,7 @@ import { Plus, Save, X, Loader2, Check, AlertCircle } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import toast from 'react-hot-toast';
 import { exportToCSV } from '@/lib/utils';
-import { useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
-
+import { useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, ui } from '@/components/admin/ui';
 interface NavbarPage {
     id?: number;
     name: string;
@@ -25,7 +24,7 @@ const EMPTY_PAGE: NavbarPage = { name: '', slug: '', link: '', description: '', 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, size = 'md' }: any) => {
     const styles = {
         primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
         danger: 'bg-gradient-to-b from-[#f7b5b0] to-[#f08080] border-[#d32f2f] hover:from-[#f5a0a0] hover:to-[#ee6f6f] text-[#0f1111]',
     };
     const sizes = {
@@ -35,15 +34,14 @@ const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className 
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`${sizes[size as keyof typeof sizes]} rounded-[3px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`${sizes[size as keyof typeof sizes]} rounded-lg font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <Loader2 className="h-3 w-3 animate-spin" />}
             {children}
         </button>
     );
 };
 
-const inputCls = "h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
-
+const inputCls = ui.inputBase.replace('h-10', 'h-9');
 // Shared form fields used by both the "Add" panel and the "Edit" modal.
 const PageForm = ({ page, onChange }: { page: NavbarPage; onChange: (p: NavbarPage) => void }) => (
     <div className="space-y-4">
@@ -82,7 +80,7 @@ const PageForm = ({ page, onChange }: { page: NavbarPage; onChange: (p: NavbarPa
             <textarea rows={2} value={page.description}
                 onChange={e => onChange({ ...page, description: e.target.value })}
                 placeholder="Internal description for admin"
-                className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white resize-none" />
+                className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white resize-none" />
         </div>
         <div className="flex items-center gap-2 pt-4 border-t border-[#eee]">
             <input type="checkbox" id={`visible-${page.id ?? 'new'}`} checked={page.is_visible}
@@ -223,8 +221,8 @@ export default function NavbarPagesTab() {
 
             {/* Add New Form */}
             {addingNew && (
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                    <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3 flex items-center justify-between">
+                <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden">
+                    <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3 flex items-center justify-between">
                         <h3 className="font-bold text-[#111]">Create New Navbar Page</h3>
                         <button onClick={() => setAddingNew(false)} className="text-[#565959] hover:text-[#111]">
                             <X size={18} />
@@ -243,8 +241,8 @@ export default function NavbarPagesTab() {
             )}
 
             {/* Pages Table */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3">
                     <h3 className="font-bold text-[#111]">All Navbar Pages ({pages.length})</h3>
                 </div>
 
@@ -302,7 +300,7 @@ export default function NavbarPagesTab() {
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center justify-end gap-2.5">
-                                                <button onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                <button onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
                                                 <span className="text-slate-300">|</span>
                                                 <button onClick={() => handleDeletePage(page.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
@@ -338,7 +336,7 @@ export default function NavbarPagesTab() {
             />
 
             {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-[4px] p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-[13px] text-blue-800 flex items-start gap-2">
                     <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
                     <span><strong>Tip:</strong> Create navbar pages first, then assign categories to them. Categories will appear as dropdown items in the navbar under their parent page.</span>
@@ -350,7 +348,7 @@ export default function NavbarPagesTab() {
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" onClick={() => !saving && setEditingPage(null)} />
                     <div className="relative bg-white rounded-[6px] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
-                        <div className="sticky top-0 bg-[#f7f8fa] border-b border-[#ddd] px-6 py-4 flex items-center justify-between">
+                        <div className="sticky top-0 bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-4 flex items-center justify-between">
                             <div>
                                 <h3 className="font-bold text-[#111] text-[16px]">Edit Navbar Page</h3>
                                 <p className="text-[12px] text-[#565959] mt-0.5">ID #{editingPage.id} · slug: <code className="font-mono text-[#d63031]">{editingPage.slug}</code></p>

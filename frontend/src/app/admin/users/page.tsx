@@ -68,7 +68,7 @@ function BlinkingEye({ isOpen, onClick }: { isOpen: boolean; onClick: () => void
                 setIsHovered(false);
                 setBlink(false);
             }}
-            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-100/50 rounded-lg transition-colors focus:outline-none flex items-center justify-center shrink-0"
+            className="p-1.5 text-slate-400 hover:text-[#0A6F85] hover:bg-[#0E8CA8]/50 rounded-lg transition-colors focus:outline-none flex items-center justify-center shrink-0"
             title={isOpen ? "Hide Password" : "Show Password"}
         >
             <svg
@@ -272,7 +272,7 @@ export default function UsersPage() {
                                             key={r}
                                             onClick={() => setActiveRole(r)}
                                             className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider transition-all rounded-md
-                                                ${activeRole === r ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:bg-slate-100'}`}
+                                                ${activeRole === r ? 'bg-[#13B0D1] text-white' : 'text-slate-500 hover:bg-slate-100'}`}
                                         >
                                             {r}
                                         </button>
@@ -299,7 +299,7 @@ export default function UsersPage() {
                                 <select
                                     value={branchFilter}
                                     onChange={e => setBranchFilter(e.target.value)}
-                                    className="shrink-0 h-7 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none focus:border-indigo-400 cursor-pointer"
+                                    className="shrink-0 h-7 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none focus:border-[#13B0D1] cursor-pointer"
                                     title="Filter by branch"
                                 >
                                     <option value="all">All branches</option>
@@ -322,7 +322,7 @@ export default function UsersPage() {
                                     type="checkbox"
                                     checked={sel.isSelected(user.id)}
                                     onChange={() => sel.toggle(user.id)}
-                                    className="mt-1 w-4 h-4 accent-indigo-600 rounded border-slate-300 cursor-pointer shrink-0"
+                                    className="mt-1 w-4 h-4 accent-[#0E8CA8] rounded border-slate-300 cursor-pointer shrink-0"
                                 />
                                 <div className="h-10 w-10 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden font-bold text-slate-500 shrink-0">
                                     {user.avatar ? <img src={getImageUrl(user.avatar) || ''} alt="" className="w-full h-full object-cover" />
@@ -352,7 +352,7 @@ export default function UsersPage() {
                             </div>
                             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
                                 <button onClick={() => setSelectedUserForView(user)} className="flex-1 h-9 rounded-lg border border-slate-200 bg-white text-[12px] font-bold text-slate-600 hover:bg-slate-50">View</button>
-                                <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="flex-1 h-9 rounded-lg border border-indigo-200 bg-indigo-50 text-[12px] font-bold text-indigo-600 hover:bg-indigo-100">Edit</button>
+                                <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="flex-1 h-9 rounded-lg border border-[#13B0D1]/25 bg-[#13B0D1]/10 text-[12px] font-bold text-[#0E8CA8] hover:bg-[#13B0D1]/15">Edit</button>
                                 {!(user as any).is_super_admin && (
                                     <button onClick={() => setDeleteUser(user)} className="flex-1 h-9 rounded-lg border border-rose-200 bg-rose-50 text-[12px] font-bold text-rose-600 hover:bg-rose-100">Delete</button>
                                 )}
@@ -385,7 +385,7 @@ export default function UsersPage() {
                                             <RowCheckboxTd sel={sel} id={user.id} />
                                             <td className="px-2.5 sm:px-6 py-2.5 sm:py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden font-bold text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
+                                                    <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden font-bold text-slate-500 group-hover:bg-[#0E8CA8] group-hover:text-white group-hover:border-[#13B0D1] transition-all">
                                                         {user.avatar ? (
                                                             <img src={getImageUrl(user.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                                         ) : (
@@ -439,7 +439,7 @@ export default function UsersPage() {
                                                 <div className="flex items-center justify-end gap-2.5 opacity-100 transition-opacity">
                                                     <button onClick={() => setSelectedUserForView(user)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
-                                                    <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <button onClick={() => router.push(`/admin/users/edit/${user.id}`)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
                                                     {/* A Super Admin account cannot be deleted from here. */}
                                                     {!(user as any).is_super_admin && (
                                                         <>
@@ -512,17 +512,17 @@ export default function UsersPage() {
                                 </div>
                                 <div>
                                     <h3 className="text-[18px] font-bold text-slate-900 tracking-tight leading-none">{selectedUserForView.first_name} {selectedUserForView.last_name}</h3>
-                                    <p className="text-[11px] text-indigo-600 font-bold uppercase mt-1.5 tracking-widest">{selectedUserForView.role_name || 'Individual'}</p>
+                                    <p className="text-[11px] text-[#0E8CA8] font-bold uppercase mt-1.5 tracking-widest">{selectedUserForView.role_name || 'Individual'}</p>
                                 </div>
                             </div>
 
-                            <div className="bg-indigo-50 border border-indigo-100 p-3.5 rounded-xl text-center">
+                            <div className="bg-[#13B0D1]/10 border border-[#13B0D1]/15 p-3.5 rounded-xl text-center">
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Security Key / Password</label>
                                 {selectedUserForView.plain_password ? (
                                     <div className="flex items-center justify-center gap-2">
                                         {/* Spacer to balance the eye button for perfect centering */}
                                         <div className="w-9 shrink-0" />
-                                        <div className="text-[24px] font-bold text-indigo-600 tracking-wider font-mono select-all flex-1 text-center">
+                                        <div className="text-[24px] font-bold text-[#0E8CA8] tracking-wider font-mono select-all flex-1 text-center">
                                             {showPasswordDetail ? selectedUserForView.plain_password : '••••••••'}
                                         </div>
                                         <div className="w-9 shrink-0 flex items-center justify-center">

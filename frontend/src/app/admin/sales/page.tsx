@@ -207,7 +207,7 @@ export default function SalesPage() {
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 placeholder="Search by order #, customer or phone…"
-                                className="w-full h-11 pl-11 pr-9 rounded-xl border border-slate-200 bg-slate-50/70 text-[13px] font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                className="w-full h-11 pl-11 pr-9 rounded-xl border border-slate-200 bg-slate-50/70 text-[13px] font-medium text-slate-800 placeholder:text-slate-400 outline-none focus:bg-white focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 transition-all"
                             />
                             {searchTerm && (
                                 <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors">
@@ -222,7 +222,7 @@ export default function SalesPage() {
                                 <button
                                     key={f}
                                     onClick={() => setStatusFilter(f)}
-                                    className={`h-9 px-3.5 sm:px-4 rounded-lg text-[12px] font-bold transition-all ${statusFilter === f ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    className={`h-9 px-3.5 sm:px-4 rounded-lg text-[12px] font-bold transition-all ${statusFilter === f ? 'bg-white text-[#0E8CA8] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                 >
                                     {f}
                                 </button>
@@ -236,7 +236,7 @@ export default function SalesPage() {
                                 <select
                                     value={channelFilter}
                                     onChange={e => setChannelFilter(e.target.value)}
-                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[12.5px] font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 appearance-none cursor-pointer transition-all ${channelFilter !== 'All' ? 'border-indigo-300 bg-indigo-50/60 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[12.5px] font-bold outline-none focus:ring-4 focus:ring-[#13B0D1]/10 appearance-none cursor-pointer transition-all ${channelFilter !== 'All' ? 'border-[#13B0D1]/35 bg-[#13B0D1]/60 text-[#0E8CA8]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
                                 >
                                     <option value="All">All Channels</option>
                                     <option value="POS">POS / Counter</option>
@@ -250,7 +250,7 @@ export default function SalesPage() {
                                 <select
                                     value={payFilter}
                                     onChange={e => setPayFilter(e.target.value)}
-                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[12.5px] font-bold outline-none focus:ring-4 focus:ring-indigo-500/10 appearance-none cursor-pointer transition-all ${payFilter !== 'All' ? 'border-indigo-300 bg-indigo-50/60 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[12.5px] font-bold outline-none focus:ring-4 focus:ring-[#13B0D1]/10 appearance-none cursor-pointer transition-all ${payFilter !== 'All' ? 'border-[#13B0D1]/35 bg-[#13B0D1]/60 text-[#0E8CA8]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
                                 >
                                     <option value="All">All Payments</option>
                                     <option value="Paid">Paid in full</option>
@@ -272,7 +272,7 @@ export default function SalesPage() {
                         {(searchTerm || statusFilter !== 'All' || channelFilter !== 'All' || payFilter !== 'All') && (
                             <button
                                 onClick={() => { setSearchTerm(''); setStatusFilter('All'); setChannelFilter('All'); setPayFilter('All'); }}
-                                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 transition-colors"
+                                className="text-[11px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] inline-flex items-center gap-1 transition-colors"
                             >
                                 <X size={12} /> Clear filters
                             </button>
@@ -294,7 +294,7 @@ export default function SalesPage() {
                                     {/* Row 1: Order # + Amount */}
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[13.5px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline">
+                                            <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[13.5px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:underline">
                                                 #{o.order_number || o.id}
                                             </button>
                                             <div className="flex items-center gap-1 text-[10px] text-slate-500 font-medium mt-0.5">
@@ -302,7 +302,7 @@ export default function SalesPage() {
                                                 {formatDateTime(o.created_at)}
                                             </div>
                                             {(o as any).warehouse_name && (
-                                                <div className="text-[10px] text-indigo-600 font-black uppercase tracking-tighter mt-0.5 flex items-center gap-1">
+                                                <div className="text-[10px] text-[#0E8CA8] font-black uppercase tracking-tighter mt-0.5 flex items-center gap-1">
                                                     <Warehouse size={10} className="opacity-60" />{(o as any).warehouse_name}
                                                 </div>
                                             )}
@@ -399,7 +399,7 @@ export default function SalesPage() {
                                     <tr key={o.id} className="hover:bg-slate-50 transition-colors group text-[12px]">
                                         <RowCheckboxTd sel={sel} id={o.id} />
                                         <td className="px-6 py-4">
-                                            <div className="text-[12px] font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline cursor-pointer" onClick={() => router.push(`/admin/sales/${o.id}`)}>
+                                            <div className="text-[12px] font-bold text-[#0E8CA8] group-hover:text-[#0A6F85] group-hover:underline cursor-pointer" onClick={() => router.push(`/admin/sales/${o.id}`)}>
                                                 #{o.order_number || o.id}
                                             </div>
                                             <div className="flex flex-col gap-1 mt-1">
@@ -407,7 +407,7 @@ export default function SalesPage() {
                                                     <Clock size={11} className="text-slate-400" /> {formatDateTime(o.created_at)}
                                                 </div>
                                                 {(o as any).warehouse_name && (
-                                                    <div className="text-[9.5px] text-indigo-600 flex items-center gap-1.5 font-black uppercase tracking-tighter">
+                                                    <div className="text-[9.5px] text-[#0E8CA8] flex items-center gap-1.5 font-black uppercase tracking-tighter">
                                                         <Warehouse size={9} className="opacity-60" /> {(o as any).warehouse_name}
                                                     </div>
                                                 )}
@@ -448,7 +448,7 @@ export default function SalesPage() {
                                                 {Number((o as any).remaining_amount ?? 0) > 0 &&
                                                   !['DELIVERED', 'CANCELLED'].includes((o.status || '').toUpperCase()) && (
                                                     <>
-                                                        <button onClick={() => setPayOrder(o)} className="text-[11px] font-bold text-indigo-600 hover:underline">Collect</button>
+                                                        <button onClick={() => setPayOrder(o)} className="text-[11px] font-bold text-[#0E8CA8] hover:underline">Collect</button>
                                                         <span className="text-slate-300">|</span>
                                                     </>
                                                 )}
@@ -487,7 +487,7 @@ export default function SalesPage() {
                                         onClick={() => setCurrentPage(page)}
                                         className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all border ${
                                             currentPage === page 
-                                                ? 'bg-indigo-600 border-indigo-600 text-white font-extrabold' 
+                                                ? 'bg-[#13B0D1] border-[#13B0D1] text-white font-extrabold' 
                                                 : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                         }`}
                                     >
@@ -525,8 +525,8 @@ export default function SalesPage() {
                 />
 
                 {/* Summary Note */}
-                <div className="mt-8 bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">
-                    <AlertTriangle className="text-indigo-600 shrink-0 mt-0.5" size={18} />
+                <div className="mt-8 bg-[#13B0D1]/10 border border-[#13B0D1]/15 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">
+                    <AlertTriangle className="text-[#0E8CA8] shrink-0 mt-0.5" size={18} />
                     <div>
                         <p className="text-[13px] font-bold text-slate-900">Order Integrity</p>
                         <p className="text-[12px] text-slate-600 leading-relaxed">Status changes here are permanent and will trigger stock adjustments where applicable. Ensure you verify physical delivery before marking as 'Delivered'.</p>

@@ -93,7 +93,7 @@ export default function MenuGroupPage() {
                     <div className="text-center py-20 text-[13px] text-slate-400">
                         This menu isn’t available.
                         <div className="mt-3">
-                            <Link href="/admin/dashboard" className="text-indigo-600 font-semibold hover:underline">Back to Dashboard</Link>
+                            <Link href="/admin/dashboard" className="text-[#0E8CA8] font-semibold hover:underline">Back to Dashboard</Link>
                         </div>
                     </div>
                 )}

@@ -4,6 +4,7 @@ import { Upload, Trash2, Image as ImageIcon, Video, Search, X, Loader2, FileText
 import cmsService, { MediaAsset } from '@/services/cms.service';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { ui } from '@/components/admin/ui';
 
 interface Props {
     media: MediaAsset[];
@@ -14,19 +15,18 @@ interface Props {
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
         primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[31px] px-4 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[31px] px-4 rounded-lg text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <Loader2 className="h-3 w-3 animate-spin" />}
             {children}
         </button>
     );
 };
 
-const inputCls = "h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
-
+const inputCls = ui.inputBase.replace('h-10', 'h-9');
 export default function MediaTab({ media, setMedia }: Props) {
     const [filter, setFilter] = useState<'all' | 'image' | 'video'>('all');
     const [search, setSearch] = useState('');
@@ -73,7 +73,7 @@ export default function MediaTab({ media, setMedia }: Props) {
         <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 text-left">
 
             {/* Library Control Bar */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
                 <div>
                     <h3 className="text-[15px] font-bold text-[#111]">Media Library</h3>
                     <p className="text-[12px] text-[#565959]">
@@ -95,7 +95,7 @@ export default function MediaTab({ media, setMedia }: Props) {
             </div>
 
             {/* Filter Sub-bar */}
-            <div className="flex items-center gap-2 border-b border-[#ddd] pb-1">
+            <div className="flex items-center gap-2 border-b border-[#e2e8f0] pb-1">
                 {(['all', 'image', 'video'] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)}
                         className={`px-4 py-2 text-[13px] font-medium transition-all relative ${filter === f ? 'text-[#c45500] font-bold' : 'text-[#565959] hover:text-[#111]'
@@ -107,11 +107,11 @@ export default function MediaTab({ media, setMedia }: Props) {
             </div>
 
             {/* Drop Zone */}
-            <div className="bg-[#f7f8fa] border border-[#ddd] rounded-[4px] p-8 text-center border-dashed hover:border-[#e77600] transition-all cursor-pointer group"
+            <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-8 text-center border-dashed hover:border-[#13B0D1] transition-all cursor-pointer group"
                 onClick={() => fileRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); e.dataTransfer.files && upload(e.dataTransfer.files); }}>
-                <div className="w-12 h-12 bg-white rounded-full border border-[#ddd] shadow-sm flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 bg-white rounded-full border border-[#e2e8f0] shadow-sm flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
                     <Upload size={20} className="text-[#888]" />
                 </div>
                 <p className="text-[13px] font-bold text-[#111]">Drag and drop files to upload</p>
@@ -120,14 +120,14 @@ export default function MediaTab({ media, setMedia }: Props) {
 
             {/* Media Grid */}
             {filtered.length === 0 ? (
-                <div className="bg-white border border-[#ddd] rounded-[4px] p-20 text-center text-[#888]">
+                <div className="bg-white border border-[#e2e8f0] rounded-lg p-20 text-center text-[#888]">
                     <ImageIcon size={40} className="mx-auto mb-3 opacity-20" />
                     <p className="text-[14px]">No media found matching your filters.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {filtered.map(asset => (
-                        <div key={asset.id} className="bg-white border border-[#ddd] rounded-[3px] overflow-hidden hover:shadow-md transition-all cursor-pointer group"
+                        <div key={asset.id} className="bg-white border border-[#e2e8f0] rounded-lg overflow-hidden hover:shadow-md transition-all cursor-pointer group"
                             onClick={() => setPreview(asset)}>
                             <div className="aspect-square bg-[#f0f2f2] relative flex items-center justify-center overflow-hidden">
                                 {asset.file_type === 'image' ? (
@@ -146,7 +146,7 @@ export default function MediaTab({ media, setMedia }: Props) {
                                 )}
 
                                 {/* Hover Actions */}
-                                <div className="absolute inset-x-0 bottom-0 bg-white/95 border-t border-[#ddd] p-1.5 flex items-center justify-end gap-2.5 translate-y-full group-hover:translate-y-0 transition-transform">
+                                <div className="absolute inset-x-0 bottom-0 bg-white/95 border-t border-[#e2e8f0] p-1.5 flex items-center justify-end gap-2.5 translate-y-full group-hover:translate-y-0 transition-transform">
                                     <button onClick={e => { e.stopPropagation(); copyUrl(asset.file); }}
                                         className="text-[12px] font-bold text-slate-600 hover:underline">Copy link</button>
                                     <span className="text-slate-300">|</span>
@@ -165,15 +165,15 @@ export default function MediaTab({ media, setMedia }: Props) {
             {/* Preview Dialog */}
             {preview && (
                 <div className="fixed inset-0 bg-[#000000cc] z-[70] flex items-center justify-center p-4" onClick={() => setPreview(null)}>
-                    <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                        <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3 flex items-center justify-between">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl overflow-hidden animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3 flex items-center justify-between">
                             <h3 className="font-bold text-[#111] text-[15px] flex items-center gap-2">
                                 <FileText size={16} /> Asset Details
                             </h3>
                             <button onClick={() => setPreview(null)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
                         </div>
                         <div className="flex flex-col md:flex-row h-auto md:h-[500px] overflow-y-auto md:overflow-hidden">
-                            <div className="flex-1 md:flex-[2] h-64 md:h-auto bg-[#f0f2f2] p-4 md:p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#ddd] shrink-0">
+                            <div className="flex-1 md:flex-[2] h-64 md:h-auto bg-[#f0f2f2] p-4 md:p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#e2e8f0] shrink-0">
                                 {preview.file_type === 'image' ? (
                                     <img src={getImageUrl(preview.file) || preview.file} alt={preview.alt_text} className="max-w-full max-h-full object-contain drop-shadow-xl" />
                                 ) : (
@@ -203,7 +203,7 @@ export default function MediaTab({ media, setMedia }: Props) {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-[#f7f8fa] border-t border-[#ddd] px-6 py-4 flex justify-end">
+                        <div className="bg-[#f8fafc] border-t border-[#e2e8f0] px-6 py-4 flex justify-end">
                             <AmazonBtn onClick={() => setPreview(null)}>Close Viewer</AmazonBtn>
                         </div>
                     </div>
@@ -213,7 +213,7 @@ export default function MediaTab({ media, setMedia }: Props) {
             {/* Delete Confirmation Modal */}
             {deleteId !== null && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setDeleteId(null)}>
-                    <div className="bg-white rounded-[4px] border border-[#ddd] shadow-2xl w-full max-w-[420px] overflow-hidden animate-in zoom-in-95 duration-200 text-center p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-2xl w-full max-w-[420px] overflow-hidden animate-in zoom-in-95 duration-200 text-center p-6 space-y-4" onClick={e => e.stopPropagation()}>
                         <div className="mx-auto w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-600 border border-red-100">
                             <Trash2 size={24} />
                         </div>
@@ -224,10 +224,10 @@ export default function MediaTab({ media, setMedia }: Props) {
                             </p>
                         </div>
                         <div className="flex gap-2 pt-2">
-                            <button onClick={() => setDeleteId(null)} className="flex-1 h-[35px] border border-[#adb1b8] rounded-[3px] text-[13px] font-medium bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm transition-all">
+                            <button onClick={() => setDeleteId(null)} className="flex-1 h-[35px] border border-[#adb1b8] rounded-lg text-[13px] font-medium bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm transition-all">
                                 Cancel
                             </button>
-                            <button onClick={() => { deleteMedia(deleteId); setDeleteId(null); }} className="flex-1 h-[35px] border border-[#a83434] rounded-[3px] text-[13px] font-medium bg-gradient-to-b from-[#f59e9e] to-[#e63946] hover:from-[#fca5a5] hover:to-[#d62828] text-white shadow-sm transition-all">
+                            <button onClick={() => { deleteMedia(deleteId); setDeleteId(null); }} className="flex-1 h-[35px] border border-[#a83434] rounded-lg text-[13px] font-medium bg-gradient-to-b from-[#f59e9e] to-[#e63946] hover:from-[#fca5a5] hover:to-[#d62828] text-white shadow-sm transition-all">
                                 Yes, Delete
                             </button>
                         </div>

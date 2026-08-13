@@ -14,7 +14,7 @@ import { formatDate, formatCurrency, exportToCSV } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   ADMIN ORDERS — indigo/slate design system
+   ADMIN ORDERS — brand cyan/amber, slate neutrals
    ───────────────────────────────────────────────────────────────────────────── */
 const inputCls = ui.inputBase;
 
@@ -121,7 +121,7 @@ function StatusDropdown({ order, updating, onSelect }: { order: any; updating: b
                                 >
                                     <span className={`w-2 h-2 rounded-full ${STATUS_DOT[s]}`} />
                                     <span className="capitalize">{s.toLowerCase()}</span>
-                                    {active && <CheckCircle2 size={13} className="ml-auto text-indigo-600" />}
+                                    {active && <CheckCircle2 size={13} className="ml-auto text-[#0E8CA8]" />}
                                 </button>
                             );
                         })}
@@ -437,7 +437,7 @@ export default function AdminOrdersPage() {
                             <select
                                 value={statusFilter}
                                 onChange={e => setStatusFilter(e.target.value)}
-                                className="h-9 px-3 text-[12px] font-semibold bg-white border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 cursor-pointer"
+                                className="h-9 px-3 text-[12px] font-semibold bg-white border border-slate-200 rounded-lg outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 cursor-pointer"
                             >
                                 <option value="ACTIVE">Active pipeline</option>
                                 <option value="ALL">All orders</option>
@@ -473,7 +473,7 @@ export default function AdminOrdersPage() {
                                         <tr key={order.id} className={`transition-colors duration-200 ${(order.status || '').toUpperCase() === 'CANCEL_REQUESTED' ? 'bg-rose-50/30 border-l-4 border-l-rose-400' : 'hover:bg-slate-50'}`}>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
-                                                    <Link href={`/admin/sales/${order.id}/invoice`} className="text-[13px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                                                    <Link href={`/admin/sales/${order.id}/invoice`} className="text-[13px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] transition-colors">
                                                         #{order.tracking_id || order.id}
                                                     </Link>
                                                     <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1 font-medium">
@@ -562,7 +562,7 @@ export default function AdminOrdersPage() {
                                     <div key={order.id} className="py-3 px-4 hover:bg-slate-50 transition-colors">
                                         <div className="flex justify-between items-start mb-2">
                                             <div>
-                                                <Link href={`/admin/sales/${order.id}/invoice`} className="text-[13px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+                                                <Link href={`/admin/sales/${order.id}/invoice`} className="text-[13px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] transition-colors">
                                                     #{order.tracking_id || order.id}
                                                 </Link>
                                                 <div className="text-[11px] text-slate-500 mt-0.5">
@@ -730,7 +730,7 @@ export default function AdminOrdersPage() {
                                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Subtotal</span>
                                 <span className="text-[11px] font-bold text-slate-900 tabular-nums">{formatCurrency(selectedOrder.total_amount)}</span>
                             </div>
-                            <div className="flex justify-between items-center text-indigo-600">
+                            <div className="flex justify-between items-center text-[#0E8CA8]">
                                 <span className="text-[11px] font-bold uppercase tracking-[0.2em]">Total Value</span>
                                 <span className="text-[16px] font-bold tabular-nums">{formatCurrency(selectedOrder.total_amount)}</span>
                             </div>
@@ -739,7 +739,7 @@ export default function AdminOrdersPage() {
                         <div className="flex gap-2 pt-4">
                             <Link
                                 href={`/admin/sales/${selectedOrder.id}/invoice`}
-                                className="flex-1 h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold text-[12px] flex items-center justify-center gap-2 uppercase tracking-wide shadow-sm shadow-indigo-600/20 transition-all active:scale-[0.98] whitespace-nowrap"
+                                className="flex-1 h-10 bg-[#13B0D1] hover:bg-[#0E8CA8] text-white rounded-lg font-semibold text-[12px] flex items-center justify-center gap-2 uppercase tracking-wide shadow-sm shadow-[#13B0D1]/20 transition-all active:scale-[0.98] whitespace-nowrap"
                             >
                                 <Printer size={14} /> Generate Invoice
                             </Link>
@@ -802,11 +802,11 @@ export default function AdminOrdersPage() {
                                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Who delivers this?</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     <button type="button" onClick={() => setShipMode('specific')}
-                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] ring-1 ring-[#13B0D1]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
                                         Specific rider
                                     </button>
                                     <button type="button" onClick={() => setShipMode('all')}
-                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8] ring-1 ring-[#13B0D1]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>
                                         All riders
                                     </button>
                                 </div>
@@ -825,7 +825,7 @@ export default function AdminOrdersPage() {
                                     </select>
                                     {riders.length === 0 && (
                                         <p className="text-[10.5px] text-slate-400 mt-1.5">
-                                            No riders yet — create them in <Link href="/admin/delivery" className="text-indigo-600 font-semibold hover:underline">Delivery Persons</Link>.
+                                            No riders yet — create them in <Link href="/admin/delivery" className="text-[#0E8CA8] font-semibold hover:underline">Delivery Persons</Link>.
                                         </p>
                                     )}
                                 </div>
@@ -861,7 +861,7 @@ export default function AdminOrdersPage() {
                                 Cancel
                             </button>
                             <button onClick={confirmShip} disabled={shippingNow}
-                                className="h-10 px-5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold inline-flex items-center gap-2 disabled:opacity-50">
+                                className="h-10 px-5 rounded-lg bg-[#13B0D1] hover:bg-[#0E8CA8] text-white text-[13px] font-bold inline-flex items-center gap-2 disabled:opacity-50">
                                 {shippingNow ? <Loader2 size={15} className="animate-spin" /> : <Truck size={15} />}
                                 {shipMode === 'specific' ? 'Assign & Ship' : 'Offer & Ship'}
                             </button>
@@ -875,7 +875,7 @@ export default function AdminOrdersPage() {
                     <div className="bg-white rounded-2xl border border-slate-200 w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-xl bg-[#13B0D1]/10 text-[#0E8CA8] flex items-center justify-center">
                                     <Truck size={20} />
                                 </div>
                                 <div>
@@ -920,7 +920,7 @@ export default function AdminOrdersPage() {
                                                     <td className="px-3.5 py-2.5">
                                                         <p className="font-semibold text-slate-800 leading-tight">{(item.product_name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}</p>
                                                         {(item.weight || item.size) && (
-                                                            <p className="text-[9px] text-indigo-600 font-bold uppercase tracking-wider mt-1">
+                                                            <p className="text-[9px] text-[#0E8CA8] font-bold uppercase tracking-wider mt-1">
                                                                 {item.weight}{item.weight && item.size ? ' • ' : ''}{item.size}
                                                             </p>
                                                         )}
@@ -950,7 +950,7 @@ export default function AdminOrdersPage() {
                                     <select
                                         value={selectedWarehouse}
                                         onChange={(e) => setSelectedWarehouse(e.target.value)}
-                                        className="w-full h-11 px-4 border border-slate-200 rounded-lg text-[13.5px] font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 bg-white transition-all appearance-none cursor-pointer"
+                                        className="w-full h-11 px-4 border border-slate-200 rounded-lg text-[13.5px] font-semibold text-slate-800 outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 bg-white transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="" className="text-slate-400">Choose a warehouse...</option>
                                         {deliveryWarehouseOptions.map((w: any) => (
@@ -1017,7 +1017,7 @@ export default function AdminOrdersPage() {
 
                             <div className="space-y-1.5">
                                 <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Recipient Number</label>
-                                <div className="flex items-center gap-2 h-10 px-3 border border-slate-200 rounded-lg focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 transition-all">
+                                <div className="flex items-center gap-2 h-10 px-3 border border-slate-200 rounded-lg focus-within:border-[#13B0D1] focus-within:ring-4 focus-within:ring-[#13B0D1]/10 transition-all">
                                     <Phone size={14} className="text-slate-400 shrink-0" />
                                     <input
                                         value={waModal.number}
@@ -1034,7 +1034,7 @@ export default function AdminOrdersPage() {
                                     value={waModal.message}
                                     onChange={(e) => setWaModal(m => m ? { ...m, message: e.target.value } : m)}
                                     rows={5}
-                                    className="w-full min-h-[120px] px-3.5 py-2.5 bg-white rounded-lg text-[13px] text-slate-800 outline-none border border-slate-200 focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-y leading-relaxed"
+                                    className="w-full min-h-[120px] px-3.5 py-2.5 bg-white rounded-lg text-[13px] text-slate-800 outline-none border border-slate-200 focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 transition-all resize-y leading-relaxed"
                                 />
                             </div>
                         </div>

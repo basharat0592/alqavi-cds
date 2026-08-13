@@ -11,6 +11,7 @@ import cmsService, { WebsiteSection } from '@/services/cms.service';
 import toast from 'react-hot-toast';
 import { cn, getImageUrl, checkIsVideo } from '@/lib/utils';
 import MediaPickerModal from '../components/MediaPickerModal';
+import { ui } from '@/components/admin/ui';
 
 const SECTION_TYPES = [
     { type: 'announcement', label: 'Announcement Bar', icon: '📢', desc: 'Top header notification bar' },
@@ -72,7 +73,7 @@ const DEFAULT_CONTENT: Record<string, any> = {
 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-indigo-600 hover:bg-indigo-700 text-white border border-transparent shadow-sm shadow-indigo-600/20',
+        primary: 'bg-[#13B0D1] hover:bg-[#0E8CA8] text-white border border-transparent shadow-sm shadow-[#13B0D1]/20',
         secondary: 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700',
     };
     return (
@@ -84,8 +85,7 @@ const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className 
     );
 };
 
-const inputCls = "w-full h-9 px-3 border border-slate-200 rounded-lg text-[13px] outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-400 bg-white transition-all";
-
+const inputCls = ui.inputBase.replace('h-10', 'h-9');
 interface Props {
     sections: WebsiteSection[];
     setSections: (s: WebsiteSection[]) => void;
@@ -275,7 +275,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                     <div className="bg-slate-50/60 border-b border-slate-100 px-6 py-4 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
                             <span className="text-[15px] font-bold text-slate-900">Announcement Bar</span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 px-2.5 py-0.5 rounded-full border border-indigo-100">Header Notification</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#13B0D1]/10 text-[#0E8CA8] px-2.5 py-0.5 rounded-full border border-[#13B0D1]/15">Header Notification</span>
                         </div>
                         <div className="flex items-center gap-4">
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -286,7 +286,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     checked={!!announcementForm.show_announcement}
                                     onChange={() => setAnnouncementForm(f => ({ ...f, show_announcement: !f.show_announcement }))}
                                 />
-                                <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-[#13B0D1]' : 'bg-slate-300'}`}>
                                     <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
                                 </div>
                             </label>
@@ -365,7 +365,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             checked={!!announcementForm.announcement_scroll}
                                             onChange={() => setAnnouncementForm(f => ({ ...f, announcement_scroll: !f.announcement_scroll }))}
                                         />
-                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-[#13B0D1]' : 'bg-slate-300'}`}>
                                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.announcement_scroll ? 'left-[20px]' : 'left-0.5'}`} />
                                         </div>
                                     </label>
@@ -377,7 +377,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     value={announcementForm.announcement_scroll_speed}
                                     onChange={e => setAnnouncementForm(f => ({ ...f, announcement_scroll_speed: e.target.value }))}
                                     disabled={!announcementForm.announcement_scroll}
-                                    className="w-full h-9 px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50 disabled:text-slate-400"
+                                    className="w-full h-9 px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-[#13B0D1] focus:ring-2 focus:ring-[#13B0D1]/20 disabled:bg-slate-50 disabled:text-slate-400"
                                 >
                                     <option value="slow">Slow</option>
                                     <option value="medium">Medium</option>
@@ -448,14 +448,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                 <div className="bg-white divide-y divide-[#eee]">
                     {/* ── PINNED ANNOUNCEMENT BAR ROW (settings-backed, not a DB section) ── */}
                     {announcementAdded && (
-                        <div className="relative bg-indigo-50/20">
+                        <div className="relative bg-[#13B0D1]/20">
                             {/* DESKTOP */}
                             <div className="hidden md:grid grid-cols-12 items-center px-6 py-4 w-full">
                                 <div className="col-span-1">
-                                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-500 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">Pinned</span>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-[#0E8CA8] bg-[#13B0D1]/10 border border-[#13B0D1]/15 px-1.5 py-0.5 rounded">Pinned</span>
                                 </div>
                                 <div className="col-span-1">
-                                    <div className="w-8 h-8 rounded-[4px] bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
+                                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
                                 </div>
                                 <div className="col-span-6">
                                     <p className="text-[14px] font-bold text-slate-900">Announcement Bar</p>
@@ -470,8 +470,8 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     </div>
                                 </div>
                                 <div className="col-span-2 flex items-center justify-end gap-3">
-                                    <button onClick={() => setEditingAnnouncement(true)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
-                                    <span className="text-[#ddd]">|</span>
+                                    <button onClick={() => setEditingAnnouncement(true)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                    <span className="text-[#e2e8f0]">|</span>
                                     <button onClick={removeAnnouncement} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                 </div>
                             </div>
@@ -479,10 +479,10 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                             <div className="flex md:hidden flex-col p-4 gap-3 w-full">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black uppercase tracking-wider text-indigo-500 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">Pinned</span>
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-[#0E8CA8] bg-[#13B0D1]/10 border border-[#13B0D1]/15 px-1.5 py-0.5 rounded">Pinned</span>
                                         <p className="text-[14px] font-bold text-slate-900">Announcement Bar</p>
                                     </div>
-                                    <div className="w-8 h-8 rounded-[4px] bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
+                                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
                                 </div>
                                 <div className="flex items-center justify-between border-t border-[#eee] pt-3">
                                     <div className="flex items-center gap-2">
@@ -492,7 +492,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         <span className={cn("text-[10px] font-black uppercase", announcementForm.show_announcement ? "text-green-700" : "text-gray-400")}>{announcementForm.show_announcement ? 'Live' : 'Hidden'}</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button onClick={() => setEditingAnnouncement(true)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-indigo-600 hover:bg-slate-50">Edit</button>
+                                        <button onClick={() => setEditingAnnouncement(true)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#0E8CA8] hover:bg-slate-50">Edit</button>
                                         <button onClick={removeAnnouncement} className="h-[28px] px-3 border border-[#c40000]/20 rounded-lg text-[12px] font-bold text-[#c40000] hover:bg-red-50/50">Delete</button>
                                     </div>
                                 </div>
@@ -502,7 +502,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                     {sections.length === 0 && !announcementAdded ? (
                         <div className="p-16 text-center text-[#888]">
                             <p className="text-[14px]">No layout sections defined yet.</p>
-                            <button onClick={() => setShowAddModal(true)} className="text-indigo-600 font-bold hover:underline mt-2">Get started by adding a hero section</button>
+                            <button onClick={() => setShowAddModal(true)} className="text-[#0E8CA8] font-bold hover:underline mt-2">Get started by adding a hero section</button>
                         </div>
                     ) : (
                         sections.map((s: WebsiteSection, idx: number) => {
@@ -543,7 +543,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             !s.is_visible && 'opacity-60 bg-slate-50/50',
                                             dragIndex === idx && 'bg-blue-50 border-blue-500 shadow-inner scale-[0.98]',
                                             dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-slate-50',
-                                            previewId === s.id && 'bg-indigo-50/40 border-l-indigo-500'
+                                            previewId === s.id && 'bg-[#13B0D1]/40 border-l-[#13B0D1]'
                                         )}>
 
                                         {/* Drop Indicator */}
@@ -557,21 +557,21 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         {/* DESKTOP ROW */}
                                         <div className="hidden md:grid grid-cols-12 items-center px-6 py-4 w-full">
                                             <div className="col-span-1 flex items-center gap-1.5">
-                                                <div className="cursor-grab active:cursor-grabbing text-[#ddd] group-hover:text-[#aaa]">
+                                                <div className="cursor-grab active:cursor-grabbing text-[#e2e8f0] group-hover:text-[#aaa]">
                                                     <GripVertical size={14} />
                                                 </div>
                                                 <div className="flex flex-col -space-y-1">
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                         disabled={idx === 0}
-                                                        className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronUp size={16} strokeWidth={3} />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                         disabled={idx === sections.length - 1}
-                                                        className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronDown size={16} strokeWidth={3} />
                                                     </button>
@@ -580,7 +580,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             </div>
 
                                             <div className="col-span-1">
-                                                <div className="w-8 h-8 rounded-[4px] bg-[#f7f8fa] border border-[#ddd] flex items-center justify-center text-lg">
+                                                <div className="w-8 h-8 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center text-lg">
                                                     {meta?.icon || '📄'}
                                                 </div>
                                             </div>
@@ -626,8 +626,8 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                 >
                                                     {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 </button>
-                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
-                                                <span className="text-[#ddd]">|</span>
+                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
+                                                <span className="text-[#e2e8f0]">|</span>
                                                 <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
                                         </div>
@@ -643,14 +643,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                             disabled={idx === 0}
-                                                            className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronUp size={16} strokeWidth={3} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                             disabled={idx === sections.length - 1}
-                                                            className="text-[#999] hover:text-indigo-600 disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-[#0A6F85] disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronDown size={16} strokeWidth={3} />
                                                         </button>
@@ -660,7 +660,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     </span>
                                                 </div>
 
-                                                <div className="w-8 h-8 rounded-[4px] bg-[#f7f8fa] border border-[#ddd] flex items-center justify-center text-lg">
+                                                <div className="w-8 h-8 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] flex items-center justify-center text-lg">
                                                     {meta?.icon || '📄'}
                                                 </div>
                                             </div>
@@ -699,14 +699,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                         onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
                                                         className={cn(
                                                             "p-1.5 rounded-full transition-all border",
-                                                            previewId === s.id ? "bg-[#111] text-white border-black" : "text-[#565959] hover:bg-slate-100 border-[#ddd]"
+                                                            previewId === s.id ? "bg-[#111] text-white border-black" : "text-[#565959] hover:bg-slate-100 border-[#e2e8f0]"
                                                         )}
                                                         title="Toggle Preview"
                                                     >
                                                         {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                     </button>
-                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-indigo-600 hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
-                                                    <button onClick={() => setDeletingId(s.id!)} className="h-[28px] px-3 border border-[#c40000]/20 rounded-[3px] text-[12px] font-bold text-[#c40000] hover:bg-red-50/50 transition-all flex items-center justify-center">Delete</button>
+                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#0E8CA8] hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
+                                                    <button onClick={() => setDeletingId(s.id!)} className="h-[28px] px-3 border border-[#c40000]/20 rounded-lg text-[12px] font-bold text-[#c40000] hover:bg-red-50/50 transition-all flex items-center justify-center">Delete</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -715,8 +715,8 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     {/* Inline Preview Area */}
                                     {previewId === s.id && (
                                         <div className="bg-[#f8f9fa] border-t border-b border-[#eee] p-6 animate-in slide-in-from-top-2 duration-300">
-                                            <div className="bg-white border border-[#ddd] rounded-[8px] overflow-hidden shadow-xl max-w-5xl mx-auto">
-                                                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-4 py-2 flex items-center justify-between">
+                                            <div className="bg-white border border-[#e2e8f0] rounded-[8px] overflow-hidden shadow-xl max-w-5xl mx-auto">
+                                                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-4 py-2 flex items-center justify-between">
                                                     <span className="text-[10px] font-black text-[#565959] uppercase tracking-widest flex items-center gap-2">
                                                         <Monitor size={12} /> Live Render Simulation
                                                     </span>
@@ -738,7 +738,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
             {/* ── FOOTER ACTIONS ── */}
             <div className="mt-8 flex justify-end pb-12 pr-6">
                 <AmazonBtn
-                    className="w-[280px] h-[48px] !text-[16px] !font-black !rounded-[4px] shadow-md border-[#888c8e]"
+                    className="w-[280px] h-[48px] !text-[16px] !font-black !rounded-lg shadow-md border-[#cbd5e1]"
                     onClick={handleSync}
                 >
                     <CheckCircle size={20} /> SAVE ALL CHANGES
@@ -755,7 +755,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {SECTION_TYPES.map(t => (
                                 <button key={t.type} onClick={() => addSection(t.type)}
-                                    className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-indigo-300 hover:bg-indigo-50/40 transition-all group text-left">
+                                    className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-[#13B0D1]/35 hover:bg-[#0E8CA8]/40 transition-all group text-left">
                                     <span className="text-2xl w-10 h-10 bg-slate-50 flex items-center justify-center border border-slate-100 rounded-xl">{t.icon}</span>
                                     <div>
                                         <p className="font-bold text-slate-900 text-[14px]">{t.label}</p>
@@ -789,7 +789,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
             {deletingId && (
                 <div className="fixed inset-0 bg-[#000000a0] z-[70] flex items-center justify-center p-4 animate-in fade-in duration-200 text-left">
-                    <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-[380px] overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-[380px] overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="bg-[#fcfcfc] px-6 py-4 border-b border-[#eee] flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center text-red-600">
                                 <Trash2 size={18} />
@@ -803,17 +803,17 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                 This will erase all configured content for this section. This action <span className="text-[#c40000] font-bold">cannot be undone</span>.
                             </p>
                         </div>
-                        <div className="bg-[#f7f8fa] px-6 py-4 flex justify-end gap-2 border-t border-[#eee]">
+                        <div className="bg-[#f8fafc] px-6 py-4 flex justify-end gap-2 border-t border-[#eee]">
                             <button
                                 onClick={() => setDeletingId(null)}
-                                className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border border-[#adb1b8] bg-white hover:bg-slate-50 text-[#111] transition-all"
+                                className="h-[31px] px-4 rounded-lg text-[13px] font-medium border border-[#adb1b8] bg-white hover:bg-slate-50 text-[#111] transition-all"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={() => deleteSection(deletingId)}
                                 disabled={loading === deletingId}
-                                className="h-[31px] px-4 rounded-[3px] text-[13px] font-bold bg-[#c40000] text-white hover:bg-[#a00000] transition-all flex items-center gap-2 disabled:opacity-50"
+                                className="h-[31px] px-4 rounded-lg text-[13px] font-bold bg-[#c40000] text-white hover:bg-[#a00000] transition-all flex items-center gap-2 disabled:opacity-50"
                             >
                                 {loading === deletingId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                                 Delete Section
@@ -897,7 +897,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                     <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
                         {catItems.map((cat: any, i: number) => (
                             <div key={i} className="flex flex-col items-center gap-2 group cursor-pointer">
-                                <div className="w-16 h-16 bg-[#f0f2f2] rounded-full border border-[#ddd] overflow-hidden shadow-sm group-hover:border-[#c45500] transition-all">
+                                <div className="w-16 h-16 bg-[#f0f2f2] rounded-full border border-[#e2e8f0] overflow-hidden shadow-sm group-hover:border-[#c45500] transition-all">
                                     <img src={getImageUrl(cat.image)} className="w-full h-full object-cover" />
                                 </div>
                                 <span className="text-[11px] font-bold text-[#111] uppercase tracking-tight text-center">{cat.name}</span>
@@ -923,11 +923,11 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
         case 'faq':
             const items = content.items || [];
             return (
-                <div className="p-8 bg-[#f7f8fa] space-y-6">
+                <div className="p-8 bg-[#f8fafc] space-y-6">
                     <h4 className="text-xl font-black text-[#111] text-center tracking-tight">{content.title}</h4>
                     <div className="max-w-2xl mx-auto space-y-2">
                         {items.map((item: any, i: number) => (
-                            <div key={i} className="bg-white border border-[#ddd] rounded-lg overflow-hidden shadow-sm">
+                            <div key={i} className="bg-white border border-[#e2e8f0] rounded-lg overflow-hidden shadow-sm">
                                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
                                     className="w-full flex items-center justify-between px-4 py-3 text-left group">
                                     <span className="text-sm font-bold text-[#111] group-hover:text-[#c45500]">{item.q}</span>
@@ -946,7 +946,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
 
         case 'promotion':
             return (
-                <div className="flex bg-white border border-[#ddd] rounded-xl overflow-hidden h-[300px]">
+                <div className="flex bg-white border border-[#e2e8f0] rounded-xl overflow-hidden h-[300px]">
                     <div className="flex-1 p-8 flex flex-col justify-center space-y-4">
                         <div className="flex items-center gap-2">
                             <div className="h-[1px] w-4 bg-[#119AB8]" />
@@ -1174,7 +1174,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
 
         default:
             return (
-                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#ddd] m-4 rounded-xl">
+                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#e2e8f0] m-4 rounded-xl">
                     <Layers size={24} className="mx-auto mb-2 text-slate-300" />
                     <p className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Quick Preview: {section_type}</p>
                 </div>
@@ -1210,7 +1210,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                 <div className="flex-1 relative group">
                     <input value={value || ''} onChange={e => onChange(e.target.value)} className={inputCls + " pr-10"} placeholder="Enter URL or Choose from Library..." />
                     {value && (
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 bg-white border border-[#ddd] rounded-[2px] overflow-hidden shadow-sm flex items-center justify-center">
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 bg-white border border-[#e2e8f0] rounded-[2px] overflow-hidden shadow-sm flex items-center justify-center">
                             {checkIsVideo(value) ? (
                                 <Film size={12} className="text-[#565959]" />
                             ) : (
@@ -1229,10 +1229,10 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
     return (
         <div className="fixed inset-0 bg-[#000000a0] z-[60] flex items-center justify-center p-4">
             {picker.open && <MediaPickerModal allowVideo={picker.allowVideo} onClose={() => setPicker(p => ({ ...p, open: false }))} onSelect={picker.onSelect} />}
-            <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[95vh] h-full sm:h-auto">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[95vh] h-full sm:h-auto">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-white border border-[#ddd] rounded-[4px] flex items-center justify-center">
+                        <div className="w-8 h-8 bg-white border border-[#e2e8f0] rounded-lg flex items-center justify-center">
                             {SECTION_TYPES.find(t => t.type === section.section_type)?.icon}
                         </div>
                         <h3 className="font-bold text-[#111] text-[17px]">Edit {section.name}</h3>
@@ -1250,7 +1250,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                         <div className="flex flex-col justify-end gap-1.5">
                             <label className="text-[13px] font-bold text-[#111]">Visibility Status</label>
                             <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={form.is_visible} onChange={e => setForm(f => ({ ...f, is_visible: e.target.checked }))} className="rounded text-[#e77600] w-4 h-4" />
+                                <input type="checkbox" checked={form.is_visible} onChange={e => setForm(f => ({ ...f, is_visible: e.target.checked }))} className="rounded text-[#13B0D1] w-4 h-4" />
                                 <span className="text-[13px] text-[#565959]">Show this section on the landing page</span>
                             </label>
                         </div>
@@ -1267,14 +1267,14 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
                                         <label className="text-[13px] font-bold text-[#111]">Carousel Slides ({(form.content.slides || []).length})</label>
                                         <button onClick={() => updateContent('slides', [...(form.content.slides || []), { title: 'New Slide', subtitle: '', description: '', media_type: 'image', image: '', cta_text: '', cta_link: '', color: '', thumbnail: '' }])}
-                                            className="text-[12px] font-bold text-indigo-600 hover:underline">+ Add Slide</button>
+                                            className="text-[12px] font-bold text-[#0E8CA8] hover:underline">+ Add Slide</button>
                                     </div>
                                     <div className="space-y-4">
                                         {(form.content.slides || []).map((s: any, i: number) => (
-                                            <div key={i} className="p-4 bg-[#fcfcfc] border border-[#ddd] rounded-[4px] space-y-4 shadow-sm">
+                                            <div key={i} className="p-4 bg-[#fcfcfc] border border-[#e2e8f0] rounded-lg space-y-4 shadow-sm">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[11px] font-bold text-[#565959] uppercase">Slide {i + 1}</span>
-                                                    <button onClick={() => updateContent('slides', form.content.slides.filter((_: any, idx: number) => idx !== i))} className="text-red-600 hover:bg-red-50 p-1.5 rounded-[3px]"><Trash2 size={14} /></button>
+                                                    <button onClick={() => updateContent('slides', form.content.slides.filter((_: any, idx: number) => idx !== i))} className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={14} /></button>
                                                 </div>
                                                 <div className="grid md:grid-cols-2 gap-4">
                                                     <MediaField
@@ -1314,7 +1314,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             }}
                                                         />
                                                     )}
-                                                    <textarea placeholder="Description Text" rows={2} value={s.description} onChange={e => { const list = [...form.content.slides]; list[i].description = e.target.value; updateContent('slides', list); }} className="md:col-span-2 w-full min-h-[60px] px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                                    <textarea placeholder="Description Text" rows={2} value={s.description} onChange={e => { const list = [...form.content.slides]; list[i].description = e.target.value; updateContent('slides', list); }} className="md:col-span-2 w-full min-h-[60px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                                 </div>
                                             </div>
                                         ))}
@@ -1359,11 +1359,11 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         <label className="text-[13px] font-bold text-[#111]">Display Toggles</label>
                                         <div className="flex gap-6">
                                             <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#565959]">
-                                                <input type="checkbox" checked={form.content.show_price} onChange={e => updateContent('show_price', e.target.checked)} className="rounded text-[#e77600]" />
+                                                <input type="checkbox" checked={form.content.show_price} onChange={e => updateContent('show_price', e.target.checked)} className="rounded text-[#13B0D1]" />
                                                 Show Prices
                                             </label>
                                             <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#565959]">
-                                                <input type="checkbox" checked={form.content.show_stock} onChange={e => updateContent('show_stock', e.target.checked)} className="rounded text-[#e77600]" />
+                                                <input type="checkbox" checked={form.content.show_stock} onChange={e => updateContent('show_stock', e.target.checked)} className="rounded text-[#13B0D1]" />
                                                 Stock Status
                                             </label>
                                         </div>
@@ -1392,12 +1392,12 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 onFocus={() => setIsDropdownOpen(true)}
                                                 onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                                className={inputCls + " w-full bg-[#f9f9f9] border-[#ccc] focus:bg-white focus:border-[#e77600] text-[13px] shadow-inner"}
+                                                className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#13B0D1] text-[13px] shadow-inner"}
                                             />
 
                                             {/* Dropdown Results */}
                                             {isDropdownOpen && (
-                                                <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#ddd] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
+                                                <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#e2e8f0] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
                                                     {products.filter(p =>
                                                         (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
                                                         !(form.content.product_ids || []).includes(p.id)
@@ -1411,14 +1411,14 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             }}
                                                             className="w-full flex items-center gap-3 p-3 border-b border-[#f0f0f0] hover:bg-[#f2f8f9] text-left transition-colors last:border-0"
                                                         >
-                                                            <div className="w-10 h-10 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0 shadow-sm">
+                                                            <div className="w-10 h-10 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
                                                                 <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
                                                                 <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
                                                             </div>
-                                                            <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-[4px] text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
+                                                            <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-lg text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
                                                         </button>
                                                     ))}
                                                     {products.filter(p =>
@@ -1438,8 +1438,8 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     const p = products.find((prod: any) => prod.id === id);
                                                     if (!p) return null;
                                                     return (
-                                                        <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#e77600]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
-                                                            <div className="w-12 h-12 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0">
+                                                        <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#13B0D1]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                            <div className="w-12 h-12 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0">
                                                                 <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                             </div>
                                                             <div className="min-w-0 flex-1 pr-8">
@@ -1491,7 +1491,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 {form.content.description !== undefined && (
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-bold text-[#111]">Description</label>
-                                        <textarea rows={3} value={form.content.description} onChange={e => updateContent('description', e.target.value)} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                        <textarea rows={3} value={form.content.description} onChange={e => updateContent('description', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                     </div>
                                 )}
                                 <div className="grid md:grid-cols-2 gap-4">
@@ -1528,8 +1528,8 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             if (!form.content.image) updateContent('image', p.images?.[0]?.image || p.image);
                                                         }}
                                                         className={cn(
-                                                            "flex items-center gap-3 p-2 border rounded-[4px] text-left transition-all",
-                                                            isSelected ? "border-[#e77600] bg-[#fff9e6]" : "border-[#ddd] hover:border-[#888]"
+                                                            "flex items-center gap-3 p-2 border rounded-lg text-left transition-all",
+                                                            isSelected ? "border-[#13B0D1] bg-[#e6f7fb]" : "border-[#e2e8f0] hover:border-[#888]"
                                                         )}>
                                                         <div className="w-10 h-10 bg-white border border-[#eee] rounded-[2px] overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
@@ -1538,7 +1538,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             <p className="text-[12px] font-bold text-[#111] truncate">{p.name || p.product_name}</p>
                                                             {(p.batch || p.batch_number) && <p className="text-[9px] text-[#888]">Batch: {p.batch || p.batch_number}</p>}
                                                         </div>
-                                                        {isSelected && <div className="ml-auto text-[#e77600]"><CheckCircle size={14} /></div>}
+                                                        {isSelected && <div className="ml-auto text-[#13B0D1]"><CheckCircle size={14} /></div>}
                                                     </button>
                                                 );
                                             })}
@@ -1590,12 +1590,12 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             onFocus={() => setIsDropdownOpen(true)}
                                             onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                            className={inputCls + " w-full bg-[#f9f9f9] border-[#ccc] focus:bg-white focus:border-[#e77600] text-[13px] shadow-inner"}
+                                            className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#13B0D1] text-[13px] shadow-inner"}
                                         />
 
                                         {/* Dropdown Results */}
                                         {isDropdownOpen && (
-                                            <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#ddd] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
+                                            <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-white border border-[#e2e8f0] shadow-[0_15px_30px_rgba(0,0,0,0.15)] rounded-[6px] max-h-[280px] overflow-y-auto z-[60] custom-scrollbar">
                                                 {products.filter(p =>
                                                     (p.name || p.product_name || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
                                                     !(form.content.product_ids || []).includes(p.id)
@@ -1609,14 +1609,14 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         }}
                                                         className="w-full flex items-center gap-3 p-3 border-b border-[#f0f0f0] hover:bg-[#f2f8f9] text-left transition-colors last:border-0"
                                                     >
-                                                        <div className="w-10 h-10 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0 shadow-sm">
+                                                        <div className="w-10 h-10 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0 shadow-sm">
                                                             <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                         </div>
                                                         <div className="min-w-0 flex-1">
                                                             <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
                                                             <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
                                                         </div>
-                                                        <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-[4px] text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
+                                                        <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-lg text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
                                                     </button>
                                                 ))}
                                                 {products.filter(p =>
@@ -1636,8 +1636,8 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 const p = products.find((prod: any) => prod.id === id);
                                                 if (!p) return null;
                                                 return (
-                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#e77600]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
-                                                        <div className="w-12 h-12 bg-white border border-[#eee] rounded-[4px] overflow-hidden flex-shrink-0">
+                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#13B0D1]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                        <div className="w-12 h-12 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                         </div>
                                                         <div className="min-w-0 flex-1 pr-8">
@@ -1673,7 +1673,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 <MediaField label="Banner Image" value={form.content.image} onChange={(url: string) => updateContent('image', url)} />
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Our Story</label>
-                                    <textarea rows={6} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                    <textarea rows={6} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                 </div>
                             </div>
                         )}
@@ -1714,14 +1714,14 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             updateContent('items', next);
                                                         }}
                                                         className={cn(
-                                                            "flex flex-col items-center gap-2 p-3 border rounded-[4px] text-center transition-all",
-                                                            isSelected ? "border-[#e77600] bg-[#fff9e6]" : "border-[#ddd] hover:border-[#888]"
+                                                            "flex flex-col items-center gap-2 p-3 border rounded-lg text-center transition-all",
+                                                            isSelected ? "border-[#13B0D1] bg-[#e6f7fb]" : "border-[#e2e8f0] hover:border-[#888]"
                                                         )}>
                                                         <div className="w-12 h-12 bg-white border border-[#eee] rounded-full overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(cat.image)} className="w-full h-full object-cover" />
                                                         </div>
                                                         <p className="text-[11px] font-bold text-[#111] truncate w-full">{cat.name}</p>
-                                                        {isSelected && <CheckCircle size={12} className="text-[#e77600]" />}
+                                                        {isSelected && <CheckCircle size={12} className="text-[#13B0D1]" />}
                                                     </button>
                                                 );
                                             })}
@@ -1735,17 +1735,17 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 const key = form.content.items ? 'items' : 'logos';
                                                 const newItem = key === 'items' ? { title: '', image: '', link: '' } : '';
                                                 updateContent(key, [...(form.content[key] || []), newItem]);
-                                            }} className="text-[12px] font-bold text-indigo-600 hover:underline">+ Add Item</button>
+                                            }} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">+ Add Item</button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             {(form.content.items || form.content.logos || []).map((item: any, i: number) => (
-                                                <div key={i} className="p-3 bg-[#fcfcfc] border border-[#ddd] rounded-[4px] space-y-2">
+                                                <div key={i} className="p-3 bg-[#fcfcfc] border border-[#e2e8f0] rounded-lg space-y-2">
                                                     <div className="flex items-center justify-between">
                                                         <span className="text-[10px] font-bold text-[#565959]">ITEM {i + 1}</span>
                                                         <button onClick={() => {
                                                             const key = form.content.items ? 'items' : 'logos';
                                                             updateContent(key, form.content[key].filter((_: any, idx: number) => idx !== i));
-                                                        }} className="text-red-600 hover:bg-red-50 p-1 rounded-[3px]"><Trash2 size={12} /></button>
+                                                        }} className="text-red-600 hover:bg-red-50 p-1 rounded-lg"><Trash2 size={12} /></button>
                                                     </div>
                                                     {typeof item === 'string' ? (
                                                         <MediaField label="Logo URL" value={item} onChange={(url: string) => { const list = [...form.content.logos]; list[i] = url; updateContent('logos', list); }} />
@@ -1785,17 +1785,17 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     section.section_type === 'testimonials' ? { name: '', role: '', text: '', rating: 5, image: '' } :
                                                         { title: '', text: '' };
                                             updateContent(key, [...(form.content[key] || []), newItem]);
-                                        }} className="text-[12px] font-bold text-indigo-600 hover:underline">+ Add Entry</button>
+                                        }} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">+ Add Entry</button>
                                     </div>
                                     <div className="grid gap-3">
                                         {(form.content.items || form.content.reviews || []).map((item: any, i: number) => (
-                                            <div key={i} className="p-4 bg-[#fcfcfc] border border-[#ddd] rounded-[4px] space-y-3 shadow-sm">
+                                            <div key={i} className="p-4 bg-[#fcfcfc] border border-[#e2e8f0] rounded-lg space-y-3 shadow-sm">
                                                 <div className="flex items-center justify-between">
                                                     <span className="text-[10px] font-black text-[#565959] uppercase tracking-widest">Entry {i + 1}</span>
                                                     <button onClick={() => {
                                                         const key = form.content.reviews ? 'reviews' : 'items';
                                                         updateContent(key, form.content[key].filter((_: any, idx: number) => idx !== i));
-                                                    }} className="text-red-600 hover:bg-red-50 p-1 rounded-[3px] transition-colors"><Trash2 size={14} /></button>
+                                                    }} className="text-red-600 hover:bg-red-50 p-1 rounded-lg transition-colors"><Trash2 size={14} /></button>
                                                 </div>
 
                                                 {section.section_type === 'testimonials' ? (
@@ -1833,7 +1833,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.reviews];
                                                             list[i].text = e.target.value;
                                                             updateContent('reviews', list);
-                                                        }} className="md:col-span-2 w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                                        }} className="md:col-span-2 w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                                     </div>
                                                 ) : section.section_type === 'stats' ? (
                                                     <div className="grid md:grid-cols-2 gap-4">
@@ -1865,7 +1865,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.items];
                                                             list[i].a = e.target.value;
                                                             updateContent('items', list);
-                                                        }} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-3">
@@ -1878,7 +1878,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.items];
                                                             list[i].text = e.target.value;
                                                             updateContent('items', list);
-                                                        }} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                                     </div>
                                                 )}
                                             </div>
@@ -1892,7 +1892,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                             <div className="space-y-6">
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Scrolling Text</label>
-                                    <textarea rows={3} value={form.content.text} onChange={e => updateContent('text', e.target.value)} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                    <textarea rows={3} value={form.content.text} onChange={e => updateContent('text', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Scroll Speed</label>
@@ -1922,7 +1922,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     </div>
                                     <div className="md:col-span-2 space-y-1.5">
                                         <label className="text-[13px] font-bold text-[#111]">Physical Address</label>
-                                        <textarea rows={2} value={form.content.address} onChange={e => updateContent('address', e.target.value)} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                        <textarea rows={2} value={form.content.address} onChange={e => updateContent('address', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                     </div>
                                 </div>
                             </div>
@@ -1949,7 +1949,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             }
                                             updateContent('iframe_url', val);
                                         }}
-                                        className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[11px] font-mono outline-none focus:border-[#e77600] bg-white resize-none"
+                                        className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[11px] font-mono outline-none focus:border-[#13B0D1] bg-white resize-none"
                                     />
                                     <p className="text-[10px] text-slate-400 italic">Go to Google Maps &gt; Share &gt; Embed a map &gt; Copy HTML and paste it here.</p>
                                 </div>
@@ -1966,13 +1966,13 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-[#111]">Body Text</label>
-                                            <textarea rows={4} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] bg-white resize-none" />
+                                            <textarea rows={4} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] bg-white resize-none" />
                                         </div>
                                     </div>
                                     <div className="space-y-6">
                                         <MediaField label="Banner Image" value={form.content.image} onChange={(url: string) => updateContent('image', url)} />
                                         <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={form.content.reversed} onChange={e => updateContent('reversed', e.target.checked)} className="rounded text-[#e77600]" />
+                                            <input type="checkbox" checked={form.content.reversed} onChange={e => updateContent('reversed', e.target.checked)} className="rounded text-[#13B0D1]" />
                                             <span className="text-[13px] font-bold text-[#111]">Reverse Layout (Image on Right)</span>
                                         </label>
                                     </div>
@@ -1988,15 +1988,15 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Custom HTML / Script Code</label>
-                                    <textarea rows={10} value={form.content.code} onChange={e => updateContent('code', e.target.value)} className="w-full font-mono text-[12px] px-3 py-2 border border-[#888c8e] rounded-[3px] outline-none focus:border-[#e77600] bg-[#1e1e1e] text-green-400 resize-none" />
+                                    <textarea rows={10} value={form.content.code} onChange={e => updateContent('code', e.target.value)} className="w-full font-mono text-[12px] px-3 py-2 border border-[#cbd5e1] rounded-lg outline-none focus:border-[#13B0D1] bg-[#1e1e1e] text-green-400 resize-none" />
                                 </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                <div className="bg-[#f7f8fa] border-t border-[#ddd] px-8 py-4 flex justify-between items-center">
-                    <button onClick={onClose} className="text-[13px] font-bold text-indigo-600 hover:underline">Dismiss Changes</button>
+                <div className="bg-[#f8fafc] border-t border-[#e2e8f0] px-8 py-4 flex justify-between items-center">
+                    <button onClick={onClose} className="text-[13px] font-bold text-[#0E8CA8] hover:underline">Dismiss Changes</button>
                     <div className="flex gap-2">
                         <AmazonBtn variant="secondary" onClick={onClose}>Cancel</AmazonBtn>
                         <AmazonBtn onClick={save} loading={saving} className="min-w-[140px]">Update Section</AmazonBtn>

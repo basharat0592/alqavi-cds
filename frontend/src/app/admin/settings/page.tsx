@@ -48,7 +48,7 @@ const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full border transition-colors ${checked ? 'bg-indigo-600 border-indigo-700' : 'bg-slate-200 border-slate-300'}`}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full border transition-colors ${checked ? 'bg-[#13B0D1] border-[#13B0D1]' : 'bg-slate-200 border-slate-300'}`}
     >
         <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
     </button>
@@ -210,13 +210,13 @@ export default function SettingsPage() {
                             return true;
                         }).map(tab => (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="text-left group w-full">
-                                <Card className="p-5 hover:border-indigo-300 transition-all">
+                                <Card className="p-5 hover:border-[#13B0D1]/35 transition-all">
                                     <div className="flex items-start gap-3">
-                                        <div className="mt-0.5 p-2 bg-slate-100 rounded-xl group-hover:bg-indigo-50 transition-colors">
-                                            <tab.icon size={20} className="text-slate-500 group-hover:text-indigo-600 transition-colors" />
+                                        <div className="mt-0.5 p-2 bg-slate-100 rounded-xl group-hover:bg-[#13B0D1]/10 transition-colors">
+                                            <tab.icon size={20} className="text-slate-500 group-hover:text-[#0A6F85] transition-colors" />
                                         </div>
                                         <div>
-                                            <h3 className="text-[14px] font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">{tab.label}</h3>
+                                            <h3 className="text-[14px] font-bold text-slate-900 group-hover:text-[#0A6F85] transition-colors">{tab.label}</h3>
                                             <p className="text-[12px] text-slate-600 mt-0.5 leading-snug">{tab.desc}</p>
                                         </div>
                                     </div>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                                         const f = e.target.files?.[0];
                                         if (f) { setSelectedAvatar(f); setAvatarPreview(URL.createObjectURL(f)); }
                                     }} />
-                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-indigo-600 hover:text-indigo-700 hover:underline font-medium">Change photo</button>
+                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline font-medium">Change photo</button>
                                 </div>
 
                                 {/* Fields */}
@@ -345,8 +345,8 @@ export default function SettingsPage() {
                                         <Input type="password" value={passwords.confirm} onChange={e => setPasswords({ ...passwords, confirm: e.target.value })} placeholder="Repeat new password" />
                                     </Field>
                                 </div>
-                                <div className="w-full sm:w-[220px] bg-indigo-50 border border-indigo-100 rounded-xl p-5 text-[12px] text-slate-600 leading-relaxed self-start">
-                                    <p className="font-bold text-indigo-700 mb-2 text-[12px]">Security Tips</p>
+                                <div className="w-full sm:w-[220px] bg-[#13B0D1]/10 border border-[#13B0D1]/15 rounded-xl p-5 text-[12px] text-slate-600 leading-relaxed self-start">
+                                    <p className="font-bold text-[#0E8CA8] mb-2 text-[12px]">Security Tips</p>
                                     Use at least 8 characters with a mix of letters, numbers, and symbols. Never share your password with anyone.
                                 </div>
                             </div>
@@ -417,9 +417,9 @@ export default function SettingsPage() {
                                     <button
                                         key={t.id}
                                         onClick={() => { setTheme(t.id as any); handleSaveAppearance({ theme: t.id }); }}
-                                        className={`flex items-center gap-3 px-5 py-3 border rounded-xl text-[13px] font-bold transition-all ${theme === t.id ? 'border-indigo-400 bg-indigo-50 text-indigo-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+                                        className={`flex items-center gap-3 px-5 py-3 border rounded-xl text-[13px] font-bold transition-all ${theme === t.id ? 'border-[#13B0D1] bg-[#13B0D1]/10 text-[#0E8CA8]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
                                     >
-                                        <t.icon size={16} className={theme === t.id ? 'text-indigo-600' : 'text-slate-400'} />
+                                        <t.icon size={16} className={theme === t.id ? 'text-[#0E8CA8]' : 'text-slate-400'} />
                                         {t.label}
                                         {theme === t.id && <Badge tone="indigo">Active</Badge>}
                                     </button>

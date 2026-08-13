@@ -101,7 +101,7 @@ export default function UserRolesPage() {
             {/* Table */}
             <Card className="overflow-hidden text-left mb-6">
                 <div className="bg-slate-50/60 px-5 py-3 border-b border-slate-100 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-indigo-600" />
+                    <ShieldCheck className="h-4 w-4 text-[#0E8CA8]" />
                     <span className="text-[13px] font-bold text-slate-900">Access Privileges Registry</span>
                 </div>
                 <div className="overflow-x-auto">
@@ -137,11 +137,11 @@ export default function UserRolesPage() {
                                         <RowCheckboxTd sel={sel} id={role.id} />
                                         <td className="px-2.5 sm:px-6 py-3.5">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-500 group-hover:bg-indigo-600 group-hover:text-white group-hover:border-indigo-600 transition-all">
+                                                <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-500 group-hover:bg-[#0E8CA8] group-hover:text-white group-hover:border-[#13B0D1] transition-all">
                                                     {(role.name?.[0] || 'R').toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer truncate">
+                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer truncate">
                                                         {role.name}
                                                     </Link>
                                                     <p className="text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-md mt-0.5">{role.description || 'Global system permissions profile'}</p>
@@ -157,7 +157,7 @@ export default function UserRolesPage() {
                                         </td>
                                         <td className="px-2.5 sm:px-6 py-3.5 text-right whitespace-nowrap">
                                             <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                <Link href={`/admin/users/roles/${role.id}/edit`} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</Link>
+                                                <Link href={`/admin/users/roles/${role.id}/edit`} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</Link>
                                                 {!role.is_default && role.name?.toLowerCase() !== 'super admin' && (
                                                     <>
                                                         <span className="text-slate-300">|</span>

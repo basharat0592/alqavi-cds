@@ -12,6 +12,7 @@ import { companyService } from '@/services/company.service';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    PURE AMAZON RETAIL DESIGN SYSTEM - PRODUCT FORM COMPONENT
@@ -19,7 +20,7 @@ import Link from 'next/link';
 
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-indigo-600 border-indigo-600 hover:bg-indigo-700 hover:border-indigo-700 text-white shadow-sm hover:shadow',
+        primary: 'bg-[#13B0D1] border-[#13B0D1] hover:bg-[#0E8CA8] hover:border-[#13B0D1] text-white shadow-sm hover:shadow',
         secondary: 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700',
     };
     return (
@@ -38,8 +39,7 @@ const Field = ({ label, required = false, children, className = "" }: { label: s
     </div>
 );
 
-const inputCls = "w-full h-10 px-3 border border-slate-200 rounded-lg text-[13px] text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 placeholder:text-slate-400 bg-white transition-all disabled:bg-slate-50 disabled:text-slate-400";
-
+const inputCls = ui.inputBase;
 /* ─── Professional Searchable Select ─── */
 const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Select...", searchable = false, required = false }: any) => {
     const [open, setOpen] = useState(false);
@@ -96,7 +96,7 @@ const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Se
                                 filtered.map((opt: any) => (
                                     <div
                                         key={opt.id}
-                                        className={`px-3 py-2 text-[13px] hover:bg-slate-50 cursor-pointer transition-colors ${String(value || '') === String(opt.id || '') ? 'bg-indigo-50 font-bold text-[#4f46e5]' : 'text-[#0f172a]'}`}
+                                        className={`px-3 py-2 text-[13px] hover:bg-slate-50 cursor-pointer transition-colors ${String(value || '') === String(opt.id || '') ? 'bg-[#13B0D1]/10 font-bold text-[#4f46e5]' : 'text-[#0f172a]'}`}
                                         onClick={() => {
                                             onChange(opt.id.toString());
                                             setOpen(false);
@@ -164,7 +164,7 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="w-full px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all flex items-center justify-between text-left h-[46px]"
+                className="w-full px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 transition-all flex items-center justify-between text-left h-[46px]"
             >
                 {selectedGrouped ? (
                     <div className="flex items-center gap-2 overflow-hidden py-1">
@@ -665,7 +665,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 </div>
 
                                 {selectedStock && (
-                                    <div className="bg-indigo-50/40 border border-indigo-100 rounded-lg p-4 animate-in zoom-in-95 mt-2 space-y-4">
+                                    <div className="bg-[#13B0D1]/40 border border-[#13B0D1]/15 rounded-lg p-4 animate-in zoom-in-95 mt-2 space-y-4">
                                         <div className="flex gap-4">
                                             <Info className="text-[#4f46e5] shrink-0" size={18} />
                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
@@ -687,8 +687,8 @@ export default function ProductForm({ id }: ProductFormProps) {
                             </div>
                             <div className="p-6 space-y-6">
                                 <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-[2px] w-[180px]">
-                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'percent' ? 'bg-white text-indigo-700 shadow-sm' : 'text-[#64748b]'}`}>Profit %</button>
-                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'manual' ? 'bg-white text-indigo-700 shadow-sm' : 'text-[#64748b]'}`}>Manual Price</button>
+                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'percent' ? 'bg-white text-[#0E8CA8] shadow-sm' : 'text-[#64748b]'}`}>Profit %</button>
+                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'manual' ? 'bg-white text-[#0E8CA8] shadow-sm' : 'text-[#64748b]'}`}>Manual Price</button>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -802,7 +802,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                                     onDragOver={(e) => { e.preventDefault(); setIsDraggingMain(true); }}
                                     onDragLeave={() => setIsDraggingMain(false)}
                                     onDrop={(e) => handleDrop(e, 'main')}
-                                    className={`aspect-square bg-slate-50 border-2 border-dashed rounded-lg flex items-center justify-center relative overflow-hidden cursor-pointer transition-all group ${isDraggingMain ? 'border-[#4f46e5] bg-indigo-50' : 'border-slate-300 hover:border-[#4f46e5]'}`}
+                                    className={`aspect-square bg-slate-50 border-2 border-dashed rounded-lg flex items-center justify-center relative overflow-hidden cursor-pointer transition-all group ${isDraggingMain ? 'border-[#4f46e5] bg-[#13B0D1]/10' : 'border-slate-300 hover:border-[#4f46e5]'}`}
                                 >
                                     {imagePreview ? (
                                         <img src={imagePreview} className="w-full h-full object-contain p-2" alt="Preview" />
@@ -821,7 +821,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                                         onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
                                         onDragLeave={() => setIsDraggingGallery(false)}
                                         onDrop={(e) => handleDrop(e, 'gallery')}
-                                        className={`grid grid-cols-4 gap-2 p-2 rounded-xl transition-colors ${isDraggingGallery ? 'bg-indigo-50 border border-dashed border-[#4f46e5]' : ''}`}
+                                        className={`grid grid-cols-4 gap-2 p-2 rounded-xl transition-colors ${isDraggingGallery ? 'bg-[#13B0D1]/10 border border-dashed border-[#4f46e5]' : ''}`}
                                     >
                                         {galleryPreviews.map((src, i) => (
                                             <div key={i} className="aspect-square bg-white border border-slate-200 rounded-md relative group overflow-hidden">
@@ -848,8 +848,8 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4 flex gap-3">
-                            <ShieldCheck className="text-indigo-600 shrink-0" size={20} />
+                        <div className="bg-[#13B0D1]/60 border border-[#13B0D1]/15 rounded-xl p-4 flex gap-3">
+                            <ShieldCheck className="text-[#0E8CA8] shrink-0" size={20} />
                             <p className="text-[12px] text-[#64748b] leading-relaxed italic">Products are linked to their source stock signatures for data integrity.</p>
                         </div>
                     </aside>

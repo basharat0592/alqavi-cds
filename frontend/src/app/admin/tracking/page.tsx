@@ -157,7 +157,7 @@ export default function OrderTrackingPage() {
                                     </div>
                                     <div className="text-right">
                                         <p className="text-[11px] font-bold text-slate-400 uppercase">Last Update</p>
-                                        <p className="text-[14px] font-bold text-indigo-600">{formatDate(order.updated_at)}</p>
+                                        <p className="text-[14px] font-bold text-[#0E8CA8]">{formatDate(order.updated_at)}</p>
                                     </div>
                                 </div>
                                 <div className="p-10 pb-16">
@@ -166,7 +166,7 @@ export default function OrderTrackingPage() {
                                         <div className="absolute top-1/2 left-0 right-0 h-1 bg-slate-100 -translate-y-1/2 rounded-full" />
                                         {currentStepIndex >= 0 && order.status !== 'CANCELLED' && (
                                             <div
-                                                className="absolute top-1/2 left-0 h-1 bg-indigo-600 -translate-y-1/2 rounded-full transition-all duration-1000 ease-out"
+                                                className="absolute top-1/2 left-0 h-1 bg-[#13B0D1] -translate-y-1/2 rounded-full transition-all duration-1000 ease-out"
                                                 style={{ width: `${(currentStepIndex / (STEPS.length - 1)) * 100}%` }}
                                             />
                                         )}
@@ -180,14 +180,14 @@ export default function OrderTrackingPage() {
                                                 return (
                                                     <div key={idx} className="flex flex-col items-center group">
                                                         <div className={`w-8 h-8 rounded-full border flex items-center justify-center bg-white z-10 transition-all duration-500
-                                                            ${isCompleted ? 'border-indigo-600 text-indigo-600 ring-4 ring-indigo-600/10' : 'border-slate-200 text-slate-400'}`}>
-                                                            {isCompleted ? <CheckCircle2 size={16} fill="currentColor" className="text-white bg-indigo-600 rounded-full" /> : <StepIcon size={14} />}
+                                                            ${isCompleted ? 'border-[#13B0D1] text-[#0E8CA8] ring-4 ring-[#13B0D1]/10' : 'border-slate-200 text-slate-400'}`}>
+                                                            {isCompleted ? <CheckCircle2 size={16} fill="currentColor" className="text-white bg-[#13B0D1] rounded-full" /> : <StepIcon size={14} />}
                                                         </div>
                                                         <div className="absolute top-10 flex flex-col items-center">
-                                                            <p className={`text-[10px] font-bold uppercase tracking-tight whitespace-nowrap ${isCompleted ? 'text-indigo-600' : 'text-slate-400'}`}>
+                                                            <p className={`text-[10px] font-bold uppercase tracking-tight whitespace-nowrap ${isCompleted ? 'text-[#0E8CA8]' : 'text-slate-400'}`}>
                                                                 {step.label}
                                                             </p>
-                                                            {isCurrent && <span className="w-1.5 h-1.5 bg-indigo-600 rounded-full mt-1.5 animate-ping" />}
+                                                            {isCurrent && <span className="w-1.5 h-1.5 bg-[#13B0D1] rounded-full mt-1.5 animate-ping" />}
                                                         </div>
                                                     </div>
                                                 );
@@ -219,7 +219,7 @@ export default function OrderTrackingPage() {
                                                     <Box size={24} className="text-slate-300" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-[13px] font-bold text-slate-800 hover:text-indigo-600 cursor-pointer">{item.product_name}</p>
+                                                    <p className="text-[13px] font-bold text-slate-800 hover:text-[#0A6F85] cursor-pointer">{item.product_name}</p>
                                                     <p className="text-[11px] text-slate-500 mt-0.5">Quantity: <span className="font-bold text-slate-900">{item.quantity} units</span></p>
                                                 </div>
                                             </div>
@@ -265,13 +265,13 @@ export default function OrderTrackingPage() {
                                 <div className="p-5 space-y-5 text-left">
                                     <div>
                                         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Supplier</label>
-                                        <p className="text-[14px] font-bold text-slate-800 hover:text-indigo-600 cursor-pointer">{order.supplier_name || 'Partner'}</p>
+                                        <p className="text-[14px] font-bold text-slate-800 hover:text-[#0A6F85] cursor-pointer">{order.supplier_name || 'Partner'}</p>
                                         <p className="text-[12px] text-slate-400 mt-0.5">{order.supplier_phone || 'No phone'}</p>
                                     </div>
                                     <div>
                                         <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Warehouse</label>
                                         <p className="text-[14px] font-bold text-slate-900">{order.warehouse_name || 'Main Center'}</p>
-                                        <div className="flex items-center gap-1.5 mt-2 text-indigo-600 hover:text-indigo-700 cursor-pointer text-[12px] font-bold">
+                                        <div className="flex items-center gap-1.5 mt-2 text-[#0E8CA8] hover:text-[#0A6F85] cursor-pointer text-[12px] font-bold">
                                             <MapPin size={12} /> Show Location <ExternalLink size={12} />
                                         </div>
                                     </div>
@@ -279,11 +279,11 @@ export default function OrderTrackingPage() {
                             </Card>
 
                             {/* Secure Certification */}
-                            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 flex gap-3 text-left">
-                                <ShieldCheck className="h-5 w-5 text-indigo-600 shrink-0" />
+                            <div className="bg-[#13B0D1]/10 border border-[#13B0D1]/15 rounded-2xl p-4 flex gap-3 text-left">
+                                <ShieldCheck className="h-5 w-5 text-[#0E8CA8] shrink-0" />
                                 <div>
-                                    <p className="text-[12px] font-bold text-indigo-700">Audit Certified</p>
-                                    <p className="text-[11px] text-indigo-700/80 mt-1 leading-relaxed">This record is end-to-end encrypted and synced with financial ledgers.</p>
+                                    <p className="text-[12px] font-bold text-[#0E8CA8]">Audit Certified</p>
+                                    <p className="text-[11px] text-[#0E8CA8]/80 mt-1 leading-relaxed">This record is end-to-end encrypted and synced with financial ledgers.</p>
                                 </div>
                             </div>
 
@@ -294,7 +294,7 @@ export default function OrderTrackingPage() {
                     <Card className="py-32 flex flex-col items-center justify-center animate-in zoom-in-95 duration-500">
                         <div className="relative mb-6">
                             <Box size={80} className="text-slate-100" />
-                            <Search size={32} className="absolute -bottom-2 -right-2 text-indigo-600 bg-white rounded-full p-2 shadow-sm border border-slate-200/70" />
+                            <Search size={32} className="absolute -bottom-2 -right-2 text-[#0E8CA8] bg-white rounded-full p-2 shadow-sm border border-slate-200/70" />
                         </div>
                         <h2 className="text-[20px] font-bold text-slate-900 tracking-tight">Where is your shipment?</h2>
                         <p className="text-[13px] text-slate-600 mt-2 mb-8 text-center max-w-sm">Enter a Purchase Order number to access the live tracking portal.</p>

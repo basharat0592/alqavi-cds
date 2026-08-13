@@ -222,7 +222,7 @@ export default function AddSystemUserPage() {
                         {/* ── Page Access ── */}
                         <div className="px-6 sm:px-8 py-5 border-y border-slate-100 bg-gradient-to-r from-slate-50/80 to-white flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-2.5">
-                                <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100"><LayoutGrid size={16} /></span>
+                                <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8] border border-[#13B0D1]/15"><LayoutGrid size={16} /></span>
                                 <div>
                                     <h2 className="text-[13px] font-bold text-slate-700 uppercase tracking-wider">Page Access</h2>
                                     <p className="text-[12px] text-slate-500">Choose which pages this user can <b>View</b> and which they can also <b>Edit</b>.</p>
@@ -230,7 +230,7 @@ export default function AddSystemUserPage() {
                             </div>
                             {!isFullAccess && (
                                 <div className="flex gap-2 text-[11px] font-semibold">
-                                    <button type="button" onClick={selectAll} className="text-indigo-600 hover:underline">Select all</button>
+                                    <button type="button" onClick={selectAll} className="text-[#0E8CA8] hover:underline">Select all</button>
                                     <span className="text-slate-300">|</span>
                                     <button type="button" onClick={clearAll} className="text-slate-500 hover:underline">Clear</button>
                                 </div>
@@ -252,9 +252,9 @@ export default function AddSystemUserPage() {
                                         return (
                                             <div key={group.label} className="border border-slate-200 rounded-xl overflow-hidden">
                                                 <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 cursor-pointer select-none" onClick={() => toggleGroup(hrefs)}>
-                                                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-indigo-600 border-indigo-600' : someChecked ? 'bg-indigo-200 border-indigo-400' : 'border-slate-300 bg-white'}`}>
+                                                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-[#13B0D1] border-[#13B0D1]' : someChecked ? 'bg-[#13B0D1]/25 border-[#13B0D1]' : 'border-slate-300 bg-white'}`}>
                                                         {allChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                                        {someChecked && !allChecked && <div className="w-2 h-0.5 bg-indigo-600 rounded" />}
+                                                        {someChecked && !allChecked && <div className="w-2 h-0.5 bg-[#13B0D1] rounded" />}
                                                     </div>
                                                     <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{group.label}</span>
                                                     <span className="ml-auto text-[10px] text-slate-400">{hrefs.filter(h => selectedPages.includes(h)).length}/{hrefs.length}</span>
@@ -265,11 +265,11 @@ export default function AddSystemUserPage() {
                                                             <span className="text-[12px] text-slate-700">{item.name}</span>
                                                             <div className="flex items-center gap-4">
                                                                 <label className="flex items-center gap-1 cursor-pointer select-none">
-                                                                    <input type="checkbox" checked={selectedPages.includes(item.href)} onChange={() => toggleView(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+                                                                    <input type="checkbox" checked={selectedPages.includes(item.href)} onChange={() => toggleView(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-[#0E8CA8] focus:ring-[#13B0D1]" />
                                                                     <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">View</span>
                                                                 </label>
                                                                 <label className={`flex items-center gap-1 select-none ${selectedPages.includes(item.href) ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}>
-                                                                    <input type="checkbox" checked={selectedEditPages.includes(item.href)} disabled={!selectedPages.includes(item.href)} onChange={() => toggleEdit(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed" />
+                                                                    <input type="checkbox" checked={selectedEditPages.includes(item.href)} disabled={!selectedPages.includes(item.href)} onChange={() => toggleEdit(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-[#0E8CA8] focus:ring-[#13B0D1] disabled:cursor-not-allowed" />
                                                                     <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Edit</span>
                                                                 </label>
                                                             </div>

@@ -228,7 +228,7 @@ export default function CustomersPage() {
                 <div className="md:hidden space-y-3 mb-6">
                     {loading && customers.length === 0 ? (
                         <Card className="py-16 text-center">
-                            <Loader2 size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
+                            <Loader2 size={32} className="animate-spin text-[#0E8CA8] mx-auto mb-3" />
                             <p className="text-[13px] text-slate-500 font-medium">Loading customer directory...</p>
                         </Card>
                     ) : filteredCustomers.length === 0 ? (
@@ -249,9 +249,9 @@ export default function CustomersPage() {
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className="text-[14px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer flex items-center gap-1" onClick={() => setViewingCustomer(cust)}>
+                                            <h3 className="text-[14px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer flex items-center gap-1" onClick={() => setViewingCustomer(cust)}>
                                                 {cust.first_name} {cust.last_name}
-                                                {cust.is_staff && <Shield size={11} className="text-indigo-600 shrink-0" />}
+                                                {cust.is_staff && <Shield size={11} className="text-[#0E8CA8] shrink-0" />}
                                             </h3>
                                             <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: #{String(cust.id).slice(-6).toUpperCase()}</div>
                                         </div>
@@ -286,7 +286,7 @@ export default function CustomersPage() {
                                 <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                                     <button onClick={() => setViewingCustomer(cust)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                     <span className="text-slate-300">|</span>
-                                    <button onClick={() => openEdit(cust)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                    <button onClick={() => openEdit(cust)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
                                     <span className="text-slate-300">|</span>
                                     <button onClick={() => setDeleteTarget(cust)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                 </div>
@@ -328,9 +328,9 @@ export default function CustomersPage() {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <div className="text-[15px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer flex items-center gap-1.5" onClick={() => setViewingCustomer(cust)}>
+                                                        <div className="text-[15px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer flex items-center gap-1.5" onClick={() => setViewingCustomer(cust)}>
                                                             {cust.first_name} {cust.last_name}
-                                                            {cust.is_staff && <Shield size={12} className="text-indigo-600" />}
+                                                            {cust.is_staff && <Shield size={12} className="text-[#0E8CA8]" />}
                                                         </div>
                                                         <div className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">ID: #{String(cust.id).slice(-6).toUpperCase()}</div>
                                                     </div>
@@ -364,7 +364,7 @@ export default function CustomersPage() {
                                                 <div className="flex items-center justify-end gap-2.5">
                                                     <button onClick={() => setViewingCustomer(cust)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
-                                                    <button onClick={() => openEdit(cust)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <button onClick={() => openEdit(cust)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button onClick={() => setDeleteTarget(cust)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
@@ -527,7 +527,7 @@ export default function CustomersPage() {
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-white text-[18px] font-bold leading-none truncate">{viewingCustomer.first_name} {viewingCustomer.last_name}</h2>
-                                        <div className="w-4 h-4 bg-indigo-600 rounded-sm flex items-center justify-center text-white text-[10px] font-black shadow-sm shrink-0">A</div>
+                                        <div className="w-4 h-4 bg-[#13B0D1] rounded-sm flex items-center justify-center text-white text-[10px] font-black shadow-sm shrink-0">A</div>
                                     </div>
                                     <p className="text-slate-400 text-[11px] font-medium mt-1">Customer Registry Console • Member Management</p>
                                 </div>
@@ -548,7 +548,7 @@ export default function CustomersPage() {
                                     </div>
                                     <div>
                                         <h3 className="text-[24px] font-bold text-slate-900 tracking-tight leading-tight mb-1">{viewingCustomer.first_name} {viewingCustomer.last_name}</h3>
-                                        <p className="text-[12px] text-indigo-600 font-bold uppercase tracking-[0.2em] mt-1">ID: #{String(viewingCustomer.id).slice(0, 8).toUpperCase()}</p>
+                                        <p className="text-[12px] text-[#0E8CA8] font-bold uppercase tracking-[0.2em] mt-1">ID: #{String(viewingCustomer.id).slice(0, 8).toUpperCase()}</p>
                                     </div>
                                     <div className="flex items-center gap-2 pt-2">
                                         <Badge tone={viewingCustomer.is_active !== false ? 'green' : 'red'}>
@@ -577,7 +577,7 @@ export default function CustomersPage() {
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-1">
                                                 <p className="text-[12px] font-semibold text-slate-400">Email Address</p>
-                                                <p className="text-[14px] text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer truncate font-bold">{viewingCustomer.email}</p>
+                                                <p className="text-[14px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer truncate font-bold">{viewingCustomer.email}</p>
                                             </div>
                                             <div className="space-y-1">
                                                 <p className="text-[12px] font-semibold text-slate-400">Mobile Connection</p>
@@ -590,7 +590,7 @@ export default function CustomersPage() {
                                     <div className="space-y-4">
                                         <h4 className="text-[13px] font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Shipping & Residence Address</h4>
                                         <div className="flex gap-4 p-5 bg-slate-50 border border-slate-200/70 rounded-2xl relative overflow-hidden group">
-                                            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-200 group-hover:bg-indigo-600 transition-colors" />
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-[#13B0D1]/25 group-hover:bg-[#0E8CA8] transition-colors" />
                                             <MapPin size={24} className="text-slate-400 shrink-0 mt-0.5" />
                                             <div className="space-y-1">
                                                 <p className="text-[14px] text-slate-900 leading-relaxed font-semibold">
@@ -618,7 +618,7 @@ export default function CustomersPage() {
                                             <div className="bg-white p-4 border border-slate-200/70 rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300 transition-colors">
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Security</p>
                                                 <div className="flex items-center gap-1.5 text-[14px] font-bold text-slate-900">
-                                                    <Shield size={16} className="text-indigo-600" /> Protected
+                                                    <Shield size={16} className="text-[#0E8CA8]" /> Protected
                                                 </div>
                                             </div>
                                         </div>

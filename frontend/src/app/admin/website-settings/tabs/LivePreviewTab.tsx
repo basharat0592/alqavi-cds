@@ -61,12 +61,12 @@ const FAQS = [
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, href }: any) => {
     const styles = {
         primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
     };
     const Comp = href ? 'a' : 'button';
     return (
         <Comp href={href} target={href ? "_blank" : undefined} type={type} onClick={onClick} disabled={disabled}
-            className={`h-[31px] px-4 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[31px] px-4 rounded-lg text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {children}
         </Comp>
     );
@@ -79,11 +79,11 @@ function SectionCard({ title, icon: Icon, badge, count, children, defaultOpen = 
 }) {
     const [open, setOpen] = useState(defaultOpen);
     return (
-        <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
+        <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden">
             <button onClick={() => setOpen(!open)}
-                className="w-full flex items-center justify-between px-6 py-3 bg-[#f7f8fa] hover:bg-[#f3f3f3] transition-colors border-b border-[#ddd]">
+                className="w-full flex items-center justify-between px-6 py-3 bg-[#f8fafc] hover:bg-[#f3f3f3] transition-colors border-b border-[#e2e8f0]">
                 <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-white border border-[#ddd] rounded-[4px] text-[#565959]">
+                    <div className="p-1.5 bg-white border border-[#e2e8f0] rounded-lg text-[#565959]">
                         <Icon size={16} />
                     </div>
                     <div className="text-left">
@@ -123,9 +123,9 @@ export default function LivePreviewTab({ products, categories, media, sections, 
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 text-left">
 
             {/* Header / Info Bar */}
-            <div className="bg-[#f0f2f2] border border-[#ddd] rounded-[4px] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+            <div className="bg-[#f0f2f2] border border-[#e2e8f0] rounded-lg px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-white rounded-full border border-[#ddd] shadow-sm">
+                    <div className="p-3 bg-white rounded-full border border-[#e2e8f0] shadow-sm">
                         <Monitor size={24} className="text-[#c45500]" />
                     </div>
                     <div>
@@ -143,8 +143,8 @@ export default function LivePreviewTab({ products, categories, media, sections, 
             {/* ── DYNAMIC SECTIONS RENDERER ── */}
             <div className="space-y-4">
                 {activeSections.length === 0 ? (
-                    <div className="text-center py-20 bg-white border border-dashed border-[#ddd] rounded-[8px]">
-                        <Layers size={48} className="mx-auto text-[#ccc] mb-4" strokeWidth={1} />
+                    <div className="text-center py-20 bg-white border border-dashed border-[#e2e8f0] rounded-[8px]">
+                        <Layers size={48} className="mx-auto text-[#cbd5e1] mb-4" strokeWidth={1} />
                         <h4 className="text-lg font-bold text-[#111]">No Visible Sections</h4>
                         <p className="text-[14px] text-[#565959] max-w-sm mx-auto mt-2">Add or enable sections in the <span className="font-bold">Page Builder</span> tab to see them appear here in real-time.</p>
                     </div>
@@ -166,17 +166,17 @@ export default function LivePreviewTab({ products, categories, media, sections, 
             </div>
 
             {/* Final Summary Card */}
-            <div className="bg-[#fcfcfc] border border-[#ddd] rounded-[8px] p-8 flex flex-col md:flex-row items-center justify-between gap-8 mt-12">
+            <div className="bg-[#fcfcfc] border border-[#e2e8f0] rounded-[8px] p-8 flex flex-col md:flex-row items-center justify-between gap-8 mt-12">
                 <div className="flex gap-12">
                     <div className="text-left">
                         <p className="text-[32px] font-bold text-[#111]">{products.length}</p>
                         <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Inventory</p>
                     </div>
-                    <div className="text-left border-l border-[#ddd] pl-12">
+                    <div className="text-left border-l border-[#e2e8f0] pl-12">
                         <p className="text-[32px] font-bold text-[#111]">{media.length}</p>
                         <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Media</p>
                     </div>
-                    <div className="text-left border-l border-[#ddd] pl-12">
+                    <div className="text-left border-l border-[#e2e8f0] pl-12">
                         <p className="text-[32px] font-bold text-[#111]">{sections.length}</p>
                         <p className="text-[11px] font-bold text-[#565959] uppercase tracking-wider">Layout Blocks</p>
                     </div>
@@ -273,7 +273,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                     <div className="grid grid-cols-3 md:grid-cols-6 gap-6">
                         {catItems.map((cat: any, i: number) => (
                             <div key={i} className="flex flex-col items-center gap-4 group cursor-pointer">
-                                <div className="w-20 h-20 md:w-28 md:h-28 bg-[#f0f2f2] rounded-full border border-[#ddd] overflow-hidden shadow-sm group-hover:border-[#c45500] group-hover:shadow-lg transition-all duration-300">
+                                <div className="w-20 h-20 md:w-28 md:h-28 bg-[#f0f2f2] rounded-full border border-[#e2e8f0] overflow-hidden shadow-sm group-hover:border-[#c45500] group-hover:shadow-lg transition-all duration-300">
                                     <img src={getImageUrl(cat.image)} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                 </div>
                                 <span className="text-[13px] font-bold text-[#111] group-hover:text-[#c45500] transition-colors uppercase tracking-tight">{cat.name}</span>
@@ -301,14 +301,14 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
         case 'faq':
             const items = content.items || [];
             return (
-                <div className="p-8 md:p-16 bg-[#f7f8fa] space-y-10">
+                <div className="p-8 md:p-16 bg-[#f8fafc] space-y-10">
                     <div className="text-center space-y-2">
                         <h4 className="text-3xl font-black text-[#111] tracking-tight">{content.title}</h4>
                         <p className="text-slate-400 text-sm uppercase font-bold tracking-[0.2em]">Support Center</p>
                     </div>
                     <div className="max-w-3xl mx-auto space-y-3">
                         {items.map((item: any, i: number) => (
-                            <div key={i} className="bg-white border border-[#ddd] rounded-xl overflow-hidden shadow-sm">
+                            <div key={i} className="bg-white border border-[#e2e8f0] rounded-xl overflow-hidden shadow-sm">
                                 <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
                                     className="w-full flex items-center justify-between px-6 py-4 text-left group">
                                     <span className="text-[15px] font-bold text-[#111] group-hover:text-[#c45500]">{item.q}</span>
@@ -334,7 +334,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         <h3 className="text-3xl font-black text-white">{content.title}</h3>
                         <p className="text-slate-400">{content.subtitle}</p>
                         <div className="flex gap-2 max-w-md mx-auto pt-4">
-                            <input readOnly placeholder={content.placeholder} className="flex-1 h-12 px-6 rounded-[4px] bg-white/10 border border-white/20 text-white outline-none" />
+                            <input readOnly placeholder={content.placeholder} className="flex-1 h-12 px-6 rounded-lg bg-white/10 border border-white/20 text-white outline-none" />
                             <AmazonBtn className="h-12 px-8 font-bold">Subscribe</AmazonBtn>
                         </div>
                     </div>
@@ -371,7 +371,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
 
         default:
             return (
-                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#ddd] m-4 rounded-xl">
+                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#e2e8f0] m-4 rounded-xl">
                     <Layers size={24} className="mx-auto mb-2 text-slate-300" />
                     <p className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Preview Placeholder for {section_type}</p>
                 </div>

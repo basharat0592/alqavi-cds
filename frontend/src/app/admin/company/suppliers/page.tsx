@@ -183,7 +183,7 @@ export default function SuppliersPage() {
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className="text-[14px] font-bold text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer" onClick={() => openEdit(s)}>{s.name}</h3>
+                                            <h3 className="text-[14px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer" onClick={() => openEdit(s)}>{s.name}</h3>
                                             <div className="text-[10px] text-slate-400 uppercase font-bold mt-0.5 tracking-tighter flex items-center gap-1">
                                                 <Building2 size={11} className="text-slate-400" /> {s.company || 'Private Seller'}
                                             </div>
@@ -216,7 +216,7 @@ export default function SuppliersPage() {
                                 <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
                                     <button onClick={() => setSelectedForView(s)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                     <span className="text-slate-300">|</span>
-                                    <button onClick={() => openEdit(s)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                    <button onClick={() => openEdit(s)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
                                     <span className="text-slate-300">|</span>
                                     <button onClick={() => setDeleteItem(s)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                 </div>
@@ -259,7 +259,7 @@ export default function SuppliersPage() {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <div className="text-[14px] font-bold text-indigo-600 group-hover:text-indigo-700 group-hover:underline cursor-pointer" onClick={() => openEdit(s)}>{s.name}</div>
+                                                        <div className="text-[14px] font-bold text-[#0E8CA8] group-hover:text-[#0A6F85] group-hover:underline cursor-pointer" onClick={() => openEdit(s)}>{s.name}</div>
                                                         <div className="text-[11px] text-slate-400 uppercase font-bold mt-0.5 tracking-tighter flex items-center gap-1.5">
                                                             <Building2 size={12} className="text-slate-400" /> {s.company || 'Private Seller'}
                                                         </div>
@@ -288,7 +288,7 @@ export default function SuppliersPage() {
                                                 <div className="flex items-center justify-end gap-2.5">
                                                     <button onClick={() => setSelectedForView(s)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
                                                     <span className="text-slate-300">|</span>
-                                                    <button onClick={() => openEdit(s)} className="text-[12px] font-bold text-indigo-600 hover:underline">Edit</button>
+                                                    <button onClick={() => openEdit(s)} className="text-[12px] font-bold text-[#0E8CA8] hover:underline">Edit</button>
                                                     <span className="text-slate-300">|</span>
                                                     <button onClick={() => setDeleteItem(s)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                 </div>
@@ -358,7 +358,7 @@ export default function SuppliersPage() {
                         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
                             <div>
                                 <h2 className="text-[17px] font-bold text-slate-900 tracking-tight flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+                                    <div className="w-10 h-10 bg-[#13B0D1]/10 text-[#0E8CA8] rounded-xl flex items-center justify-center">
                                         {view === 'add' ? <Plus size={22} /> : <Pencil size={22} />}
                                     </div>
                                     {view === 'add' ? 'Add New Supplier' : 'Update Supplier Detail'}
@@ -375,7 +375,7 @@ export default function SuppliersPage() {
                                 {/* Left Side: Profile */}
                                 <div className="space-y-6">
                                     {/* Image Selector */}
-                                    <div className="flex flex-col items-center justify-center p-4 bg-white border-2 border-dashed border-slate-200 rounded-2xl hover:border-indigo-400 transition-all group relative overflow-hidden min-h-[140px]">
+                                    <div className="flex flex-col items-center justify-center p-4 bg-white border-2 border-dashed border-slate-200 rounded-2xl hover:border-[#13B0D1] transition-all group relative overflow-hidden min-h-[140px]">
                                         {((view === 'add' && addForm.avatar) || (view === 'edit' && (editForm.avatar || editTarget?.avatar))) ? (
                                             <div className="relative w-24 h-24 rounded-xl overflow-hidden shadow-md">
                                                 <img
@@ -393,10 +393,10 @@ export default function SuppliersPage() {
                                             </div>
                                         ) : (
                                             <label className="flex flex-col items-center cursor-pointer w-full">
-                                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-all">
+                                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 group-hover:bg-[#13B0D1]/10 group-hover:text-[#0A6F85] transition-all">
                                                     <Camera size={28} />
                                                 </div>
-                                                <span className="mt-2 text-[11px] font-black uppercase text-slate-400 tracking-widest group-hover:text-indigo-600">Upload Photo</span>
+                                                <span className="mt-2 text-[11px] font-black uppercase text-slate-400 tracking-widest group-hover:text-[#0A6F85]">Upload Photo</span>
                                                 <input 
                                                     type="file" 
                                                     className="hidden" 
@@ -453,13 +453,13 @@ export default function SuppliersPage() {
                                                 <Field label="Password" required>
                                                     <div className="relative">
                                                         <input className={inputCls} type={showPw ? 'text' : 'password'} value={addForm.password} onChange={(e) => setAddForm(f => ({ ...f, password: e.target.value }))} />
-                                                        <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-indigo-600">{showPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                        <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0A6F85]">{showPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                                                     </div>
                                                 </Field>
                                                 <Field label="Confirm Password" required>
                                                     <div className="relative">
                                                         <input className={inputCls} type={showConfirmPw ? 'text' : 'password'} value={addForm.confirmPassword} onChange={(e) => setAddForm(f => ({ ...f, confirmPassword: e.target.value }))} />
-                                                        <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-indigo-600">{showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                        <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0A6F85]">{showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                                                     </div>
                                                 </Field>
                                             </div>
@@ -467,7 +467,7 @@ export default function SuppliersPage() {
                                             <Field label="Change Password (Optional)">
                                                 <div className="relative">
                                                     <input className={inputCls} type={showPw ? 'text' : 'password'} value={editForm.password} onChange={(e) => setEditForm(f => ({ ...f, password: e.target.value }))} placeholder="Leave blank to keep current" />
-                                                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-indigo-600">{showPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
+                                                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-[#0A6F85]">{showPw ? <EyeOff size={14} /> : <Eye size={14} />}</button>
                                                 </div>
                                             </Field>
                                         )}
@@ -484,7 +484,7 @@ export default function SuppliersPage() {
                                     <div className="relative flex items-center">
                                         <input
                                             type="checkbox"
-                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 transition-all"
+                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-[#13B0D1] checked:bg-[#13B0D1] transition-all"
                                             checked={view === 'add' ? addForm.is_active : editForm.is_active}
                                             onChange={(e) => view === 'add' ? setAddForm(f => ({ ...f, is_active: e.target.checked })) : setEditForm(f => ({ ...f, is_active: e.target.checked }))}
                                         />
@@ -566,7 +566,7 @@ export default function SuppliersPage() {
                                     </div>
                                     <div>
                                         <h3 className="text-[24px] font-bold text-slate-900 tracking-tight leading-tight mb-1">{selectedForView.name}</h3>
-                                        <p className="text-[14px] text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer font-bold">{selectedForView.company || 'Private Distribution Partner'}</p>
+                                        <p className="text-[14px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer font-bold">{selectedForView.company || 'Private Distribution Partner'}</p>
                                     </div>
                                     <div className="flex items-center gap-2 pt-2">
                                         <Badge tone={selectedForView.is_active ? 'green' : 'red'}>
@@ -592,7 +592,7 @@ export default function SuppliersPage() {
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-1">
                                                 <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Email Address</p>
-                                                <p className="text-[14px] text-indigo-600 hover:text-indigo-700 hover:underline cursor-pointer truncate font-bold">{selectedForView.email}</p>
+                                                <p className="text-[14px] text-[#0E8CA8] hover:text-[#0A6F85] hover:underline cursor-pointer truncate font-bold">{selectedForView.email}</p>
                                             </div>
                                             <div className="space-y-1">
                                                 <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">Mobile Connection</p>
@@ -605,7 +605,7 @@ export default function SuppliersPage() {
                                     <div className="space-y-4">
                                         <h4 className="text-[13px] font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Business Logistics & Address</h4>
                                         <div className="flex gap-4 p-5 bg-slate-50 border border-slate-200 rounded-xl relative overflow-hidden group">
-                                            <div className="absolute top-0 left-0 w-1 h-full bg-indigo-200 group-hover:bg-indigo-600 transition-colors" />
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-[#13B0D1]/25 group-hover:bg-[#0E8CA8] transition-colors" />
                                             <MapPin size={24} className="text-slate-400 shrink-0 mt-0.5" />
                                             <div className="space-y-1">
                                                 <p className="text-[14px] text-slate-900 leading-relaxed font-bold">

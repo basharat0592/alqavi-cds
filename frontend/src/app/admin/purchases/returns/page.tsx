@@ -213,7 +213,7 @@ export default function PurchaseReturnsPage() {
                                         <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50 transition-all group">
                                             <RowCheckboxTd sel={sel} id={row.id} />
                                             <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
-                                                <span className="text-[13px] font-bold text-indigo-600 group-hover:text-indigo-700 hover:underline cursor-pointer">
+                                                <span className="text-[13px] font-bold text-[#0E8CA8] group-hover:text-[#0A6F85] hover:underline cursor-pointer">
                                                     #{row.return_number}
                                                 </span>
                                             </td>
@@ -243,7 +243,7 @@ export default function PurchaseReturnsPage() {
                                                         <>
                                                             <button
                                                                 onClick={() => setPayRow(row)}
-                                                                className="text-[12px] font-bold text-indigo-600 hover:underline"
+                                                                className="text-[12px] font-bold text-[#0E8CA8] hover:underline"
                                                             >
                                                                 Settle
                                                             </button>

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Loader2, Globe, Search, BarChart3, CheckCircle, AlertCircle, RotateCcw } from 'lucide-react';
 import { SiteSettings } from '@/services/cms.service';
+import { ui } from '@/components/admin/ui';
 
 interface Props { 
     settings: SiteSettings; 
@@ -13,19 +14,18 @@ interface Props {
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
         primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[35px] px-8 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[35px] px-8 rounded-lg text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <Loader2 className="h-3 w-3 animate-spin" />}
             {children}
         </button>
     );
 };
 
-const inputCls = "w-full h-[35px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
-
+const inputCls = ui.inputBase.replace('h-10', 'h-9');
 export default function SeoTab({ settings, onSave, saving }: Props) {
     const [form, setForm] = useState({ ...settings });
 
@@ -44,15 +44,15 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
             </div>
             
             {/* Search Preview */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden text-left">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3">
                     <h3 className="font-bold text-[#111] text-[15px] flex items-center gap-2">
                         <Search size={16} className="text-[#007185]" /> 
                         Google Search Appearance
                     </h3>
                 </div>
-                <div className="p-4 md:p-8 flex items-center justify-center bg-[#f0f2f2]/30 border-b border-[#ddd]">
-                    <div className="bg-white rounded-lg border border-[#ddd] shadow-sm p-4 md:p-6 w-full max-w-xl font-sans">
+                <div className="p-4 md:p-8 flex items-center justify-center bg-[#f0f2f2]/30 border-b border-[#e2e8f0]">
+                    <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-sm p-4 md:p-6 w-full max-w-xl font-sans">
                         <div className="flex items-center gap-2 mb-1.5">
                             <div className="w-6 h-6 rounded-full bg-[#f0f2f2] flex items-center justify-center">
                                 <Globe size={12} className="text-[#565959]" />
@@ -70,8 +70,8 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
             </div>
 
             {/* Meta Tags */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden text-left">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3">
                     <h3 className="font-bold text-[#111] text-[15px]">Meta Data & Social Tags</h3>
                 </div>
                 <div className="p-6 space-y-6">
@@ -97,7 +97,7 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
                         </div>
                         <textarea rows={3} value={form.meta_description || ''} onChange={e => setForm(f => ({ ...f, meta_description: e.target.value }))}
                             placeholder="Briefly describe what your store sells..."
-                            className="w-full min-h-[80px] px-3 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
+                            className="w-full min-h-[80px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
                         <p className="text-[11px] text-[#565959]">A short summary of your page. Keep it between 120-160 characters.</p>
                     </div>
 
@@ -112,8 +112,8 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
             </div>
 
             {/* Tracking */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden text-left">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3">
                     <h3 className="font-bold text-[#111] text-[15px] flex items-center gap-2">
                         <BarChart3 size={16} className="text-amber-600" />
                         Tracking & Analytics
@@ -136,7 +136,7 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
             </div>
 
             {/* Footer Aligned Action */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#ddd] rounded-[4px] p-4 md:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#e2e8f0] rounded-lg p-4 md:p-6 shadow-sm">
                 <div className="flex items-center gap-3 text-slate-400">
                     <RotateCcw size={18} />
                     <p className="text-[13px] font-medium italic">SEO changes may take a few days to reflect in search engines.</p>

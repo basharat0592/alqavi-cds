@@ -125,7 +125,7 @@ export default function AddSaleReturnPage() {
                 {/* ── 1. SELECT A RECENT SALE ── */}
                 <Card className="p-5 mb-5">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><RotateCcw size={16} /></div>
+                        <div className="w-8 h-8 rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8] flex items-center justify-center"><RotateCcw size={16} /></div>
                         <div>
                             <h3 className="text-[14px] font-bold text-slate-900">Recent Sale</h3>
                             <p className="text-[11px] text-slate-400">Delivered sales from the last 7 days</p>
@@ -138,7 +138,7 @@ export default function AddSaleReturnPage() {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search by order #, customer or phone…"
-                            className="w-full h-11 pl-10 pr-3 rounded-xl border border-slate-200 bg-slate-50/60 text-[13px] outline-none focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                            className="w-full h-11 pl-10 pr-3 rounded-xl border border-slate-200 bg-slate-50/60 text-[13px] outline-none focus:bg-white focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 transition-all"
                         />
                     </div>
 
@@ -148,12 +148,12 @@ export default function AddSaleReturnPage() {
                             type="button"
                             disabled={loading}
                             onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="w-full h-11 px-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-800 outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 cursor-pointer disabled:opacity-50 select-none text-left"
+                            className="w-full h-11 px-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-800 outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 cursor-pointer disabled:opacity-50 select-none text-left"
                         >
                             <span>
                                 {loading ? 'Loading recent sales...' : order ? (
                                     <span className="flex items-center gap-2">
-                                        <span className="text-indigo-600 font-extrabold">#{order.order_number}</span>
+                                        <span className="text-[#0E8CA8] font-extrabold">#{order.order_number}</span>
                                         <span className="text-slate-300">|</span>
                                         <span className="text-slate-600 font-semibold">{order.customer_display_name || order.customer_name || 'Walk-in'}</span>
                                         <span className="text-slate-300">|</span>
@@ -186,7 +186,7 @@ export default function AddSaleReturnPage() {
                                                         selectOrder(o.id);
                                                         setDropdownOpen(false);
                                                     }}
-                                                    className={`p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isSelected ? 'bg-indigo-50/50 hover:bg-indigo-50' : ''}`}
+                                                    className={`p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isSelected ? 'bg-[#13B0D1]/50 hover:bg-[#13B0D1]/10' : ''}`}
                                                 >
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2">
@@ -263,7 +263,7 @@ export default function AddSaleReturnPage() {
                                             <tr key={it.id}>
                                                 <td className="px-4 py-2.5">
                                                     <p className="font-semibold text-slate-800">{it.product_name}</p>
-                                                    {(it.weight || it.size) && <p className="text-[10px] text-indigo-600 font-bold uppercase">{it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}</p>}
+                                                    {(it.weight || it.size) && <p className="text-[10px] text-[#0E8CA8] font-bold uppercase">{it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}</p>}
                                                 </td>
                                                 <td className="px-3 py-2.5 text-center font-bold text-slate-500">{it.quantity}</td>
                                                 <td className="px-3 py-2.5 text-right text-slate-600 tabular-nums">{money(it.price)}</td>
@@ -275,7 +275,7 @@ export default function AddSaleReturnPage() {
                                                             setQty(p => ({ ...p, [it.id]: v }));
                                                         }}
                                                         placeholder="0"
-                                                        className="w-20 h-8 px-2 text-center rounded-lg border border-slate-200 text-[12.5px] tabular-nums outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                                                        className="w-20 h-8 px-2 text-center rounded-lg border border-slate-200 text-[12.5px] tabular-nums outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right font-bold text-rose-600 tabular-nums">{rq > 0 ? money(Number(it.price) * rq) : '—'}</td>
@@ -292,7 +292,7 @@ export default function AddSaleReturnPage() {
                             <textarea
                                 rows={2} value={reason} onChange={e => setReason(e.target.value)}
                                 placeholder="e.g. Damaged item, wrong product, customer changed mind…"
-                                className="w-full rounded-xl border border-slate-200 p-3 text-[13px] outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 resize-none"
+                                className="w-full rounded-xl border border-slate-200 p-3 text-[13px] outline-none focus:border-[#13B0D1] focus:ring-4 focus:ring-[#13B0D1]/10 resize-none"
                             />
                         </div>
                     </Card>

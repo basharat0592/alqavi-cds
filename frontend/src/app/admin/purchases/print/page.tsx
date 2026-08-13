@@ -103,7 +103,7 @@ function InvoicePaper({ purchase }: { purchase: any }) {
                     )}
                     <div className="flex justify-between items-center pt-2 mt-1 border-t-2 border-slate-300">
                         <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
-                        <span className="font-black text-indigo-600 text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        <span className="font-black text-[#0E8CA8] text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
                     </div>
                     <div className="flex justify-between pt-1"><span className="text-emerald-600 font-bold uppercase text-[11px]">Total Paid</span><span className="font-bold text-emerald-600 tabular-nums">{formatCurrency(paidAmount)}</span></div>
                     {balance > 0 && (
