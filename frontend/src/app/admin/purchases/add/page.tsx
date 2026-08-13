@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, CheckCircle, Package, RefreshCw, Search, ChevronDown, Building2, History, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, RefreshCw, Search, ChevronDown, Building2, History, AlertTriangle, CreditCard, ArrowLeft } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
@@ -35,20 +35,20 @@ const Field = ({ label, required = false, children }: { label: string; required?
     </div>
 );
 
-const inputCls = ui.inputBase.replace('text-[13.5px]', 'text-[14px]');
+const inputCls = ui.inputBase;
 const selectCls = `${inputCls} cursor-pointer`;
 /* ─── Line-items spreadsheet ───
    Column widths are shared by the header and every row so they stay aligned; the whole
    grid scrolls horizontally as one unit below ~1290px. */
 const GRID_COLS =
-    'grid grid-cols-[minmax(172px,1.3fr)_minmax(194px,1.5fr)_106px_98px_88px_76px_76px_104px_104px_104px_132px_40px]';
-const GRID_MIN = 'min-w-[1290px]';
+    'grid grid-cols-[minmax(150px,1.25fr)_minmax(170px,1.5fr)_94px_86px_78px_66px_66px_92px_92px_92px_36px]';
+const GRID_MIN = 'min-w-[1000px]';
 
 /* Each cell still carries a visible resting fill + border — a transparent cell reads as
    "nothing here" on a white card, which is the whole problem this screen started with.
    The grid lines frame the columns; the field outline says "you can type here". */
 const cellCls =
-    'w-full h-10 px-2.5 bg-slate-50 text-[13.5px] font-semibold text-slate-900 outline-none rounded-md ' +
+    'w-full h-9 px-2 bg-slate-50 text-[12.5px] font-semibold text-slate-900 outline-none rounded-md ' +
     'border border-slate-200 transition-colors placeholder:text-slate-400 placeholder:font-normal ' +
     'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-[#13B0D1] focus:ring-2 focus:ring-[#13B0D1]/30';
 const cellNum = cellCls + ' text-right tabular-nums no-spinner';
@@ -58,13 +58,25 @@ const cellDisabled = 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-al
 const TH_ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' } as const;
 
 const Th = ({ children, align = 'left', required = false }: { children: React.ReactNode; align?: keyof typeof TH_ALIGN; required?: boolean }) => (
-    <div className={`px-2.5 py-2.5 text-[11.5px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80 last:border-r-0 whitespace-nowrap ${TH_ALIGN[align]}`}>
+    <div className={`px-2 py-2 text-[11px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80 last:border-r-0 whitespace-nowrap ${TH_ALIGN[align]}`}>
         {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
     </div>
 );
 
 const Cell = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`px-1.5 py-1.5 border-r border-slate-100 last:border-r-0 flex items-center ${className}`}>{children}</div>
+    <div className={`px-1 py-1 border-r border-slate-100 last:border-r-0 flex items-center ${className}`}>{children}</div>
+);
+
+/* Compact field used only in the bottom Settlement strip — smaller than the shared
+   admin field so seven of them sit on one row without crowding. */
+const settleInput = ui.inputBase.replace('h-10', 'h-9').replace('text-[13.5px]', 'text-[12.5px]');
+const settleSelect = settleInput + ' cursor-pointer';
+
+const SField = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
+    <div className="w-full min-w-0">
+        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1 truncate" title={hint || label}>{label}</label>
+        {children}
+    </div>
 );
 
 const EMPTY_FORM = {
@@ -1000,7 +1012,18 @@ export default function AddPurchasePage() {
             const isDupe = duplicateRows.has(i);
 
             return (
-                <div key={i} data-row={i} className="border-b border-slate-200 last:border-b-0 bg-white hover:bg-slate-50/60 focus-within:bg-[#13B0D1]/[0.06] transition-colors">
+                <div
+                    key={i}
+                    data-row={i}
+                    className={
+                        'relative border-b border-slate-200 last:border-b-0 transition-colors ' +
+                        // A left rail that lights up on the focused row — makes it obvious
+                        // which line you're editing once several are on screen.
+                        'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#13B0D1] ' +
+                        (i % 2 ? 'bg-slate-50/40 ' : 'bg-white ') +
+                        'hover:bg-slate-50 focus-within:bg-[#13B0D1]/[0.06]'
+                    }
+                >
                     <div className={GRID_COLS + ' ' + GRID_MIN}>
                         <Cell>
                             <CompanySelector selectedId={item.company} companies={companies} inputCls={cellCls + err(bad.company)} onSelect={(val: any) => updateItem(i, 'company', val)} />
@@ -1089,16 +1112,6 @@ export default function AddPurchasePage() {
                                 placeholder="0.00"
                             />
                         </Cell>
-                        <Cell>
-                            <input
-                                type="date"
-                                disabled={!item.apply_expiry}
-                                title={item.apply_expiry ? '' : 'Expiry not applicable for this product'}
-                                className={cellCls + ' tabular-nums' + (item.apply_expiry ? '' : ' ' + cellDisabled)}
-                                value={item.expiry_date || ''}
-                                onChange={e => updateItem(i, 'expiry_date', e.target.value)}
-                            />
-                        </Cell>
                         <Cell className="justify-center">
                             <button
                                 onClick={() => removeItem(i)}
@@ -1113,7 +1126,7 @@ export default function AddPurchasePage() {
 
                     {/* Per-row readout — only once the row actually has a product on it. */}
                     {item.product && (
-                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-4 gap-y-1 px-3.5 pb-2 -mt-0.5 text-[12px] text-slate-500'}>
+                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[11px] text-slate-500'}>
                             <span className="font-bold text-slate-400 tabular-nums">#{i + 1}</span>
                             {isDupe && (
                                 <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
@@ -1139,7 +1152,7 @@ export default function AddPurchasePage() {
                                     <span>profit <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
                                 </>
                             )}
-                            <span className="ml-auto text-[13.5px] font-bold text-[#B4780B] tabular-nums">
+                            <span className="ml-auto text-[12.5px] font-bold text-[#B4780B] tabular-nums">
                                 {formatCurrency(calculateSubtotal(item))}
                             </span>
                         </div>
@@ -1152,23 +1165,8 @@ export default function AddPurchasePage() {
     /* ─── Order Items section (identical in both modes) ─── */
     const renderItemsCard = () => (
         <>
-            <div className="px-4 sm:px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-[#13B0D1]/10 text-[#0E8CA8] flex items-center justify-center ring-1 ring-inset ring-[#13B0D1]/25 shrink-0">
-                        <Package size={18} strokeWidth={2} />
-                    </div>
-                    <div>
-                        <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                            Order Items
-                            <span className="text-[11px] font-black text-[#0E8CA8] bg-[#13B0D1]/10 px-2 py-0.5 rounded-full tabular-nums">{items.length}</span>
-                        </h2>
-                        <p className="text-[12.5px] text-slate-500">Products, quantities, and pricing.</p>
-                    </div>
-                </div>
-                <Btn variant="secondary" className="text-[13px] py-2 px-4" onClick={openAddProduct}><Plus size={15} /> Add New Products</Btn>
-            </div>
             {/* One horizontal scroller wraps header + rows so their columns stay locked together. */}
-            <div ref={gridRef} onKeyDown={onGridKeyDown} className="overflow-x-auto custom-scrollbar border-y border-slate-200">
+            <div ref={gridRef} onKeyDown={onGridKeyDown} className="overflow-x-auto custom-scrollbar border-b border-slate-200">
                 <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-100 border-b border-slate-300'}>
                     <Th required>Company</Th>
                     <Th required>Product</Th>
@@ -1180,89 +1178,100 @@ export default function AddPurchasePage() {
                     <Th align="right" required>Pur. Rs</Th>
                     <Th align="right" required>Sale Rs</Th>
                     <Th align="right" required>Retail Rs</Th>
-                    <Th>Expiry</Th>
                     <Th> </Th>
                 </div>
                 {renderItemsList()}
 
-                {/* Column totals — aligned to the grid so each sum sits under its column. */}
-                <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-100 border-t-2 border-slate-300'}>
-                    <div className="px-2.5 py-2.5 text-[11.5px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80">Totals</div>
+                {/* Column totals — aligned to the grid so each sum sits under its column.
+                    "Add row" lives here rather than in a separate bar below. */}
+                <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-50 border-t-2 border-slate-300 items-center'}>
+                    <div className="px-2 py-1.5 border-r border-slate-200/80">
+                        <button
+                            onClick={addItem}
+                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:bg-[#13B0D1]/10 px-2 py-1 rounded-md transition-colors"
+                        >
+                            <Plus size={13} /> Add row
+                        </button>
+                    </div>
+                    <div className="px-2 py-2 text-[11.5px] text-slate-500 border-r border-slate-200/80">
+                        <b className="text-slate-700 tabular-nums">{items.length}</b> {items.length === 1 ? 'line' : 'lines'}
+                    </div>
                     <div className="border-r border-slate-200/80" />
                     <div className="border-r border-slate-200/80" />
+                    <div className="px-2 py-2 text-[12px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnits}</div>
                     <div className="border-r border-slate-200/80" />
-                    <div className="px-2.5 py-2.5 text-[13px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnits}</div>
-                    <div className="border-r border-slate-200/80" />
-                    <div className="px-2.5 py-2.5 text-[13px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonus || ''}</div>
-                    <div className="border-r border-slate-200/80" />
+                    <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonus || ''}</div>
                     <div className="border-r border-slate-200/80" />
                     <div className="border-r border-slate-200/80" />
-                    <div className="px-2.5 py-2.5 text-[13.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
-                </div>
-
-                <div className={GRID_MIN + ' bg-slate-50/70 px-3 py-2 flex items-center justify-between gap-3'}>
-                    <button
-                        onClick={addItem}
-                        className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[#0E8CA8] hover:text-[#0A6F85] hover:bg-[#13B0D1]/10 px-3 py-2 rounded-lg transition-colors"
-                    >
-                        <Plus size={16} /> Add row
-                    </button>
-                    <span className="hidden md:flex items-center gap-3 text-[11.5px] text-slate-400">
-                        <span><kbd className="px-1.5 py-0.5 rounded border border-slate-300 bg-white font-sans font-bold text-slate-500">Enter</kbd> next</span>
-                        <span><kbd className="px-1.5 py-0.5 rounded border border-slate-300 bg-white font-sans font-bold text-slate-500">↑↓</kbd> row</span>
-                        <span><kbd className="px-1.5 py-0.5 rounded border border-slate-300 bg-white font-sans font-bold text-slate-500">Ctrl↵</kbd> save</span>
-                    </span>
-                    <span className="text-[12.5px] text-slate-500">
-                        {items.length} {items.length === 1 ? 'row' : 'rows'}
-                    </span>
+                    <div className="px-2 py-2 text-[12.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
                 </div>
             </div>
         </>
     );
 
-    /* ─── Settlement & Charges — standalone card, shown at the very bottom ─── */
+    /* ─── Settlement & Charges — standalone card, shown at the very bottom ───
+       Also hosts Expiry now that it's off the grid: it writes to every line whose
+       product actually tracks expiry, so one date covers the whole delivery. */
+    const expiryApplies = items.some(it => it.apply_expiry);
+    const bulkExpiry = items.find(it => it.apply_expiry)?.expiry_date || '';
+    const setBulkExpiry = (v: string) =>
+        setItems(prev => prev.map(it => it.apply_expiry ? { ...it, expiry_date: v } : it));
+
     const renderSettlementCard = () => (
         <div className="px-4 sm:px-5 py-4">
-            <div className="flex items-center gap-3 mb-3 select-none">
-                <span className="text-[11px] font-bold uppercase tracking-[0.1em] text-slate-500">Settlement &amp; Charges</span>
+            <div className="flex items-center gap-2.5 mb-4 select-none">
+                {/* Money section — amber, matching Net Amount and the row totals. */}
+                <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/12 text-[#B4780B] flex items-center justify-center ring-1 ring-inset ring-[#F59E0B]/30 shrink-0">
+                    <CreditCard size={14} strokeWidth={2} />
+                </div>
+                <span className="text-[12px] font-bold text-slate-800 tracking-tight">Settlement &amp; Charges</span>
                 <div className="h-px flex-1 bg-slate-200/70" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-3 gap-y-4">
-                <Field label="Staff">
-                    <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-x-3 gap-y-3.5">
+                <SField label="Staff">
+                    <select className={settleSelect} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
                         <option value="">Select any one</option>
                         {staffList.map(s => (
                             <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
                     </select>
-                </Field>
-                <Field label="Paid Now (Advance)">
+                </SField>
+                <SField label="Paid Now">
                     <div className="relative">
-                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
-                        <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).paid_amount || ''} onChange={e => setForm(f => ({ ...f, paid_amount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
+                        <span className={ui.fieldAffix + ' left-2.5'}>Rs</span>
+                        <input className={settleInput + " pl-8 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).paid_amount || ''} onChange={e => setForm(f => ({ ...f, paid_amount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
-                </Field>
-                <Field label="Extra Discount">
+                </SField>
+                <SField label="Extra Discount">
                     <div className="relative">
-                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
-                        <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).extra_discount || ''} onChange={e => setForm(f => ({ ...f, extra_discount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
+                        <span className={ui.fieldAffix + ' left-2.5'}>Rs</span>
+                        <input className={settleInput + " pl-8 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).extra_discount || ''} onChange={e => setForm(f => ({ ...f, extra_discount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
-                </Field>
-                <Field label="Freight / Shipping Cost">
+                </SField>
+                <SField label="Freight">
                     <div className="relative">
-                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
-                        <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).shipping_cost || ''} onChange={e => setForm(f => ({ ...f, shipping_cost: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
+                        <span className={ui.fieldAffix + ' left-2.5'}>Rs</span>
+                        <input className={settleInput + " pl-8 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).shipping_cost || ''} onChange={e => setForm(f => ({ ...f, shipping_cost: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
-                </Field>
-                <Field label="Tax Rate (%)">
+                </SField>
+                <SField label="Tax Rate">
                     <div className="relative">
-                        <span className={ui.fieldAffix + ' right-3'}>%</span>
-                        <input className={inputCls + " pr-8"} type="number" min="0" value={(form as any).tax_rate || ''} onChange={e => setForm(f => ({ ...f, tax_rate: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0" />
+                        <span className={ui.fieldAffix + ' right-2.5'}>%</span>
+                        <input className={settleInput + " pr-7 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).tax_rate || ''} onChange={e => setForm(f => ({ ...f, tax_rate: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0" />
                     </div>
-                </Field>
-                <Field label="Balance Due Date">
-                    <input className={inputCls} type="date" value={(form as any).due_date || ''} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
-                </Field>
+                </SField>
+                <SField label="Balance Due Date">
+                    <input className={settleInput + ' tabular-nums'} type="date" value={(form as any).due_date || ''} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
+                </SField>
+                <SField label="Expiry Date" hint={expiryApplies ? 'Applies to all items that track expiry' : 'No item on this order tracks expiry'}>
+                    <input
+                        className={settleInput + ' tabular-nums' + (expiryApplies ? '' : ' ' + ui.inputDisabled)}
+                        type="date"
+                        disabled={!expiryApplies}
+                        value={bulkExpiry}
+                        onChange={e => setBulkExpiry(e.target.value)}
+                    />
+                </SField>
             </div>
         </div>
     );
@@ -1402,21 +1411,38 @@ export default function AddPurchasePage() {
     return (
         <div className="pb-20">
             <div className="max-w-[1320px] mx-auto">
-                {/* Breadcrumb only — the title block was removed; "Purchases" here is the way back. */}
-                <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 mb-4">
-                    <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
-                    <span className="text-slate-300">/</span>
-                    <button onClick={() => router.push('/admin/purchases')} className="hover:text-slate-600 transition-colors">Purchases</button>
-                    <span className="text-slate-300">/</span>
-                    <span className="text-slate-600">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
-                </nav>
+                {/* Breadcrumb doubles as the page's action bar — the title block and the
+                    Order Items header were both removed, so this is the only chrome left. */}
+                <div className="flex items-center justify-between gap-4 mb-4">
+                    <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 min-w-0">
+                        <button
+                            onClick={() => router.push('/admin/purchases')}
+                            title="Back to Purchases"
+                            aria-label="Back to Purchases"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#0E8CA8] hover:border-[#13B0D1]/50 hover:bg-[#13B0D1]/10 flex items-center justify-center transition-colors shadow-sm"
+                        >
+                            <ArrowLeft size={15} />
+                        </button>
+                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
+                        <span className="text-slate-300">/</span>
+                        <button onClick={() => router.push('/admin/purchases')} className="hover:text-slate-600 transition-colors">Purchases</button>
+                        <span className="text-slate-300">/</span>
+                        <span className="text-slate-600 truncate">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
+                    </nav>
+                    {/* Secondary action — amber, so it reads as distinct from the cyan Save CTA. */}
+                    <Btn variant="secondary" className="shrink-0 text-[12px] py-1.5 px-3.5 !bg-[#F59E0B]/10 !border-[#F59E0B]/40 !text-[#B4780B] hover:!bg-[#F59E0B]/20 hover:!border-[#F59E0B]/60" onClick={openAddProduct}>
+                        <Plus size={14} /> Add New Products
+                    </Btn>
+                </div>
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
                 ) : (
                     <div className="space-y-5">
                         {/* Order Items (rows + settlement fields) — full width */}
-                        <Card className="relative z-[10]">
+                        {/* overflow-hidden clips the grid's square header/totals bands to
+                            the card's rounded corners, now that the grid sits flush at the top. */}
+                        <Card className="relative z-[10] overflow-hidden">
                             {renderItemsCard()}
                         </Card>
 
@@ -1431,9 +1457,9 @@ export default function AddPurchasePage() {
                                     </div>
                                     <div className="p-4 sm:p-5">
                                         {!histLoaded ? (
-                                            <div className="text-center py-12 text-[12.5px] text-slate-400">Select a product to see its previous purchase history.</div>
+                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400"><History size={22} className="opacity-40" /><p className="text-[12.5px]">Select a product to see its previous purchase history.</p></div>
                                         ) : histRows.length === 0 ? (
-                                            <div className="text-center py-12 text-[12.5px] text-slate-400">No previous purchase history for these products.</div>
+                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400"><History size={22} className="opacity-40" /><p className="text-[12.5px]">No previous purchase history for these products.</p></div>
                                         ) : (
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-left text-[12px] border-collapse min-w-[640px]">
@@ -1471,58 +1497,59 @@ export default function AddPurchasePage() {
                             {/* RIGHT: totals panel + actions */}
                             <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4">
                             <Card className="overflow-hidden">
-                                <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2.5">
-                                    <h3 className="text-[14px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
+                                <div className="px-5 py-3.5 border-b border-slate-200 flex items-center gap-2.5 bg-gradient-to-r from-slate-50 to-transparent">
+                                    <span className="w-1 h-4 rounded-full bg-[#F59E0B] shrink-0" />
+                                    <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
+                                    <span className="ml-auto text-[11px] font-semibold text-slate-400 tabular-nums">{items.filter(i => i.product).length} items</span>
                                 </div>
                                 <div className="p-5 space-y-2.5">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Amt Purchase</span>
-                                        <span className="font-extrabold text-slate-800 tabular-nums text-[14px]">{formatCurrency(totalAmount)}</span>
+                                        <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Purchase</span>
+                                        <span className="font-extrabold text-slate-800 tabular-nums text-[13px]">{formatCurrency(totalAmount)}</span>
                                     </div>
                                     {bonusValue > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Amt Bonus</span>
-                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[14px]">{formatCurrency(bonusValue)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Bonus</span>
+                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(bonusValue)}</span>
                                         </div>
                                     )}
                                     {(form as any).shipping_cost > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Freight</span>
-                                            <span className="font-bold text-slate-700 tabular-nums text-[14px]">+{formatCurrency((form as any).shipping_cost)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Freight</span>
+                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency((form as any).shipping_cost)}</span>
                                         </div>
                                     )}
                                     {taxAmountLive > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Tax ({(form as any).tax_rate || 0}%)</span>
-                                            <span className="font-bold text-slate-700 tabular-nums text-[14px]">+{formatCurrency(taxAmountLive)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Tax ({(form as any).tax_rate || 0}%)</span>
+                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency(taxAmountLive)}</span>
                                         </div>
                                     )}
                                     {extraDiscount > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[12px] tracking-wide">Extra Disc.</span>
-                                            <span className="font-bold text-rose-600 tabular-nums text-[14px]">−{formatCurrency(extraDiscount)}</span>
+                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Extra Disc.</span>
+                                            <span className="font-bold text-rose-600 tabular-nums text-[13px]">−{formatCurrency(extraDiscount)}</span>
                                         </div>
                                     )}
                                     <div className="h-px bg-slate-100 my-1" />
                                     <div className="flex justify-between items-center rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/35 px-4 py-3">
-                                        <span className="text-slate-700 font-black uppercase text-[13px] tracking-wide">Net Amount</span>
-                                        <span className="text-[24px] font-black text-[#B4780B] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
+                                        <span className="text-slate-700 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
+                                        <span className="text-[21px] font-black text-[#B4780B] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
                                     </div>
                                     {paidNow > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-emerald-600 font-semibold uppercase text-[12px] tracking-wide">Paid Cash</span>
-                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[14px]">{formatCurrency(paidNow)}</span>
+                                            <span className="text-emerald-600 font-semibold uppercase text-[11px] tracking-wide">Paid Cash</span>
+                                            <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(paidNow)}</span>
                                         </div>
                                     )}
+                                    <div className="flex justify-between items-center pt-1 border-t border-slate-100">
+                                        <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Balance</span>
+                                        <span className={`text-[16px] font-black tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
+                                    </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-800 font-black uppercase text-[13px] tracking-wide">Balance</span>
-                                        <span className={`text-[18px] font-black tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
+                                        <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wide">Status</span>
+                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${paymentPill}`}>{paymentStatus}</span>
                                     </div>
-                                    <div className="flex justify-between items-center pt-1">
-                                        <span className="text-slate-400 font-semibold uppercase text-[11px] tracking-wide">Status</span>
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border ${paymentPill}`}>{paymentStatus}</span>
-                                    </div>
-                                    <div className="text-[12px] text-slate-400 font-semibold pt-1">Total Products = {items.filter(i => i.product).length}</div>
 
                                     <div className="pt-3 space-y-2 border-t border-slate-100 mt-2">
                                         <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#13B0D1] hover:!bg-[#0E8CA8] shadow-sm shadow-[#13B0D1]/30" loading={saving} onClick={() => handleSave()}>

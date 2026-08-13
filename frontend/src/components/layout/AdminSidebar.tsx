@@ -214,11 +214,16 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll pt-5 pb-4">
 
 
-                    {filteredGroups.map((group, gIdx) => (
+                    {filteredGroups.map((group, gIdx) => {
+                        // The section holding the current page is marked in the secondary
+                        // amber, so you can see where you are without hunting for the row.
+                        const groupActive = group.items.some(it => isActive(it.href));
+                        return (
                         <div key={group.label} className={gIdx !== 0 ? 'mt-6' : ''}>
                             {!isCollapsed && (
-                                <div className="px-4 mb-2">
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                                <div className="px-4 mb-2 flex items-center gap-1.5">
+                                    {groupActive && <span className="w-1 h-1 rounded-full bg-[#F59E0B] shrink-0" />}
+                                    <span className={`text-[10px] font-bold uppercase tracking-[0.16em] ${groupActive ? 'text-[#F59E0B]' : 'text-slate-400'}`}>
                                         {group.label}
                                     </span>
                                 </div>
@@ -254,8 +259,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                             {/* Live active-orders badge (blinks) on the Order List link */}
                                             {item.href === '/admin/orders' && activeOrders > 0 && (
                                                 <span className={`inline-flex items-center justify-center shrink-0 ${isCollapsed ? 'absolute top-1 right-1.5' : 'relative ml-auto'}`}>
-                                                    <span className="absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-60 motion-safe:animate-ping" />
-                                                    <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-bold tabular-nums shadow-sm shadow-rose-600/40">
+                                                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#F59E0B] opacity-60 motion-safe:animate-ping" />
+                                                    <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#F59E0B] text-slate-900 text-[10px] font-black tabular-nums shadow-sm shadow-[#F59E0B]/40">
                                                         {activeOrders}
                                                     </span>
                                                 </span>
@@ -274,7 +279,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                 })}
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </nav>
 
                 {/* ── FOOTER / SETTINGS ── */}
