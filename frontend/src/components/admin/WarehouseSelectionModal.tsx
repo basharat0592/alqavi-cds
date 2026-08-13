@@ -58,25 +58,25 @@ export const WarehouseSelectionModal = ({
     );
 
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0f1111]/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#0F172A]/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
             <div 
-                className="bg-white rounded-[8px] w-full max-w-[500px] shadow-2xl overflow-hidden border border-[#ddd] flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
+                className="bg-white rounded-[8px] w-full max-w-[500px] shadow-2xl overflow-hidden border border-[#e2e8f0] flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-[#ddd] bg-[#f7f8fa] flex items-center justify-between">
+                <div className="px-6 py-4 border-b border-[#e2e8f0] bg-[#f7f8fa] flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[#fef8e2] rounded-full flex items-center justify-center border border-[#fbd8b4]">
                             <WarehouseIcon size={20} className="text-[#c45500]" />
                         </div>
                         <div>
-                            <h3 className="text-[17px] font-bold text-[#0f1111]">{title}</h3>
-                            <p className="text-[12px] text-[#565959] mt-0.5">{description}</p>
+                            <h3 className="text-[17px] font-bold text-[#0F172A]">{title}</h3>
+                            <p className="text-[12px] text-[#64748B] mt-0.5">{description}</p>
                         </div>
                     </div>
                     <button 
                         onClick={onClose}
-                        className="text-[#565959] hover:text-[#0f1111] p-1.5 hover:bg-slate-100 rounded-full transition-colors"
+                        className="text-[#64748B] hover:text-[#0F172A] p-1.5 hover:bg-slate-100 rounded-full transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -88,7 +88,7 @@ export const WarehouseSelectionModal = ({
                         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input 
                             placeholder="Search branch by name or location..."
-                            className="w-full h-[38px] pl-9 pr-3 border border-slate-300 rounded-[4px] text-[13px] outline-none focus:border-[#e77600] focus:ring-1 focus:ring-[#e77600]/20 transition-all"
+                            className="w-full h-[38px] pl-9 pr-3 border border-slate-300 rounded-lg text-[13px] outline-none focus:border-[#13B0D1] focus:ring-1 focus:ring-[#13B0D1]/20 transition-all"
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             autoFocus
@@ -100,7 +100,7 @@ export const WarehouseSelectionModal = ({
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#fcfcfc] custom-scrollbar">
                     {fetching ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-3">
-                            <Loader2 className="h-8 w-8 text-[#e77600] animate-spin" />
+                            <Loader2 className="h-8 w-8 text-[#13B0D1] animate-spin" />
                             <p className="text-[13px] text-slate-500 font-medium">Fetching available branches...</p>
                         </div>
                     ) : filtered.length === 0 ? (
@@ -108,7 +108,7 @@ export const WarehouseSelectionModal = ({
                             <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                                 <AlertCircle size={32} className="text-slate-200" />
                             </div>
-                            <p className="text-[15px] font-bold text-[#0f1111]">No branches found</p>
+                            <p className="text-[15px] font-bold text-[#0F172A]">No branches found</p>
                             <p className="text-[13px] text-slate-500 mt-1">We couldn't find any branches matching your search or in the system.</p>
                         </div>
                     ) : (
@@ -120,7 +120,7 @@ export const WarehouseSelectionModal = ({
                                     relative p-4 border rounded-[6px] cursor-pointer transition-all duration-200 group
                                     ${selectedId === String(w.id) 
                                         ? 'bg-[#f7fafa] border-[#007185] shadow-sm ring-1 ring-[#007185]' 
-                                        : 'bg-white border-[#ddd] hover:border-[#adb1b8] hover:shadow-md'}
+                                        : 'bg-white border-[#e2e8f0] hover:border-[#cbd5e1] hover:shadow-md'}
                                 `}
                             >
                                 <div className="flex items-start justify-between">
@@ -132,8 +132,8 @@ export const WarehouseSelectionModal = ({
                                             <Package size={24} />
                                         </div>
                                         <div>
-                                            <h4 className="text-[15px] font-bold text-[#0f1111]">{w.name}</h4>
-                                            <p className="text-[12px] text-[#565959] flex items-center gap-1.5 mt-0.5">
+                                            <h4 className="text-[15px] font-bold text-[#0F172A]">{w.name}</h4>
+                                            <p className="text-[12px] text-[#64748B] flex items-center gap-1.5 mt-0.5">
                                                 <WarehouseIcon size={12} />
                                                 {w.location || 'Central Facility'}
                                             </p>
@@ -151,7 +151,7 @@ export const WarehouseSelectionModal = ({
                                         w-6 h-6 rounded-full border flex items-center justify-center transition-all
                                         ${selectedId === String(w.id) 
                                             ? 'bg-[#007185] border-[#007185] text-white scale-110' 
-                                            : 'bg-white border-[#ddd] text-transparent'}
+                                            : 'bg-white border-[#e2e8f0] text-transparent'}
                                     `}>
                                         <Check size={14} strokeWidth={3} />
                                     </div>
@@ -162,10 +162,10 @@ export const WarehouseSelectionModal = ({
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-[#ddd] bg-white flex items-center justify-end gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+                <div className="p-6 border-t border-[#e2e8f0] bg-white flex items-center justify-end gap-3 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
                     <button 
                         onClick={onClose}
-                        className="h-[31px] px-6 text-[13px] font-medium text-[#0f1111] hover:bg-slate-50 border border-[#adb1b8] rounded-[3px] transition-colors"
+                        className="h-[31px] px-6 text-[13px] font-medium text-[#0F172A] hover:bg-slate-50 border border-[#cbd5e1] rounded-lg transition-colors"
                     >
                         Cancel
                     </button>
@@ -173,10 +173,10 @@ export const WarehouseSelectionModal = ({
                         disabled={!selectedId || loading}
                         onClick={() => onConfirm(selectedId)}
                         className={`
-                            h-[31px] px-8 text-[13px] font-bold rounded-[3px] shadow-sm flex items-center gap-2 transition-all
+                            h-[31px] px-8 text-[13px] font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all
                             ${!selectedId || loading
                                 ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                                : 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border border-[#a88734] text-[#0f1111] hover:from-[#f5d78e] hover:to-[#eeb933] active:shadow-inner'}
+                                : 'bg-[#13B0D1] border border-[#13B0D1] text-white hover:bg-[#0E8CA8] hover:border-[#0E8CA8] active:shadow-inner'}
                         `}
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}

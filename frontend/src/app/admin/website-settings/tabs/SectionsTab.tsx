@@ -298,7 +298,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         {/* Row 1: Text and Link */}
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="space-y-1.5">
-                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Banner Text</label>
+                                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Banner Text</label>
                                 <input
                                     type="text"
                                     value={announcementForm.announcement_text}
@@ -308,7 +308,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                 />
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Action Link (Optional)</label>
+                                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Action Link (Optional)</label>
                                 <input
                                     type="text"
                                     value={announcementForm.announcement_link}
@@ -322,7 +322,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         {/* Row 2: Colors, Scroll, Speed, Duration */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 items-end">
                             <div className="space-y-1.5">
-                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Background Color</label>
+                                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Background Color</label>
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="color"
@@ -339,7 +339,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Text Color</label>
+                                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Text Color</label>
                                 <div className="flex items-center gap-2">
                                     <input
                                         type="color"
@@ -356,7 +356,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Scroll Text (Ticker)</label>
+                                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Scroll Text (Ticker)</label>
                                 <div className="h-[31px] flex items-center">
                                     <label className="flex items-center gap-2 cursor-pointer">
                                         <input
@@ -372,7 +372,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                 </div>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Scroll Speed</label>
+                                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Scroll Speed</label>
                                 <select
                                     value={announcementForm.announcement_scroll_speed}
                                     onChange={e => setAnnouncementForm(f => ({ ...f, announcement_scroll_speed: e.target.value }))}
@@ -385,7 +385,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                 </select>
                             </div>
                             <div className="space-y-1.5">
-                                <label className="text-[12px] font-bold text-[#565959] uppercase tracking-wider">Display Length (Sec)</label>
+                                <label className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Display Length (Sec)</label>
                                 <input
                                     type="number"
                                     value={announcementForm.announcement_duration}
@@ -587,7 +587,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
                                             <div className="col-span-6">
                                                 <p className="text-[14px] font-bold text-[#111]">{s.name}</p>
-                                                <p className="text-[12px] text-[#565959]">{meta?.label} • {meta?.desc}</p>
+                                                <p className="text-[12px] text-[#64748B]">{meta?.label} • {meta?.desc}</p>
                                             </div>
 
                                             <div className="col-span-2">
@@ -620,7 +620,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
                                                     className={cn(
                                                         "p-1.5 rounded-full transition-all",
-                                                        previewId === s.id ? "bg-[#111] text-white" : "text-[#565959] hover:bg-slate-100"
+                                                        previewId === s.id ? "bg-[#111] text-white" : "text-[#64748B] hover:bg-slate-100"
                                                     )}
                                                     title="Toggle Preview"
                                                 >
@@ -667,7 +667,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
                                             <div>
                                                 <p className="text-[14px] font-bold text-[#111]">{s.name}</p>
-                                                <p className="text-[12px] text-[#565959] mt-0.5">{meta?.label} • {meta?.desc}</p>
+                                                <p className="text-[12px] text-[#64748B] mt-0.5">{meta?.label} • {meta?.desc}</p>
                                             </div>
 
                                             <div className="flex items-center justify-between border-t border-[#eee] pt-3 mt-1">
@@ -699,7 +699,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                         onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
                                                         className={cn(
                                                             "p-1.5 rounded-full transition-all border",
-                                                            previewId === s.id ? "bg-[#111] text-white border-black" : "text-[#565959] hover:bg-slate-100 border-[#e2e8f0]"
+                                                            previewId === s.id ? "bg-[#111] text-white border-black" : "text-[#64748B] hover:bg-slate-100 border-[#e2e8f0]"
                                                         )}
                                                         title="Toggle Preview"
                                                     >
@@ -717,10 +717,10 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         <div className="bg-[#f8f9fa] border-t border-b border-[#eee] p-6 animate-in slide-in-from-top-2 duration-300">
                                             <div className="bg-white border border-[#e2e8f0] rounded-[8px] overflow-hidden shadow-xl max-w-5xl mx-auto">
                                                 <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-4 py-2 flex items-center justify-between">
-                                                    <span className="text-[10px] font-black text-[#565959] uppercase tracking-widest flex items-center gap-2">
+                                                    <span className="text-[10px] font-black text-[#64748B] uppercase tracking-widest flex items-center gap-2">
                                                         <Monitor size={12} /> Live Render Simulation
                                                     </span>
-                                                    <button onClick={() => setPreviewId(null)} className="text-[#565959] hover:text-[#c40000]"><X size={14} /></button>
+                                                    <button onClick={() => setPreviewId(null)} className="text-[#64748B] hover:text-[#c40000]"><X size={14} /></button>
                                                 </div>
                                                 <div className="transform scale-[0.95] origin-top">
                                                     {renderPreview(s, products, categories, openFaq, setOpenFaq)}
@@ -797,7 +797,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                             <h3 className="font-bold text-[#111] text-[16px]">Permanently Delete?</h3>
                         </div>
                         <div className="p-6">
-                            <p className="text-[13px] text-[#565959] leading-relaxed">
+                            <p className="text-[13px] text-[#64748B] leading-relaxed">
                                 Are you sure you want to remove <span className="font-bold text-[#111]">"{sections.find(s => s.id === deletingId)?.name}"</span>?
                                 <br /><br />
                                 This will erase all configured content for this section. This action <span className="text-[#c40000] font-bold">cannot be undone</span>.
@@ -806,7 +806,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         <div className="bg-[#f8fafc] px-6 py-4 flex justify-end gap-2 border-t border-[#eee]">
                             <button
                                 onClick={() => setDeletingId(null)}
-                                className="h-[31px] px-4 rounded-lg text-[13px] font-medium border border-[#adb1b8] bg-white hover:bg-slate-50 text-[#111] transition-all"
+                                className="h-[31px] px-4 rounded-lg text-[13px] font-medium border border-[#cbd5e1] bg-white hover:bg-slate-50 text-[#111] transition-all"
                             >
                                 Cancel
                             </button>
@@ -844,7 +844,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                                 <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
                             )}
                             <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
-                                <p className="text-[#f0c14b] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
+                                <p className="text-[#13B0D1] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
                                 <h3 className="text-4xl md:text-5xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
                                 <p className="text-slate-300 mt-4 max-w-lg text-sm leading-relaxed">{slides[0].description}</p>
                             </div>
@@ -912,7 +912,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                 <div className="grid md:grid-cols-2 gap-8 p-8 items-center">
                     <div className="space-y-4">
                         <h3 className="text-3xl font-black text-[#111] tracking-tighter leading-tight">{content.title}</h3>
-                        <p className="text-[#565959] leading-relaxed text-sm whitespace-pre-wrap">{content.body}</p>
+                        <p className="text-[#64748B] leading-relaxed text-sm whitespace-pre-wrap">{content.body}</p>
                     </div>
                     <div className="relative aspect-square rounded-2xl overflow-hidden shadow-xl border border-[#eee]">
                         <img src={getImageUrl(content.image)} className="w-full h-full object-cover" />
@@ -934,7 +934,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                                     <ChevronDown size={14} className={cn("text-[#888] transition-transform", openFaq === i && "rotate-180")} />
                                 </button>
                                 {openFaq === i && (
-                                    <div className="px-4 pb-4 pt-1 text-xs text-[#565959] border-t border-[#f0f2f2] leading-relaxed">
+                                    <div className="px-4 pb-4 pt-1 text-xs text-[#64748B] border-t border-[#f0f2f2] leading-relaxed">
                                         {item.a}
                                     </div>
                                 )}
@@ -953,7 +953,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                             <span className="text-[8px] font-bold text-[#119AB8] uppercase tracking-[0.2em]">Elite Collection</span>
                         </div>
                         <h3 className="text-2xl font-bold text-[#111] leading-tight">{content.title}</h3>
-                        <p className="text-[#565959] text-[10px] leading-relaxed max-w-xs">{content.subtitle}</p>
+                        <p className="text-[#64748B] text-[10px] leading-relaxed max-w-xs">{content.subtitle}</p>
                         <div className="pt-2">
                             <div className="inline-block px-6 py-2 bg-[#119AB8] text-white rounded-full text-[10px] font-bold uppercase tracking-widest">
                                 {content.cta_text || "Shop Now"}
@@ -970,7 +970,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
             const logos = content.logos || [];
             return (
                 <div className="p-8 space-y-6 text-center">
-                    <h4 className="text-sm font-black text-[#565959] uppercase tracking-[0.3em]">{content.title}</h4>
+                    <h4 className="text-sm font-black text-[#64748B] uppercase tracking-[0.3em]">{content.title}</h4>
                     <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:grayscale-0 transition-all">
                         {logos.length > 0 ? logos.map((logo: string, i: number) => (
                             <img key={i} src={getImageUrl(logo)} className="h-8 md:h-10 w-auto object-contain" />
@@ -1005,7 +1005,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                                 <Sparkles size={20} className="text-[#119AB8]" />
                             </div>
                             <h5 className="font-bold text-[#111]">{item.title}</h5>
-                            <p className="text-[11px] text-[#565959] leading-relaxed">{item.text}</p>
+                            <p className="text-[11px] text-[#64748B] leading-relaxed">{item.text}</p>
                         </div>
                     ))}
                 </div>
@@ -1023,7 +1023,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                                     {i + 1}
                                 </div>
                                 <h5 className="font-bold text-[#111] text-sm">{item.title}</h5>
-                                <p className="text-[10px] text-[#565959] px-2">{item.text}</p>
+                                <p className="text-[10px] text-[#64748B] px-2">{item.text}</p>
                             </div>
                         ))}
                     </div>
@@ -1045,7 +1045,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                         <div className="p-8 flex flex-col justify-center space-y-4">
                             <span className="text-[8px] font-black text-[#119AB8] uppercase tracking-[0.4em]">Product Spotlight</span>
                             <h4 className="text-2xl font-black text-[#111] tracking-tighter leading-none">{content.title || spotProd?.name}</h4>
-                            <p className="text-[11px] text-[#565959] leading-relaxed line-clamp-3">{content.description || spotProd?.description}</p>
+                            <p className="text-[11px] text-[#64748B] leading-relaxed line-clamp-3">{content.description || spotProd?.description}</p>
                             <div className="flex items-center gap-4 pt-2">
                                 <div className="px-6 py-2 bg-[#111] text-white rounded-full text-[9px] font-bold uppercase tracking-widest">Shop Now</div>
                                 {spotProd && <span className="font-black text-lg text-[#111]">Rs. {Number(spotProd.selling_price || spotProd.price).toLocaleString()}</span>}
@@ -1212,7 +1212,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                     {value && (
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 bg-white border border-[#e2e8f0] rounded-[2px] overflow-hidden shadow-sm flex items-center justify-center">
                             {checkIsVideo(value) ? (
-                                <Film size={12} className="text-[#565959]" />
+                                <Film size={12} className="text-[#64748B]" />
                             ) : (
                                 <img src={getImageUrl(value)} className="h-full w-full object-cover" />
                             )}
@@ -1237,7 +1237,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                         </div>
                         <h3 className="font-bold text-[#111] text-[17px]">Edit {section.name}</h3>
                     </div>
-                    <button onClick={onClose} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
+                    <button onClick={onClose} className="text-[#64748B] hover:text-[#111]"><X size={20} /></button>
                 </div>
 
                 <div className="p-4 md:p-8 space-y-6 md:space-y-8 overflow-y-auto flex-1 custom-scrollbar text-left">
@@ -1251,7 +1251,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                             <label className="text-[13px] font-bold text-[#111]">Visibility Status</label>
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" checked={form.is_visible} onChange={e => setForm(f => ({ ...f, is_visible: e.target.checked }))} className="rounded text-[#13B0D1] w-4 h-4" />
-                                <span className="text-[13px] text-[#565959]">Show this section on the landing page</span>
+                                <span className="text-[13px] text-[#64748B]">Show this section on the landing page</span>
                             </label>
                         </div>
                     </div>
@@ -1273,7 +1273,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         {(form.content.slides || []).map((s: any, i: number) => (
                                             <div key={i} className="p-4 bg-[#fcfcfc] border border-[#e2e8f0] rounded-lg space-y-4 shadow-sm">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[11px] font-bold text-[#565959] uppercase">Slide {i + 1}</span>
+                                                    <span className="text-[11px] font-bold text-[#64748B] uppercase">Slide {i + 1}</span>
                                                     <button onClick={() => updateContent('slides', form.content.slides.filter((_: any, idx: number) => idx !== i))} className="text-red-600 hover:bg-red-50 p-1.5 rounded-lg"><Trash2 size={14} /></button>
                                                 </div>
                                                 <div className="grid md:grid-cols-2 gap-4">
@@ -1358,11 +1358,11 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     <div className="space-y-2">
                                         <label className="text-[13px] font-bold text-[#111]">Display Toggles</label>
                                         <div className="flex gap-6">
-                                            <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#565959]">
+                                            <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#64748B]">
                                                 <input type="checkbox" checked={form.content.show_price} onChange={e => updateContent('show_price', e.target.checked)} className="rounded text-[#13B0D1]" />
                                                 Show Prices
                                             </label>
-                                            <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#565959]">
+                                            <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#64748B]">
                                                 <input type="checkbox" checked={form.content.show_stock} onChange={e => updateContent('show_stock', e.target.checked)} className="rounded text-[#13B0D1]" />
                                                 Stock Status
                                             </label>
@@ -1381,7 +1381,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     <div className="space-y-4 pt-4 border-t border-[#eee]">
                                         <div className="flex-1 mb-2">
                                             <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
-                                            <p className="text-[11px] text-[#565959]">Search and select products to display in this grid.</p>
+                                            <p className="text-[11px] text-[#64748B]">Search and select products to display in this grid.</p>
                                         </div>
 
                                         <div className="relative">
@@ -1416,7 +1416,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
-                                                                <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                                <p className="text-[11px] font-medium text-[#64748B] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
                                                             </div>
                                                             <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-lg text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
                                                         </button>
@@ -1444,7 +1444,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             </div>
                                                             <div className="min-w-0 flex-1 pr-8">
                                                                 <p className="text-[12px] font-bold text-[#111] leading-tight line-clamp-2">{p.name || p.product_name}</p>
-                                                                <p className="text-[11px] font-bold text-[#565959] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                                <p className="text-[11px] font-bold text-[#64748B] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
                                                             </div>
                                                             <button
                                                                 type="button"
@@ -1579,7 +1579,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 <div className="space-y-4 pt-4 border-t border-[#eee]">
                                     <div className="flex-1 mb-2">
                                         <label className="text-[13px] font-bold text-[#111]">Selected Products ({(form.content.product_ids || []).length})</label>
-                                        <p className="text-[11px] text-[#565959]">Search and select products to link to this promotion.</p>
+                                        <p className="text-[11px] text-[#64748B]">Search and select products to link to this promotion.</p>
                                     </div>
 
                                     <div className="relative">
@@ -1614,7 +1614,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         </div>
                                                         <div className="min-w-0 flex-1">
                                                             <p className="text-[13px] font-bold text-[#111] truncate leading-tight">{p.name || p.product_name}</p>
-                                                            <p className="text-[11px] font-medium text-[#565959] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                            <p className="text-[11px] font-medium text-[#64748B] mt-0.5">Rs. {p.selling_price || p.price || p.sale_price}</p>
                                                         </div>
                                                         <div className="text-[#007185] bg-[#007185]/10 px-3 py-1.5 rounded-lg text-[11px] font-bold shrink-0 shadow-sm">Add +</div>
                                                     </button>
@@ -1642,7 +1642,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         </div>
                                                         <div className="min-w-0 flex-1 pr-8">
                                                             <p className="text-[12px] font-bold text-[#111] leading-tight line-clamp-2">{p.name || p.product_name}</p>
-                                                            <p className="text-[11px] font-bold text-[#565959] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
+                                                            <p className="text-[11px] font-bold text-[#64748B] mt-1">Rs. {p.selling_price || p.price || p.sale_price}</p>
                                                         </div>
                                                         <button
                                                             type="button"
@@ -1699,7 +1699,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     <div className="space-y-4 pt-4 border-t border-[#eee]">
                                         <div className="flex items-center justify-between">
                                             <label className="text-[13px] font-bold text-[#111]">Select Categories to Show</label>
-                                            <p className="text-[11px] text-[#565959]">Select categories to display as cards in this section.</p>
+                                            <p className="text-[11px] text-[#64748B]">Select categories to display as cards in this section.</p>
                                         </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1 custom-scrollbar">
                                             {categories.map(cat => {
@@ -1741,7 +1741,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             {(form.content.items || form.content.logos || []).map((item: any, i: number) => (
                                                 <div key={i} className="p-3 bg-[#fcfcfc] border border-[#e2e8f0] rounded-lg space-y-2">
                                                     <div className="flex items-center justify-between">
-                                                        <span className="text-[10px] font-bold text-[#565959]">ITEM {i + 1}</span>
+                                                        <span className="text-[10px] font-bold text-[#64748B]">ITEM {i + 1}</span>
                                                         <button onClick={() => {
                                                             const key = form.content.items ? 'items' : 'logos';
                                                             updateContent(key, form.content[key].filter((_: any, idx: number) => idx !== i));
@@ -1791,7 +1791,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         {(form.content.items || form.content.reviews || []).map((item: any, i: number) => (
                                             <div key={i} className="p-4 bg-[#fcfcfc] border border-[#e2e8f0] rounded-lg space-y-3 shadow-sm">
                                                 <div className="flex items-center justify-between">
-                                                    <span className="text-[10px] font-black text-[#565959] uppercase tracking-widest">Entry {i + 1}</span>
+                                                    <span className="text-[10px] font-black text-[#64748B] uppercase tracking-widest">Entry {i + 1}</span>
                                                     <button onClick={() => {
                                                         const key = form.content.reviews ? 'reviews' : 'items';
                                                         updateContent(key, form.content[key].filter((_: any, idx: number) => idx !== i));
@@ -1838,7 +1838,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 ) : section.section_type === 'stats' ? (
                                                     <div className="grid md:grid-cols-2 gap-4">
                                                         <div className="space-y-1">
-                                                            <label className="text-[11px] font-bold text-[#565959]">VALUE (e.g. 10k+)</label>
+                                                            <label className="text-[11px] font-bold text-[#64748B]">VALUE (e.g. 10k+)</label>
                                                             <input value={item.value} onChange={e => {
                                                                 const list = [...form.content.items];
                                                                 list[i].value = e.target.value;
@@ -1846,7 +1846,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             }} className={inputCls} />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <label className="text-[11px] font-bold text-[#565959]">LABEL (e.g. Partners)</label>
+                                                            <label className="text-[11px] font-bold text-[#64748B]">LABEL (e.g. Partners)</label>
                                                             <input value={item.label} onChange={e => {
                                                                 const list = [...form.content.items];
                                                                 list[i].label = e.target.value;

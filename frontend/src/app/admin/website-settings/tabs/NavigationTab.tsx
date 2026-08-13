@@ -19,8 +19,8 @@ const LOCATIONS = [
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -91,14 +91,14 @@ export default function NavigationTab({ menus, setMenus }: Props) {
 
                 {/* Menu List */}
                 <div className="md:col-span-1 space-y-3">
-                    <p className="text-[13px] font-bold text-[#565959] uppercase px-1">Menu Sets</p>
+                    <p className="text-[13px] font-bold text-[#64748B] uppercase px-1">Menu Sets</p>
                     <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden">
                         {LOCATIONS.map(loc => {
                             const menu = menus.find(m => m.location === loc.id);
                             const isActive = activeMenu === menu?.id;
                             return menu ? (
                                 <button key={loc.id} onClick={() => setActiveMenu(menu.id!)}
-                                    className={`w-full text-left px-4 py-3 text-[13px] font-medium border-l-4 transition-all flex items-center justify-between border-b border-[#eee] last:border-0 ${isActive ? 'border-[#13B0D1] bg-[#f8fafc] text-[#111]' : 'border-transparent text-[#565959] hover:bg-[#f8fafc]'
+                                    className={`w-full text-left px-4 py-3 text-[13px] font-medium border-l-4 transition-all flex items-center justify-between border-b border-[#eee] last:border-0 ${isActive ? 'border-[#13B0D1] bg-[#f8fafc] text-[#111]' : 'border-transparent text-[#64748B] hover:bg-[#f8fafc]'
                                         }`}>
                                     <span>{loc.label.split(' - ')[1] || loc.label}</span>
                                     <span className="text-[11px] font-bold text-[#888]">{menu.items.length}</span>
@@ -201,7 +201,7 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                             <div className="p-2 bg-white rounded-full border border-[#e2e8f0] shadow-sm">
                                 <MenuIcon size={16} className="text-[#c45500]" />
                             </div>
-                            <p className="text-[12px] text-[#565959] font-medium leading-relaxed">
+                            <p className="text-[12px] text-[#64748B] font-medium leading-relaxed">
                                 Tip: Use absolute paths like <span className="font-mono bg-white px-1">/shop</span> or <span className="font-mono bg-white px-1">/contact</span>. External links should start with <span className="font-mono bg-white px-1">https://</span>.
                             </p>
                         </div>

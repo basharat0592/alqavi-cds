@@ -23,9 +23,9 @@ const EMPTY_PAGE: NavbarPage = { name: '', slug: '', link: '', description: '', 
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, size = 'md' }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
-        danger: 'bg-gradient-to-b from-[#f7b5b0] to-[#f08080] border-[#d32f2f] hover:from-[#f5a0a0] hover:to-[#ee6f6f] text-[#0f1111]',
+        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
+        danger: 'bg-gradient-to-b from-[#f7b5b0] to-[#f08080] border-[#d32f2f] hover:from-[#f5a0a0] hover:to-[#ee6f6f] text-[#0F172A]',
     };
     const sizes = {
         sm: 'h-[28px] px-2 text-[11px]',
@@ -210,7 +210,7 @@ export default function NavbarPagesTab() {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-[21px] font-bold text-[#111]">Navbar Pages</h2>
-                    <p className="text-[13px] text-[#565959] mt-1">Manage pages that appear in the top navigation bar</p>
+                    <p className="text-[13px] text-[#64748B] mt-1">Manage pages that appear in the top navigation bar</p>
                 </div>
                 {!addingNew && (
                     <AmazonBtn onClick={() => setAddingNew(true)} className="flex items-center gap-2">
@@ -224,7 +224,7 @@ export default function NavbarPagesTab() {
                 <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden">
                     <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3 flex items-center justify-between">
                         <h3 className="font-bold text-[#111]">Create New Navbar Page</h3>
-                        <button onClick={() => setAddingNew(false)} className="text-[#565959] hover:text-[#111]">
+                        <button onClick={() => setAddingNew(false)} className="text-[#64748B] hover:text-[#111]">
                             <X size={18} />
                         </button>
                     </div>
@@ -249,7 +249,7 @@ export default function NavbarPagesTab() {
                 {pages.length === 0 ? (
                     <div className="p-12 text-center">
                         <AlertCircle size={40} className="mx-auto text-[#aaa] mb-3" />
-                        <p className="text-[#565959] text-[14px]">No navbar pages created yet. Start by creating your first page.</p>
+                        <p className="text-[#64748B] text-[14px]">No navbar pages created yet. Start by creating your first page.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -351,9 +351,9 @@ export default function NavbarPagesTab() {
                         <div className="sticky top-0 bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-4 flex items-center justify-between">
                             <div>
                                 <h3 className="font-bold text-[#111] text-[16px]">Edit Navbar Page</h3>
-                                <p className="text-[12px] text-[#565959] mt-0.5">ID #{editingPage.id} · slug: <code className="font-mono text-[#d63031]">{editingPage.slug}</code></p>
+                                <p className="text-[12px] text-[#64748B] mt-0.5">ID #{editingPage.id} · slug: <code className="font-mono text-[#d63031]">{editingPage.slug}</code></p>
                             </div>
-                            <button onClick={() => !saving && setEditingPage(null)} className="text-[#565959] hover:text-[#111]">
+                            <button onClick={() => !saving && setEditingPage(null)} className="text-[#64748B] hover:text-[#111]">
                                 <X size={20} />
                             </button>
                         </div>

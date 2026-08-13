@@ -1069,14 +1069,14 @@ function ReportsEngineInner() {
                                 <div>
                                     <h3 className="text-[9px] font-black text-[#bbb] uppercase mb-3 tracking-widest border-b border-[#eee] pb-1">Report Period</h3>
                                     <div className="space-y-1">
-                                        <p className="text-[10px] text-[#565959] font-bold">Timeline Coverage</p>
+                                        <p className="text-[10px] text-[#64748B] font-bold">Timeline Coverage</p>
                                         <p className="text-[12px] font-black text-black">{filters.dateFrom} TO {filters.dateTo}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <h3 className="text-[9px] font-black text-[#bbb] uppercase mb-3 tracking-widest border-b border-[#eee] pb-1">Dataset Status</h3>
                                     <div className="space-y-1">
-                                        <p className="text-[10px] text-[#565959] font-bold">Volume Found</p>
+                                        <p className="text-[10px] text-[#64748B] font-bold">Volume Found</p>
                                         <div className="inline-block px-3 py-1 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-full">
                                             {reportResult.length} RECORDS
                                         </div>

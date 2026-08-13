@@ -14,8 +14,8 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -76,7 +76,7 @@ export default function MediaTab({ media, setMedia }: Props) {
             <div className="bg-white border border-[#e2e8f0] rounded-lg px-4 md:px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
                 <div>
                     <h3 className="text-[15px] font-bold text-[#111]">Media Library</h3>
-                    <p className="text-[12px] text-[#565959]">
+                    <p className="text-[12px] text-[#64748B]">
                         {media.length} items total • {media.filter(m => m.file_type === 'image').length} images, {media.filter(m => m.file_type === 'video').length} videos
                     </p>
                 </div>
@@ -98,7 +98,7 @@ export default function MediaTab({ media, setMedia }: Props) {
             <div className="flex items-center gap-2 border-b border-[#e2e8f0] pb-1">
                 {(['all', 'image', 'video'] as const).map(f => (
                     <button key={f} onClick={() => setFilter(f)}
-                        className={`px-4 py-2 text-[13px] font-medium transition-all relative ${filter === f ? 'text-[#c45500] font-bold' : 'text-[#565959] hover:text-[#111]'
+                        className={`px-4 py-2 text-[13px] font-medium transition-all relative ${filter === f ? 'text-[#c45500] font-bold' : 'text-[#64748B] hover:text-[#111]'
                             }`}>
                         {f === 'all' ? 'All Assets' : f === 'image' ? 'Images Only' : 'Videos Only'}
                         {filter === f && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#c45500]" />}
@@ -115,7 +115,7 @@ export default function MediaTab({ media, setMedia }: Props) {
                     <Upload size={20} className="text-[#888]" />
                 </div>
                 <p className="text-[13px] font-bold text-[#111]">Drag and drop files to upload</p>
-                <p className="text-[12px] text-[#565959] mt-1">Supports High-Resolution Images & MP4 Videos</p>
+                <p className="text-[12px] text-[#64748B] mt-1">Supports High-Resolution Images & MP4 Videos</p>
             </div>
 
             {/* Media Grid */}
@@ -155,7 +155,7 @@ export default function MediaTab({ media, setMedia }: Props) {
                                 </div>
                             </div>
                             <div className="p-2 border-t border-[#eee]">
-                                <p className="text-[11px] font-medium text-[#565959] truncate">{asset.alt_text || asset.file.split('/').pop()}</p>
+                                <p className="text-[11px] font-medium text-[#64748B] truncate">{asset.alt_text || asset.file.split('/').pop()}</p>
                             </div>
                         </div>
                     ))}
@@ -170,7 +170,7 @@ export default function MediaTab({ media, setMedia }: Props) {
                             <h3 className="font-bold text-[#111] text-[15px] flex items-center gap-2">
                                 <FileText size={16} /> Asset Details
                             </h3>
-                            <button onClick={() => setPreview(null)} className="text-[#565959] hover:text-[#111]"><X size={20} /></button>
+                            <button onClick={() => setPreview(null)} className="text-[#64748B] hover:text-[#111]"><X size={20} /></button>
                         </div>
                         <div className="flex flex-col md:flex-row h-auto md:h-[500px] overflow-y-auto md:overflow-hidden">
                             <div className="flex-1 md:flex-[2] h-64 md:h-auto bg-[#f0f2f2] p-4 md:p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-[#e2e8f0] shrink-0">
@@ -182,15 +182,15 @@ export default function MediaTab({ media, setMedia }: Props) {
                             </div>
                             <div className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto">
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-[#565959] uppercase">Filename</label>
+                                    <label className="text-[11px] font-bold text-[#64748B] uppercase">Filename</label>
                                     <p className="text-[13px] font-mono break-all text-[#111]">{preview.file.split('/').pop()}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-[#565959] uppercase">Alt Text / Label</label>
+                                    <label className="text-[11px] font-bold text-[#64748B] uppercase">Alt Text / Label</label>
                                     <input value={preview.alt_text} readOnly className={inputCls + " bg-[#fcfcfc] cursor-default"} />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[11px] font-bold text-[#565959] uppercase">Full Access URL</label>
+                                    <label className="text-[11px] font-bold text-[#64748B] uppercase">Full Access URL</label>
                                     <div className="flex gap-2">
                                         <input value={getImageUrl(preview.file) || preview.file} readOnly className={inputCls + " bg-[#fcfcfc] text-[11px] font-mono"} />
                                         <AmazonBtn variant="secondary" onClick={() => copyUrl(preview.file)}>Copy</AmazonBtn>
@@ -219,12 +219,12 @@ export default function MediaTab({ media, setMedia }: Props) {
                         </div>
                         <div className="space-y-1.5">
                             <h3 className="text-[17px] font-bold text-[#111]">Delete Media Asset?</h3>
-                            <p className="text-[13px] text-[#565959] leading-relaxed">
+                            <p className="text-[13px] text-[#64748B] leading-relaxed">
                                 Are you sure you want to permanently remove this asset from your library? This action cannot be undone.
                             </p>
                         </div>
                         <div className="flex gap-2 pt-2">
-                            <button onClick={() => setDeleteId(null)} className="flex-1 h-[35px] border border-[#adb1b8] rounded-lg text-[13px] font-medium bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111] shadow-sm transition-all">
+                            <button onClick={() => setDeleteId(null)} className="flex-1 h-[35px] border border-[#cbd5e1] rounded-lg text-[13px] font-medium bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A] shadow-sm transition-all">
                                 Cancel
                             </button>
                             <button onClick={() => { deleteMedia(deleteId); setDeleteId(null); }} className="flex-1 h-[35px] border border-[#a83434] rounded-lg text-[13px] font-medium bg-gradient-to-b from-[#f59e9e] to-[#e63946] hover:from-[#fca5a5] hover:to-[#d62828] text-white shadow-sm transition-all">

@@ -20,8 +20,8 @@ interface Props {
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -94,11 +94,11 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                     {/* Hover Quick Actions */}
                     <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button onClick={() => setPicker({ open: true, field: field as string })} 
-                            className="p-1.5 bg-white border border-[#e2e8f0] rounded-full shadow-md hover:bg-[#f8fafc] text-[#565959]">
+                            className="p-1.5 bg-white border border-[#e2e8f0] rounded-full shadow-md hover:bg-[#f8fafc] text-[#64748B]">
                             <Search size={14} />
                         </button>
                         <button onClick={() => document.getElementById(`upload_${field}`)?.click()}
-                            className="p-1.5 bg-white border border-[#e2e8f0] rounded-full shadow-md hover:bg-[#f8fafc] text-[#565959]">
+                            className="p-1.5 bg-white border border-[#e2e8f0] rounded-full shadow-md hover:bg-[#f8fafc] text-[#64748B]">
                             <Upload size={14} />
                         </button>
                     </div>

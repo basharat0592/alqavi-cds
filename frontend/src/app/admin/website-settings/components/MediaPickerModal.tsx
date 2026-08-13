@@ -16,8 +16,8 @@ interface Props {
 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -78,10 +78,10 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                 {/* Header */}
                 <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-4 md:px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <ImageIcon size={18} className="text-[#565959]" />
+                        <ImageIcon size={18} className="text-[#64748B]" />
                         <h3 className="font-bold text-[#111] text-[15px]">{title}</h3>
                     </div>
-                    <button onClick={onClose} className="text-[#565959] hover:text-[#111] transition-colors"><X size={20} /></button>
+                    <button onClick={onClose} className="text-[#64748B] hover:text-[#111] transition-colors"><X size={20} /></button>
                 </div>
 
                 <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
@@ -183,11 +183,11 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                     </div>
                                     <div className="space-y-3">
                                         <div className="space-y-1">
-                                            <label className="text-[11px] font-bold text-[#565959]">FILENAME</label>
+                                            <label className="text-[11px] font-bold text-[#64748B]">FILENAME</label>
                                             <p className="text-[12px] font-medium text-[#111] truncate">{selectedAsset.file.split('/').pop()}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[11px] font-bold text-[#565959]">TYPE</label>
+                                            <label className="text-[11px] font-bold text-[#64748B]">TYPE</label>
                                             <p className="text-[12px] font-medium text-[#111] uppercase">{selectedAsset.file_type}</p>
                                         </div>
                                     </div>
@@ -205,7 +205,7 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                             <AmazonBtn disabled={!selectedId} className="w-full md:w-full justify-center text-center" onClick={() => selectedAsset && onSelect(selectedAsset.file)}>
                                 Insert Selected Asset
                             </AmazonBtn>
-                            <button onClick={onClose} className="text-[12px] font-medium text-[#565959] hover:underline py-1 px-4 md:px-0 whitespace-nowrap">
+                            <button onClick={onClose} className="text-[12px] font-medium text-[#64748B] hover:underline py-1 px-4 md:px-0 whitespace-nowrap">
                                 Cancel
                             </button>
                         </div>

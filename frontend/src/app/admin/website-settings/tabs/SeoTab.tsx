@@ -13,8 +13,8 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#13B0D1] border-[#0E8CA8] hover:bg-[#0E8CA8] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -55,7 +55,7 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
                     <div className="bg-white rounded-lg border border-[#e2e8f0] shadow-sm p-4 md:p-6 w-full max-w-xl font-sans">
                         <div className="flex items-center gap-2 mb-1.5">
                             <div className="w-6 h-6 rounded-full bg-[#f0f2f2] flex items-center justify-center">
-                                <Globe size={12} className="text-[#565959]" />
+                                <Globe size={12} className="text-[#64748B]" />
                             </div>
                             <span className="text-[12px] text-[#202124]">https://alqavihub.com › <span className="text-[#5f6368]">shop</span></span>
                         </div>
@@ -78,27 +78,27 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
                     <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                             <label className="text-[13px] font-bold text-[#111]">SEO Page Title</label>
-                            <span className={`text-[10px] font-bold ${titleLen > 60 ? 'text-red-600' : 'text-[#565959]'}`}>
+                            <span className={`text-[10px] font-bold ${titleLen > 60 ? 'text-red-600' : 'text-[#64748B]'}`}>
                                 {titleLen}/60 characters
                             </span>
                         </div>
                         <input type="text" value={form.meta_title || ''} onChange={e => setForm(f => ({ ...f, meta_title: e.target.value }))}
                             placeholder="e.g. Al-Qavi Hub | Professional Makeup & Skincare"
                             className={inputCls} />
-                        <p className="text-[11px] text-[#565959]">Appears in browser tabs and search results. Keep it between 50-60 characters.</p>
+                        <p className="text-[11px] text-[#64748B]">Appears in browser tabs and search results. Keep it between 50-60 characters.</p>
                     </div>
 
                     <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                             <label className="text-[13px] font-bold text-[#111]">Meta Description</label>
-                            <span className={`text-[10px] font-bold ${descLen > 160 ? 'text-red-600' : 'text-[#565959]'}`}>
+                            <span className={`text-[10px] font-bold ${descLen > 160 ? 'text-red-600' : 'text-[#64748B]'}`}>
                                 {descLen}/160 characters
                             </span>
                         </div>
                         <textarea rows={3} value={form.meta_description || ''} onChange={e => setForm(f => ({ ...f, meta_description: e.target.value }))}
                             placeholder="Briefly describe what your store sells..."
                             className="w-full min-h-[80px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#13B0D1] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
-                        <p className="text-[11px] text-[#565959]">A short summary of your page. Keep it between 120-160 characters.</p>
+                        <p className="text-[11px] text-[#64748B]">A short summary of your page. Keep it between 120-160 characters.</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -106,7 +106,7 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
                         <input type="text" value={form.meta_keywords || ''} onChange={e => setForm(f => ({ ...f, meta_keywords: e.target.value }))}
                             placeholder="cosmetics, beauty, pakistan, makeup"
                             className={inputCls} />
-                        <p className="text-[11px] text-[#565959]">Separate keywords with commas. Used by secondary search engines.</p>
+                        <p className="text-[11px] text-[#64748B]">Separate keywords with commas. Used by secondary search engines.</p>
                     </div>
                 </div>
             </div>
