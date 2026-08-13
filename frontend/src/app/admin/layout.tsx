@@ -11,7 +11,7 @@ import {
     Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Building2,
-    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, PanelLeft
+    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, PanelLeft, Maximize, Minimize
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -264,6 +264,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             setSidebarCollapsed(window.localStorage.getItem('admin.sidebarCollapsed') === '1');
         } catch { /* private mode / storage disabled */ }
     }, []);
+
+    /* Fullscreen — hands the whole viewport to the admin, which matters on the
+       wide data grids. Vendor-prefixed calls are kept for older Safari/WebKit. */
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+        const sync = () => setIsFullscreen(Boolean(
+            document.fullscreenElement || (document as any).webkitFullscreenElement
+        ));
+        sync();
+        document.addEventListener('fullscreenchange', sync);
+        document.addEventListener('webkitfullscreenchange', sync);
+        return () => {
+            document.removeEventListener('fullscreenchange', sync);
+            document.removeEventListener('webkitfullscreenchange', sync);
+        };
+    }, []);
+
+    const toggleFullscreen = async () => {
+        try {
+            const el = document.documentElement as any;
+            const doc = document as any;
+            if (document.fullscreenElement || doc.webkitFullscreenElement) {
+                await (document.exitFullscreen?.() ?? doc.webkitExitFullscreen?.());
+            } else {
+                await (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.());
+            }
+        } catch {
+            // Browsers reject this unless it comes from a user gesture, and some
+            // block it outright — leave the UI as-is rather than surfacing noise.
+        }
+    };
 
     const toggleSidebar = () => {
         setSidebarCollapsed(prev => {
@@ -558,6 +590,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             )}
                             <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
                             {/* Dues pill removed from the navbar for all admins — it lives on System Alerts. */}
+                            <button
+                                onClick={toggleFullscreen}
+                                title={isFullscreen ? 'Exit full screen (Esc)' : 'Full screen'}
+                                aria-label={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
+                                aria-pressed={isFullscreen}
+                                className={`hidden md:flex p-2.5 rounded-xl transition-all border ${isFullscreen
+                                    ? 'bg-[#13B0D1]/10 border-[#13B0D1]/30 text-[#0E8CA8]'
+                                    : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white border-transparent'}`}
+                            >
+                                {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+                            </button>
                             <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={notifRef}>
                                 <button onClick={() => setNotifOpen(!notifOpen)}
