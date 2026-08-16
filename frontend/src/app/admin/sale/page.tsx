@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     ShoppingCart, Plus, Trash2, X, CheckCircle, Package, ArrowLeft,
     RefreshCw, Save, Search, ChevronDown, User,
-    Printer, Loader2, AlertTriangle, ShieldCheck, History, MapPin, Phone
+    Printer, Loader2, AlertTriangle, ShieldCheck, History, MapPin, Phone, ScanLine
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
 import { installmentService } from '@/services/payment.service';
@@ -292,6 +292,12 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     const [stockError, setStockError] = useState<string | null>(null);
     const [warehouseStock, setWarehouseStock] = useState<any[]>([]);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
+    // Scanner input, cash tendered, parked sales, and post-save-attempt error marking.
+    const [barcodeInput, setBarcodeInput] = useState('');
+    const barcodeRef = useRef<HTMLInputElement>(null);
+    const [amountTendered, setAmountTendered] = useState('');
+    const [heldSales, setHeldSales] = useState<any[]>([]);
+    const [showErrors, setShowErrors] = useState(false);
 
     // Delivery fields for assigning rider
     const [deliveryCustomerName, setDeliveryCustomerName] = useState('');
@@ -469,9 +475,14 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
     // Calculate discount amount
     const enteredDiscount = parseFloat(discountVal) || 0;
-    const discountAmount = discountType === 'percent'
-        ? (totalBill * (enteredDiscount / 100))
-        : enteredDiscount;
+    // Capped at the bill: the UI clamps the grand total at zero but the backend
+    // doesn't, so an over-large discount would display Rs 0 while storing a
+    // negative total — which then drives payment status the wrong way.
+    const discountAmount = Math.min(
+        discountType === 'percent' ? (totalBill * (enteredDiscount / 100)) : enteredDiscount,
+        totalBill,
+    );
+    const discountCapped = enteredDiscount > 0 && discountAmount < (discountType === 'percent' ? (totalBill * (enteredDiscount / 100)) : enteredDiscount);
 
     const parsedShipping = 0; // shipping charges removed from POS
     const grandTotal = Math.max(0, totalBill + parsedShipping - discountAmount);
@@ -518,7 +529,166 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         return [...out.values()];
     })();
 
+    /* ─── Barcode / scanner entry ───
+       A hardware scanner types the code then sends Enter, so this is just a text
+       field with an Enter handler. Matching is by barcode OR sku, since products
+       created from the purchase screen set both. */
+    const findByCode = (code: string) => {
+        const q = code.trim().toLowerCase();
+        if (!q) return null;
+        return branchProducts.find((p: any) =>
+            String(p.barcode ?? '').toLowerCase() === q ||
+            String(p.sku ?? '').toLowerCase() === q
+        ) ?? null;
+    };
+
+    const addByBarcode = (rawCode: string) => {
+        const code = rawCode.trim();
+        if (!code) return;
+        const p: any = findByCode(code);
+        if (!p) {
+            toast.error(`No product matches "${code}"`, { id: 'scan-miss' });
+            return;
+        }
+        const stock = Number(p.total_quantity ?? p.stock_quantity ?? 0);
+        setItems(prev => {
+            const idx = prev.findIndex(it => String(it.product) === String(p.id));
+            if (idx >= 0) {
+                const line = prev[idx];
+                if (stock > 0 && (line.quantity || 0) + 1 > stock) {
+                    toast.error(`Only ${stock} in stock for ${line.product_name}`, { id: 'scan-stock' });
+                    return prev;
+                }
+                toast.success(`${line.product_name} ×${(line.quantity || 0) + 1}`, { id: 'scan-hit' });
+                return prev.map((x, i) => i === idx ? { ...x, quantity: (x.quantity || 0) + 1 } : x);
+            }
+            if (stock <= 0) {
+                toast.error(`${p.product_name || p.name} is out of stock`, { id: 'scan-stock' });
+                return prev;
+            }
+            const line: SaleItem = {
+                ...EMPTY_SALE_ITEM,
+                product: String(p.id),
+                product_name: p.product_name || p.name,
+                unit_price: parseFloat(p.selling_price || p.price || 0),
+                cost: parseFloat(p.cost_price || 0),
+                stock,
+                quantity: 1,
+                weight: p.weight,
+                size: p.size,
+            };
+            toast.success(`Added ${line.product_name}`, { id: 'scan-hit' });
+            // Fill the blank starter row rather than leaving an empty line above.
+            const blank = prev.findIndex(it => !it.product);
+            if (blank >= 0) return prev.map((x, i) => i === blank ? line : x);
+            return [...prev, line];
+        });
+        setBarcodeInput('');
+        barcodeRef.current?.focus();
+    };
+
+    /* ─── Cash tendered / change due ───
+       Only meaningful for cash: what the customer handed over vs what to give back. */
+    const tendered = parseFloat(amountTendered) || 0;
+    const amountCollectable = payMode === 'full' ? grandTotal : paidNow;
+    const changeDue = Math.max(0, tendered - amountCollectable);
+    const tenderShort = tendered > 0 && tendered < amountCollectable;
+
+    /* ─── Held (parked) sales ─── */
+    const HOLD_KEY = 'pos.heldSales';
+    const readHeld = (): any[] => {
+        try { return JSON.parse(window.localStorage.getItem(HOLD_KEY) || '[]'); } catch { return []; }
+    };
+    const writeHeld = (list: any[]) => {
+        try { window.localStorage.setItem(HOLD_KEY, JSON.stringify(list)); } catch { /* storage disabled */ }
+        setHeldSales(list);
+    };
+    const cartHasContent = items.some(it => it.product);
+
+    const holdSale = () => {
+        if (!cartHasContent) return toast.error('Nothing to hold yet.');
+        const snapshot = {
+            id: `${orderNumber}-${items.length}-${Math.round(grandTotal)}`,
+            heldAtLabel: new Date().toLocaleTimeString(),
+            items, customerId, guestName, guestPhone, salesperson,
+            discountType, discountVal, paymentMethod, total: grandTotal,
+        };
+        writeHeld([snapshot, ...readHeld()].slice(0, 12));
+        setItems([{ ...EMPTY_SALE_ITEM }]);
+        setCustomerId(''); setGuestName(''); setGuestPhone('');
+        setDiscountVal(''); setAmountTendered(''); setAmountPaidNow('');
+        toast.success('Sale held.');
+        barcodeRef.current?.focus();
+    };
+
+    const resumeSale = (h: any) => {
+        if (cartHasContent && !window.confirm('Replace the current cart with the held sale?')) return;
+        setItems(h.items?.length ? h.items : [{ ...EMPTY_SALE_ITEM }]);
+        setCustomerId(h.customerId || ''); setGuestName(h.guestName || '');
+        setGuestPhone(h.guestPhone || ''); setSalesperson(h.salesperson || '');
+        setDiscountType(h.discountType || 'flat'); setDiscountVal(h.discountVal || '');
+        setPaymentMethod(h.paymentMethod || 'cash');
+        writeHeld(readHeld().filter((x: any) => x.id !== h.id));
+        toast.success('Held sale resumed.');
+    };
+
+    useEffect(() => { setHeldSales(readHeld()); }, []);
+
+    /* Row-level validation. Reported by line number so a cashier with a long cart
+       knows which one to fix, and only surfaced once a save has been attempted. */
+    const firstInvalidRow = () => {
+        const noProduct = items.findIndex(it => !it.product);
+        if (noProduct >= 0) return { row: noProduct, msg: `Line ${noProduct + 1}: choose a product` };
+        const badQty = items.findIndex(it => (it.quantity || 0) < 1);
+        if (badQty >= 0) return { row: badQty, msg: `Line ${badQty + 1}: quantity must be at least 1` };
+        const overStock = items.findIndex(it => (it.stock || 0) > 0 && (it.quantity || 0) > it.stock);
+        if (overStock >= 0) return { row: overStock, msg: `Line ${overStock + 1}: only ${items[overStock].stock} in stock` };
+        return null;
+    };
+    const rowIsInvalid = (it: SaleItem) =>
+        showErrors && (!it.product || (it.quantity || 0) < 1 || ((it.stock || 0) > 0 && (it.quantity || 0) > it.stock));
+
+    /* Keyboard: F2 jumps to the scanner box, Ctrl/Cmd+Enter reviews the sale,
+       Esc closes whichever dialog is open. Ignored while typing in a field so it
+       never fights normal data entry. */
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            const el = e.target as HTMLElement | null;
+            const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA');
+            if (e.key === 'F2') { e.preventDefault(); barcodeRef.current?.focus(); barcodeRef.current?.select(); return; }
+            if (e.key === 'Escape') {
+                if (showConfirm) { setShowConfirm(false); return; }
+                if (stockError) { setStockError(null); return; }
+                if (typing) (el as HTMLElement).blur();
+                return;
+            }
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                if (successOrder || saving) return;
+                const bad = firstInvalidRow();
+                if (bad) { setShowErrors(true); toast.error(bad.msg); return; }
+                if (!warehouseId) { toast.error('No source warehouse selected'); return; }
+                setShowConfirm(true);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [items, showConfirm, stockError, successOrder, saving, warehouseId]);
+
+    // Scanner box takes focus on load — the normal starting point for a cashier.
+    useEffect(() => { if (!loading && !successOrder) barcodeRef.current?.focus(); }, [loading, successOrder]);
+
+    // Don't let a reload silently bin a cart that has lines on it.
+    useEffect(() => {
+        if (!cartHasContent || successOrder) return;
+        const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [cartHasContent, successOrder]);
+
     const handleSave = async () => {
+        // An impatient double-click would otherwise bill the sale twice.
+        if (saving) return;
         // Guard rails for credit / partial sales (allowed for walk-in too now).
         if (payMode !== 'full') {
             if (!dueDate) { setShowConfirm(false); return toast.error('Set a payment due date for the outstanding balance.'); }
@@ -643,10 +813,30 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             <span className="text-[26px] font-black text-slate-900 tabular-nums">{formatCurrency(successOrder.total_amount)}</span>
                         </div>
                     </div>
+                    {/* ?print=true makes the invoice route fire window.print() once loaded. */}
+                    <Btn
+                        className="w-full h-[42px] font-bold mb-3"
+                        onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice?print=true`)}
+                    >
+                        <Printer size={18} /> Print Receipt
+                    </Btn>
                     <div className="flex gap-4">
-                        <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}><Printer size={18} /> View Invoice</Btn>
-                        <Btn className="flex-1 h-[40px] font-bold" onClick={() => router.push('/admin/sales')}><History size={18} /> View Sales</Btn>
+                        <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}>View Invoice</Btn>
+                        <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push('/admin/sales')}><History size={18} /> View Sales</Btn>
                     </div>
+                    <button
+                        onClick={() => {
+                            setSuccessOrder(null);
+                            setItems([{ ...EMPTY_SALE_ITEM }]);
+                            setCustomerId(''); setGuestName(''); setGuestPhone('');
+                            setDiscountVal(''); setAmountTendered(''); setAmountPaidNow('');
+                            setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`);
+                            setShowErrors(false);
+                        }}
+                        className="mt-4 text-[13px] font-bold text-[#B4780B] hover:text-[#92600A] hover:underline"
+                    >
+                        + Start next sale
+                    </button>
                 </Card>
             </div>
         );
@@ -728,12 +918,50 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                             {/* Line Items Detail */}
                             <Card className="relative z-[10] overflow-visible animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between rounded-t-2xl">
-                                    <div>
+                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between gap-3 rounded-t-2xl">
+                                    <div className="min-w-0">
                                         <h2 className="text-[13px] sm:text-[14px] font-bold uppercase tracking-wider text-slate-700">Sale Items</h2>
-                                        <p className="text-[11px] text-slate-500 mt-0.5 font-medium italic">Add products and how many to sell.</p>
+                                        <p className="text-[11px] text-slate-500 mt-0.5 font-medium italic">Scan a barcode, or add products manually.</p>
                                     </div>
-                                    <Btn variant="secondary" onClick={addItem} className="font-bold"><Plus size={14} /> Add Item</Btn>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <Btn variant="secondary" onClick={holdSale} className="font-bold" disabled={!cartHasContent}>Hold</Btn>
+                                        <Btn variant="secondary" onClick={addItem} className="font-bold"><Plus size={14} /> Add Item</Btn>
+                                    </div>
+                                </div>
+
+                                {/* Scanner box — a hardware scanner types the code and sends Enter. */}
+                                <div className="px-4 sm:px-6 pt-4">
+                                    <div className="relative">
+                                        <ScanLine size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B4780B] pointer-events-none" />
+                                        <input
+                                            ref={barcodeRef}
+                                            value={barcodeInput}
+                                            onChange={e => setBarcodeInput(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') { e.preventDefault(); addByBarcode(barcodeInput); }
+                                                else if (e.key === 'Escape') { setBarcodeInput(''); }
+                                            }}
+                                            placeholder="Scan barcode or type a code, then press Enter…"
+                                            aria-label="Barcode scanner input"
+                                            className="w-full h-11 pl-10 pr-20 rounded-xl border-2 border-[#F59E0B]/40 bg-[#F59E0B]/5 text-[14px] font-semibold text-slate-900 outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-[#F59E0B] focus:bg-white focus:ring-4 focus:ring-[#F59E0B]/20"
+                                        />
+                                        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-slate-300 bg-white text-[10px] font-sans font-bold text-slate-500 pointer-events-none">F2</kbd>
+                                    </div>
+                                    {heldSales.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Held</span>
+                                            {heldSales.map((h: any) => (
+                                                <button
+                                                    key={h.id}
+                                                    onClick={() => resumeSale(h)}
+                                                    title={`Resume sale held at ${h.heldAtLabel}`}
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[11.5px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/20 transition-colors"
+                                                >
+                                                    {h.heldAtLabel} · {formatCurrency(h.total)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="p-3 sm:p-5 space-y-3">
                                     {items.map((item, i) => {
@@ -741,7 +969,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         const gross = (parseInt(item.quantity as any) || 0) * (parseFloat(item.unit_price as any) || 0);
                                         const discAmt = gross - net;
                                         return (
-                                        <div key={i} className="bg-white border border-slate-200/70 rounded-xl p-3 sm:p-4 transition-all hover:border-[#F59E0B]/35 hover:shadow-sm animate-in slide-in-from-left-2 duration-300">
+                                        <div key={i} className={`bg-white border rounded-xl p-3 sm:p-4 transition-all hover:shadow-sm animate-in slide-in-from-left-2 duration-300 ${rowIsInvalid(item) ? 'border-rose-300 bg-rose-50/40' : 'border-slate-200/70 hover:border-[#F59E0B]/35'}`}>
                                             {/* Product + remove */}
                                             <div className="flex items-end gap-2.5">
                                                 <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-[#F59E0B]/15">{i + 1}</span>
@@ -865,6 +1093,41 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                             </select>
                                         </div>
 
+                                        {/* Cash drawer maths — what was handed over, and what to give back. */}
+                                        {paymentMethod === 'cash' && amountCollectable > 0 && (
+                                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
+                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Cash Received</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">Rs</span>
+                                                    <input
+                                                        type="number" min={0} inputMode="decimal"
+                                                        value={amountTendered}
+                                                        onChange={e => setAmountTendered(e.target.value)}
+                                                        placeholder="0.00"
+                                                        className="w-full h-9 pl-8 pr-2.5 rounded-lg border border-slate-200 text-[13px] text-right font-bold tabular-nums outline-none bg-white transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10"
+                                                    />
+                                                </div>
+                                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                                    <button type="button" onClick={() => setAmountTendered(String(amountCollectable))}
+                                                        className="px-2 py-1 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors">Exact</button>
+                                                    {[500, 1000, 5000].map(d => (
+                                                        <button key={d} type="button" onClick={() => setAmountTendered(String(d))}
+                                                            className="px-2 py-1 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors tabular-nums">{d}</button>
+                                                    ))}
+                                                </div>
+                                                {tendered > 0 && (
+                                                    <div className={`mt-2.5 flex justify-between items-center rounded-lg px-3 py-2 ${tenderShort ? 'bg-rose-50 border border-rose-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                                                        <span className={`text-[11px] font-black uppercase tracking-wider ${tenderShort ? 'text-rose-700' : 'text-emerald-700'}`}>
+                                                            {tenderShort ? 'Short by' : 'Change due'}
+                                                        </span>
+                                                        <span className={`text-[16px] font-black tabular-nums ${tenderShort ? 'text-rose-700' : 'text-emerald-700'}`}>
+                                                            {formatCurrency(tenderShort ? amountCollectable - tendered : changeDue)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         {payMode !== 'full' && (
                                             <div className="mt-3 space-y-3 rounded-xl border border-amber-200/70 bg-amber-50/40 p-3.5">
                                                 {payMode === 'partial' && (
@@ -945,7 +1208,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         )}
                                         {discountAmount > 0 && (
                                             <div className="flex justify-between text-[13px] text-slate-500">
-                                                <span>Discount {discountType === 'percent' ? `(${discountVal}%)` : ''}</span>
+                                                <span>
+                                                    Discount {discountType === 'percent' ? `(${discountVal}%)` : ''}
+                                                    {discountCapped && <span className="ml-1 text-[11px] font-bold text-amber-600">capped at bill</span>}
+                                                </span>
                                                 <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(discountAmount)}</span>
                                             </div>
                                         )}
@@ -1009,9 +1275,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         variant="primary"
                                         size="lg"
                                         onClick={() => {
-                                            if (items.some(i => !i.product)) return toast.error('Please select items for the sale');
-                                            if (items.some(i => (i.quantity || 0) < 1)) return toast.error('All quantities must be at least 1');
+                                            const bad = firstInvalidRow();
+                                            if (bad) { setShowErrors(true); return toast.error(bad.msg); }
                                             if (!warehouseId) return toast.error('Please select a source warehouse');
+                                            setShowErrors(false);
                                             setShowConfirm(true);
                                         }}
                                         disabled={items.some(i => !i.product) || items.length === 0 || saving}

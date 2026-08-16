@@ -665,6 +665,8 @@ export default function AddPurchasePage() {
 
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
+        // An impatient double-click would otherwise post the order twice.
+        if (saving) return;
 
         // Point at the offending row instead of just naming the field — with many
         // rows on screen, "for all items" isn't enough to find the gap.
@@ -722,10 +724,23 @@ export default function AddPurchasePage() {
         // folds shipping + tax into the grand total, so compute it here.
         const taxAmount = (totalAmount * ((form as any).tax_rate || 0)) / 100;
 
+        // The UI clamps the grand total at zero, the backend does not — an extra
+        // discount larger than the bill would show Rs 0 here but store a negative
+        // total and mis-derive payment status. Cap it before it goes out.
+        const chargeable = totalAmount + ((form as any).shipping_cost || 0) + taxAmount;
+        const enteredDiscount = Number((form as any).extra_discount) || 0;
+        const cappedDiscount = Math.min(enteredDiscount, chargeable);
+        if (cappedDiscount !== enteredDiscount) {
+            toast(`Extra discount capped at ${formatCurrency(chargeable)} (the bill total).`, { icon: '⚠️' });
+            setForm(f => ({ ...f, extra_discount: cappedDiscount }));
+        }
+        // Everything below builds its payload from this, not from `form` directly.
+        const formOut = { ...form, extra_discount: cappedDiscount };
+
         // Edit mode: update the existing order (full header + items recompute).
         if (editId) {
             try {
-                await purchaseService.updateFull(editId, { ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount });
+                await purchaseService.updateFull(editId, { ...formOut, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount });
                 toast.success('Purchase order updated!');
                 router.push('/admin/purchases');
             } catch (err: any) {
@@ -740,7 +755,7 @@ export default function AddPurchasePage() {
         // Only prompt for a branch when the admin genuinely has multiple; otherwise
         // the received stock lands in their single/assigned branch automatically.
         if (form.status === 'RECEIVED' && !warehouseId && !form.warehouse && warehouses.length > 1) {
-            setTempPayload({ ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems });
+            setTempPayload({ ...formOut, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems });
             setIsWarehouseModalOpen(true);
             setSaving(false);
             return;
@@ -756,7 +771,7 @@ export default function AddPurchasePage() {
             const grandTotal = Math.max(0, totalAmount + ((form as any).shipping_cost || 0) + taxAmount - (Number((form as any).extra_discount) || 0));
             const paidNow = Number((form as any).paid_amount) || 0;
             const payment_status = paidNow <= 0 ? 'UNPAID' : paidNow >= grandTotal ? 'PAID' : 'PARTIAL';
-            const payload: any = { ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
+            const payload: any = { ...formOut, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
             if (finalWarehouseId) payload.warehouse = finalWarehouseId;
             const data = await purchaseService.create(payload);
             setSuccessOrder(data);
@@ -961,6 +976,47 @@ export default function AddPurchasePage() {
         else if (e.key === 'Escape') target.blur();
     };
 
+    /* ─── Duplicate supplier bill ───
+       Re-keying the same invoice double-counts stock and payables, so warn on blur.
+       Advisory only: suppliers do occasionally reuse numbers across years. */
+    const [dupBill, setDupBill] = useState<{ number: string; date?: string } | null>(null);
+
+    const checkDuplicateBill = useCallback(async (ref: string) => {
+        const number = (ref || '').trim();
+        if (!number || editId) { setDupBill(null); return; }
+        try {
+            const res: any = await purchaseService.getAll({ search: number, page_size: 20 });
+            const rows: any[] = res?.results ?? res ?? [];
+            const hit = rows.find((r: any) =>
+                String(r.reference_number ?? '').trim().toLowerCase() === number.toLowerCase() &&
+                String(r.id) !== String(editId ?? '')
+            );
+            setDupBill(hit ? { number, date: hit.order_date || hit.created_at?.slice(0, 10) } : null);
+        } catch {
+            setDupBill(null); // never block entry on a lookup failure
+        }
+    }, [editId]);
+
+    /* ─── Barcode resolution ───
+       The Bar Code column used to be free text that went nowhere. Entering or
+       scanning a known code now selects that product onto the row, which also
+       pulls its company and last-known rates through the normal update path. */
+    const findProductByCode = (code: string) => {
+        const q = code.trim().toLowerCase();
+        if (!q) return null;
+        return products.find((p: any) =>
+            String(p.barcode ?? '').toLowerCase() === q ||
+            String(p.sku ?? '').toLowerCase() === q
+        ) ?? null;
+    };
+
+    const applyScannedProduct = (rowIndex: number, p: any) => {
+        // Route through updateItem so rate auto-fill and apply_expiry stay in one place.
+        if (p.company) updateItem(rowIndex, 'company', String(p.company));
+        updateItem(rowIndex, 'product', String(p.id));
+        toast.success(`${p.name}`, { id: 'pur-scan-hit' });
+    };
+
     // Rows that fail validation, surfaced only after a save attempt so the form
     // doesn't shout at someone who is still filling it in.
     const rowInvalid = (it: LineItem) => ({
@@ -995,6 +1051,52 @@ export default function AddPurchasePage() {
         window.addEventListener('beforeunload', onBeforeUnload);
         return () => window.removeEventListener('beforeunload', onBeforeUnload);
     }, [hasUnsavedWork]);
+
+    /* ─── Draft persistence ───
+       The warning above only asks; it doesn't save. Mirror the live form into
+       localStorage so a crash, a stray reload or a closed tab is recoverable.
+       Editing an existing PO is excluded — that already has a server record. */
+    const DRAFT_KEY = 'purchase.draft.v1';
+    const [draftOffer, setDraftOffer] = useState<any | null>(null);
+    const draftRestored = useRef(false);
+
+    useEffect(() => {
+        if (editId || loading || draftRestored.current) return;
+        draftRestored.current = true;
+        try {
+            const raw = window.localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            if (Array.isArray(d?.items) && d.items.some((it: any) => it.product)) setDraftOffer(d);
+        } catch { /* corrupt or unavailable */ }
+    }, [editId, loading]);
+
+    useEffect(() => {
+        if (editId || successOrder) return;
+        if (!hasUnsavedWork) { try { window.localStorage.removeItem(DRAFT_KEY); } catch {} return; }
+        // Debounced so keystrokes don't hammer storage.
+        const t = setTimeout(() => {
+            try {
+                window.localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                    items, form, savedAtLabel: new Date().toLocaleString(),
+                }));
+            } catch { /* quota or private mode */ }
+        }, 800);
+        return () => clearTimeout(t);
+    }, [items, form, hasUnsavedWork, editId, successOrder]);
+
+    const restoreDraft = () => {
+        if (!draftOffer) return;
+        if (Array.isArray(draftOffer.items) && draftOffer.items.length) setItems(draftOffer.items);
+        if (draftOffer.form) setForm((f: any) => ({ ...f, ...draftOffer.form }));
+        setDraftOffer(null);
+        toast.success('Draft restored.');
+    };
+
+    const discardDraft = () => {
+        try { window.localStorage.removeItem(DRAFT_KEY); } catch {}
+        setDraftOffer(null);
+    };
 
     const renderItemsList = () => {
         return items.map((item, i) => {
@@ -1049,7 +1151,22 @@ export default function AddPurchasePage() {
                                 className={cellCls + ' tabular-nums tracking-wide text-slate-600'}
                                 value={item.barcode || ''}
                                 onChange={e => updateItem(i, 'barcode', e.target.value)}
-                                placeholder="—"
+                                onKeyDown={e => {
+                                    // Enter resolves the code to a product on this row rather
+                                    // than just moving on, so a scanner fills the line.
+                                    if (e.key !== 'Enter') return;
+                                    const code = (e.target as HTMLInputElement).value.trim();
+                                    if (!code) return;
+                                    const hit = findProductByCode(code);
+                                    if (hit) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        applyScannedProduct(i, hit);
+                                    } else {
+                                        toast.error(`No product matches "${code}"`, { id: 'pur-scan-miss' });
+                                    }
+                                }}
+                                placeholder="scan / type"
                             />
                         </Cell>
                         <Cell>
@@ -1150,6 +1267,24 @@ export default function AddPurchasePage() {
                                 <>
                                     <span className="w-1 h-1 bg-slate-300 rounded-full" />
                                     <span>profit <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
+                                </>
+                            )}
+                            {/* Per-row expiry override. The Settlement field sets a default for
+                                the whole order; this lets one line differ when a delivery mixes
+                                batches, without giving the grid another column. */}
+                            {item.apply_expiry && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <label className="inline-flex items-center gap-1.5">
+                                        <span>expiry</span>
+                                        <input
+                                            type="date"
+                                            value={item.expiry_date || ''}
+                                            onChange={e => updateItem(i, 'expiry_date', e.target.value)}
+                                            title="Expiry for this line — overrides the order default"
+                                            className="h-6 px-1.5 rounded border border-slate-200 bg-slate-50 text-[11px] tabular-nums text-slate-700 outline-none transition-colors hover:border-slate-300 focus:border-[#F59E0B] focus:bg-white focus:ring-2 focus:ring-[#F59E0B]/25"
+                                        />
+                                    </label>
                                 </>
                             )}
                             <span className="ml-auto text-[12.5px] font-bold text-[#B4780B] tabular-nums">
@@ -1263,7 +1398,7 @@ export default function AddPurchasePage() {
                 <SField label="Balance Due Date">
                     <input className={settleInput + ' tabular-nums'} type="date" value={(form as any).due_date || ''} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
                 </SField>
-                <SField label="Expiry Date" hint={expiryApplies ? 'Applies to all items that track expiry' : 'No item on this order tracks expiry'}>
+                <SField label="Expiry (all lines)" hint={expiryApplies ? 'Sets every line that tracks expiry; a line can still be overridden individually below its row' : 'No item on this order tracks expiry'}>
                     <input
                         className={settleInput + ' tabular-nums' + (expiryApplies ? '' : ' ' + ui.inputDisabled)}
                         type="date"
@@ -1290,7 +1425,19 @@ export default function AddPurchasePage() {
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
                 <Field label="Supplier Bill No.">
-                    <input className={inputCls} value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="Supplier's invoice / bill no." />
+                    <input
+                        className={inputCls + (dupBill ? ' !border-amber-400 !bg-amber-50/60' : '')}
+                        value={form.reference_number}
+                        onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))}
+                        onBlur={() => checkDuplicateBill(form.reference_number)}
+                        placeholder="Supplier's invoice / bill no."
+                    />
+                    {dupBill && (
+                        <p className="mt-1.5 flex items-start gap-1.5 text-[11.5px] font-semibold text-amber-700">
+                            <AlertTriangle size={13} className="mt-px shrink-0" />
+                            <span>Bill <b>{dupBill.number}</b> is already recorded{dupBill.date ? ` on ${dupBill.date}` : ''}. Saving again will double-count stock and payables.</span>
+                        </p>
+                    )}
                 </Field>
                 <Field label="Staff">
                     <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
@@ -1434,6 +1581,19 @@ export default function AddPurchasePage() {
                         <Plus size={14} /> Add New Products
                     </Btn>
                 </div>
+
+                {draftOffer && (
+                    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-4 py-3">
+                        <AlertTriangle size={16} className="text-[#B4780B] shrink-0" />
+                        <span className="text-[12.5px] font-semibold text-slate-700">
+                            An unsaved purchase from {draftOffer.savedAtLabel} was recovered.
+                        </span>
+                        <div className="ml-auto flex items-center gap-2">
+                            <button onClick={restoreDraft} className="px-3 py-1.5 rounded-lg bg-[#F59E0B] text-white text-[12px] font-bold hover:bg-[#B4780B] transition-colors">Restore</button>
+                            <button onClick={discardDraft} className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-colors">Discard</button>
+                        </div>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
