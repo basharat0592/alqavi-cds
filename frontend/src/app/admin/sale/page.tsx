@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    ShoppingCart, Plus, Trash2, X, CheckCircle, Package, ArrowLeft,
-    RefreshCw, Save, Search, ChevronDown, User,
+    Plus, Trash2, X, CheckCircle, Package, ArrowLeft,
+    RefreshCw, Search, ChevronDown, User,
     Printer, Loader2, AlertTriangle, ShieldCheck, History, MapPin, Phone, ScanLine
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
@@ -13,7 +13,11 @@ import { deliveryService } from '@/services/delivery.service';
 import { authService } from '@/lib/auth';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
+import { Card, Button, Modal, ui } from '@/components/admin/ui';
+import {
+    cellCls, cellNum, cellError, Th, Cell,
+    gridScroller, gridHead, gridFoot, gridRow,
+} from '@/components/admin/ui/grid';
 /* ─────────────────────────────────────────────────────────────────────────────
    PURE AMAZON RETAIL DESIGN SYSTEM - POS (ENTRY FORM STYLE)
    ───────────────────────────────────────────────────────────────────────────── */
@@ -40,6 +44,12 @@ const Field = ({ label, required = false, children }: { label: string; required?
 
 const inputCls = ui.inputBase.replace('h-10', 'h-[38px]');
 const selectCls = `${inputCls} cursor-pointer`;
+
+/* Line-item grid — same shape as New Purchase, with the POS's own columns:
+   product, stock, qty, bonus, rate, discount, net, remove. */
+const POS_COLS =
+    'grid grid-cols-[minmax(220px,2fr)_72px_80px_68px_98px_68px_106px_36px]';
+const POS_MIN = 'min-w-[770px]';
 
 type SaleItem = {
     product: string;
@@ -678,6 +688,63 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     // Scanner box takes focus on load — the normal starting point for a cashier.
     useEffect(() => { if (!loading && !successOrder) barcodeRef.current?.focus(); }, [loading, successOrder]);
 
+    /* Column sums shown in the totals band. */
+    const totalUnitsSold = items.reduce((s, it) => s + (parseInt(it.quantity as any) || 0), 0);
+    const totalBonusUnits = items.reduce((s, it) => s + (parseInt(it.bonus as any) || 0), 0);
+
+    /* In-grid keyboard movement, mirroring the purchase screen: Enter steps to the
+       next cell (adding a line past the end), arrows move by row. Reads live DOM
+       order so it never needs a hardcoded column count. */
+    const gridRef = useRef<HTMLDivElement>(null);
+    const gridCells = () => Array.from(
+        gridRef.current?.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])') ?? []
+    ).filter(el => el !== barcodeRef.current);
+
+    const focusCell = (el?: HTMLElement) => {
+        if (!el) return;
+        el.focus();
+        if (el instanceof HTMLInputElement && el.type !== 'date') el.select();
+    };
+
+    const onGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        if (target === barcodeRef.current) return; // scanner box has its own handler
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
+        const cells = gridCells();
+        const idx = cells.indexOf(target);
+        if (idx === -1) return;
+
+        const rowOf = (el: HTMLElement) => el.closest('[data-row]');
+        const stepRow = (dir: 1 | -1) => {
+            const row = rowOf(target);
+            if (!row) return;
+            const inRow = Array.from(row.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
+            const col = inRow.indexOf(target);
+            let j = idx;
+            while ((j = j + dir) >= 0 && j < cells.length) {
+                const other = rowOf(cells[j]);
+                if (other && other !== row) {
+                    const others = Array.from(other.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
+                    focusCell(others[Math.min(col, others.length - 1)]);
+                    return;
+                }
+            }
+        };
+
+        if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            const next = cells[idx + (e.shiftKey ? -1 : 1)];
+            if (next) { focusCell(next); return; }
+            if (!e.shiftKey) {
+                addItem();
+                requestAnimationFrame(() => focusCell(gridCells()[idx + 1]));
+            }
+            return;
+        }
+        if (e.key === 'ArrowDown') { e.preventDefault(); stepRow(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); stepRow(-1); }
+    };
+
     // Don't let a reload silently bin a cart that has lines on it.
     useEffect(() => {
         if (!cartHasContent || successOrder) return;
@@ -846,14 +913,29 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         <div className="pb-20 text-left text-slate-800">
             <div className="max-w-[1200px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
 
-                <PageHeader
-                    title="Point of Sale"
-                    breadcrumbs={[
-                        { label: 'Console', href: '/admin/dashboard' },
-                        { label: 'Sales History', href: '/admin/sales' },
-                        { label: 'New Sale' },
-                    ]}
-                />
+                {/* Same header shape as New Purchase: breadcrumb doubles as the action
+                    bar, with a back control at the far left and no title block. */}
+                <div className="flex items-center justify-between gap-4 mb-4">
+                    <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 min-w-0">
+                        <button
+                            onClick={() => router.push('/admin/sales')}
+                            title="Back to Sales"
+                            aria-label="Back to Sales"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#B4780B] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
+                        >
+                            <ArrowLeft size={15} />
+                        </button>
+                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
+                        <span className="text-slate-300">/</span>
+                        <button onClick={() => router.push('/admin/sales')} className="hover:text-slate-600 transition-colors">Sales History</button>
+                        <span className="text-slate-300">/</span>
+                        <span className="text-slate-600 truncate">New Sale</span>
+                    </nav>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <Btn variant="secondary" onClick={holdSale} disabled={!cartHasContent} className="font-bold">Hold</Btn>
+                        <Btn variant="secondary" onClick={addItem} className="font-bold"><Plus size={14} /> Add Item</Btn>
+                    </div>
+                </div>
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500 font-medium animate-pulse flex flex-col items-center gap-4">
@@ -916,21 +998,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                 </div>
                             </Card>
 
-                            {/* Line Items Detail */}
-                            <Card className="relative z-[10] overflow-visible animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between gap-3 rounded-t-2xl">
-                                    <div className="min-w-0">
-                                        <h2 className="text-[13px] sm:text-[14px] font-bold uppercase tracking-wider text-slate-700">Sale Items</h2>
-                                        <p className="text-[11px] text-slate-500 mt-0.5 font-medium italic">Scan a barcode, or add products manually.</p>
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <Btn variant="secondary" onClick={holdSale} className="font-bold" disabled={!cartHasContent}>Hold</Btn>
-                                        <Btn variant="secondary" onClick={addItem} className="font-bold"><Plus size={14} /> Add Item</Btn>
-                                    </div>
-                                </div>
-
+                            {/* Line items — same spreadsheet grid as New Purchase */}
+                            <Card className="relative z-[10] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
                                 {/* Scanner box — a hardware scanner types the code and sends Enter. */}
-                                <div className="px-4 sm:px-6 pt-4">
+                                <div className="px-4 sm:px-5 py-4">
                                     <div className="relative">
                                         <ScanLine size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B4780B] pointer-events-none" />
                                         <input
@@ -963,98 +1034,131 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         </div>
                                     )}
                                 </div>
-                                <div className="p-3 sm:p-5 space-y-3">
+
+                                <div ref={gridRef} onKeyDown={onGridKeyDown} className={gridScroller}>
+                                    <div className={POS_COLS + ' ' + POS_MIN + ' ' + gridHead}>
+                                        <Th required>Product</Th>
+                                        <Th align="right">Stock</Th>
+                                        <Th align="right" required>Qty</Th>
+                                        <Th align="right">Bonus</Th>
+                                        <Th align="right" required>Rate Rs</Th>
+                                        <Th align="right">Disc %</Th>
+                                        <Th align="right">Net Rs</Th>
+                                        <Th> </Th>
+                                    </div>
+
                                     {items.map((item, i) => {
                                         const net = lineNet(item);
                                         const gross = (parseInt(item.quantity as any) || 0) * (parseFloat(item.unit_price as any) || 0);
                                         const discAmt = gross - net;
+                                        const bad = rowIsInvalid(item);
                                         return (
-                                        <div key={i} className={`bg-white border rounded-xl p-3 sm:p-4 transition-all hover:shadow-sm animate-in slide-in-from-left-2 duration-300 ${rowIsInvalid(item) ? 'border-rose-300 bg-rose-50/40' : 'border-slate-200/70 hover:border-[#F59E0B]/35'}`}>
-                                            {/* Product + remove */}
-                                            <div className="flex items-end gap-2.5">
-                                                <span className="hidden sm:flex shrink-0 mb-1.5 w-6 h-6 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] text-[11px] font-black items-center justify-center tabular-nums ring-1 ring-inset ring-[#F59E0B]/15">{i + 1}</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <ProductSelector
-                                                        selectedId={item.product}
-                                                        products={branchProducts}
-                                                        inputCls={selectCls}
-                                                        onSelect={(p: any) => updateItem(i, p)}
-                                                    />
-                                                </div>
-                                                <button onClick={() => removeItem(i)} title="Remove" className="shrink-0 mb-0.5 w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-colors">
-                                                    <Trash2 size={15} />
-                                                </button>
-                                            </div>
-
-                                            {/* Per-line fields grid */}
-                                            <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                                                <div>
-                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Qty {item.stock > 0 ? <span className="text-slate-300 normal-case">/ {item.stock}</span> : ''}</label>
-                                                    <input
-                                                        className={inputCls + " text-center font-black text-[#B4780B]"}
-                                                        type="number" min="1"
-                                                        value={item.quantity || ''}
-                                                        onChange={e => updateQty(i, parseInt(e.target.value))}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Bonus (U)</label>
-                                                    <input
-                                                        className={inputCls + " text-center tabular-nums text-emerald-700 font-bold"}
-                                                        type="number" min="0"
-                                                        value={item.bonus || ''}
-                                                        onChange={e => patchItem(i, 'bonus', Math.max(0, parseInt(e.target.value) || 0))}
-                                                        placeholder="0"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Rate (TP)</label>
-                                                    <div className="relative flex items-center">
-                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
+                                            <div key={i} data-row={i} className={gridRow(i)}>
+                                                <div className={POS_COLS + ' ' + POS_MIN}>
+                                                    <Cell>
+                                                        <ProductSelector
+                                                            selectedId={item.product}
+                                                            products={branchProducts}
+                                                            inputCls={cellCls + (bad && !item.product ? cellError : '')}
+                                                            onSelect={(p: any) => updateItem(i, p)}
+                                                        />
+                                                    </Cell>
+                                                    <Cell className="justify-end">
+                                                        <span className={`px-1 text-[12px] font-bold tabular-nums ${item.product ? (item.stock > 0 ? 'text-slate-600' : 'text-rose-600') : 'text-slate-300'}`}>
+                                                            {item.product ? item.stock : '—'}
+                                                        </span>
+                                                    </Cell>
+                                                    <Cell>
                                                         <input
-                                                            className={inputCls + " pl-6 text-center tabular-nums font-bold text-slate-800"}
+                                                            className={cellNum + ' text-[#B4780B]' + (bad && (item.quantity || 0) < 1 ? cellError : '')}
+                                                            type="number" min="1"
+                                                            value={item.quantity || ''}
+                                                            onChange={e => updateQty(i, parseInt(e.target.value))}
+                                                        />
+                                                    </Cell>
+                                                    <Cell>
+                                                        <input
+                                                            className={cellNum + ' text-emerald-700'}
+                                                            type="number" min="0"
+                                                            value={item.bonus || ''}
+                                                            onChange={e => patchItem(i, 'bonus', Math.max(0, parseInt(e.target.value) || 0))}
+                                                            placeholder="0"
+                                                        />
+                                                    </Cell>
+                                                    <Cell>
+                                                        <input
+                                                            className={cellNum}
                                                             type="number" min="0" step="0.01"
                                                             value={item.unit_price || ''}
                                                             onChange={e => patchItem(i, 'unit_price', Math.max(0, parseFloat(e.target.value) || 0))}
+                                                            placeholder="0.00"
                                                         />
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Disc %</label>
-                                                    <div className="relative flex items-center">
-                                                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">%</span>
+                                                    </Cell>
+                                                    <Cell>
                                                         <input
-                                                            className={inputCls + " pr-5 text-center tabular-nums"}
+                                                            className={cellNum}
                                                             type="number" min="0" max="100"
                                                             value={item.discountPct || ''}
                                                             onChange={e => patchItem(i, 'discountPct', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
                                                             placeholder="0"
                                                         />
-                                                    </div>
+                                                    </Cell>
+                                                    <Cell className="justify-end">
+                                                        <span className="px-1 text-[12.5px] font-bold text-[#B4780B] tabular-nums">{formatCurrency(net)}</span>
+                                                    </Cell>
+                                                    <Cell className="justify-center">
+                                                        <button
+                                                            onClick={() => removeItem(i)}
+                                                            disabled={items.length === 1}
+                                                            title={items.length === 1 ? 'A sale needs at least one line' : 'Remove line'}
+                                                            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </Cell>
                                                 </div>
-                                                <div className="col-span-2 sm:col-span-1">
-                                                    <label className="block text-[9.5px] font-black text-slate-400 uppercase tracking-widest mb-1">Net Amt</label>
-                                                    <div className="h-[38px] flex items-center justify-end px-3 rounded-lg bg-slate-50 border border-slate-200/70">
-                                                        <span className="text-[14px] font-black text-slate-900 tabular-nums">{formatCurrency(net)}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {(item.bonus > 0 || discAmt > 0) && (
-                                                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[10.5px] text-slate-500">
-                                                    {item.bonus > 0 && <span className="text-emerald-700">+{item.bonus} bonus units (free)</span>}
-                                                    {discAmt > 0 && <span>Disc: <b className="text-rose-600">-{formatCurrency(discAmt)}</b></span>}
-                                                    <span>Total pcs: <b className="text-slate-700 tabular-nums">{(parseInt(item.quantity as any) || 0) + (parseInt(item.bonus as any) || 0)}</b></span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );})}
 
-                                    {items.length === 0 && (
-                                        <div className="py-10 text-center border-2 border-dashed border-slate-200 rounded-xl text-slate-300">
-                                            <ShoppingCart size={40} className="mx-auto mb-2 opacity-20" />
-                                            <p className="text-[13px] italic">No items yet. Click "Add Item" to begin billing.</p>
+                                                {item.product && (
+                                                    <div className={POS_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[11px] text-slate-500'}>
+                                                        <span className="font-bold text-slate-400 tabular-nums">#{i + 1}</span>
+                                                        <span>Total <b className="text-slate-700 tabular-nums">{(parseInt(item.quantity as any) || 0) + (parseInt(item.bonus as any) || 0)}</b> pcs</span>
+                                                        {item.bonus > 0 && (
+                                                            <>
+                                                                <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                                <span className="text-emerald-700">incl. {item.bonus} free</span>
+                                                            </>
+                                                        )}
+                                                        {discAmt > 0 && (
+                                                            <>
+                                                                <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                                <span>disc <b className="text-rose-600">-{formatCurrency(discAmt)}</b></span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Column totals — "Add row" lives here, as on New Purchase. */}
+                                    <div className={POS_COLS + ' ' + POS_MIN + ' ' + gridFoot}>
+                                        <div className="px-2 py-1.5 border-r border-slate-200/80">
+                                            <button
+                                                onClick={addItem}
+                                                className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#B4780B] hover:text-[#92600A] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
+                                            >
+                                                <Plus size={13} /> Add row
+                                            </button>
                                         </div>
-                                    )}
+                                        <div className="px-2 py-2 text-[11.5px] text-slate-500 text-right border-r border-slate-200/80">
+                                            <b className="text-slate-700 tabular-nums">{items.length}</b>
+                                        </div>
+                                        <div className="px-2 py-2 text-[12px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnitsSold}</div>
+                                        <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonusUnits || ''}</div>
+                                        <div className="border-r border-slate-200/80" />
+                                        <div className="border-r border-slate-200/80" />
+                                        <div className="px-2 py-2 text-[12.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalBill)}</div>
+                                    </div>
                                 </div>
                             </Card>
                         </div>

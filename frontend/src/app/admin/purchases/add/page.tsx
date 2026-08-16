@@ -13,6 +13,10 @@ import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
 import { Card, Button, Modal, ui } from '@/components/admin/ui';
+import {
+    cellCls, cellNum, cellDisabled, Th, Cell,
+    settleInput, settleSelect, SField, gridScroller, gridHead, gridFoot, gridRow,
+} from '@/components/admin/ui/grid';
 
 /* ─── Shared Components ─── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
@@ -44,40 +48,8 @@ const GRID_COLS =
     'grid grid-cols-[minmax(150px,1.25fr)_minmax(170px,1.5fr)_94px_86px_78px_66px_66px_92px_92px_92px_36px]';
 const GRID_MIN = 'min-w-[1000px]';
 
-/* Each cell still carries a visible resting fill + border — a transparent cell reads as
-   "nothing here" on a white card, which is the whole problem this screen started with.
-   The grid lines frame the columns; the field outline says "you can type here". */
-const cellCls =
-    'w-full h-9 px-2 bg-slate-50 text-[12.5px] font-semibold text-slate-900 outline-none rounded-md ' +
-    'border border-slate-200 transition-colors placeholder:text-slate-400 placeholder:font-normal ' +
-    'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/30';
-const cellNum = cellCls + ' text-right tabular-nums no-spinner';
-const cellDisabled = 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed hover:border-slate-200 hover:bg-slate-100';
-
-// Written out rather than interpolated — Tailwind only ships classes it can see as literals.
-const TH_ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' } as const;
-
-const Th = ({ children, align = 'left', required = false }: { children: React.ReactNode; align?: keyof typeof TH_ALIGN; required?: boolean }) => (
-    <div className={`px-2 py-2 text-[11px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80 last:border-r-0 whitespace-nowrap ${TH_ALIGN[align]}`}>
-        {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
-    </div>
-);
-
-const Cell = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`px-1 py-1 border-r border-slate-100 last:border-r-0 flex items-center ${className}`}>{children}</div>
-);
-
-/* Compact field used only in the bottom Settlement strip — smaller than the shared
-   admin field so seven of them sit on one row without crowding. */
-const settleInput = ui.inputBase.replace('h-10', 'h-9').replace('text-[13.5px]', 'text-[12.5px]');
-const settleSelect = settleInput + ' cursor-pointer';
-
-const SField = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
-    <div className="w-full min-w-0">
-        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1 truncate" title={hint || label}>{label}</label>
-        {children}
-    </div>
-);
+// Cell chrome, header cells, dividers and the settlement strip all come from the
+// shared grid module, so this screen and the POS are the same code, not copies.
 
 const EMPTY_FORM = {
     purchase_number: '', supplier: '', supplier_name: '',
@@ -1117,14 +1089,7 @@ export default function AddPurchasePage() {
                 <div
                     key={i}
                     data-row={i}
-                    className={
-                        'relative border-b border-slate-200 last:border-b-0 transition-colors ' +
-                        // A left rail that lights up on the focused row — makes it obvious
-                        // which line you're editing once several are on screen.
-                        'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#F59E0B] ' +
-                        (i % 2 ? 'bg-slate-50/40 ' : 'bg-white ') +
-                        'hover:bg-slate-50 focus-within:bg-[#F59E0B]/[0.06]'
-                    }
+                    className={gridRow(i)}
                 >
                     <div className={GRID_COLS + ' ' + GRID_MIN}>
                         <Cell>
@@ -1301,8 +1266,8 @@ export default function AddPurchasePage() {
     const renderItemsCard = () => (
         <>
             {/* One horizontal scroller wraps header + rows so their columns stay locked together. */}
-            <div ref={gridRef} onKeyDown={onGridKeyDown} className="overflow-x-auto custom-scrollbar border-b border-slate-200">
-                <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-100 border-b border-slate-300'}>
+            <div ref={gridRef} onKeyDown={onGridKeyDown} className={gridScroller}>
+                <div className={GRID_COLS + ' ' + GRID_MIN + ' ' + gridHead}>
                     <Th required>Company</Th>
                     <Th required>Product</Th>
                     <Th>Bar Code</Th>
@@ -1319,7 +1284,7 @@ export default function AddPurchasePage() {
 
                 {/* Column totals — aligned to the grid so each sum sits under its column.
                     "Add row" lives here rather than in a separate bar below. */}
-                <div className={GRID_COLS + ' ' + GRID_MIN + ' bg-slate-50 border-t-2 border-slate-300 items-center'}>
+                <div className={GRID_COLS + ' ' + GRID_MIN + ' ' + gridFoot}>
                     <div className="px-2 py-1.5 border-r border-slate-200/80">
                         <button
                             onClick={addItem}
