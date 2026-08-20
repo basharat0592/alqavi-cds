@@ -15,7 +15,7 @@ import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Card, Button, Modal, ui } from '@/components/admin/ui';
 import {
-    cellCls, cellNum, cellError, Th, Cell,
+    cellCls, cellNum, Th, Cell,
     gridScroller, gridHead, gridFoot, gridRow,
 } from '@/components/admin/ui/grid';
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -43,18 +43,14 @@ const Field = ({ label, required = false, children }: { label: string; required?
 );
 
 const inputCls = ui.inputBase.replace('h-10', 'h-[38px]');
-const selectCls = `${inputCls} cursor-pointer`;
 
 /* Line-item grid — same shape as New Purchase, with the POS's own columns:
    product, stock, qty, bonus, rate, discount, net, remove. */
-const POS_COLS =
-    'grid grid-cols-[minmax(220px,2fr)_72px_80px_68px_98px_68px_106px_36px]';
-const POS_MIN = 'min-w-[770px]';
 
 type SaleItem = {
     product: string;
     product_name: string;
-    quantity: number;
+    quantity: number;        // total units (packs x packing + loose units)
     unit_price: number;      // Unit TP (editable sale rate)
     bonus: number;           // Bon(U) — free units
     discountPct: number;     // per-line Disct %
@@ -62,6 +58,12 @@ type SaleItem = {
     stock: number;
     weight?: string;
     size?: string;
+    // Desktop (Trade 1.0) columns. Display/entry only — the save payload is
+    // unchanged, so these do not reach the backend.
+    expiry?: string;
+    retail?: number;
+    packing?: number;
+    company_name?: string;
 };
 
 const EMPTY_SALE_ITEM: SaleItem = {
@@ -435,29 +437,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         else setItems([{ ...EMPTY_SALE_ITEM }]);
     };
 
-    const updateItem = (i: number, pInfo: any) => {
-        setItems(prev => prev.map((item, idx) => {
-            if (idx !== i) return item;
-            return {
-                ...item,
-                product: String(pInfo.id),
-                product_name: pInfo.product_name || pInfo.name,
-                unit_price: parseFloat(pInfo.selling_price || pInfo.price || 0),
-                cost: parseFloat(pInfo.cost_price || 0),
-                stock: pInfo.total_quantity || pInfo.stock_quantity || (typeof pInfo.stock === 'number' ? pInfo.stock : 0),
-                quantity: 1,
-                bonus: 0,
-                discountPct: 0,
-                weight: pInfo.weight,
-                size: pInfo.size
-            };
-        }));
-    };
 
-    // Patch a single editable field on a line (rate, bonus, discount %).
-    const patchItem = (i: number, field: keyof SaleItem, val: number) => {
-        setItems(prev => prev.map((item, idx) => idx === i ? { ...item, [field]: val } : item));
-    };
 
     // Charged net for a line: qty × rate − line discount (bonus units are free).
     const lineNet = (it: SaleItem) => {
@@ -466,19 +446,6 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         return Math.max(0, gross - disc);
     };
 
-    const updateQty = (i: number, val: number) => {
-        const inputVal = isNaN(val) ? 0 : val;
-        setItems(prev => prev.map((item, idx) => {
-            if (idx !== i) return item;
-            const maxStock = parseInt(item.stock as any) || 0;
-            // Allow 0 temporarily for typing, but clamp the upper limit
-            const capped = Math.min(inputVal, maxStock > 0 ? maxStock : 999999);
-            if (inputVal > maxStock && maxStock > 0) {
-                toast.error(`Only ${maxStock} units in stock`, { id: `stock-err-${i}` });
-            }
-            return { ...item, quantity: capped };
-        }));
-    };
 
     // Subtotal now nets each line's own discount (desktop "Sub Total" column sum).
     const totalBill = items.reduce((sum, item) => sum + lineNet(item), 0);
@@ -552,50 +519,6 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         ) ?? null;
     };
 
-    const addByBarcode = (rawCode: string) => {
-        const code = rawCode.trim();
-        if (!code) return;
-        const p: any = findByCode(code);
-        if (!p) {
-            toast.error(`No product matches "${code}"`, { id: 'scan-miss' });
-            return;
-        }
-        const stock = Number(p.total_quantity ?? p.stock_quantity ?? 0);
-        setItems(prev => {
-            const idx = prev.findIndex(it => String(it.product) === String(p.id));
-            if (idx >= 0) {
-                const line = prev[idx];
-                if (stock > 0 && (line.quantity || 0) + 1 > stock) {
-                    toast.error(`Only ${stock} in stock for ${line.product_name}`, { id: 'scan-stock' });
-                    return prev;
-                }
-                toast.success(`${line.product_name} ×${(line.quantity || 0) + 1}`, { id: 'scan-hit' });
-                return prev.map((x, i) => i === idx ? { ...x, quantity: (x.quantity || 0) + 1 } : x);
-            }
-            if (stock <= 0) {
-                toast.error(`${p.product_name || p.name} is out of stock`, { id: 'scan-stock' });
-                return prev;
-            }
-            const line: SaleItem = {
-                ...EMPTY_SALE_ITEM,
-                product: String(p.id),
-                product_name: p.product_name || p.name,
-                unit_price: parseFloat(p.selling_price || p.price || 0),
-                cost: parseFloat(p.cost_price || 0),
-                stock,
-                quantity: 1,
-                weight: p.weight,
-                size: p.size,
-            };
-            toast.success(`Added ${line.product_name}`, { id: 'scan-hit' });
-            // Fill the blank starter row rather than leaving an empty line above.
-            const blank = prev.findIndex(it => !it.product);
-            if (blank >= 0) return prev.map((x, i) => i === blank ? line : x);
-            return [...prev, line];
-        });
-        setBarcodeInput('');
-        barcodeRef.current?.focus();
-    };
 
     /* ─── Cash tendered / change due ───
        Only meaningful for cash: what the customer handed over vs what to give back. */
@@ -655,8 +578,6 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         if (overStock >= 0) return { row: overStock, msg: `Line ${overStock + 1}: only ${items[overStock].stock} in stock` };
         return null;
     };
-    const rowIsInvalid = (it: SaleItem) =>
-        showErrors && (!it.product || (it.quantity || 0) < 1 || ((it.stock || 0) > 0 && (it.quantity || 0) > it.stock));
 
     /* Keyboard: F2 jumps to the scanner box, Ctrl/Cmd+Enter reviews the sale,
        Esc closes whichever dialog is open. Ignored while typing in a field so it
@@ -695,55 +616,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     /* In-grid keyboard movement, mirroring the purchase screen: Enter steps to the
        next cell (adding a line past the end), arrows move by row. Reads live DOM
        order so it never needs a hardcoded column count. */
-    const gridRef = useRef<HTMLDivElement>(null);
-    const gridCells = () => Array.from(
-        gridRef.current?.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])') ?? []
-    ).filter(el => el !== barcodeRef.current);
 
-    const focusCell = (el?: HTMLElement) => {
-        if (!el) return;
-        el.focus();
-        if (el instanceof HTMLInputElement && el.type !== 'date') el.select();
-    };
 
-    const onGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        const target = e.target as HTMLElement;
-        if (target === barcodeRef.current) return; // scanner box has its own handler
-        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
-        const cells = gridCells();
-        const idx = cells.indexOf(target);
-        if (idx === -1) return;
-
-        const rowOf = (el: HTMLElement) => el.closest('[data-row]');
-        const stepRow = (dir: 1 | -1) => {
-            const row = rowOf(target);
-            if (!row) return;
-            const inRow = Array.from(row.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
-            const col = inRow.indexOf(target);
-            let j = idx;
-            while ((j = j + dir) >= 0 && j < cells.length) {
-                const other = rowOf(cells[j]);
-                if (other && other !== row) {
-                    const others = Array.from(other.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
-                    focusCell(others[Math.min(col, others.length - 1)]);
-                    return;
-                }
-            }
-        };
-
-        if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
-            e.preventDefault();
-            const next = cells[idx + (e.shiftKey ? -1 : 1)];
-            if (next) { focusCell(next); return; }
-            if (!e.shiftKey) {
-                addItem();
-                requestAnimationFrame(() => focusCell(gridCells()[idx + 1]));
-            }
-            return;
-        }
-        if (e.key === 'ArrowDown') { e.preventDefault(); stepRow(1); }
-        else if (e.key === 'ArrowUp') { e.preventDefault(); stepRow(-1); }
-    };
 
     // Don't let a reload silently bin a cart that has lines on it.
     useEffect(() => {
@@ -752,6 +626,187 @@ const [warehouseId, setWarehouseId] = useState<string>('');
         window.addEventListener('beforeunload', onBeforeUnload);
         return () => window.removeEventListener('beforeunload', onBeforeUnload);
     }, [cartHasContent, successOrder]);
+
+
+    /* ═══ Desktop-style entry row ═══
+       The Trade 1.0 screen works entry-row-then-Add rather than inline editing:
+       you resolve a product, fill quantities/rates above, press Add, and the line
+       drops into the grid. `items` stays the source of truth so the save payload,
+       stock checks and totals are unchanged. */
+    const EMPTY_ENTRY = {
+        productId: '', code: '', name: '', company: '', stock: 0, cost: 0,
+        qtyP: 0, qtyU: 0, packing: 1, bonus: 0, tp: 0, discPct: 0, retail: 0, expiry: '',
+    };
+    const [entry, setEntry] = useState({ ...EMPTY_ENTRY });
+    const [selectedLine, setSelectedLine] = useState<number>(-1);
+
+    // Popups
+    const [showFindCustomer, setShowFindCustomer] = useState(false);
+    const [custSearch, setCustSearch] = useState('');
+    const [showRecords, setShowRecords] = useState(false);
+    const [recFrom, setRecFrom] = useState('');
+    const [recTo, setRecTo] = useState('');
+    const [recStaff, setRecStaff] = useState('');
+    const [recType, setRecType] = useState('');
+    const [recRows, setRecRows] = useState<any[]>([]);
+    const [recLoading, setRecLoading] = useState(false);
+
+    const LINE_COLS = 'grid grid-cols-[54px_90px_minmax(180px,2fr)_98px_72px_70px_84px_84px_96px_66px_88px_104px_38px]';
+    const LINE_MIN = 'min-w-[1180px]';
+    const REC_COLS = 'grid grid-cols-[110px_100px_minmax(110px,1fr)_90px_minmax(140px,1.4fr)_92px_80px_100px_92px_92px_92px_96px] min-w-[1180px]';
+
+    // Packing comes from the branch stock row (items_per_carton); products carry no
+    // pack size of their own, so it falls back to 1 = loose units.
+    const packingFor = (p: any) => {
+        const row: any = warehouseStock.find((s: any) =>
+            (s.product_name || '').toLowerCase().trim() === (p?.product_name || p?.name || '').toLowerCase().trim());
+        return Math.max(1, Number(row?.items_per_carton || 0) || 1);
+    };
+
+    const loadEntryFromProduct = (p: any) => {
+        if (!p) return;
+        setEntry({
+            ...EMPTY_ENTRY,
+            productId: String(p.id),
+            code: p.barcode || p.sku || '',
+            name: p.product_name || p.name || '',
+            company: p.company_name || p.company || '',
+            stock: Number(p.total_quantity ?? p.stock_quantity ?? 0),
+            cost: parseFloat(p.cost_price || 0),
+            packing: packingFor(p),
+            tp: parseFloat(p.selling_price || p.price || 0),
+            retail: parseFloat(p.retail_price || 0),
+        });
+    };
+
+    const entryTotalUnits = (entry.qtyP || 0) * (entry.packing || 1) + (entry.qtyU || 0);
+    const entryGross = entryTotalUnits * (entry.tp || 0);
+    const entryDiscAmt = entryGross * ((entry.discPct || 0) / 100);
+    const entrySubTotal = Math.max(0, entryGross - entryDiscAmt);
+    const entryProfit = entrySubTotal - entryTotalUnits * (entry.cost || 0);
+    const entryProfitPct = entry.cost > 0 ? (entryProfit / (entryTotalUnits * entry.cost)) * 100 : 0;
+
+    const addEntryToGrid = () => {
+        if (!entry.productId) return toast.error('Pick a product first.');
+        if (entryTotalUnits < 1) return toast.error('Enter a quantity.');
+        if (entry.stock > 0 && entryTotalUnits > entry.stock) {
+            return toast.error(`Only ${entry.stock} units in stock.`);
+        }
+        const line: SaleItem = {
+            product: entry.productId,
+            product_name: entry.name,
+            quantity: entryTotalUnits,
+            unit_price: entry.tp,
+            bonus: entry.bonus,
+            discountPct: entry.discPct,
+            cost: entry.cost,
+            stock: entry.stock,
+            expiry: entry.expiry,
+            retail: entry.retail,
+            packing: entry.packing,
+            company_name: entry.company,
+        };
+        setItems(prev => {
+            const blank = prev.findIndex(it => !it.product);
+            if (blank >= 0) return prev.map((x, i) => i === blank ? line : x);
+            return [...prev, line];
+        });
+        setEntry({ ...EMPTY_ENTRY });
+        barcodeRef.current?.focus();
+    };
+
+    const removeLine = (i: number) => {
+        if (i < 0) return;
+        setItems(prev => {
+            const withProducts = prev.filter(it => it.product);
+            if (withProducts.length <= 1) return [{ ...EMPTY_SALE_ITEM }];
+            return prev.filter((_, idx) => idx !== i);
+        });
+        setSelectedLine(-1);
+    };
+
+    // Only lines that actually carry a product are shown/summed in the desktop grid.
+    const lineRows = items.filter(it => it.product).map(it => {
+        const qty = parseInt(it.quantity as any) || 0;
+        const gross = qty * (parseFloat(it.unit_price as any) || 0);
+        const discAmt = gross * ((parseFloat(it.discountPct as any) || 0) / 100);
+        return {
+            pid: String(it.product).slice(0, 8),
+            name: it.product_name,
+            expiry: it.expiry || '',
+            qty,
+            bonus: parseInt(it.bonus as any) || 0,
+            tp: parseFloat(it.unit_price as any) || 0,
+            retail: parseFloat((it as any).retail || 0),
+            subTotal: gross,
+            discPct: parseFloat(it.discountPct as any) || 0,
+            discAmt,
+            netAmt: Math.max(0, gross - discAmt),
+        };
+    });
+    const lineDiscTotal = lineRows.reduce((s, r) => s + r.discAmt, 0);
+
+    const startNewInvoice = () => {
+        if (cartHasContent && !window.confirm('Discard the current invoice and start a new one?')) return;
+        setItems([{ ...EMPTY_SALE_ITEM }]);
+        setEntry({ ...EMPTY_ENTRY });
+        setCustomerId(''); setGuestName(''); setGuestPhone('');
+        setDiscountVal(''); setAmountTendered(''); setAmountPaidNow('');
+        setPayMode('full'); setSelectedLine(-1); setShowErrors(false);
+        setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`);
+        barcodeRef.current?.focus();
+    };
+
+    /* ── Find Account popup ── */
+    const customerLabel = (c: any) =>
+        c?.full_name || `${c?.first_name || ''} ${c?.last_name || ''}`.trim() || c?.username || c?.email || 'Unnamed';
+
+    const filteredCustomers = (() => {
+        const q = custSearch.trim().toLowerCase();
+        if (!q) return users;
+        return users.filter((c: any) =>
+            customerLabel(c).toLowerCase().includes(q) ||
+            String(c.phone ?? '').toLowerCase().includes(q) ||
+            String(c.area_name ?? '').toLowerCase().includes(q));
+    })();
+
+    const selectedCustomerLabel = (() => {
+        if (!customerId) return '';
+        const c = users.find((u: any) => String(u.id) === String(customerId));
+        return c ? customerLabel(c) : '';
+    })();
+
+    const pickCustomer = (c: any) => {
+        setCustomerId(String(c.id));
+        setShowFindCustomer(false);
+        setCustSearch('');
+    };
+
+    /* ── Sale / Sale-Return records popup ── */
+    const loadRecords = async () => {
+        setRecLoading(true);
+        try {
+            const params: any = { no_pagination: true };
+            if (recFrom) params.date_from = recFrom;
+            if (recTo) params.date_to = recTo;
+            if (recStaff) params.salesperson = recStaff;
+            const res: any = await orderService.getAll(params);
+            let rows: any[] = res?.results ?? res ?? [];
+            // The API has no sale-vs-return flag, so narrow client-side on the fields
+            // that do exist rather than showing an unfiltered list under a filter label.
+            if (recType === 'return') rows = rows.filter((r: any) => Number(r.total_amount || 0) < 0 || r.is_return);
+            if (recType === 'sale') rows = rows.filter((r: any) => !(Number(r.total_amount || 0) < 0 || r.is_return));
+            if (recFrom) rows = rows.filter((r: any) => ((r.sale_date || r.created_at || '') as string).slice(0, 10) >= recFrom);
+            if (recTo) rows = rows.filter((r: any) => ((r.sale_date || r.created_at || '') as string).slice(0, 10) <= recTo);
+            setRecRows(rows);
+            if (rows.length === 0) toast('No records in that range.', { icon: 'ℹ️' });
+        } catch {
+            toast.error('Could not load sale records.');
+            setRecRows([]);
+        } finally {
+            setRecLoading(false);
+        }
+    };
 
     const handleSave = async () => {
         // An impatient double-click would otherwise bill the sale twice.
@@ -911,11 +966,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
     return (
         <div className="pb-20 text-left text-slate-800">
-            <div className="max-w-[1200px] mx-auto px-0 sm:px-6 pt-1 sm:pt-5">
+            <div className="max-w-[1400px] mx-auto px-0 sm:px-5 pt-1 sm:pt-4">
 
-                {/* Same header shape as New Purchase: breadcrumb doubles as the action
-                    bar, with a back control at the far left and no title block. */}
-                <div className="flex items-center justify-between gap-4 mb-4">
+                {/* Breadcrumb + record actions */}
+                <div className="flex items-center justify-between gap-4 mb-3">
                     <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 min-w-0">
                         <button
                             onClick={() => router.push('/admin/sales')}
@@ -929,11 +983,13 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         <span className="text-slate-300">/</span>
                         <button onClick={() => router.push('/admin/sales')} className="hover:text-slate-600 transition-colors">Sales History</button>
                         <span className="text-slate-300">/</span>
-                        <span className="text-slate-600 truncate">New Sale</span>
+                        <span className="text-slate-600 truncate">Sale Invoice</span>
                     </nav>
                     <div className="flex items-center gap-2 shrink-0">
                         <Btn variant="secondary" onClick={holdSale} disabled={!cartHasContent} className="font-bold">Hold</Btn>
-                        <Btn variant="secondary" onClick={addItem} className="font-bold"><Plus size={14} /> Add Item</Btn>
+                        <Btn variant="secondary" onClick={() => { setRecFrom(orderDate); setRecTo(orderDate); setShowRecords(true); }} className="font-bold">
+                            <History size={14} /> View Records
+                        </Btn>
                     </div>
                 </div>
 
@@ -943,441 +999,309 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         Syncing Terminal Catalog...
                     </div>
                 ) : (
-                    <div className="flex flex-col lg:flex-row gap-8 items-start">
+                    <div className="space-y-3">
 
-                        {/* LEFT: Sale Entry Form */}
-                        <div className="flex-1 min-w-0 space-y-6">
-
-                            {/* Order Info Panel */}
-                            <Card className="overflow-visible animate-in fade-in slide-in-from-top-2">
-                                <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 bg-slate-50/60 rounded-t-2xl">
-                                    <h2 className="text-[13px] sm:text-[14px] font-bold uppercase tracking-wider text-slate-700">Order Details</h2>
-                                    <p className="text-[11px] text-slate-500 mt-0.5 font-medium italic">Choose customer and how they will pay.</p>
+                        {/* ═══ CUSTOMER / PRODUCT STRIP ═══ */}
+                        <Card className="overflow-hidden">
+                            <div className="px-3 sm:px-4 py-3 border-b border-slate-200 bg-slate-50/70 grid grid-cols-1 lg:grid-cols-[auto_minmax(180px,1fr)_minmax(240px,2fr)_150px] gap-2.5 items-end">
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Customer</label>
+                                    <Btn variant="secondary" onClick={() => setShowFindCustomer(true)} className="font-bold w-full lg:w-auto">
+                                        <Search size={13} /> Find Customer
+                                    </Btn>
                                 </div>
-                                <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field label="Order Number" required>
-                                        <input className={inputCls} value={orderNumber} onChange={e => setOrderNumber(e.target.value)} />
-                                    </Field>
-                                    <Field label="Customer Account">
-                                        <CustomerSelector 
-                                            selectedId={customerId}
-                                            customers={users}
-                                            inputCls={inputCls}
-                                            onSelect={(c: any) => {
-                                                if (c) {
-                                                    setCustomerId(c.id.toString());
-                                                    setGuestName('');
-                                                } else {
-                                                    setCustomerId('');
-                                                }
-                                            }}
-                                        />
-                                    </Field>
-                                    {/* Walk-in name + contact — only when no registered account is chosen. */}
-                                    {!customerId && (
-                                        <Field label="Walk-in Name">
-                                            <input className={inputCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
-                                        </Field>
-                                    )}
-                                    {!customerId && (
-                                        <Field label="Walk-in Contact Number">
-                                            <input className={inputCls} value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="e.g. 03xx-xxxxxxx" />
-                                        </Field>
-                                    )}
-                                    <Field label="Salesman">
-                                        <select className={selectCls} value={salesperson} onChange={e => setSalesperson(e.target.value)}>
-                                            <option value="">Select any one</option>
-                                            {staffList.map(s => (
-                                                <option key={s.id} value={s.id}>{s.name}</option>
-                                            ))}
-                                        </select>
-                                    </Field>
-                                    <Field label="Sale Date">
-                                        <input className={inputCls} type="date" value={orderDate} onChange={e => setOrderDate(e.target.value)} />
-                                    </Field>
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Account</label>
+                                    <input
+                                        readOnly
+                                        value={selectedCustomerLabel}
+                                        placeholder="Walk-in"
+                                        onClick={() => setShowFindCustomer(true)}
+                                        className={cellCls + ' cursor-pointer bg-[#F59E0B]/5 border-[#F59E0B]/30'}
+                                    />
                                 </div>
-                            </Card>
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Product</label>
+                                    <ProductSelector
+                                        selectedId={entry.productId}
+                                        products={branchProducts}
+                                        inputCls={cellCls}
+                                        onSelect={(p: any) => loadEntryFromProduct(p)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Stock</label>
+                                    <input readOnly value={entry.productId ? String(entry.stock) : ''} className={cellCls + ' text-right ' + (entry.productId && entry.stock <= 0 ? 'text-rose-600' : 'text-slate-700')} />
+                                </div>
+                            </div>
 
-                            {/* Line items — same spreadsheet grid as New Purchase */}
-                            <Card className="relative z-[10] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                {/* Scanner box — a hardware scanner types the code and sends Enter. */}
-                                <div className="px-4 sm:px-5 py-4">
-                                    <div className="relative">
-                                        <ScanLine size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B4780B] pointer-events-none" />
+                            {/* ═══ ENTRY ROW ═══ */}
+                            <div className="overflow-x-auto custom-scrollbar">
+                                <div className="min-w-[1150px] grid grid-cols-[86px_minmax(120px,1fr)_78px_78px_88px_78px_78px_92px_78px_96px_92px_104px] gap-1.5 px-3 sm:px-4 py-3 items-end">
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">&nbsp;</label>
+                                        <Btn variant="secondary" onClick={() => barcodeRef.current?.focus()} className="w-full font-bold">Find</Btn>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Product Code</label>
                                         <input
                                             ref={barcodeRef}
-                                            value={barcodeInput}
-                                            onChange={e => setBarcodeInput(e.target.value)}
+                                            value={entry.code}
+                                            onChange={e => setEntry(v => ({ ...v, code: e.target.value }))}
                                             onKeyDown={e => {
-                                                if (e.key === 'Enter') { e.preventDefault(); addByBarcode(barcodeInput); }
-                                                else if (e.key === 'Escape') { setBarcodeInput(''); }
+                                                if (e.key !== 'Enter') return;
+                                                e.preventDefault();
+                                                const p: any = findByCode(entry.code);
+                                                if (p) loadEntryFromProduct(p);
+                                                else toast.error(`No product matches "${entry.code}"`, { id: 'code-miss' });
                                             }}
-                                            placeholder="Scan barcode or type a code, then press Enter…"
-                                            aria-label="Barcode scanner input"
-                                            className="w-full h-11 pl-10 pr-20 rounded-xl border-2 border-[#F59E0B]/40 bg-[#F59E0B]/5 text-[14px] font-semibold text-slate-900 outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-[#F59E0B] focus:bg-white focus:ring-4 focus:ring-[#F59E0B]/20"
+                                            placeholder="scan / code"
+                                            className={cellCls + ' bg-[#F59E0B]/5 border-[#F59E0B]/40'}
                                         />
-                                        <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-slate-300 bg-white text-[10px] font-sans font-bold text-slate-500 pointer-events-none">F2</kbd>
                                     </div>
-                                    {heldSales.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Held</span>
-                                            {heldSales.map((h: any) => (
-                                                <button
-                                                    key={h.id}
-                                                    onClick={() => resumeSale(h)}
-                                                    title={`Resume sale held at ${h.heldAtLabel}`}
-                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[11.5px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/20 transition-colors"
-                                                >
-                                                    {h.heldAtLabel} · {formatCurrency(h.total)}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Qty (P)</label>
+                                        <input type="number" min="0" className={cellNum} value={entry.qtyP || ''} placeholder="0"
+                                            onChange={e => setEntry(v => ({ ...v, qtyP: Math.max(0, parseInt(e.target.value) || 0) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Qty (U)</label>
+                                        <input type="number" min="0" className={cellNum} value={entry.qtyU || ''} placeholder="0"
+                                            onChange={e => setEntry(v => ({ ...v, qtyU: Math.max(0, parseInt(e.target.value) || 0) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Total Units</label>
+                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#B4780B]'} value={entryTotalUnits || ''} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Packing</label>
+                                        <input type="number" min="1" className={cellNum} value={entry.packing || ''} placeholder="1"
+                                            onChange={e => setEntry(v => ({ ...v, packing: Math.max(1, parseInt(e.target.value) || 1) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Bon (U)</label>
+                                        <input type="number" min="0" className={cellNum + ' text-emerald-700'} value={entry.bonus || ''} placeholder="0"
+                                            onChange={e => setEntry(v => ({ ...v, bonus: Math.max(0, parseInt(e.target.value) || 0) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Unit TP</label>
+                                        <input type="number" min="0" step="0.01" className={cellNum} value={entry.tp || ''} placeholder="0.00"
+                                            onChange={e => setEntry(v => ({ ...v, tp: Math.max(0, parseFloat(e.target.value) || 0) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Disct %</label>
+                                        <input type="number" min="0" max="100" className={cellNum} value={entry.discPct || ''} placeholder="0"
+                                            onChange={e => setEntry(v => ({ ...v, discPct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Retail Rate</label>
+                                        <input type="number" min="0" step="0.01" className={cellNum} value={entry.retail || ''} placeholder="0.00"
+                                            onChange={e => setEntry(v => ({ ...v, retail: Math.max(0, parseFloat(e.target.value) || 0) }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Disc Amt.</label>
+                                        <input readOnly className={cellNum + ' bg-slate-100 text-rose-600 font-bold'} value={entryDiscAmt ? entryDiscAmt.toFixed(2) : ''} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Sub Total</label>
+                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#B4780B]'} value={entrySubTotal ? entrySubTotal.toFixed(2) : ''} />
+                                    </div>
                                 </div>
+                            </div>
+                        </Card>
 
-                                <div ref={gridRef} onKeyDown={onGridKeyDown} className={gridScroller}>
-                                    <div className={POS_COLS + ' ' + POS_MIN + ' ' + gridHead}>
-                                        <Th required>Product</Th>
-                                        <Th align="right">Stock</Th>
-                                        <Th align="right" required>Qty</Th>
+                        {/* ═══ GRID + RIGHT PANEL ═══ */}
+                        <div className="flex flex-col xl:flex-row gap-3 items-start">
+
+                            <Card className="flex-1 min-w-0 overflow-hidden w-full">
+                                <div className={gridScroller}>
+                                    <div className={LINE_COLS + ' ' + LINE_MIN + ' ' + gridHead}>
+                                        <Th align="right">SNo</Th>
+                                        <Th>PID</Th>
+                                        <Th>Product Name</Th>
+                                        <Th>Expiry</Th>
+                                        <Th align="right">Qty</Th>
                                         <Th align="right">Bonus</Th>
-                                        <Th align="right" required>Rate Rs</Th>
-                                        <Th align="right">Disc %</Th>
-                                        <Th align="right">Net Rs</Th>
+                                        <Th align="right">TP</Th>
+                                        <Th align="right">Retail</Th>
+                                        <Th align="right">SubTotal</Th>
+                                        <Th align="right">Disc%</Th>
+                                        <Th align="right">Dis.Amt</Th>
+                                        <Th align="right">Net Amt</Th>
                                         <Th> </Th>
                                     </div>
 
-                                    {items.map((item, i) => {
-                                        const net = lineNet(item);
-                                        const gross = (parseInt(item.quantity as any) || 0) * (parseFloat(item.unit_price as any) || 0);
-                                        const discAmt = gross - net;
-                                        const bad = rowIsInvalid(item);
-                                        return (
-                                            <div key={i} data-row={i} className={gridRow(i)}>
-                                                <div className={POS_COLS + ' ' + POS_MIN}>
-                                                    <Cell>
-                                                        <ProductSelector
-                                                            selectedId={item.product}
-                                                            products={branchProducts}
-                                                            inputCls={cellCls + (bad && !item.product ? cellError : '')}
-                                                            onSelect={(p: any) => updateItem(i, p)}
-                                                        />
-                                                    </Cell>
-                                                    <Cell className="justify-end">
-                                                        <span className={`px-1 text-[12px] font-bold tabular-nums ${item.product ? (item.stock > 0 ? 'text-slate-600' : 'text-rose-600') : 'text-slate-300'}`}>
-                                                            {item.product ? item.stock : '—'}
-                                                        </span>
-                                                    </Cell>
-                                                    <Cell>
-                                                        <input
-                                                            className={cellNum + ' text-[#B4780B]' + (bad && (item.quantity || 0) < 1 ? cellError : '')}
-                                                            type="number" min="1"
-                                                            value={item.quantity || ''}
-                                                            onChange={e => updateQty(i, parseInt(e.target.value))}
-                                                        />
-                                                    </Cell>
-                                                    <Cell>
-                                                        <input
-                                                            className={cellNum + ' text-emerald-700'}
-                                                            type="number" min="0"
-                                                            value={item.bonus || ''}
-                                                            onChange={e => patchItem(i, 'bonus', Math.max(0, parseInt(e.target.value) || 0))}
-                                                            placeholder="0"
-                                                        />
-                                                    </Cell>
-                                                    <Cell>
-                                                        <input
-                                                            className={cellNum}
-                                                            type="number" min="0" step="0.01"
-                                                            value={item.unit_price || ''}
-                                                            onChange={e => patchItem(i, 'unit_price', Math.max(0, parseFloat(e.target.value) || 0))}
-                                                            placeholder="0.00"
-                                                        />
-                                                    </Cell>
-                                                    <Cell>
-                                                        <input
-                                                            className={cellNum}
-                                                            type="number" min="0" max="100"
-                                                            value={item.discountPct || ''}
-                                                            onChange={e => patchItem(i, 'discountPct', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
-                                                            placeholder="0"
-                                                        />
-                                                    </Cell>
-                                                    <Cell className="justify-end">
-                                                        <span className="px-1 text-[12.5px] font-bold text-[#B4780B] tabular-nums">{formatCurrency(net)}</span>
-                                                    </Cell>
-                                                    <Cell className="justify-center">
-                                                        <button
-                                                            onClick={() => removeItem(i)}
-                                                            disabled={items.length === 1}
-                                                            title={items.length === 1 ? 'A sale needs at least one line' : 'Remove line'}
-                                                            className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </button>
-                                                    </Cell>
-                                                </div>
+                                    {lineRows.length === 0 && (
+                                        <div className={LINE_MIN + ' py-14 text-center text-[12.5px] text-slate-400'}>
+                                            Pick a product above, fill the entry row, then press <b className="text-slate-600">Add</b>.
+                                        </div>
+                                    )}
 
-                                                {item.product && (
-                                                    <div className={POS_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[11px] text-slate-500'}>
-                                                        <span className="font-bold text-slate-400 tabular-nums">#{i + 1}</span>
-                                                        <span>Total <b className="text-slate-700 tabular-nums">{(parseInt(item.quantity as any) || 0) + (parseInt(item.bonus as any) || 0)}</b> pcs</span>
-                                                        {item.bonus > 0 && (
-                                                            <>
-                                                                <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                                                <span className="text-emerald-700">incl. {item.bonus} free</span>
-                                                            </>
-                                                        )}
-                                                        {discAmt > 0 && (
-                                                            <>
-                                                                <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                                                <span>disc <b className="text-rose-600">-{formatCurrency(discAmt)}</b></span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                )}
+                                    {lineRows.map((r, i) => (
+                                        <div
+                                            key={i}
+                                            onClick={() => setSelectedLine(i)}
+                                            className={gridRow(i) + (selectedLine === i ? ' !bg-[#F59E0B]/15' : '') + ' cursor-pointer'}
+                                        >
+                                            <div className={LINE_COLS + ' ' + LINE_MIN}>
+                                                <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-500">{i + 1}</span></Cell>
+                                                <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{r.pid}</span></Cell>
+                                                <Cell><span className="px-1 text-[12.5px] font-semibold text-slate-800 truncate">{r.name}</span></Cell>
+                                                <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500">{r.expiry || '—'}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-bold tabular-nums text-[#B4780B]">{r.qty}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-emerald-700">{r.bonus || ''}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-700">{r.tp.toFixed(2)}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-500">{r.retail ? r.retail.toFixed(2) : '—'}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-700">{r.subTotal.toFixed(2)}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-500">{r.discPct || ''}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-rose-600">{r.discAmt ? r.discAmt.toFixed(2) : ''}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-black tabular-nums text-[#B4780B]">{r.netAmt.toFixed(2)}</span></Cell>
+                                                <Cell className="justify-center">
+                                                    <button
+                                                        onClick={(ev) => { ev.stopPropagation(); removeLine(i); }}
+                                                        title="Remove line"
+                                                        className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </Cell>
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    ))}
 
-                                    {/* Column totals — "Add row" lives here, as on New Purchase. */}
-                                    <div className={POS_COLS + ' ' + POS_MIN + ' ' + gridFoot}>
-                                        <div className="px-2 py-1.5 border-r border-slate-200/80">
-                                            <button
-                                                onClick={addItem}
-                                                className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#B4780B] hover:text-[#92600A] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
-                                            >
-                                                <Plus size={13} /> Add row
-                                            </button>
+                                    {lineRows.length > 0 && (
+                                        <div className={LINE_COLS + ' ' + LINE_MIN + ' ' + gridFoot}>
+                                            <div className="px-2 py-2 text-[11px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80 col-span-4">Totals</div>
+                                            <div className="px-2 py-2 text-[12px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnitsSold}</div>
+                                            <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonusUnits || ''}</div>
+                                            <div className="border-r border-slate-200/80 col-span-3" />
+                                            <div className="border-r border-slate-200/80" />
+                                            <div className="px-2 py-2 text-[12px] font-black text-rose-600 tabular-nums text-right border-r border-slate-200/80">{lineDiscTotal ? lineDiscTotal.toFixed(2) : ''}</div>
+                                            <div className="px-2 py-2 text-[12.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalBill)}</div>
                                         </div>
-                                        <div className="px-2 py-2 text-[11.5px] text-slate-500 text-right border-r border-slate-200/80">
-                                            <b className="text-slate-700 tabular-nums">{items.length}</b>
+                                    )}
+                                </div>
+                            </Card>
+
+                            {/* RIGHT PANEL — invoice meta + add/remove + profit */}
+                            <Card className="w-full xl:w-[320px] shrink-0 overflow-hidden">
+                                <div className="p-3.5 space-y-2.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Net Amount</span>
+                                        <span className="text-[15px] font-black tabular-nums text-[#B4780B]">{formatCurrency(entrySubTotal)}</span>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Expiry Date</label>
+                                        <input type="date" className={cellCls + ' tabular-nums'} value={entry.expiry}
+                                            onChange={e => setEntry(v => ({ ...v, expiry: e.target.value }))} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Company</label>
+                                        <input readOnly className={cellCls + ' bg-slate-100'} value={entry.company} placeholder="—" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Invoice No.</label>
+                                        <input readOnly className={cellCls + ' bg-[#F59E0B]/10 border-[#F59E0B]/30 font-black text-[#B4780B] tabular-nums'} value={orderNumber} />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 pt-1">
+                                        <Btn onClick={addEntryToGrid} className="justify-center font-bold">Add</Btn>
+                                        <Btn variant="secondary" onClick={() => removeLine(selectedLine)} disabled={selectedLine < 0} className="justify-center font-bold">Remove</Btn>
+                                    </div>
+
+                                    <div className="pt-2 mt-1 border-t border-slate-200 space-y-2">
+                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500">Product PR</div>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <div>
+                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Pur. Rate</span>
+                                                <input readOnly className={cellNum + ' bg-slate-100'} value={entry.cost ? entry.cost.toFixed(2) : ''} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit</span>
+                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (entryProfit >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={entry.productId ? entryProfit.toFixed(2) : ''} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit %</span>
+                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (entryProfitPct >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={entry.productId && entry.cost > 0 ? entryProfitPct.toFixed(1) : ''} />
+                                            </div>
                                         </div>
-                                        <div className="px-2 py-2 text-[12px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnitsSold}</div>
-                                        <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonusUnits || ''}</div>
-                                        <div className="border-r border-slate-200/80" />
-                                        <div className="border-r border-slate-200/80" />
-                                        <div className="px-2 py-2 text-[12.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalBill)}</div>
+
+                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 pt-1">Invoice PV</div>
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                            <div>
+                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Pur. Value</span>
+                                                <input readOnly className={cellNum + ' bg-slate-100'} value={totalCost ? totalCost.toFixed(2) : '0'} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit</span>
+                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (invoiceProfit >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={invoiceProfit.toFixed(2)} />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit %</span>
+                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (profitPct >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={totalCost > 0 ? profitPct.toFixed(1) : ''} />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-2 rounded-lg bg-slate-900 px-3 py-2 text-[12px] font-bold text-white">
+                                        Total Products = <span className="tabular-nums">{lineRows.length}</span>
                                     </div>
                                 </div>
                             </Card>
                         </div>
 
-                        {/* RIGHT: Bill Summary */}
-                        <div className="w-full lg:w-[350px] shrink-0 animate-in slide-in-from-right-4 duration-500">
-                            <Card className="overflow-hidden lg:sticky lg:top-4">
-                                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
-                                    <h3 className="text-[14px] font-bold uppercase tracking-widest text-slate-900">Bill Summary</h3>
+                        {/* ═══ BOTTOM TOTALS BAR ═══ */}
+                        <Card className="overflow-hidden">
+                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-px bg-slate-200">
+                                {[
+                                    { label: 'Amount Billed', value: totalBill, tone: 'text-slate-900' },
+                                    { label: 'Total Disc By%', value: discountAmount, tone: 'text-rose-600' },
+                                    { label: 'Net Amount', value: grandTotal, tone: 'text-[#B4780B]' },
+                                    { label: 'Prev. Bal', value: prevBalance, tone: 'text-slate-700' },
+                                    { label: 'Net Balance', value: grandTotal + prevBalance - paidNow, tone: 'text-emerald-700' },
+                                ].map(c => (
+                                    <div key={c.label} className="bg-white px-3 py-2.5">
+                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500">{c.label}</div>
+                                        <div className={`text-[16px] font-black tabular-nums ${c.tone}`}>{formatCurrency(c.value)}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="px-3 sm:px-4 py-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[150px_150px_minmax(160px,1fr)_150px_1fr] gap-2.5 items-end">
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Paid Cash</label>
+                                    <input type="number" min="0" className={cellNum} placeholder="0.00"
+                                        value={payMode === 'full' ? String(grandTotal || '') : amountPaidNow}
+                                        onChange={e => { setPayMode('partial'); setAmountPaidNow(e.target.value); }} />
                                 </div>
-                                
-                                <div className="p-6 space-y-5">
-                                    {/* Settlement: Full / Partial (available for walk-in too) */}
-                                    <div>
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Settlement</label>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {([['full', 'Full'], ['partial', 'Partial']] as const).map(([m, label]) => (
-                                                <button
-                                                    key={m}
-                                                    type="button"
-                                                    onClick={() => setPayMode(m)}
-                                                    className={`h-10 rounded-xl border text-[12.5px] font-bold transition-all ${payMode === m ? 'border-[#F59E0B] bg-[#F59E0B]/70 text-[#B4780B] shadow-sm' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700'}`}
-                                                >
-                                                    {label}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        {/* Payment method — moved here as a dropdown */}
-                                        <div className="mt-3">
-                                            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Payment Method</label>
-                                            <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-                                                className="w-full h-[38px] px-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white font-medium">
-                                                <option value="cash">Cash</option>
-                                                <option value="online">Online Transfer</option>
-                                            </select>
-                                        </div>
-
-                                        {/* Cash drawer maths — what was handed over, and what to give back. */}
-                                        {paymentMethod === 'cash' && amountCollectable > 0 && (
-                                            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
-                                                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Cash Received</label>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">Rs</span>
-                                                    <input
-                                                        type="number" min={0} inputMode="decimal"
-                                                        value={amountTendered}
-                                                        onChange={e => setAmountTendered(e.target.value)}
-                                                        placeholder="0.00"
-                                                        className="w-full h-9 pl-8 pr-2.5 rounded-lg border border-slate-200 text-[13px] text-right font-bold tabular-nums outline-none bg-white transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10"
-                                                    />
-                                                </div>
-                                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                                    <button type="button" onClick={() => setAmountTendered(String(amountCollectable))}
-                                                        className="px-2 py-1 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors">Exact</button>
-                                                    {[500, 1000, 5000].map(d => (
-                                                        <button key={d} type="button" onClick={() => setAmountTendered(String(d))}
-                                                            className="px-2 py-1 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors tabular-nums">{d}</button>
-                                                    ))}
-                                                </div>
-                                                {tendered > 0 && (
-                                                    <div className={`mt-2.5 flex justify-between items-center rounded-lg px-3 py-2 ${tenderShort ? 'bg-rose-50 border border-rose-200' : 'bg-emerald-50 border border-emerald-200'}`}>
-                                                        <span className={`text-[11px] font-black uppercase tracking-wider ${tenderShort ? 'text-rose-700' : 'text-emerald-700'}`}>
-                                                            {tenderShort ? 'Short by' : 'Change due'}
-                                                        </span>
-                                                        <span className={`text-[16px] font-black tabular-nums ${tenderShort ? 'text-rose-700' : 'text-emerald-700'}`}>
-                                                            {formatCurrency(tenderShort ? amountCollectable - tendered : changeDue)}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-
-                                        {payMode !== 'full' && (
-                                            <div className="mt-3 space-y-3 rounded-xl border border-amber-200/70 bg-amber-50/40 p-3.5">
-                                                {payMode === 'partial' && (
-                                                    <div>
-                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Amount Received Now</label>
-                                                        <div className="relative">
-                                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">Rs</span>
-                                                            <input
-                                                                type="number" min={0} max={grandTotal} value={amountPaidNow}
-                                                                onChange={e => setAmountPaidNow(e.target.value)} placeholder="0.00"
-                                                                className="w-full h-9 pl-8 pr-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 tabular-nums bg-white"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Balance Due Date</label>
-                                                    <input
-                                                        type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                                                        className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white"
-                                                    />
-                                                </div>
-                                                <p className="flex items-start gap-1.5 text-[10.5px] text-amber-700 font-medium leading-snug">
-                                                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                                                    The remaining balance is tracked as outstanding and can be collected later from Sales History.
-                                                </p>
-                                            </div>
-                                        )}
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Discount</label>
+                                    <div className="flex gap-1">
+                                        <input type="number" min="0" className={cellNum} placeholder="0" value={discountVal}
+                                            onChange={e => setDiscountVal(e.target.value)} />
+                                        <button
+                                            onClick={() => setDiscountType(discountType === 'flat' ? 'percent' : 'flat')}
+                                            title="Toggle flat / percent"
+                                            className="shrink-0 w-9 h-9 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-black text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors"
+                                        >
+                                            {discountType === 'percent' ? '%' : 'Rs'}
+                                        </button>
                                     </div>
-
-                                    {/* Discount Controls */}
-                                    <div className="space-y-4 pt-2 border-t border-slate-100">
-                                        {/* Discount Input */}
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1.5">
-                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Discount</label>
-                                                <div className="flex bg-slate-100 rounded-md p-0.5 border border-slate-200/50">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setDiscountType('flat')}
-                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'flat' ? 'bg-white text-[#B4780B] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                                    >
-                                                        Rs
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setDiscountType('percent')}
-                                                        className={`px-2 py-0.5 rounded text-[9.5px] font-extrabold uppercase transition-all ${discountType === 'percent' ? 'bg-white text-[#B4780B] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
-                                                    >
-                                                        %
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="relative">
-                                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-slate-400">
-                                                    {discountType === 'flat' ? 'Rs' : '%'}
-                                                </span>
-                                                <input
-                                                    type="number" min={0} value={discountVal}
-                                                    onChange={e => setDiscountVal(e.target.value)} placeholder="0.00"
-                                                    className="w-full h-[38px] pl-8 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white transition-all font-medium"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Financial Breakdown */}
-                                    <div className="space-y-3 pt-2 border-t border-slate-100">
-                                        <div className="flex justify-between text-[13px] text-slate-500">
-                                            <span>Subtotal ({items.reduce((a,b)=>a+(b.product?b.quantity:0), 0)} items)</span>
-                                            <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(totalBill)}</span>
-                                        </div>
-                                        {parsedShipping > 0 && (
-                                            <div className="flex justify-between text-[13px] text-slate-500">
-                                                <span>Shipping Cost</span>
-                                                <span className="font-bold text-slate-900 tabular-nums">+{formatCurrency(parsedShipping)}</span>
-                                            </div>
-                                        )}
-                                        {discountAmount > 0 && (
-                                            <div className="flex justify-between text-[13px] text-slate-500">
-                                                <span>
-                                                    Discount {discountType === 'percent' ? `(${discountVal}%)` : ''}
-                                                    {discountCapped && <span className="ml-1 text-[11px] font-bold text-amber-600">capped at bill</span>}
-                                                </span>
-                                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(discountAmount)}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between text-[13px] text-slate-500">
-                                            <span>Service Tax</span>
-                                            <span className="text-slate-400 tabular-nums">{formatCurrency(0)}</span>
-                                        </div>
-                                        <div className="h-px bg-slate-100 my-2" />
-                                        <div className="flex justify-between items-center pt-1">
-                                            <div>
-                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Grand Total</p>
-                                                <p className="text-[24px] font-black text-slate-900 tabular-nums">
-                                                    {formatCurrency(grandTotal)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        {payMode !== 'full' && (
-                                            <div className="flex justify-between items-center pt-1 text-[13px]">
-                                                <span className="font-semibold text-emerald-600">Paid Now</span>
-                                                <span className="font-bold text-emerald-700 tabular-nums">{formatCurrency(paidNow)}</span>
-                                            </div>
-                                        )}
-                                        {payMode !== 'full' && (
-                                            <div className="flex justify-between items-center text-[13px]">
-                                                <span className="font-semibold text-rose-600">Balance Due</span>
-                                                <span className="font-bold text-rose-700 tabular-nums">{formatCurrency(grandTotal - paidNow)}</span>
-                                            </div>
-                                        )}
-
-                                        {/* Previous balance + running net balance (registered customer) */}
-                                        {customerId && prevBalance > 0 && (
-                                            <div className="mt-1 pt-3 border-t border-slate-100 space-y-2">
-                                                <div className="flex justify-between items-center text-[13px]">
-                                                    <span className="text-slate-500">Previous Balance</span>
-                                                    <span className="font-bold text-amber-600 tabular-nums">{formatCurrency(prevBalance)}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-[13px]">
-                                                    <span className="font-semibold text-slate-700">Net Balance</span>
-                                                    <span className="font-black text-rose-700 tabular-nums">{formatCurrency(prevBalance + (grandTotal - paidNow))}</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Profit tracking (cost-based) */}
-                                    {totalCost > 0 && (
-                                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3.5 flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[10px] font-black text-emerald-700/70 uppercase tracking-widest">Invoice Profit</p>
-                                                <p className={`text-[17px] font-black tabular-nums ${invoiceProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(invoiceProfit)}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-black text-emerald-700/70 uppercase tracking-widest">Margin</p>
-                                                <p className={`text-[17px] font-black tabular-nums ${invoiceProfit >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{profitPct.toFixed(1)}%</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Action Button */}
-                                    <Button
-                                        variant="primary"
-                                        size="lg"
+                                </div>
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Saleman</label>
+                                    <select className={cellCls + ' cursor-pointer'} value={salesperson} onChange={e => setSalesperson(e.target.value)}>
+                                        <option value="">Select any one</option>
+                                        {staffList.map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Sale Date</label>
+                                    <input type="date" className={cellCls + ' tabular-nums'} value={orderDate} onChange={e => setOrderDate(e.target.value)} />
+                                </div>
+                                <div className="flex flex-wrap items-end justify-end gap-2">
+                                    <Btn variant="secondary" onClick={startNewInvoice} className="font-bold">New Invoice</Btn>
+                                    <Btn
                                         onClick={() => {
                                             const bad = firstInvalidRow();
                                             if (bad) { setShowErrors(true); return toast.error(bad.msg); }
@@ -1385,32 +1309,234 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                             setShowErrors(false);
                                             setShowConfirm(true);
                                         }}
-                                        disabled={items.some(i => !i.product) || items.length === 0 || saving}
-                                        className="w-full"
+                                        loading={saving}
+                                        disabled={lineRows.length === 0}
+                                        className="font-bold px-6"
                                     >
-                                        {saving ? <RefreshCw className="animate-spin" size={20} /> : "Finalize & Bill"}
-                                    </Button>
-                                    
-                                    <div className="flex items-center gap-2 justify-center py-2 bg-slate-50/60 rounded-lg border border-slate-100">
-                                        <ShieldCheck size={16} className="text-emerald-600" />
-                                        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Secure Store Checkout</span>
-                                    </div>
-                                </div>
-                            </Card>
-
-                            <div className="bg-amber-50 border border-amber-100 rounded-xl p-5 animate-in fade-in duration-1000 mt-4">
-                                <div className="flex gap-3 items-start">
-                                    <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
-                                    <div className="text-[12px] leading-relaxed text-slate-600">
-                                        <p className="font-bold text-slate-900 uppercase tracking-tighter mb-1">Stock Update</p>
-                                        Selling these items will lower your stock levels immediately.
-                                    </div>
+                                        <CheckCircle size={15} /> Save
+                                    </Btn>
+                                    <Btn variant="secondary" onClick={() => { setRecFrom(orderDate); setRecTo(orderDate); setShowRecords(true); }} className="font-bold">View</Btn>
+                                    <Btn variant="secondary" onClick={() => router.push('/admin/sales')} className="font-bold">Close</Btn>
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Walk-in details, kept from the web build — the desktop app has no
+                                equivalent, but a sale with no registered account still needs a name. */}
+                            {!customerId && (
+                                <div className="px-3 sm:px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+                                    <div>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Walk-in Name</label>
+                                        <input className={cellCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Walk-in Contact</label>
+                                        <input className={cellCls} value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="e.g. 03xx-xxxxxxx" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Payment Method</label>
+                                        <select className={cellCls + ' cursor-pointer'} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
+                                            <option value="cash">Cash</option>
+                                            <option value="online">Online Transfer</option>
+                                        </select>
+                                    </div>
+                                    {payMode !== 'full' && (
+                                        <div>
+                                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Balance Due Date</label>
+                                            <input type="date" className={cellCls + ' tabular-nums'} value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Cash drawer maths */}
+                            {paymentMethod === 'cash' && amountCollectable > 0 && (
+                                <div className="px-3 sm:px-4 pb-3.5 flex flex-wrap items-end gap-2.5">
+                                    <div className="w-[160px]">
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Cash Received</label>
+                                        <input type="number" min={0} className={cellNum} value={amountTendered} placeholder="0.00"
+                                            onChange={e => setAmountTendered(e.target.value)} />
+                                    </div>
+                                    <div className="flex gap-1.5 pb-0.5">
+                                        <button type="button" onClick={() => setAmountTendered(String(amountCollectable))}
+                                            className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors">Exact</button>
+                                        {[500, 1000, 5000].map(d => (
+                                            <button key={d} type="button" onClick={() => setAmountTendered(String(d))}
+                                                className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors tabular-nums">{d}</button>
+                                        ))}
+                                    </div>
+                                    {tendered > 0 && (
+                                        <div className={`px-3 py-2 rounded-lg ${tenderShort ? 'bg-rose-50 border border-rose-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                                            <span className={`text-[10.5px] font-black uppercase tracking-wider mr-2 ${tenderShort ? 'text-rose-700' : 'text-emerald-700'}`}>
+                                                {tenderShort ? 'Short by' : 'Change due'}
+                                            </span>
+                                            <span className={`text-[15px] font-black tabular-nums ${tenderShort ? 'text-rose-700' : 'text-emerald-700'}`}>
+                                                {formatCurrency(tenderShort ? amountCollectable - tendered : changeDue)}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </Card>
+
+                        {heldSales.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2 px-1">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Held</span>
+                                {heldSales.map((h: any) => (
+                                    <button key={h.id} onClick={() => resumeSale(h)}
+                                        title={`Resume sale held at ${h.heldAtLabel}`}
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[11.5px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/20 transition-colors">
+                                        {h.heldAtLabel} · {formatCurrency(h.total)}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
+
+            {/* ── Find Customer (Find Account) ── */}
+            <Modal open={showFindCustomer} onClose={() => setShowFindCustomer(false)} title="Find Account" size="xl">
+                <div className="space-y-3">
+                    <div className="flex flex-wrap items-end gap-2">
+                        <div className="flex-1 min-w-[220px]">
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Account Name</label>
+                            <input
+                                autoFocus
+                                value={custSearch}
+                                onChange={e => setCustSearch(e.target.value)}
+                                placeholder="Type to filter accounts…"
+                                className={cellCls + ' bg-[#F59E0B]/5 border-[#F59E0B]/30'}
+                            />
+                        </div>
+                        <Btn variant="secondary" onClick={() => router.push('/admin/company/customers/add')} className="font-bold">Add New</Btn>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="grid grid-cols-[110px_minmax(160px,1.6fr)_minmax(110px,1fr)_110px_110px] bg-slate-100 border-b border-slate-300">
+                            <Th>Account ID</Th>
+                            <Th>Account Name</Th>
+                            <Th>Area</Th>
+                            <Th>Acc. 2nd Level</Th>
+                            <Th>Acc. 3rd Level</Th>
+                        </div>
+                        <div className="max-h-[320px] overflow-y-auto custom-scrollbar">
+                            {filteredCustomers.length === 0 && (
+                                <div className="py-10 text-center text-[12.5px] text-slate-400">No accounts match.</div>
+                            )}
+                            {filteredCustomers.map((c: any, i: number) => (
+                                <div
+                                    key={c.id}
+                                    onDoubleClick={() => pickCustomer(c)}
+                                    onClick={() => pickCustomer(c)}
+                                    className={'grid grid-cols-[110px_minmax(160px,1.6fr)_minmax(110px,1fr)_110px_110px] cursor-pointer border-b border-slate-100 last:border-b-0 ' + (i % 2 ? 'bg-slate-50/40 ' : 'bg-white ') + 'hover:bg-[#F59E0B]/10'}
+                                >
+                                    <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{String(c.id).slice(0, 8)}</span></Cell>
+                                    <Cell><span className="px-1 text-[12.5px] font-semibold text-slate-800 truncate">{customerLabel(c)}</span></Cell>
+                                    <Cell><span className="px-1 text-[12px] text-slate-600 truncate">{c.area_name || c.city || '—'}</span></Cell>
+                                    <Cell><span className="px-1 text-[12px] text-slate-400">—</span></Cell>
+                                    <Cell><span className="px-1 text-[12px] text-slate-400">—</span></Cell>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-center pt-1">
+                        <button
+                            onClick={() => { setCustomerId(''); setShowFindCustomer(false); }}
+                            className="text-[12.5px] font-bold text-slate-500 hover:text-slate-800 hover:underline"
+                        >
+                            Clear (walk-in)
+                        </button>
+                        <Btn variant="secondary" onClick={() => setShowFindCustomer(false)} className="font-bold px-6">Cancel</Btn>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* ── Sale / Sale-Return Records ── */}
+            <Modal open={showRecords} onClose={() => setShowRecords(false)} title="Sale / Sale-Return Records" size="xl">
+                <div className="space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-2.5 items-end">
+                        <div>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">From Sale Date</label>
+                            <input type="date" className={cellCls + ' tabular-nums'} value={recFrom} onChange={e => setRecFrom(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">To Sale Date</label>
+                            <input type="date" className={cellCls + ' tabular-nums'} value={recTo} onChange={e => setRecTo(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Staff</label>
+                            <select className={cellCls + ' cursor-pointer'} value={recStaff} onChange={e => setRecStaff(e.target.value)}>
+                                <option value="">Select any one</option>
+                                {staffList.map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Sale / Sale Return</label>
+                            <select className={cellCls + ' cursor-pointer'} value={recType} onChange={e => setRecType(e.target.value)}>
+                                <option value="">Select any one</option>
+                                <option value="sale">Sale</option>
+                                <option value="return">Sale Return</option>
+                            </select>
+                        </div>
+                        <div className="flex gap-2">
+                            <Btn onClick={loadRecords} loading={recLoading} className="font-bold flex-1 justify-center">Search</Btn>
+                            <Btn variant="secondary" onClick={() => setShowRecords(false)} className="font-bold flex-1 justify-center">Cancel</Btn>
+                        </div>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <div className={REC_COLS + ' bg-slate-100 border-b border-slate-300'}>
+                                <Th>SaleID</Th>
+                                <Th>Date Sale</Th>
+                                <Th>Staff</Th>
+                                <Th>Acc.ID</Th>
+                                <Th>Acc.Name</Th>
+                                <Th align="right">Amount</Th>
+                                <Th align="right">Disc.</Th>
+                                <Th align="right">Net.Amount</Th>
+                                <Th align="right">Pre. Bal.</Th>
+                                <Th align="right">Total</Th>
+                                <Th align="right">Paid</Th>
+                                <Th align="right">Balance</Th>
+                            </div>
+                            <div className="max-h-[340px] overflow-y-auto custom-scrollbar">
+                                {recRows.length === 0 && (
+                                    <div className="py-10 text-center text-[12.5px] text-slate-400">
+                                        {recLoading ? 'Searching…' : 'No records — pick a date range and press Search.'}
+                                    </div>
+                                )}
+                                {recRows.map((r: any, i: number) => {
+                                    const amount = Number(r.total_amount || 0);
+                                    const disc = Number(r.discount || 0);
+                                    const paid = Number(r.amount_paid ?? r.paid_amount ?? 0);
+                                    return (
+                                        <div
+                                            key={r.id}
+                                            onClick={() => router.push(`/admin/sales/${r.id}/invoice`)}
+                                            className={REC_COLS + ' cursor-pointer border-b border-slate-100 last:border-b-0 ' + (i % 2 ? 'bg-slate-50/40 ' : 'bg-white ') + 'hover:bg-[#F59E0B]/10'}
+                                        >
+                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{r.order_number || String(r.id).slice(0, 8)}</span></Cell>
+                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-600">{(r.sale_date || r.created_at || '').slice(0, 10)}</span></Cell>
+                                            <Cell><span className="px-1 text-[12px] text-slate-600 truncate">{r.salesperson_name || '—'}</span></Cell>
+                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{r.customer ? String(r.customer).slice(0, 8) : '—'}</span></Cell>
+                                            <Cell><span className="px-1 text-[12px] font-semibold text-slate-800 truncate">{r.customer_name || 'Walk-in'}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-700">{amount.toFixed(2)}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-rose-600">{disc ? disc.toFixed(2) : ''}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] font-bold tabular-nums text-[#B4780B]">{amount.toFixed(2)}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-400">—</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-700">{amount.toFixed(2)}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-emerald-700">{paid.toFixed(2)}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] font-bold tabular-nums text-rose-600">{Math.max(0, amount - paid).toFixed(2)}</span></Cell>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
 
             {/* ── Confirmation Modal ── */}
             <Modal
