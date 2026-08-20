@@ -80,6 +80,10 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    # nginx holds the certificate in memory, so a renewed file on disk changes
+    # nothing until it reloads. Reload every 6h to pick up new chains; the reload
+    # is graceful and does not drop connections.
+    command: /bin/sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
       - backend_static:/app/static
@@ -90,8 +94,16 @@ services:
       - frontend
       - backend
 
+  # Renewal loop. WITHOUT a command this container runs certbot with no arguments,
+  # which prints help and exits 1 — which is exactly what happened: it never renewed
+  # anything and the certificate expired on 18 Aug 2026. certbot only acts when a
+  # cert is within 30 days of expiry, so waking twice a day is cheap and leaves
+  # ~60 chances to recover from a transient failure before anything expires.
   certbot:
     image: certbot/certbot
+    restart: always
+    entrypoint: /bin/sh
+    command: -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
     volumes:
       - certbot_www:/var/www/certbot
       - certbot_conf:/etc/letsencrypt
