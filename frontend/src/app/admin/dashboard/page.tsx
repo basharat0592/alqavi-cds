@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { getImageUrl } from '@/lib/utils';
 import { useAdminDashboard } from '@/hooks';
 import SuperAdminCharts from '@/components/admin/SuperAdminCharts';
+import SuperAdminOverview from '@/components/admin/SuperAdminOverview';
 import { NAV_GROUPS, STANDALONE_ITEMS } from '@/components/layout/AdminNavMenu';
 import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
@@ -87,7 +88,7 @@ interface GroupSection {
     items: Omit<PageButton, 'theme'>[];
 }
 
-/* Mobile welcome-hero avatar → tap for Profile / Logout. */
+/* Mobile welcome-hero avatar â†’ tap for Profile / Logout. */
 function MobileProfileMenu() {
     const [open, setOpen] = useState(false);
     const ref = React.useRef<HTMLDivElement>(null);
@@ -136,7 +137,7 @@ function MobileProfileMenu() {
 
 /* Module-level flag: the hand waves once per real page load. It survives in-app
    navigation (same JS runtime), so returning to the dashboard from another page
-   does NOT replay it — only a full refresh/first open resets it. */
+   does NOT replay it â€” only a full refresh/first open resets it. */
 let handWavePlayed = false;
 
 /* Shared mobile welcome hero (branch + super admin) with the profile avatar. */
@@ -152,8 +153,8 @@ function MobileWelcomeHero({ subtitle }: { subtitle: string }) {
                 <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#B4780B]">Welcome back</p>
                 <h1 className="text-[26px] font-black text-slate-900 leading-[1.15] mt-0.5">
                     {first
-                        ? <>Hi, <span className="bg-gradient-to-r from-[#F59E0B] via-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{first}</span> <span className={handCls}>👋</span></>
-                        : <>Hello there <span className={handCls}>👋</span></>}
+                        ? <>Hi, <span className="bg-gradient-to-r from-[#F59E0B] via-violet-600 to-fuchsia-600 bg-clip-text text-transparent">{first}</span> <span className={handCls}>ðŸ‘‹</span></>
+                        : <>Hello there <span className={handCls}>ðŸ‘‹</span></>}
                 </h1>
                 <p className="text-[12.5px] text-slate-500 mt-1">{subtitle}</p>
             </div>
@@ -174,7 +175,7 @@ export default function AdminDashboard() {
         const u: any = authService.getUser();
         const role = (typeof u?.role === 'string' ? u.role : u?.role_name || '').toLowerCase();
         if (['admin', 'super admin', 'superadmin'].includes(role) || u?.is_superuser) {
-            setUserPagePerms(null); // full access — no page restriction
+            setUserPagePerms(null); // full access â€” no page restriction
         } else {
             const perms = u?.page_permissions;
             setUserPagePerms(Array.isArray(perms) && perms.length > 0 ? perms : null);
@@ -201,7 +202,7 @@ export default function AdminDashboard() {
         return () => { cancelled = true; };
     }, [isSuperAdmin]);
 
-    // Payments Due (receivables) widget — branch admin only. Shows sales with an
+    // Payments Due (receivables) widget â€” branch admin only. Shows sales with an
     // outstanding balance, filtered by how soon they fall due.
     const money = (n: number) => `Rs ${Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
     const DUE_WINDOWS: { k: string; label: string; days: number }[] = [
@@ -238,7 +239,7 @@ export default function AdminDashboard() {
     };
     const dueLabel = (d: any) => {
         const n = daysUntilDue(d);
-        if (!isFinite(n)) return '—';
+        if (!isFinite(n)) return 'â€”';
         if (n < 0) return `${Math.abs(n)}d late`;
         if (n === 0) return 'Today';
         if (n === 1) return 'Tomorrow';
@@ -258,7 +259,7 @@ export default function AdminDashboard() {
     }, [due, dueWindow, dueSearch]);
     const dueOverdueCount = useMemo(() => dueRows.filter((d: any) => daysUntilDue(d) < 0).length, [dueRows]);
 
-    // Sidebar-visibility toggles (System Settings → Sidebar Pages) hide pages here too.
+    // Sidebar-visibility toggles (System Settings â†’ Sidebar Pages) hide pages here too.
     const [sidebarVisibility, setSidebarVisibility] = useState<Record<string, boolean>>({});
     useEffect(() => {
         const load = () => {
@@ -285,7 +286,7 @@ export default function AdminDashboard() {
             (userPagePerms === null || userPagePerms.includes(base));
     };
 
-    // ── CORE OPERATIONS & KEY PAGES (PROMINENT BUTTONS) ──
+    // â”€â”€ CORE OPERATIONS & KEY PAGES (PROMINENT BUTTONS) â”€â”€
     const corePages: PageButton[] = [
         {
             name: 'Point of Sale (POS)',
@@ -653,7 +654,7 @@ export default function AdminDashboard() {
         },
     ];
 
-    // ── COMPLETE PAGE CATALOG ──
+    // â”€â”€ COMPLETE PAGE CATALOG â”€â”€
     // Every navigable admin page, grouped by category. This is the single source of
     // truth for the "All Pages" directory at the bottom. Anything already shown as a
     // prominent card up top is filtered out below so nothing appears twice. Add new
@@ -751,7 +752,7 @@ export default function AdminDashboard() {
             .slice(0, 60);
     }, [serverLowStock, products]);
 
-    // ── Group the core button-cards into labeled sections (order = display order) ──
+    // â”€â”€ Group the core button-cards into labeled sections (order = display order) â”€â”€
     const CORE_GROUPS: { title: string; hrefs: string[] }[] = [
         { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/sales', '/admin/sale-returns', '/admin/orders', '/admin/tracking'] },
         { title: 'Purchasing & Inventory', hrefs: ['/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns', '/admin/products', '/admin/products/add', '/admin/inventory/list'] },
@@ -771,9 +772,9 @@ export default function AdminDashboard() {
     const coreByHref = new Map(corePages.map((p) => [p.href, p]));
 
     // Whether a core card stays a big prominent button (vs dropping to the list):
-    //  - Super admin → every page they can see is a prominent card (the "All Pages"
+    //  - Super admin â†’ every page they can see is a prominent card (the "All Pages"
     //    directory is hidden for them, so the cards are their full menu).
-    //  - Branch admin → only the day-to-day essential cards.
+    //  - Branch admin â†’ only the day-to-day essential cards.
     const isPromoted = (_groupTitle: string, href: string) =>
         isSuperAdmin
             ? true
@@ -789,7 +790,7 @@ export default function AdminDashboard() {
         }))
         .filter((g) => g.items.length > 0);
 
-    // Hrefs already shown as big prominent cards up top — excluded from the grouped
+    // Hrefs already shown as big prominent cards up top â€” excluded from the grouped
     // lists below so nothing appears twice.
     const promotedHrefs = new Set(groupedCore.flatMap((g) => g.items.map((i) => i.href)));
 
@@ -815,7 +816,7 @@ export default function AdminDashboard() {
         { label: 'Active Suppliers', value: overviewCounts.suppliers, icon: Truck, color: 'bg-amber-50 text-amber-600' },
     ];
 
-    // A single directory card — reused by the desktop grouped grid and the Super
+    // A single directory card â€” reused by the desktop grouped grid and the Super
     // Admin's flattened mobile grid (so Areas/Notifications share one row).
     const renderNavCard = (btn: PageButton) => {
         const Icon = btn.icon;
@@ -855,7 +856,7 @@ export default function AdminDashboard() {
     // Super Admin mobile: every visible card that isn't already in the bottom tab bar.
     const superMobileCards = groupedCore.flatMap((g) => g.items).filter((i) => !SUPER_MOBILE_HIDDEN_CARD_HREFS.has(i.href));
 
-    // ── BRANCH-ADMIN DASHBOARD TILES — one clean, consistent button design ──
+    // â”€â”€ BRANCH-ADMIN DASHBOARD TILES â€” one clean, consistent button design â”€â”€
     type Tile = { name: string; href: string; icon: any; color: string };
     const DASH_TILES: Tile[] = [
         { name: 'POS', href: '/admin/sale', icon: ScanLine, color: '#4F46E5' },
@@ -873,7 +874,7 @@ export default function AdminDashboard() {
     ];
     const dashTiles = DASH_TILES.filter((t) => canSee(t.href));
 
-    // Super-admin pill colours (bright, distinct) keyed by page — reuses each page's
+    // Super-admin pill colours (bright, distinct) keyed by page â€” reuses each page's
     // own icon from `groupedCore`, so the super admin gets the same clean pill buttons.
     const SUPER_TILE_COLOR: Record<string, string> = {
         '/admin/branches': '#4F46E5',
@@ -908,7 +909,7 @@ export default function AdminDashboard() {
         const active = t.href === '/admin/orders' ? ((stats as any)?.totalActive ?? stats?.pendingOrders ?? 0) : 0;
         return (
             <Link key={t.href} href={t.href} className="group block">
-                {/* ── DESKTOP: colored body + diagonal white icon panel (reference design) ── */}
+                {/* â”€â”€ DESKTOP: colored body + diagonal white icon panel (reference design) â”€â”€ */}
                 <div
                     className="hidden md:flex relative items-center h-[54px] rounded-[10px] overflow-hidden shadow-[0_4px_12px_-3px_rgba(15,23,42,0.28)] transition-all duration-300 ease-out group-hover:-translate-y-0.5 group-hover:shadow-[0_10px_20px_-6px_rgba(15,23,42,0.36)]"
                     style={{ backgroundColor: g.ink }}
@@ -925,7 +926,7 @@ export default function AdminDashboard() {
                     )}
                 </div>
 
-                {/* ── MOBILE: solid pill (unchanged) ── */}
+                {/* â”€â”€ MOBILE: solid pill (unchanged) â”€â”€ */}
                 <div
                     className="flex md:hidden relative items-center h-[56px] rounded-full border-2 pl-[54px] pr-6 shadow-[0_3px_10px_-3px_rgba(15,23,42,0.18)] transition-all active:translate-y-0"
                     style={{ backgroundColor: '#4F46E5', borderColor: '#4338CA' }}
@@ -942,8 +943,8 @@ export default function AdminDashboard() {
         );
     };
 
-    // ── MOBILE (branch admin): the 5 nav groups shown on the dashboard as pills;
-    //    tapping a group expands its pages as pills too (same clean design). ──
+    // â”€â”€ MOBILE (branch admin): the 5 nav groups shown on the dashboard as pills;
+    //    tapping a group expands its pages as pills too (same clean design). â”€â”€
     const NAV_GROUP_META: Record<string, { icon: any; color: string }> = {
         Sales: { icon: TrendingUp, color: '#2563EB' },
         Purchase: { icon: ShoppingCart, color: '#059669' },
@@ -973,15 +974,25 @@ export default function AdminDashboard() {
                         </div>
                     </div>
                 )}
+
+                {/* Oversight band â€” headline numbers, revenue trend and the per-branch
+                    breakdown. Full width, above the admin shortcuts: the Super Admin's
+                    job here is monitoring, so the numbers lead and navigation follows. */}
+                {isSuperAdmin && (
+                    <div className="px-3 md:px-0 mb-6 md:mb-8">
+                        <SuperAdminOverview revenueData={revenueData30} counts={overviewCounts} />
+                    </div>
+                )}
+
                 <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-stretch">
 
-                {/* ── MAIN: DIRECTORY ── */}
+                {/* â”€â”€ MAIN: DIRECTORY â”€â”€ */}
                 <div className="flex-1 min-w-0 space-y-6 md:space-y-12 animate-in fade-in duration-300 text-left px-3 md:px-0">
 
                         {/* Shared mobile welcome hero (branch + super admin) */}
                         <MobileWelcomeHero subtitle={isSuperAdmin ? 'Your business across all branches.' : 'Everything you need, one tap away.'} />
 
-                        {/* ── BRANCH ADMIN — MOBILE: 5 nav groups as pills ── */}
+                        {/* â”€â”€ BRANCH ADMIN â€” MOBILE: 5 nav groups as pills â”€â”€ */}
                         {!isSuperAdmin && (
                             <div className="md:hidden space-y-4">
                                 <div className="space-y-2.5">
@@ -1005,13 +1016,13 @@ export default function AdminDashboard() {
                                             </Link>
                                         );
                                     })}
-                                    {/* Payments + Reports — separate pills (not a group) */}
+                                    {/* Payments + Reports â€” separate pills (not a group) */}
                                     {mobileStandalone.map((s) => renderTile({ name: s.name, href: s.href, icon: s.icon, color: s.color }))}
                                 </div>
                             </div>
                         )}
 
-                        {/* ── BRANCH ADMIN — DESKTOP: flat quick-action grid (all modules) ── */}
+                        {/* â”€â”€ BRANCH ADMIN â€” DESKTOP: flat quick-action grid (all modules) â”€â”€ */}
                         {!isSuperAdmin && (
                             <div className="hidden md:block">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
@@ -1020,7 +1031,7 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* ── SUPER ADMIN: same clean pill buttons, grouped by area ── */}
+                        {/* â”€â”€ SUPER ADMIN: same clean pill buttons, grouped by area â”€â”€ */}
                         {isSuperAdmin && (
                         <div className="space-y-5 md:space-y-7">
                             {superTileGroups.map((grp) => (
@@ -1039,11 +1050,11 @@ export default function AdminDashboard() {
                         )}
                     </div>
 
-                    {/* ── RIGHT: SUPER ADMIN → BUSINESS OVERVIEW · BRANCH ADMIN → LOW STOCK ── */}
+                    {/* â”€â”€ RIGHT: SUPER ADMIN â†’ BUSINESS OVERVIEW Â· BRANCH ADMIN â†’ LOW STOCK â”€â”€ */}
                     <aside className={`w-full lg:w-[320px] xl:w-[340px] shrink-0 ${isSuperAdmin ? 'hidden lg:block lg:order-last' : ''}`}>
                         {isSuperAdmin ? (
                         /* Charts stacked vertically in the right column (desktop only). */
-                        <SuperAdminCharts revenueData={revenueData30} />
+                        <SuperAdminCharts />
                         ) : (
                         <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden flex flex-col">
                             {/* Tab Switcher at the top */}
@@ -1077,7 +1088,7 @@ export default function AdminDashboard() {
 
                                     <div className="flex-1 max-h-[380px] overflow-y-auto divide-y divide-slate-50">
                                         {loading ? (
-                                            <div className="px-5 py-10 text-center text-[12px] text-slate-400">Loading…</div>
+                                            <div className="px-5 py-10 text-center text-[12px] text-slate-400">Loadingâ€¦</div>
                                         ) : lowStock.length === 0 ? (
                                             <div className="px-5 py-10 text-center text-[12px] text-slate-400">
                                                 <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
@@ -1126,7 +1137,7 @@ export default function AdminDashboard() {
                                             <input
                                                 value={dueSearch}
                                                 onChange={(e) => setDueSearch(e.target.value)}
-                                                placeholder="Search…"
+                                                placeholder="Searchâ€¦"
                                                 className="w-full h-8 pl-7 pr-2 rounded-lg border border-slate-200 text-[11.5px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white"
                                             />
                                         </div>
@@ -1146,7 +1157,7 @@ export default function AdminDashboard() {
 
                                     <div className="flex-1 max-h-[340px] overflow-y-auto divide-y divide-slate-50">
                                         {loading ? (
-                                            <div className="px-5 py-8 text-center text-[12px] text-slate-400">Loading…</div>
+                                            <div className="px-5 py-8 text-center text-[12px] text-slate-400">Loadingâ€¦</div>
                                         ) : dueRows.length === 0 ? (
                                             <div className="px-5 py-8 text-center text-[12px] text-slate-400">
                                                 <ShieldCheck size={20} className="mx-auto mb-2 text-emerald-500" />
@@ -1173,7 +1184,7 @@ export default function AdminDashboard() {
                                                             <p className="text-[12px] font-bold text-slate-800 truncate group-hover:text-slate-900">{d.party || 'Walk-in Customer'}</p>
                                                             <p className="text-[10px] text-slate-400 truncate">{d.products || `#${d.ref}`}</p>
                                                             <p className="text-[9.5px] font-semibold text-slate-400">
-                                                                Paid <span className="text-emerald-600">{money(d.paid)}</span> · #{d.ref}
+                                                                Paid <span className="text-emerald-600">{money(d.paid)}</span> Â· #{d.ref}
                                                             </p>
                                                         </div>
                                                         <div className="text-right shrink-0">

@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import {
-    ResponsiveContainer, AreaChart, Area, BarChart, Bar,
+    ResponsiveContainer, BarChart, Bar,
     XAxis, YAxis, CartesianGrid, Tooltip, Cell,
 } from 'recharts';
-import { TrendingUp, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { paymentService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import type { RevenueDataPoint } from '@/types';
 
-const INDIGO = '#6366F1';
 const TEAL = '#119AB8';
 const GRID = '#eef2f7';
 const AXIS = '#94a3b8';
@@ -56,7 +54,10 @@ function Panel({ icon: Icon, title, subtitle, children }: any) {
     );
 }
 
-export default function SuperAdminCharts({ revenueData }: { revenueData: RevenueDataPoint[] }) {
+/* Narrow sidebar companion to SuperAdminOverview: just the net-by-branch bars.
+   The revenue trend and the income/expense detail live in the full-width band,
+   which has the room to render them properly. */
+export default function SuperAdminCharts() {
     const [branches, setBranches] = useState<{ name: string; net: number }[]>([]);
 
     useEffect(() => {
@@ -69,13 +70,6 @@ export default function SuperAdminCharts({ revenueData }: { revenueData: Revenue
             })
             .catch(() => setBranches([]));
     }, []);
-
-    const trend = (revenueData || []).map((r) => ({ date: r.date, sales: Number(r.sales ?? r.revenue ?? 0) }));
-    const hasTrend = trend.some((t) => t.sales > 0);
-    const totalSales = trend.reduce((s, t) => s + t.sales, 0);
-    const totalOrders = (revenueData || []).reduce((s, r: any) => s + Number(r.orders ?? 0), 0);
-    const peakDay = trend.reduce((m, t) => (t.sales > m ? t.sales : m), 0);
-    const avgDay = trend.length ? totalSales / trend.length : 0;
 
     return (
         <div className="space-y-4">
