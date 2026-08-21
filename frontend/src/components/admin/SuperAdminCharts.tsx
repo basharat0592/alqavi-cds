@@ -6,7 +6,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Cell,
 } from 'recharts';
 import { Building2 } from 'lucide-react';
-import { paymentService } from '@/lib/api';
+import { paymentService, inventoryService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 
 const TEAL = '#119AB8';
@@ -61,12 +61,22 @@ export default function SuperAdminCharts() {
     const [branches, setBranches] = useState<{ name: string; net: number }[]>([]);
 
     useEffect(() => {
-        paymentService.getByBranch?.()
-            .then((d: any) => {
-                const rows = (d?.branches || []).map((b: any) => ({
-                    name: b.warehouse_name || 'Organization', net: Number(b.net || 0),
-                }));
-                setBranches(rows.sort((a: any, b: any) => b.net - a.net).slice(0, 8));
+        // Include organizations with no payment activity, which by-branch omits.
+        Promise.all([
+            paymentService.getByBranch?.() ?? Promise.resolve(null),
+            inventoryService.getWarehouses().catch(() => []),
+        ])
+            .then(([d, whs]: any[]) => {
+                const byName = new Map<string, { name: string; net: number }>();
+                for (const w of (whs || [])) {
+                    const name = String(w?.name || '').trim();
+                    if (name) byName.set(name.toLowerCase(), { name, net: 0 });
+                }
+                for (const b of (d?.branches || [])) {
+                    const name = String(b.warehouse_name || '').trim() || 'Organization';
+                    byName.set(name.toLowerCase(), { name, net: Number(b.net || 0) });
+                }
+                setBranches([...byName.values()].sort((a, b) => b.net - a.net).slice(0, 10));
             })
             .catch(() => setBranches([]));
     }, []);

@@ -7,7 +7,7 @@ import {
 import {
     TrendingUp, Building2, ShoppingBag, PackageX, Activity, Clock,
 } from 'lucide-react';
-import { paymentService } from '@/lib/api';
+import { paymentService, inventoryService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import type { RevenueDataPoint } from '@/types';
 
@@ -74,16 +74,34 @@ export default function SuperAdminOverview({ revenueData, stats, recentOrders, l
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        paymentService.getByBranch?.()
-            .then((d: any) => {
-                const rows: BranchRow[] = (d?.branches || []).map((b: any) => ({
-                    name: b.warehouse_name || 'Unnamed organization',
-                    income: Number(b.income || 0),
-                    expense: Number(b.expense || 0),
-                    net: Number(b.net || 0),
-                    count: Number(b.count || 0),
-                }));
-                setBranches(rows.sort((a, b) => b.net - a.net));
+        // by-branch only reports organizations that have payment records, so an
+        // organization with no activity would silently vanish from this list.
+        // Merge the full warehouse list in so every organization is accounted for.
+        Promise.all([
+            paymentService.getByBranch?.() ?? Promise.resolve(null),
+            inventoryService.getWarehouses().catch(() => []),
+        ])
+            .then(([d, whs]: any[]) => {
+                const byName = new Map<string, BranchRow>();
+                for (const w of (whs || [])) {
+                    const name = String(w?.name || '').trim();
+                    if (!name) continue;
+                    byName.set(name.toLowerCase(), { name, income: 0, expense: 0, net: 0, count: 0 });
+                }
+                for (const b of (d?.branches || [])) {
+                    const name = String(b.warehouse_name || '').trim() || 'Unnamed organization';
+                    byName.set(name.toLowerCase(), {
+                        name,
+                        income: Number(b.income || 0),
+                        expense: Number(b.expense || 0),
+                        net: Number(b.net || 0),
+                        count: Number(b.count || 0),
+                    });
+                }
+                // Active organizations first (by net), dormant ones after.
+                const rows = [...byName.values()].sort((a, b) =>
+                    (b.count > 0 ? 1 : 0) - (a.count > 0 ? 1 : 0) || b.net - a.net);
+                setBranches(rows);
             })
             .catch(() => { /* leave empty; the panels show their own empty state */ })
             .finally(() => setLoaded(true));
@@ -139,7 +157,7 @@ export default function SuperAdminOverview({ revenueData, stats, recentOrders, l
                     )}
                 </Panel>
 
-                <Panel icon={Building2} title="Organization Performance" subtitle="Income, expense and net · per organization">
+                <Panel icon={Building2} title="Organization Performance" subtitle="Every organization · income, expense and net">
                     {branches.length ? (
                         <div className="max-h-[230px] overflow-y-auto custom-scrollbar -mx-1 px-1">
                             <div className="space-y-2.5">
@@ -152,12 +170,24 @@ export default function SuperAdminOverview({ revenueData, stats, recentOrders, l
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-1 h-1.5">
-                                            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(b.income / maxGross) * 100}%` }} title={`Income ${formatCurrency(b.income)}`} />
-                                            <div className="h-full rounded-full bg-rose-400" style={{ width: `${(b.expense / maxGross) * 100}%` }} title={`Expense ${formatCurrency(b.expense)}`} />
+                                            {b.count === 0 ? (
+                                                <div className="h-full w-full rounded-full bg-slate-100" title="No activity recorded" />
+                                            ) : (
+                                                <>
+                                                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(b.income / maxGross) * 100}%` }} title={`Income ${formatCurrency(b.income)}`} />
+                                                    <div className="h-full rounded-full bg-rose-400" style={{ width: `${(b.expense / maxGross) * 100}%` }} title={`Expense ${formatCurrency(b.expense)}`} />
+                                                </>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-3 mt-1 text-[10.5px] text-slate-400 font-medium">
-                                            <span className="text-emerald-600">In {formatCurrency(b.income)}</span>
-                                            <span className="text-rose-500">Out {formatCurrency(b.expense)}</span>
+                                            {b.count === 0 ? (
+                                                <span className="italic">No activity yet</span>
+                                            ) : (
+                                                <>
+                                                    <span className="text-emerald-600">In {formatCurrency(b.income)}</span>
+                                                    <span className="text-rose-500">Out {formatCurrency(b.expense)}</span>
+                                                </>
+                                            )}
                                             <span className="ml-auto tabular-nums">{b.count} txn</span>
                                         </div>
                                     </div>
