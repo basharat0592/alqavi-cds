@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail, Phone
+    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail
 } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils';
 import { userService } from '@/lib/api';
@@ -157,15 +157,14 @@ export default function BranchesPage() {
         [users]
     );
 
-    const byCity = useMemo(() => {
-        const groups = new Map<string, { city: string; items: any[] }>();
-        warehouses.forEach(w => {
-            const city = w.area_name || 'No city';
-            if (!groups.has(city)) groups.set(city, { city, items: [] });
-            groups.get(city)!.items.push(w);
-        });
-        return Array.from(groups.values()).sort((a, b) => a.city.localeCompare(b.city));
-    }, [warehouses]);
+    // One flat list for the table, ordered by area then name so rows from the same
+    // city still sit together without needing separate grouped tables.
+    const rows = useMemo(
+        () => [...warehouses].sort((a, b) =>
+            String(a.area_name || 'zzz').localeCompare(String(b.area_name || 'zzz'))
+            || String(a.name || '').localeCompare(String(b.name || ''))),
+        [warehouses]
+    );
 
     const name = (u: any) => `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || u.email;
 
@@ -239,111 +238,111 @@ export default function BranchesPage() {
                     </Card>
                 )}
 
-                {/* Cities → warehouses → assigned admins */}
+                {/* Organizations as one table — area is a column rather than a heading,
+                    so every organization is comparable in a single scan. */}
                 {warehouses.length === 0 ? (
                     <Card className="py-20 text-center text-[13px] text-slate-500">No organizations yet. Click “New Organization” to create one.</Card>
                 ) : (
-                    <div className="space-y-8">
-                        {byCity.map(group => (
-                            <div key={group.city} className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                    <h2 className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                                        <MapPin size={14} className="text-slate-400" /> {group.city}
-                                    </h2>
-                                    <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{group.items.length}</span>
-                                    <div className="h-px flex-1 bg-slate-200/70" />
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    {group.items.map(wh => {
+                    <Card className="overflow-hidden">
+                        <div className={ui.tableWrap}>
+                            <table className={ui.table + ' min-w-[940px]'}>
+                                <thead>
+                                    <tr>
+                                        <th className={ui.th}>Organization</th>
+                                        <th className={ui.th}>Area</th>
+                                        <th className={ui.th + ' text-right'}>Products</th>
+                                        <th className={ui.th}>Admins</th>
+                                        <th className={ui.th + ' text-right'}>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows.map(wh => {
                                         const admins = adminsFor(wh.id);
                                         return (
-                                            <Card key={wh.id} className="overflow-hidden">
-                                                <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-2">
+                                            <tr key={wh.id} className={ui.trHover}>
+                                                <td className={ui.td}>
                                                     <div className="flex items-center gap-2.5 min-w-0">
-                                                        <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/15 text-[#B4780B] flex items-center justify-center shrink-0">
-                                                            <Building2 size={17} />
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                            <h3 className="font-bold text-[14px] text-slate-900 truncate">{wh.name}</h3>
-                                                            <p className="text-[11px] text-slate-400 flex items-center gap-1"><Boxes size={11} /> {wh.stock_count || 0} products</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 shrink-0">
-                                                        <button onClick={() => openEdit(wh)} title="Edit organization"
-                                                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#92600A] hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
-                                                            <Pencil size={12} /> Edit
-                                                        </button>
-                                                        <button onClick={() => setDeleteTarget(wh)} title="Delete organization"
-                                                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
-                                                            <Trash2 size={12} /> Delete
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div className="p-5 space-y-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                                                            <Users size={12} /> Admins
+                                                        <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/15 text-[#B4780B] flex items-center justify-center shrink-0">
+                                                            <Building2 size={15} />
                                                         </span>
-                                                        <Badge tone={admins.length ? 'blue' : 'neutral'}>{admins.length}</Badge>
+                                                        <span className="font-bold text-[13px] text-slate-900 truncate">{wh.name}</span>
                                                     </div>
+                                                </td>
+                                                <td className={ui.td}>
+                                                    <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-600">
+                                                        <MapPin size={12} className="text-slate-400 shrink-0" />
+                                                        {wh.area_name || <span className="text-slate-400 italic">No city</span>}
+                                                    </span>
+                                                </td>
+                                                <td className={ui.td + ' text-right'}>
+                                                    <span className={`inline-flex items-center gap-1 text-[12.5px] font-bold tabular-nums ${Number(wh.stock_count || 0) > 0 ? 'text-slate-800' : 'text-slate-300'}`}>
+                                                        <Boxes size={12} className="text-slate-400" /> {wh.stock_count || 0}
+                                                    </span>
+                                                </td>
+                                                <td className={ui.td}>
                                                     {admins.length === 0 ? (
-                                                        <p className="text-[12px] text-slate-400 italic">No admin assigned to this organization.</p>
-                                                    ) : (
-                                                        <div className="space-y-2">
-                                                            {admins.map(u => (
-                                                                <button key={u.id} onClick={() => router.push(`/admin/users/edit/${u.id}`)}
-                                                                    title="View / edit this admin"
-                                                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-[#B4780B]/50 hover:border-[#F59E0B]/25 transition-colors text-left group">
-                                                                    <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[12px] font-bold text-slate-500">
-                                                                        {u.avatar ? (
-                                                                            <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
-                                                                        ) : (
-                                                                            (u.full_name || u.username || 'A').split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()
-                                                                        )}
-                                                                    </div>
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <p className="font-bold text-[13px] text-slate-900 truncate">{u.full_name?.trim() || u.username || 'Admin'}</p>
-                                                                        <p className="text-[11px] text-slate-500 truncate flex items-center gap-1"><Mail size={10} className="shrink-0" /> {u.email}</p>
-                                                                        {u.phone && <p className="text-[11px] text-slate-400 truncate flex items-center gap-1"><Phone size={10} className="shrink-0" /> {u.phone}</p>}
-                                                                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                                                                            {u.role_name && <Badge tone="blue">{u.role_name}</Badge>}
-                                                                            {u.status && <Badge tone={String(u.status).toLowerCase() === 'active' ? 'green' : 'neutral'}>{u.status}</Badge>}
-                                                                        </div>
-                                                                    </div>
-                                                                    <ChevronRight size={16} className="text-slate-300 group-hover:text-[#92600A] group-hover:translate-x-0.5 transition-all shrink-0" />
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Assign options — only while the branch has no admin yet. */}
-                                                    {admins.length === 0 && (
-                                                        <div className="space-y-2 mt-1">
+                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                            <span className="text-[11.5px] text-slate-400 italic mr-1">None assigned</span>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setSelectFor(wh)}
-                                                                className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg py-2 transition-colors"
+                                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-md px-2 py-1 transition-colors"
                                                             >
-                                                                <Users size={13} className="text-slate-400" /> Select existing admin
+                                                                <Users size={11} className="text-slate-400" /> Select
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => router.push(`/admin/users/add?warehouse=${wh.id}`)}
-                                                                className="w-full flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/25 rounded-lg py-2 transition-colors"
+                                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                                             >
-                                                                <Plus size={13} /> Create new admin
+                                                                <Plus size={11} /> Create
                                                             </button>
                                                         </div>
+                                                    ) : (
+                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                            {admins.map(u => (
+                                                                <button
+                                                                    key={u.id}
+                                                                    onClick={() => router.push(`/admin/users/edit/${u.id}`)}
+                                                                    title={`${u.email || ''}${u.phone ? ' · ' + u.phone : ''} — view / edit`}
+                                                                    className="inline-flex items-center gap-1.5 max-w-[220px] text-[11.5px] font-semibold text-slate-700 bg-white hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/30 rounded-full pl-1 pr-2.5 py-1 transition-colors group"
+                                                                >
+                                                                    <span className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[9px] font-bold text-slate-500">
+                                                                        {u.avatar
+                                                                            ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                                                            : (u.full_name || u.username || 'A').split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()}
+                                                                    </span>
+                                                                    <span className="truncate">{u.full_name?.trim() || u.username || 'Admin'}</span>
+                                                                    {u.status && String(u.status).toLowerCase() !== 'active' && (
+                                                                        <span className="text-[9px] font-black uppercase text-slate-400">{u.status}</span>
+                                                                    )}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     )}
-                                                </div>
-                                            </Card>
+                                                </td>
+                                                <td className={ui.td + ' text-right whitespace-nowrap'}>
+                                                    <button onClick={() => openEdit(wh)} title="Edit organization"
+                                                        className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#92600A] hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                        <Pencil size={12} /> Edit
+                                                    </button>
+                                                    <button onClick={() => setDeleteTarget(wh)} title="Delete organization"
+                                                        className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors ml-1.5">
+                                                        <Trash2 size={12} /> Delete
+                                                    </button>
+                                                </td>
+                                            </tr>
                                         );
                                     })}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="px-4 py-2.5 border-t border-slate-200 bg-slate-50/70 text-[11.5px] text-slate-500">
+                            <b className="text-slate-700 tabular-nums">{rows.length}</b> {rows.length === 1 ? 'organization' : 'organizations'}
+                            {' · '}
+                            <b className="text-slate-700 tabular-nums">{rows.filter(w => adminsFor(w.id).length === 0).length}</b> without an admin
+                        </div>
+                    </Card>
                 )}
             </div>
 
