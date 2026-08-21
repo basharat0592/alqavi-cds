@@ -583,11 +583,6 @@ export default function BranchesPage() {
                 }
             >
                 <form onSubmit={saveBranch} className="space-y-4">
-                    <p className="text-[12px] text-slate-500">
-                        {editing
-                            ? 'Rename the organization or move it to a different city.'
-                            : 'Name the organization and say who will run it. We create the organization now and give you a link to send them — they set their own password and fill in their city and address.'}
-                    </p>
                     <div>
                         <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
                         <input
@@ -643,10 +638,7 @@ export default function BranchesPage() {
                                 <span className="w-7 h-7 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
                                     <UserPlus size={14} />
                                 </span>
-                                <div>
-                                    <p className="text-[12.5px] font-bold text-slate-800 leading-none">Who will run it</p>
-                                    <p className="text-[11px] text-slate-400 mt-1">No account is created until they open the link.</p>
-                                </div>
+                                <p className="text-[12.5px] font-bold text-slate-800 leading-none">Who will run it</p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -679,9 +671,6 @@ export default function BranchesPage() {
                                     className={ui.inputBase}
                                     placeholder="admin@example.com"
                                 />
-                                <p className="mt-1 text-[11px] text-slate-400">
-                                    The invite is issued to this address, and they sign in with it.
-                                </p>
                             </div>
                         </div>
                     )}
