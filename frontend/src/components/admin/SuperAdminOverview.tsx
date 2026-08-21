@@ -77,7 +77,7 @@ export default function SuperAdminOverview({ revenueData, stats, recentOrders, l
         paymentService.getByBranch?.()
             .then((d: any) => {
                 const rows: BranchRow[] = (d?.branches || []).map((b: any) => ({
-                    name: b.warehouse_name || 'Unnamed branch',
+                    name: b.warehouse_name || 'Unnamed organization',
                     income: Number(b.income || 0),
                     expense: Number(b.expense || 0),
                     net: Number(b.net || 0),
@@ -139,7 +139,7 @@ export default function SuperAdminOverview({ revenueData, stats, recentOrders, l
                     )}
                 </Panel>
 
-                <Panel icon={Building2} title="Branch Performance" subtitle="Income, expense and net · per branch">
+                <Panel icon={Building2} title="Organization Performance" subtitle="Income, expense and net · per organization">
                     {branches.length ? (
                         <div className="max-h-[230px] overflow-y-auto custom-scrollbar -mx-1 px-1">
                             <div className="space-y-2.5">
@@ -166,7 +166,7 @@ export default function SuperAdminOverview({ revenueData, stats, recentOrders, l
                         </div>
                     ) : (
                         <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">
-                            {loaded ? 'No branch activity recorded yet.' : 'Loading…'}
+                            {loaded ? 'No organization activity recorded yet.' : 'Loading…'}
                         </div>
                     )}
                 </Panel>
@@ -175,7 +175,7 @@ export default function SuperAdminOverview({ revenueData, stats, recentOrders, l
             {/* ── Orders + pipeline ── */}
             <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-4">
 
-                <Panel icon={ShoppingBag} title="Recent Orders" subtitle="Latest activity across every branch">
+                <Panel icon={ShoppingBag} title="Recent Orders" subtitle="Latest activity across every organization">
                     {orders.length ? (
                         <div className="max-h-[260px] overflow-y-auto custom-scrollbar -mx-1 px-1">
                             <div className="divide-y divide-slate-100">

@@ -124,7 +124,7 @@ export function InvoiceFooter({ pinned = true }: { pinned?: boolean }) {
             {/* Contact strip */}
             <div className="mt-3 text-center">
                 <p className="text-[8px] text-slate-400 font-medium tracking-wide">
-                    Branch 1: Qazi Market, CMH Road, Khomer Gilgit&nbsp;&nbsp;•&nbsp;&nbsp;Branch 2: Ibrahim Market, Confection Bil, Skardu
+                    Organization 1: Qazi Market, CMH Road, Khomer Gilgit&nbsp;&nbsp;•&nbsp;&nbsp;Organization 2: Ibrahim Market, Confection Bil, Skardu
                 </p>
             </div>
         </div>

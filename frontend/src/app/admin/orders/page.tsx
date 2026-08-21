@@ -150,8 +150,8 @@ export default function AdminOrdersPage() {
     const [selectedWarehouse, setSelectedWarehouse] = useState<string>('');
     const [isSubmittingDelivery, setIsSubmittingDelivery] = useState(false);
 
-    // Branch context of the logged-in admin (drives branch-isolated delivery:
-    // a branch admin fulfils from their OWN branch, auto-selected — no picker).
+    // Organization context of the logged-in admin (drives organization-isolated delivery:
+    // a organization admin fulfils from their OWN organization, auto-selected — no picker).
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [myWarehouses, setMyWarehouses] = useState<any[]>([]);
 
@@ -166,7 +166,7 @@ export default function AdminOrdersPage() {
     const pickupOf = (order: any) => {
         const wid = order?.warehouse || order?.warehouse_id;
         const wh = warehouses.find((w: any) => String(w.id) === String(wid));
-        const name = wh?.name || order?.warehouse_name || 'Branch';
+        const name = wh?.name || order?.warehouse_name || 'Organization';
         const loc = wh?.location || wh?.address || '';
         return { name, loc };
     };
@@ -212,7 +212,7 @@ export default function AdminOrdersPage() {
                 setDeliveryModal({ orderId: id, status: newStatus, order });
                 return;
             }
-            // Branch admin: deliver directly, NO popup. The backend auto-deducts
+            // Organization admin: deliver directly, NO popup. The backend auto-deducts
             // from their OWN branch and books the sale to their branch accounts.
             setUpdatingRow(id);
             try {
@@ -388,7 +388,7 @@ export default function AdminOrdersPage() {
     const hasEnoughStock = warehouseStockInfo.every((i: { insufficient: boolean }) => !i.insufficient);
 
     // The delivery picker only appears for the super admin (who chooses any
-    // branch) or as a fallback when a multi-branch admin's branch couldn't be
+    // branch) or as a fallback when a multi-branch admin's organization couldn't be
     // auto-resolved — in which case limit the options to THEIR own branches.
     const deliveryWarehouseOptions = isSuperAdmin ? warehouses : myWarehouses;
 
@@ -831,7 +831,7 @@ export default function AdminOrdersPage() {
                                 </div>
                             ) : (
                                 <p className="text-[11px] text-slate-500 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">
-                                    This delivery will appear in <span className="font-semibold text-sky-700">every branch rider&apos;s feed</span> — the first one to accept it gets the job.
+                                    This delivery will appear in <span className="font-semibold text-sky-700">every organization rider&apos;s feed</span> — the first one to accept it gets the job.
                                 </p>
                             )}
 

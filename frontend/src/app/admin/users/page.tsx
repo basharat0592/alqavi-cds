@@ -241,7 +241,7 @@ export default function UsersPage() {
                             </Button>
                             {isSuperAdmin && (
                                 <Button variant="outline" onClick={() => router.push('/admin/branches')} className="whitespace-nowrap">
-                                    <Building2 size={14} /> <span className="hidden sm:inline">Branches</span>
+                                    <Building2 size={14} /> <span className="hidden sm:inline">Organizations</span>
                                 </Button>
                             )}
                             <Button onClick={() => router.push('/admin/users/add')} className="whitespace-nowrap">
@@ -300,9 +300,9 @@ export default function UsersPage() {
                                     value={branchFilter}
                                     onChange={e => setBranchFilter(e.target.value)}
                                     className="shrink-0 h-7 px-2 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none focus:border-[#F59E0B] cursor-pointer"
-                                    title="Filter by branch"
+                                    title="Filter by organization"
                                 >
-                                    <option value="all">All branches</option>
+                                    <option value="all">All organizations</option>
                                     {branchOptions.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                                     <option value="none">— Unassigned —</option>
                                 </select>
@@ -334,9 +334,9 @@ export default function UsersPage() {
                                     <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                                         <Badge tone={user.role_name?.toLowerCase().includes('admin') ? 'blue' : 'neutral'}>{user.role_name || 'Individual'}</Badge>
                                         {(user as any).is_super_admin
-                                            ? <Badge tone="blue">All Branches</Badge>
+                                            ? <Badge tone="blue">All Organizations</Badge>
                                             : ((user as any).warehouses || []).length === 0
-                                                ? <span className="text-[10px] font-semibold text-rose-500">No branch</span>
+                                                ? <span className="text-[10px] font-semibold text-rose-500">No organization</span>
                                                 : <span className="text-[10px] font-semibold text-slate-500">{((user as any).warehouses || []).map((w: any) => w.name).join(', ')}</span>}
                                     </div>
                                 </div>
@@ -370,7 +370,7 @@ export default function UsersPage() {
                                     <SelectAllTh sel={sel} />
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">User</th>
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Role</th>
-                                    <th className="hidden md:table-cell px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Branch</th>
+                                    <th className="hidden md:table-cell px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Organization</th>
                                     <th className="hidden sm:table-cell px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Joined</th>
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center whitespace-nowrap">Status</th>
                                     <th className="px-2.5 sm:px-6 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right whitespace-nowrap">Actions</th>
@@ -408,9 +408,9 @@ export default function UsersPage() {
                                             </td>
                                             <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
                                                 {(user as any).is_super_admin ? (
-                                                    <Badge tone="blue">All Branches</Badge>
+                                                    <Badge tone="blue">All Organizations</Badge>
                                                 ) : ((user as any).warehouses || []).length === 0 ? (
-                                                    <span className="text-[11px] font-semibold text-rose-500">No branch</span>
+                                                    <span className="text-[11px] font-semibold text-rose-500">No organization</span>
                                                 ) : (
                                                     <div className="flex flex-wrap gap-1 max-w-[220px]">
                                                         {((user as any).warehouses || []).map((w: any) => (
@@ -486,7 +486,7 @@ export default function UsersPage() {
                     <div className="text-center py-2">
                         <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600"><AlertTriangle size={32} /></div>
                         <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Delete User?</h3>
-                        <p className="text-[13px] text-slate-600 mt-3 leading-relaxed mb-8">Delete <span className="font-bold text-slate-900">"{deleteUser.first_name} {deleteUser.last_name}"</span>? This revokes all system access. If this admin owns branches or transactions, it will be <span className="font-semibold">deactivated</span> (blocked from signing in) instead of permanently removed, so their data stays intact.</p>
+                        <p className="text-[13px] text-slate-600 mt-3 leading-relaxed mb-8">Delete <span className="font-bold text-slate-900">"{deleteUser.first_name} {deleteUser.last_name}"</span>? This revokes all system access. If this admin owns organizations or transactions, it will be <span className="font-semibold">deactivated</span> (blocked from signing in) instead of permanently removed, so their data stays intact.</p>
                         <div className="flex gap-3">
                             <Button variant="outline" onClick={() => setDeleteUser(null)} className="flex-1">Cancel</Button>
                             <Button variant="danger" onClick={confirmDelete} disabled={deleting} className="flex-1">
@@ -548,12 +548,12 @@ export default function UsersPage() {
                                     <p className="font-bold text-slate-900">{selectedUserForView.phone || '—'}</p>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">City <span className="text-slate-300 normal-case font-medium">· branch</span></p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">City <span className="text-slate-300 normal-case font-medium">· organization</span></p>
                                     <p className="font-bold text-slate-900">{(selectedUserForView as any).warehouses?.[0]?.area || '—'}</p>
                                 </div>
                                 <div className="col-span-full space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Physical Address <span className="text-slate-300 normal-case font-medium">· branch</span></p>
-                                    <p className="font-bold text-slate-900">{(selectedUserForView as any).warehouses?.[0]?.location || (selectedUserForView as any).warehouses?.[0]?.name || 'No branch assigned'}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Physical Address <span className="text-slate-300 normal-case font-medium">· organization</span></p>
+                                    <p className="font-bold text-slate-900">{(selectedUserForView as any).warehouses?.[0]?.location || (selectedUserForView as any).warehouses?.[0]?.name || 'No organization assigned'}</p>
                                 </div>
                             </div>
                         </div>

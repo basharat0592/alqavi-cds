@@ -98,7 +98,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         {
             label: 'Security & Logs',
             items: [
-                { name: 'Branches', href: '/admin/branches', icon: Building2 },
+                { name: 'Organizations', href: '/admin/branches', icon: Building2 },
                 { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
                 { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
                 { name: 'Delivery Persons', href: '/admin/delivery', icon: Truck },

@@ -22,7 +22,7 @@ export default function BranchesPage() {
     const [loading, setLoading] = useState(true);
     const [allowed, setAllowed] = useState<boolean | null>(null);
 
-    // "New Branch" creation / edit (a branch is a store/warehouse tagged to a city).
+    // "New Organization" creation / edit (a organization is a store/warehouse tagged to a city).
     const [showNew, setShowNew] = useState(false);
     const [editing, setEditing] = useState<any | null>(null);
     const [creating, setCreating] = useState(false);
@@ -30,7 +30,7 @@ export default function BranchesPage() {
     const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [deletingBranch, setDeletingBranch] = useState(false);
 
-    // "Create admin here" — a two-option menu per branch (pick an existing internal
+    // "Create admin here" — a two-option menu per organization (pick an existing internal
     // user, or create a brand-new admin) plus the pick-existing modal.
     const [selectFor, setSelectFor] = useState<any | null>(null);
     const [assigningId, setAssigningId] = useState<any>(null);
@@ -75,7 +75,7 @@ export default function BranchesPage() {
     // warehouse. The Super Admin never deals with "warehouse" terms — just branch.
     const saveBranch = async (e?: React.SyntheticEvent) => {
         e?.preventDefault();
-        if (!nb.name.trim()) return toast.error('Branch name is required');
+        if (!nb.name.trim()) return toast.error('Organization name is required');
         if (nb.area === '__new__' && !nb.newCity.trim()) return toast.error('Enter the new city name');
         setCreating(true);
         try {
@@ -93,17 +93,17 @@ export default function BranchesPage() {
             };
             if (editing) {
                 await inventoryService.updateWarehouse(editing.id, payload);
-                toast.success('Branch updated');
+                toast.success('Organization updated');
             } else {
                 await inventoryService.createWarehouse(payload);
-                toast.success('Branch created');
+                toast.success('Organization created');
             }
             setShowNew(false);
             setEditing(null);
             setNb({ name: '', area: '', newCity: '', address: '' });
             load();
         } catch {
-            toast.error(editing ? 'Failed to update branch' : 'Failed to create branch');
+            toast.error(editing ? 'Failed to update organization' : 'Failed to create organization');
         } finally {
             setCreating(false);
         }
@@ -132,11 +132,11 @@ export default function BranchesPage() {
         setDeletingBranch(true);
         try {
             await inventoryService.deleteWarehouse(deleteTarget.id);
-            toast.success('Branch deleted');
+            toast.success('Organization deleted');
             setDeleteTarget(null);
             load();
         } catch {
-            toast.error('Failed to delete branch.');
+            toast.error('Failed to delete organization.');
         } finally {
             setDeletingBranch(false);
         }
@@ -176,7 +176,7 @@ export default function BranchesPage() {
                     <ShieldCheck size={26} />
                 </div>
                 <h2 className="text-[18px] font-bold text-slate-900">Super Admin only</h2>
-                <p className="text-[13px] text-slate-500 mt-2">Branch ↔ admin assignments can only be managed by a Super Admin.</p>
+                <p className="text-[13px] text-slate-500 mt-2">Organization ↔ admin assignments can only be managed by a Super Admin.</p>
             </div>
         );
     }
@@ -187,16 +187,16 @@ export default function BranchesPage() {
         <div className="pb-16 text-left text-slate-800">
             <div className="max-w-[1200px] mx-auto">
                 <PageHeader
-                    title="Branches"
-                    subtitle="Which admin manages which city / branch"
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Branches' }]}
+                    title="Organizations"
+                    subtitle="Which admin manages which city / organization"
+                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Organizations' }]}
                     actions={
                         <>
                             <Button variant="outline" onClick={load} disabled={loading} className="whitespace-nowrap">
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
                             </Button>
                             <Button onClick={openCreate} className="whitespace-nowrap">
-                                <Plus size={16} /> New Branch
+                                <Plus size={16} /> New Organization
                             </Button>
                         </>
                     }
@@ -205,7 +205,7 @@ export default function BranchesPage() {
                 {/* Global super admins */}
                 <Card className="p-5 mb-6 flex flex-wrap items-center gap-3">
                     <span className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-[#B4780B]">
-                        <ShieldCheck size={15} /> Global (all branches)
+                        <ShieldCheck size={15} /> Global (all organizations)
                     </span>
                     {superAdmins.length === 0 ? (
                         <span className="text-[12px] text-slate-400 italic">No super admins.</span>
@@ -241,7 +241,7 @@ export default function BranchesPage() {
 
                 {/* Cities → warehouses → assigned admins */}
                 {warehouses.length === 0 ? (
-                    <Card className="py-20 text-center text-[13px] text-slate-500">No branches yet. Click “New Branch” to create one.</Card>
+                    <Card className="py-20 text-center text-[13px] text-slate-500">No organizations yet. Click “New Organization” to create one.</Card>
                 ) : (
                     <div className="space-y-8">
                         {byCity.map(group => (
@@ -270,11 +270,11 @@ export default function BranchesPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center gap-1.5 shrink-0">
-                                                        <button onClick={() => openEdit(wh)} title="Edit branch"
+                                                        <button onClick={() => openEdit(wh)} title="Edit organization"
                                                             className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#92600A] hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
                                                             <Pencil size={12} /> Edit
                                                         </button>
-                                                        <button onClick={() => setDeleteTarget(wh)} title="Delete branch"
+                                                        <button onClick={() => setDeleteTarget(wh)} title="Delete organization"
                                                             className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
                                                             <Trash2 size={12} /> Delete
                                                         </button>
@@ -288,7 +288,7 @@ export default function BranchesPage() {
                                                         <Badge tone={admins.length ? 'blue' : 'neutral'}>{admins.length}</Badge>
                                                     </div>
                                                     {admins.length === 0 ? (
-                                                        <p className="text-[12px] text-slate-400 italic">No admin assigned to this branch.</p>
+                                                        <p className="text-[12px] text-slate-400 italic">No admin assigned to this organization.</p>
                                                     ) : (
                                                         <div className="space-y-2">
                                                             {admins.map(u => (
@@ -347,27 +347,27 @@ export default function BranchesPage() {
                 )}
             </div>
 
-            {/* New / Edit Branch — branch-first (no warehouse jargon). */}
+            {/* New / Edit Organization — branch-first (no warehouse jargon). */}
             <Modal
                 open={showNew}
                 onClose={() => { if (!creating) { setShowNew(false); setEditing(null); } }}
-                title={editing ? 'Edit Branch' : 'New Branch'}
+                title={editing ? 'Edit Organization' : 'New Organization'}
                 size="md"
                 footer={
                     <>
                         <Button variant="outline" onClick={() => { setShowNew(false); setEditing(null); }} disabled={creating}>Cancel</Button>
                         <Button onClick={() => saveBranch()} disabled={creating}>
-                            {creating ? <RefreshCw size={14} className="animate-spin" /> : (editing ? <Pencil size={14} /> : <Plus size={14} />)} {editing ? 'Save Changes' : 'Create Branch'}
+                            {creating ? <RefreshCw size={14} className="animate-spin" /> : (editing ? <Pencil size={14} /> : <Plus size={14} />)} {editing ? 'Save Changes' : 'Create Organization'}
                         </Button>
                     </>
                 }
             >
                 <form onSubmit={saveBranch} className="space-y-4">
                     <p className="text-[12px] text-slate-500">
-                        A branch is a store/location in a city. Name it and pick its city — each branch is managed by one admin.
+                        A organization is a store/location in a city. Name it and pick its city — each organization is managed by one admin.
                     </p>
                     <div>
-                        <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Branch Name <span className="text-rose-600">*</span></label>
+                        <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
                         <input
                             autoFocus
                             value={nb.name}
@@ -417,13 +417,13 @@ export default function BranchesPage() {
             <Modal
                 open={!!deleteTarget}
                 onClose={() => { if (!deletingBranch) setDeleteTarget(null); }}
-                title="Delete Branch"
+                title="Delete Organization"
                 size="sm"
                 footer={
                     <>
                         <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deletingBranch}>Cancel</Button>
                         <Button variant="danger" onClick={doDelete} disabled={deletingBranch}>
-                            {deletingBranch ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete Branch
+                            {deletingBranch ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete Organization
                         </Button>
                     </>
                 }
@@ -434,7 +434,7 @@ export default function BranchesPage() {
                     </div>
                     <div className="text-[13px] text-slate-600">
                         <p className="font-bold text-slate-900 mb-1">Delete “{deleteTarget?.name}”?</p>
-                        <p>This permanently removes the branch and any inventory (products &amp; stock) in it, and unassigns its admin. This cannot be undone.</p>
+                        <p>This permanently removes the organization and any inventory (products &amp; stock) in it, and unassigns its admin. This cannot be undone.</p>
                     </div>
                 </div>
             </Modal>
@@ -443,7 +443,7 @@ export default function BranchesPage() {
             <Modal
                 open={!!selectFor}
                 onClose={() => { if (!assigningId) setSelectFor(null); }}
-                title={`Select admin for ${selectFor?.name || 'branch'}`}
+                title={`Select admin for ${selectFor?.name || 'organization'}`}
                 size="md"
             >
                 {(() => {
@@ -466,7 +466,7 @@ export default function BranchesPage() {
                     }
                     return (
                         <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-                            <p className="text-[12px] text-slate-500 mb-1">Pick an existing internal user to also manage this branch.</p>
+                            <p className="text-[12px] text-slate-500 mb-1">Pick an existing internal user to also manage this organization.</p>
                             {eligible.map(u => (
                                 <button
                                     key={u.id}

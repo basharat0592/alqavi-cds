@@ -25,7 +25,7 @@ import { inventoryService, companyService, supplierService } from '@/lib/api';
 import { paymentsDueService } from '@/services/payment.service';
 
 // Dashboard cards/links only a Super Admin should see (cross-branch administration).
-// Branch admins run day-to-day ops and don't manage branches, staff, roles or
+// Organization admins run day-to-day ops and don't manage branches, staff, roles or
 // global config, so these are hidden from their dashboard.
 const SUPER_ONLY_HREFS = new Set<string>([
     '/admin/branches',
@@ -35,8 +35,8 @@ const SUPER_ONLY_HREFS = new Set<string>([
     '/admin/website-settings',
     '/admin/inventory/warehouses',
     '/admin/company/areas',
-    '/admin/income',   // branch admins use the unified Global Payments page
-    '/admin/expense',  // branch admins use the unified Global Payments page
+    '/admin/income',   // organization admins use the unified Global Payments page
+    '/admin/expense',  // organization admins use the unified Global Payments page
 ]);
 
 // On mobile the Super Admin already has these in the fixed bottom tab bar, so the
@@ -45,7 +45,7 @@ const SUPER_MOBILE_HIDDEN_CARD_HREFS = new Set<string>([
     '/admin/users', '/admin/branches', '/admin/website-settings', '/admin/settings',
 ]);
 
-// For a Branch Admin, only the day-to-day essentials stay as prominent cards; the
+// For a Organization Admin, only the day-to-day essentials stay as prominent cards; the
 // rest drop into the "Other Pages" list. Tweak this set to change what's featured.
 const BRANCH_ADMIN_IMPORTANT_HREFS = new Set<string>([
     // Sales & Orders
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
         }
     }, []);
 
-    // Cross-branch counts for the Super Admin "Business Overview" panel. Branches,
+    // Cross-branch counts for the Super Admin "Business Overview" panel. Organizations,
     // customers and suppliers aren't in the dashboard stats payload, so fetch them
     // directly (products & employees come from the dashboard hook). null = still loading.
     const [overviewCounts, setOverviewCounts] = useState<{ branches: number | null; customers: number | null; suppliers: number | null }>({ branches: null, customers: null, suppliers: null });
@@ -541,7 +541,7 @@ export default function AdminDashboard() {
             keywords: ['config', 'sidebar', 'site details', 'settings', 'configure']
         },
         {
-            name: 'Branches',
+            name: 'Organizations',
             desc: 'Assign warehouses to admins',
             href: '/admin/branches',
             icon: Building2,
@@ -552,7 +552,7 @@ export default function AdminDashboard() {
                 chevron: 'text-[#FBBF24] group-hover:text-[#92600A]',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
             },
-            keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch']
+            keywords: ['organization', 'organizations', 'city', 'assign', 'warehouse admin', 'multi organization']
         },
         {
             name: 'Supplier Registry',
@@ -713,7 +713,7 @@ export default function AdminDashboard() {
         {
             title: 'Administration',
             items: [
-                { name: 'Branches', href: '/admin/branches', icon: Building2, keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch'] },
+                { name: 'Organizations', href: '/admin/branches', icon: Building2, keywords: ['organization', 'organizations', 'city', 'assign', 'warehouse admin', 'multi organization'] },
                 { name: 'Admins', href: '/admin/users', icon: User, keywords: ['staff', 'logins', 'accounts'] },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck, keywords: ['groups', 'privileges', 'ranks'] },
             ]
@@ -774,7 +774,7 @@ export default function AdminDashboard() {
     // Whether a core card stays a big prominent button (vs dropping to the list):
     //  - Super admin â†’ every page they can see is a prominent card (the "All Pages"
     //    directory is hidden for them, so the cards are their full menu).
-    //  - Branch admin â†’ only the day-to-day essential cards.
+    //  - Organization admin â†’ only the day-to-day essential cards.
     const isPromoted = (_groupTitle: string, href: string) =>
         isSuperAdmin
             ? true
@@ -784,7 +784,7 @@ export default function AdminDashboard() {
         .map((g) => ({
             title: g.title,
             items: (g.hrefs.map((h) => coreByHref.get(h)).filter(Boolean) as PageButton[])
-                // Super admin: every page in their groups is a prominent card. Branch
+                // Super admin: every page in their groups is a prominent card. Organization
                 // admin: only the day-to-day essentials stay prominent.
                 .filter((p) => canSee(p.href) && (isSuperAdmin || isPromoted(g.title, p.href))),
         }))
@@ -809,7 +809,7 @@ export default function AdminDashboard() {
     // Products & employees come from the dashboard hook; branches/customers/suppliers
     // from overviewCounts. `value` is null while that count is still loading.
     const businessOverview: { label: string; value: number | null; icon: any; color: string }[] = [
-        { label: 'Total Branches', value: overviewCounts.branches, icon: Building2, color: 'bg-[#F59E0B]/10 text-[#B4780B]' },
+        { label: 'Total Organizations', value: overviewCounts.branches, icon: Building2, color: 'bg-[#F59E0B]/10 text-[#B4780B]' },
         { label: 'Total Admins', value: stats?.activeUsers ?? null, icon: User, color: 'bg-violet-50 text-violet-600' },
         { label: 'Total Products', value: stats?.totalProducts ?? null, icon: Package, color: 'bg-teal-50 text-teal-600' },
         { label: 'Total Customers', value: overviewCounts.customers, icon: Users, color: 'bg-sky-50 text-sky-600' },
@@ -943,7 +943,7 @@ export default function AdminDashboard() {
                             <h1 className="text-[19px] sm:text-[22px] font-bold text-slate-900 leading-tight truncate">
                                 Welcome back{(authService.getUser() as any)?.name ? `, ${((authService.getUser() as any).name).split(' ')[0]}` : ''}
                             </h1>
-                            <p className="text-[12px] text-slate-500">Your business across all branches</p>
+                            <p className="text-[12px] text-slate-500">Your business across all organizations</p>
                         </div>
                     </div>
                 )}
@@ -963,7 +963,7 @@ export default function AdminDashboard() {
                 <div className="flex-1 min-w-0 space-y-6 md:space-y-12 animate-in fade-in duration-300 text-left px-3 md:px-0">
 
                         {/* Shared mobile welcome hero (branch + super admin) */}
-                        <MobileWelcomeHero subtitle={isSuperAdmin ? 'Your business across all branches.' : 'Everything you need, one tap away.'} />
+                        <MobileWelcomeHero subtitle={isSuperAdmin ? 'Your business across all organizations.' : 'Everything you need, one tap away.'} />
 
                         {/* â”€â”€ BRANCH ADMIN â€” MOBILE: 5 nav groups as pills â”€â”€ */}
                         {!isSuperAdmin && (
@@ -1170,7 +1170,7 @@ export default function AdminDashboard() {
                     </aside>
                 </div>
 
-                {/* Branch admins now work from the single "Quick Actions" tile section above;
+                {/* Organization admins now work from the single "Quick Actions" tile section above;
                     the old "All Pages" directory has been removed. */}
             </div>
         </div>

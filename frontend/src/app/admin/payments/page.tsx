@@ -64,7 +64,7 @@ export default function PaymentsPage() {
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     const [myWarehouses, setMyWarehouses] = useState<any[]>([]);
 
-    // Super-admin per-branch payments overview (each branch separately + own).
+    // Super-admin per-organization payments overview (each organization separately + own).
     const [branchOverview, setBranchOverview] = useState<any | null>(null);
     const [branchLoading, setBranchLoading] = useState(false);
     const [toastState, setToastState] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -514,8 +514,8 @@ export default function PaymentsPage() {
                         <Card className="overflow-hidden text-left mb-8 shadow-sm border border-slate-100">
                             <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between">
                                 <div>
-                                    <h3 className="text-[13.5px] font-bold text-slate-900">Per-Branch Payments</h3>
-                                    <p className="text-[11.5px] text-slate-500">Income, expense and net for every branch, plus your own ledger.</p>
+                                    <h3 className="text-[13.5px] font-bold text-slate-900">Per-Organization Payments</h3>
+                                    <p className="text-[11.5px] text-slate-500">Income, expense and net for every organization, plus your own ledger.</p>
                                 </div>
                                 {branchLoading && <RefreshCw size={14} className="animate-spin text-slate-400" />}
                             </div>
@@ -523,7 +523,7 @@ export default function PaymentsPage() {
                                 <table className="w-full text-[12.5px]">
                                     <thead>
                                         <tr className="text-[10px] uppercase tracking-wider text-slate-400 border-b border-slate-100">
-                                            <th className="text-left font-bold px-5 py-2.5">Branch</th>
+                                            <th className="text-left font-bold px-5 py-2.5">Organization</th>
                                             <th className="text-right font-bold px-5 py-2.5">Income</th>
                                             <th className="text-right font-bold px-5 py-2.5">Expense</th>
                                             <th className="text-right font-bold px-5 py-2.5">Net</th>
@@ -551,7 +551,7 @@ export default function PaymentsPage() {
                                         )}
                                         {branchOverview?.unassigned && branchOverview.unassigned.count > 0 && (
                                             <tr className="hover:bg-slate-50/60">
-                                                <td className="px-5 py-2.5 font-semibold text-slate-500 italic">Unassigned (no branch)</td>
+                                                <td className="px-5 py-2.5 font-semibold text-slate-500 italic">Unassigned (no organization)</td>
                                                 <td className="px-5 py-2.5 text-right tabular-nums text-emerald-700">{formatCurrency(branchOverview.unassigned.income)}</td>
                                                 <td className="px-5 py-2.5 text-right tabular-nums text-rose-600">{formatCurrency(branchOverview.unassigned.expense)}</td>
                                                 <td className={`px-5 py-2.5 text-right tabular-nums font-bold ${branchOverview.unassigned.net >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>{formatCurrency(branchOverview.unassigned.net)}</td>
@@ -565,7 +565,7 @@ export default function PaymentsPage() {
                                     {branchOverview?.totals && (
                                         <tfoot>
                                             <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold">
-                                                <td className="px-4 py-2 text-slate-900">All Branches Total</td>
+                                                <td className="px-4 py-2 text-slate-900">All Organizations Total</td>
                                                 <td className="px-4 py-2 text-right tabular-nums text-emerald-700">{formatCurrency(branchOverview.totals.income)}</td>
                                                 <td className="px-4 py-2 text-right tabular-nums text-rose-600">{formatCurrency(branchOverview.totals.expense)}</td>
                                                 <td className={`px-4 py-2 text-right tabular-nums ${branchOverview.totals.net >= 0 ? 'text-[#B4780B]' : 'text-rose-600'}`}>{formatCurrency(branchOverview.totals.net)}</td>
@@ -991,7 +991,7 @@ export default function PaymentsPage() {
                                         <DetailCell label="Type">{isIncome ? 'Income' : 'Expense'}</DetailCell>
                                         <DetailCell label="Person / Company">{p.payer_payee || 'Internal'}</DetailCell>
                                         <DetailCell label="Reference / Txn" mono>{p.reference_number || '—'}</DetailCell>
-                                        <DetailCell label="Branch">{p.warehouse_name || '—'}</DetailCell>
+                                        <DetailCell label="Organization">{p.warehouse_name || '—'}</DetailCell>
                                         <DetailCell label="Recorded By">{p.user_name || '—'}</DetailCell>
                                     </div>
 
@@ -1216,7 +1216,7 @@ function CreateView({ onClose, onSuccess, categories, warehouses = [], isSuperAd
         const e: typeof errors = {};
         if (!formData.amount || amountNum <= 0) e.amount = 'Enter an amount greater than 0';
         if (!formData.category) e.category = 'Choose a category';
-        if (!isSuperAdmin && !formData.warehouse_id) e.warehouse_id = 'Select a branch';
+        if (!isSuperAdmin && !formData.warehouse_id) e.warehouse_id = 'Select a organization';
         setErrors(e);
         return Object.keys(e).length === 0;
     };
@@ -1322,15 +1322,15 @@ function CreateView({ onClose, onSuccess, categories, warehouses = [], isSuperAd
                                 <input type="date" value={formData.date} onChange={e => set('date', e.target.value)} className={inputCls + " cursor-pointer"} />
                             </div>
                             <div>
-                                <Lbl icon={Building2} required={!isSuperAdmin}>Branch</Lbl>
+                                <Lbl icon={Building2} required={!isSuperAdmin}>Organization</Lbl>
                                 {lockBranch ? (
                                     <div className={inputCls + " flex items-center bg-slate-100 border-slate-200 text-slate-600 font-semibold shadow-none"}>
-                                        {warehouses[0]?.name || 'Your branch'}
+                                        {warehouses[0]?.name || 'Your organization'}
                                     </div>
                                 ) : (
                                     <>
                                         <select value={formData.warehouse_id} onChange={e => set('warehouse_id', e.target.value)} className={inputCls + " cursor-pointer" + errCls('warehouse_id')}>
-                                            <option value="">{isSuperAdmin ? 'All / Unassigned' : 'Select branch…'}</option>
+                                            <option value="">{isSuperAdmin ? 'All / Unassigned' : 'Select organization…'}</option>
                                             {warehouses.map((w: any) => (<option key={w.id} value={w.id}>{w.name}</option>))}
                                         </select>
                                         {errors.warehouse_id && <p className="text-[10.5px] text-rose-600 mt-1 font-semibold">{errors.warehouse_id}</p>}

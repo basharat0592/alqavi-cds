@@ -23,7 +23,7 @@ const ALL_HREFS = PAGE_GROUPS.flatMap(g => g.items.map(i => i.href));
 export default function AddSystemUserPage() {
     const router = useRouter();
 
-    // Branch admins only (not the Super Admin, not restricted staff).
+    // Organization admins only (not the Super Admin, not restricted staff).
     const [allowed, setAllowed] = useState<boolean | null>(null);
     useEffect(() => {
         const u: any = authService.getUser();
@@ -148,8 +148,8 @@ export default function AddSystemUserPage() {
                 <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                     <ShieldCheck size={26} />
                 </div>
-                <h2 className="text-[18px] font-bold text-slate-900">Branch admins only</h2>
-                <p className="text-[13px] text-slate-500 mt-2">Only a branch admin can add system users to their workspace.</p>
+                <h2 className="text-[18px] font-bold text-slate-900">Organization admins only</h2>
+                <p className="text-[13px] text-slate-500 mt-2">Only a organization admin can add system users to their workspace.</p>
             </div>
         );
     }

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -83,7 +83,7 @@ export default function ProductsPage() {
     }, [loadData]);
 
     // Auto-refresh (30s). A 2s poll re-pulled the entire inventory + supplier
-    // catalog every tick — far too heavy for the value it added.
+    // catalog every tick â€” far too heavy for the value it added.
     useEffect(() => {
         const timer = setInterval(() => {
             if (!loading && !syncing && !deleting) {
@@ -106,7 +106,7 @@ export default function ProductsPage() {
 
     // Grouped Products: Merge by [Name + Selling Price].
     // Current units come from the REAL Stock table (warehouse + tenant scoped),
-    // counted once per [name|weight|size] variant — the same source the POS and
+    // counted once per [name|weight|size] variant â€” the same source the POS and
     // Current Stocks read. This avoids the denormalized Product.total_quantity
     // drifting / double-counting across duplicate product rows.
     const groupedProducts = useMemo(() => {
@@ -244,7 +244,7 @@ export default function ProductsPage() {
                                                                     </div>
                                                                     {(prod.weight || prod.size) && (
                                                                         <span className="text-[10px] text-[#B4780B] font-black uppercase tracking-tight shrink-0">
-                                                                            — {prod.weight}{prod.weight && prod.size ? ' • ' : ''}{prod.size}
+                                                                            â€” {prod.weight}{prod.weight && prod.size ? ' â€¢ ' : ''}{prod.size}
                                                                         </span>
                                                                     )}
                                                                 </div>

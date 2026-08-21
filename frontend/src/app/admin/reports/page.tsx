@@ -54,7 +54,7 @@ const PERSONAL_CATEGORIES = [
     { id: 'expense', label: 'Expense' },
 ];
 
-// Extra category shown for a branch / All Branches: the branch's system users (staff).
+// Extra category shown for a branch / All Organizations: the branch's system users (staff).
 const SYSTEM_USER_CATEGORY = { id: 'system_users', label: 'System Users' };
 
 const SUB_OPTIONS: Record<string, string[]> = {
@@ -162,7 +162,7 @@ function ReportsEngineInner() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [stocks, setStocks] = useState<any[]>([]);
-    // Super-Admin branch scope: pick a branch and the whole report follows it.
+    // Super-Admin organization scope: pick a organization and the whole report follows it.
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
@@ -218,7 +218,7 @@ function ReportsEngineInner() {
 
     useEffect(() => { loadMeta(); }, [loadMeta]);
 
-    // Branches the Super Admin can scope to: only warehouses actually assigned to a
+    // Organizations the Super Admin can scope to: only warehouses actually assigned to a
     // (non-super) admin. An unassigned branch has no admin running it, so showing it
     // here would just produce empty reports.
     const assignedWarehouses = useMemo(() => {
@@ -230,8 +230,8 @@ function ReportsEngineInner() {
         return warehouses.filter((w: any) => assigned.has(String(w.id)));
     }, [warehouses, users]);
 
-    // Net Profit mode: the Select Branch dropdown picks "Net Profit", and the second
-    // dropdown becomes a SCOPE selector (All Branches / a branch / Personal), held in
+    // Net Profit mode: the Select Organization dropdown picks "Net Profit", and the second
+    // dropdown becomes a SCOPE selector (All Organizations / a branch / Personal), held in
     // filters.category. effectiveBranch is the branch the report is actually scoped to.
     const isNetProfitMode = filters.branch === 'netprofit';
     const effectiveBranch = isNetProfitMode ? filters.category : filters.branch;
@@ -381,7 +381,7 @@ function ReportsEngineInner() {
     const generateReport = async () => {
         if (isNetProfitMode) {
             if (!filters.category) {
-                toast.error('Please select a scope (a branch, All Branches, or Personal).');
+                toast.error('Please select a scope (a organization, All Organizations, or Personal).');
                 return;
             }
         } else if (!filters.category || !filters.view) {
@@ -397,7 +397,7 @@ function ReportsEngineInner() {
 
         // Net Profit — a P&L summary (not a list). Triggered either by the Net Profit
         // view under Payments, or by the dedicated "Net Profit" branch mode whose scope
-        // (All Branches / a branch / Personal) lives in filters.category.
+        // (All Organizations / a branch / Personal) lives in filters.category.
         if (filters.view === 'Net Profit' || isNetProfitMode) {
             setGenerating(true);
             setHasGenerated(true);
@@ -429,7 +429,7 @@ function ReportsEngineInner() {
                     return;
                 }
 
-                // Branch / All Branches scope: P&L from transactions. Server filters by
+                // Organization / All Organizations scope: P&L from transactions. Server filters by
                 // ?warehouse for a super admin, so only the chosen branch's rows return.
                 const branchParam = (isSuperAdmin && effectiveBranch && effectiveBranch !== 'all' && effectiveBranch !== 'personal') ? { warehouse: effectiveBranch } : {};
                 const all = { no_pagination: 'true', ...branchParam };
@@ -537,8 +537,8 @@ function ReportsEngineInner() {
             let result: any[] = [];
 
             if (filters.category === 'system_users') {
-                // A branch's system users (staff). Server returns the branch's staff +
-                // owning admin when a warehouse is given, or everyone for All Branches.
+                // A branch's system users (staff). Server returns the organization's staff +
+                // owning admin when a warehouse is given, or everyone for All Organizations.
                 const params: any = { include_staff: 'true' };
                 if (effectiveBranch && effectiveBranch !== 'all') params.warehouse = effectiveBranch;
                 const res: any = await userService.getAll(params);
@@ -547,9 +547,9 @@ function ReportsEngineInner() {
                 // Income/Expense ledger:
                 //   • Personal     → the Super Admin's own entries (no branch attached)
                 //   • A branch      → that branch's ledger (server filters by ?warehouse)
-                //   • All Branches  → everything
+                //   • All Organizations  → everything
                 const ptype = filters.category === 'income' ? 'inbound' : 'outbound';
-                // "All Branches" must aggregate across every branch — the payments
+                // "All Organizations" must aggregate across every branch — the payments
                 // endpoint otherwise scopes a super admin to their OWN ledger only.
                 const payParams: any = { payment_type: ptype, ...branchAll };
                 if (filters.branch === 'all') payParams.scope = 'all';
@@ -692,14 +692,14 @@ function ReportsEngineInner() {
                         {/* Super Admin: branch scope comes first — the report follows it. */}
                         {isSuperAdmin && (
                             <div className="space-y-1.5">
-                                <label className="text-[13px] font-bold text-slate-900">Select Branch</label>
+                                <label className="text-[13px] font-bold text-slate-900">Select Organization</label>
                                 <select
                                     value={filters.branch}
                                     onChange={e => { setFilters({ ...filters, branch: e.target.value, category: '', view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); setReportResult([]); }}
                                     className={inputCls}
                                 >
-                                    <option value="">Select Branch...</option>
-                                    <option value="all">All Branches</option>
+                                    <option value="">Select Organization...</option>
+                                    <option value="all">All Organizations</option>
                                     {assignedWarehouses.map((w: any) => (
                                         <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                                     ))}
@@ -720,7 +720,7 @@ function ReportsEngineInner() {
                                 {isNetProfitMode ? (
                                     <>
                                         <option value="">Select Scope...</option>
-                                        <option value="all">All Branches</option>
+                                        <option value="all">All Organizations</option>
                                         {assignedWarehouses.map((w: any) => (
                                             <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                                         ))}
@@ -728,7 +728,7 @@ function ReportsEngineInner() {
                                     </>
                                 ) : (
                                     <>
-                                        <option value="">{isSuperAdmin && !filters.branch ? 'Select a branch first…' : 'Choose Category...'}</option>
+                                        <option value="">{isSuperAdmin && !filters.branch ? 'Select a organization first…' : 'Choose Category...'}</option>
                                         {(filters.branch === 'personal' ? PERSONAL_CATEGORIES : [...CATEGORIES, ...PERSONAL_CATEGORIES, SYSTEM_USER_CATEGORY]).map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                                     </>
                                 )}
@@ -939,8 +939,8 @@ function ReportsEngineInner() {
                                         {profitSummary.personal
                                             ? 'Personal'
                                             : (effectiveBranch && effectiveBranch !== 'all'
-                                                ? (warehouses.find((w: any) => String(w.id) === String(effectiveBranch))?.name || 'Branch')
-                                                : 'All Branches')} · {filters.dateFrom} → {filters.dateTo}
+                                                ? (warehouses.find((w: any) => String(w.id) === String(effectiveBranch))?.name || 'Organization')
+                                                : 'All Organizations')} · {filters.dateFrom} → {filters.dateTo}
                                     </p>
                                 </div>
                             </div>

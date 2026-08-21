@@ -1435,9 +1435,9 @@ export default function AddPurchasePage() {
                     </div>
                 </Field>
                 {warehouses.length > 1 && (
-                    <Field label="Branch / Warehouse" required>
+                    <Field label="Organization / Warehouse" required>
                         <select className={selectCls} value={form.warehouse} onChange={e => setForm(f => ({ ...f, warehouse: e.target.value }))}>
-                            <option value="">Select branch</option>
+                            <option value="">Select organization</option>
                             {warehouses.map(w => (
                                 <option key={w.id} value={w.id}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                             ))}

@@ -64,7 +64,7 @@ export default function SuperAdminCharts() {
         paymentService.getByBranch?.()
             .then((d: any) => {
                 const rows = (d?.branches || []).map((b: any) => ({
-                    name: b.warehouse_name || 'Branch', net: Number(b.net || 0),
+                    name: b.warehouse_name || 'Organization', net: Number(b.net || 0),
                 }));
                 setBranches(rows.sort((a: any, b: any) => b.net - a.net).slice(0, 8));
             })
@@ -74,7 +74,7 @@ export default function SuperAdminCharts() {
     return (
         <div className="space-y-4">
             {/* Net by branch — magnitude by identity → bars */}
-            <Panel icon={Building2} title="Net by Branch" subtitle="Income minus expense · per branch">
+            <Panel icon={Building2} title="Net by Organization" subtitle="Income minus expense · per organization">
                 {branches.length ? (
                     <ResponsiveContainer width="100%" height={200}>
                         <BarChart data={branches} margin={{ top: 6, right: 6, left: -12, bottom: 0 }}>
@@ -90,7 +90,7 @@ export default function SuperAdminCharts() {
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div className="h-[200px] flex items-center justify-center text-[12px] text-slate-400">No branch data yet.</div>
+                    <div className="h-[200px] flex items-center justify-center text-[12px] text-slate-400">No organization data yet.</div>
                 )}
             </Panel>
         </div>

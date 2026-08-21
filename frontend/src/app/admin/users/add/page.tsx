@@ -135,7 +135,7 @@ export default function AddUserPage() {
     useEffect(() => {
         roleService.getAll().then(setRoles).catch(() => setRoles([]));
         areaService.getActive().then(setAreas).catch(() => setAreas([]));
-        // Branch assignment is a Super-Admin-only capability. A Super Admin also
+        // Organization assignment is a Super-Admin-only capability. A Super Admin also
         // only ever creates "Admin" users (branch admins); their staff are added
         // by each branch admin within their own branch.
         const superAdmin = authService.isSuperAdmin();
@@ -164,7 +164,7 @@ export default function AddUserPage() {
     }, [isSuperAdmin, roles, form.role]);
 
     // A Super Admin may only assign the "Admin" or "Super Admin" roles. Everyone
-    // else sees the full role list. (Branch admins create their own staff.)
+    // else sees the full role list. (Organization admins create their own staff.)
     const ADMIN_ASSIGNABLE_ROLES = ['admin', 'super admin', 'superadmin'];
     const visibleRoles = isSuperAdmin
         ? roles.filter(r => ADMIN_ASSIGNABLE_ROLES.includes(r.name?.trim().toLowerCase() || ''))
@@ -358,18 +358,18 @@ export default function AddUserPage() {
                                 </div>
                             )}
 
-                            {/* Assigned Branches — appears right under the role field once an
+                            {/* Assigned Organizations — appears right under the role field once an
                                 Admin is selected. A branch admin only sees data for the
                                 warehouse(s) chosen here. */}
                             {showBranches && (
                                 <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 bg-slate-50/40 p-5">
                                     <div className="flex items-center gap-2">
                                         <Store className="w-4 h-4 text-[#B4780B] shrink-0" />
-                                        <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">Assigned Branches</span>
+                                        <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">Assigned Organizations</span>
                                     </div>
                                     <p className="text-xs text-slate-500">
                                         This admin gets their own fully independent workspace — their own products,
-                                        stock, customers, sales and payments. Optionally tag the branch warehouse(s)
+                                        stock, customers, sales and payments. Optionally tag the organization warehouse(s)
                                         they work in (organizational only); it can be left empty.
                                     </p>
 
@@ -434,7 +434,7 @@ export default function AddUserPage() {
                                         <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
                                             <Info className="w-3.5 h-3.5 shrink-0" />
                                             Optional — leaving this empty is fine. This admin starts with their own
-                                            empty workspace and builds their own products, stock and branches.
+                                            empty workspace and builds their own products, stock and organizations.
                                         </p>
                                     )}
                                     {selectedWarehouses.length > 0 && (

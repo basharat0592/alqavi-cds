@@ -424,15 +424,15 @@ export default function EditUserPage() {
                         </div>
                     </div>
 
-                    {/* Assigned Branches — appears right under the role field once an
+                    {/* Assigned Organizations — appears right under the role field once an
                         Admin is selected. A branch admin only sees data for the
                         warehouse(s) chosen here. */}
                     {showBranches && (
                         <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <SectionHeader title="Assigned Branches" icon={Building2} />
+                            <SectionHeader title="Assigned Organizations" icon={Building2} />
                             <p className="text-xs text-slate-500">
                                 This admin has their own fully independent workspace — their own products,
-                                stock, customers, sales and payments. Optionally tag the branch warehouse(s)
+                                stock, customers, sales and payments. Optionally tag the organization warehouse(s)
                                 they work in (organizational only); it can be left empty.
                             </p>
 
@@ -494,7 +494,7 @@ export default function EditUserPage() {
                                 <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
                                     <Info className="w-3.5 h-3.5 shrink-0" />
                                     Optional — leaving this empty is fine. This admin has their own independent
-                                    workspace regardless of branch tagging.
+                                    workspace regardless of organization tagging.
                                 </p>
                             )}
                             {selectedWarehouses.length > 0 && (

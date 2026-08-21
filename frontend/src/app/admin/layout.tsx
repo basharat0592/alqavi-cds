@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
@@ -23,9 +23,9 @@ import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 
-/* ═══════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MOBILE TOP BAR (CLEAN LIGHT THEME)
-   ═══════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, unreadCount, onToggleNotifications, onToggleProfile, showBack, onBack }: {
     onMenuToggle: () => void; showMenu?: boolean; adminName: string; adminAvatar: string | null; unreadCount: number;
     onToggleNotifications: () => void; onToggleProfile: () => void;
@@ -82,10 +82,10 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
     );
 }
 
-/* ═══════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MAIN ADMIN LAYOUT
-   ═══════════════════════════════════════════════ */
-/* Live session timer — shown in the navbar (global across all admin pages) */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* Live session timer â€” shown in the navbar (global across all admin pages) */
 const SESSION_MAX_SECONDS = 24 * 60 * 60; // auto sign-out after 24 hours
 
 function SessionTimer({ className = '', onTimeout }: { className?: string; onTimeout?: () => void }) {
@@ -133,9 +133,9 @@ function SessionTimer({ className = '', onTimeout }: { className?: string; onTim
     );
 }
 
-/* ═══════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SUPER-ADMIN MOBILE BOTTOM NAV (app-style tab bar)
-   ═══════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 /* A bottom-tab that echoes the gradient pill buttons: the active tab is a mini
    gradient circle with a white icon; inactive tabs show a colour-inked icon. */
 function BottomTab({ href, label, icon: Icon, active }: { href: string; label: string; icon: any; active: boolean }) {
@@ -162,12 +162,12 @@ function SuperAdminBottomNav({ pathname }: { pathname: string }) {
             <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="grid grid-cols-5">
                     <BottomTab href="/admin/users" label="Admins" icon={Users} active={isActive('/admin/users')} />
-                    <BottomTab href="/admin/branches" label="Branches" icon={Building2} active={isActive('/admin/branches')} />
+                    <BottomTab href="/admin/branches" label="Organizations" icon={Building2} active={isActive('/admin/branches')} />
                     <div aria-hidden />{/* center slot for the raised Home button */}
                     <BottomTab href="/admin/website-settings" label="CMS" icon={Globe} active={isActive('/admin/website-settings')} />
                     <BottomTab href="/admin/settings" label="Settings" icon={Settings} active={isActive('/admin/settings')} />
                 </div>
-                {/* Raised center Home — gradient fill to match the pill buttons */}
+                {/* Raised center Home â€” gradient fill to match the pill buttons */}
                 <Link
                     href="/admin/dashboard"
                     aria-label="Dashboard"
@@ -181,7 +181,7 @@ function SuperAdminBottomNav({ pathname }: { pathname: string }) {
     );
 }
 
-/* App-style bottom tab bar for BRANCH ADMINS (mobile only) — same design as the
+/* App-style bottom tab bar for BRANCH ADMINS (mobile only) â€” same design as the
    super-admin bar, but with the branch's day-to-day quick actions. */
 function BranchAdminBottomNav({ pathname }: { pathname: string }) {
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
@@ -195,7 +195,7 @@ function BranchAdminBottomNav({ pathname }: { pathname: string }) {
                     <BottomTab href="/admin/inventory/list" label="Stock" icon={Boxes} active={isActive('/admin/inventory/list')} />
                     <BottomTab href="/admin/purchases/add" label="Purchase" icon={ShoppingCart} active={isActive('/admin/purchases/add')} />
                 </div>
-                {/* Raised center Home — gradient fill to match the pill buttons */}
+                {/* Raised center Home â€” gradient fill to match the pill buttons */}
                 <Link
                     href="/admin/dashboard"
                     aria-label="Dashboard"
@@ -257,7 +257,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [actLoading, setActLoading] = useState(false);
 
-    // Restore the collapse preference on mount only — reading it in useState would
+    // Restore the collapse preference on mount only â€” reading it in useState would
     // run on the server and mismatch the first client render.
     useEffect(() => {
         try {
@@ -265,7 +265,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         } catch { /* private mode / storage disabled */ }
     }, []);
 
-    /* Fullscreen — hands the whole viewport to the admin, which matters on the
+    /* Fullscreen â€” hands the whole viewport to the admin, which matters on the
        wide data grids. Vendor-prefixed calls are kept for older Safari/WebKit. */
     const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -293,7 +293,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             }
         } catch {
             // Browsers reject this unless it comes from a user gesture, and some
-            // block it outright — leave the UI as-is rather than surfacing noise.
+            // block it outright â€” leave the UI as-is rather than surfacing noise.
         }
     };
 
@@ -322,8 +322,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             setAdminId(user.id || '');
             const wh = (user as any).warehouses;
             setBranchLabel(authService.isSuperAdmin()
-                ? 'All Branches'
-                : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No branch'));
+                ? 'All Organizations'
+                : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No organization'));
         }
 
         const loadSettings = async () => {
@@ -345,8 +345,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     setAdminId(p.id);
                     const wh = (p as any).warehouses;
                     setBranchLabel((p as any).is_super_admin
-                        ? 'All Branches'
-                        : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No branch'));
+                        ? 'All Organizations'
+                        : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No organization'));
                 }
             } catch { }
         };
@@ -456,17 +456,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <AuthGuard allowedRoles={['admin', 'staff']}>
             <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-row font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
 
-                {/* ═══ SIDEBAR — desktop only; mobile navigates via the bottom tab bar ═══ */}
+                {/* â•â•â• SIDEBAR â€” desktop only; mobile navigates via the bottom tab bar â•â•â• */}
                 <div className="hidden md:block h-full shrink-0 print:hidden">
                     <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
                 </div>
 
-                {/* ═══ RIGHT CONTAINER (Navbar + Main Content) ═══ */}
+                {/* â•â•â• RIGHT CONTAINER (Navbar + Main Content) â•â•â• */}
                 <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
-                    {/* Mobile top bar is hidden for everyone — nav is via the dashboard
+                    {/* Mobile top bar is hidden for everyone â€” nav is via the dashboard
                         pills/tiles + the fixed bottom tab bar on all mobile pages. */}
 
-                    {/* ═══ MOBILE NOTIFICATIONS PANEL ═══ */}
+                    {/* â•â•â• MOBILE NOTIFICATIONS PANEL â•â•â• */}
                     {notifOpen && (
                         <div className="fixed inset-0 z-[150] md:hidden" onClick={() => setNotifOpen(false)}>
                             <div ref={mobileNotifRef} className="absolute top-[52px] right-2 w-[calc(100vw-16px)] max-w-sm" onClick={e => e.stopPropagation()}>
@@ -475,7 +475,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     )}
 
-                    {/* ═══ MOBILE PROFILE PANEL ═══ */}
+                    {/* â•â•â• MOBILE PROFILE PANEL â•â•â• */}
                     {profileOpen && (
                         <>
                             <div className="fixed inset-0 z-[200] md:hidden" onClick={() => setProfileOpen(false)} />
@@ -485,7 +485,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </>
                     )}
 
-                    {/* ═══ NAVBAR (takes remaining width) ═══ */}
+                    {/* â•â•â• NAVBAR (takes remaining width) â•â•â• */}
                     <div className="hidden md:flex h-[66px] w-full flex-shrink-0 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-[0_1px_0_rgba(15,23,42,0.03),0_6px_20px_-12px_rgba(15,23,42,0.15)] sticky top-0 transition-colors duration-300 print:hidden">
 
                         <div className="flex items-center gap-4 flex-1">
@@ -561,7 +561,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                             </div>
                                         ) : (
                                             <div className="px-4 py-6 text-center text-[12.5px] text-slate-400">
-                                                No pages found for “{searchQuery}”
+                                                No pages found for â€œ{searchQuery}â€
                                             </div>
                                         )}
                                     </div>
@@ -572,14 +572,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         {/* Actions */}
                         <div className="flex items-center gap-3">
                             {/* Hide the branch badge entirely for users with no branch (e.g. staff). */}
-                            {branchLabel && branchLabel !== 'No branch' && (
+                            {branchLabel && branchLabel !== 'No organization' && (
                                 <div
-                                    title={branchLabel === 'All Branches' ? 'You can see every branch' : `Your branch: ${branchLabel}`}
+                                    title={branchLabel === 'All Organizations' ? 'You can see every organization' : `Your organization: ${branchLabel}`}
                                     className={cn(
                                         "hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold select-none",
-                                        branchLabel === 'All Branches'
+                                        branchLabel === 'All Organizations'
                                             ? "bg-[#F59E0B]/10 border-[#F59E0B]/25 text-[#B4780B]"
-                                            : branchLabel === 'No branch'
+                                            : branchLabel === 'No organization'
                                                 ? "bg-rose-50 border-rose-200 text-rose-600"
                                                 : "bg-slate-50 border-slate-200 text-slate-600"
                                     )}
@@ -589,7 +589,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </div>
                             )}
                             <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
-                            {/* Dues pill removed from the navbar for all admins — it lives on System Alerts. */}
+                            {/* Dues pill removed from the navbar for all admins â€” it lives on System Alerts. */}
                             <button
                                 onClick={toggleFullscreen}
                                 title={isFullscreen ? 'Exit full screen (Esc)' : 'Full screen'}
@@ -638,10 +638,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     </div>
 
-                    {/* ═══ TOP MENU BAR (5 groups) — shown on the dashboard only ═══ */}
+                    {/* â•â•â• TOP MENU BAR (5 groups) â€” shown on the dashboard only â•â•â• */}
                     {pathname === '/admin/dashboard' && <DesktopNavMenu />}
 
-                    {/* ═══ MAIN CONTENT ═══ */}
+                    {/* â•â•â• MAIN CONTENT â•â•â• */}
                     <main className={cn(
                         "flex-1 overflow-y-auto px-3 py-3 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white",
                         isSuperAdminUser && "pb-24 lg:pb-8"
@@ -652,7 +652,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </main>
                 </div>
 
-                {/* App-style bottom tab bar — mobile only (per role) */}
+                {/* App-style bottom tab bar â€” mobile only (per role) */}
                 {isSuperAdminUser
                     ? <SuperAdminBottomNav pathname={pathname} />
                     : <BranchAdminBottomNav pathname={pathname} />}

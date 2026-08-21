@@ -93,7 +93,7 @@ export default function DeliveryPersonsPage() {
                             <th className="px-6 py-3">Rider</th>
                             <th className="px-6 py-3">Contact</th>
                             <th className="px-6 py-3">Vehicle</th>
-                            <th className="px-6 py-3">Branch</th>
+                            <th className="px-6 py-3">Organization</th>
                             <th className="px-6 py-3 text-center">Deliveries</th>
                             <th className="px-6 py-3 text-center">Status</th>
                             <th className="px-6 py-3 text-right">Actions</th>

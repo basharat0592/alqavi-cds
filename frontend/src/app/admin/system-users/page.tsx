@@ -100,8 +100,8 @@ export default function SystemUsersPage() {
                 <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                     <ShieldCheck size={26} />
                 </div>
-                <h2 className="text-[18px] font-bold text-slate-900">Branch admins only</h2>
-                <p className="text-[13px] text-slate-500 mt-2">Only a branch admin can manage their own system users.</p>
+                <h2 className="text-[18px] font-bold text-slate-900">Organization admins only</h2>
+                <p className="text-[13px] text-slate-500 mt-2">Only a organization admin can manage their own system users.</p>
             </div>
         );
     }

@@ -409,7 +409,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
             .catch(() => setPrevBalance(0));
     }, [customerId]);
 
-    // Source warehouse = the logged-in branch admin's own branch. There's no picker;
+    // Source warehouse = the logged-in branch admin's own organization. There's no picker;
     // we auto-select their assigned warehouse (falling back to the first available).
     useEffect(() => {
         if (warehouseId) return;
@@ -1581,7 +1581,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                 <div className="grid grid-cols-1 gap-2">
                                     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1"><MapPin size={12} /> Pickup</div>
-                                        <p className="text-[12.5px] font-semibold text-slate-800">{wh?.name || 'Branch'}</p>
+                                        <p className="text-[12.5px] font-semibold text-slate-800">{wh?.name || 'Organization'}</p>
                                         {wh?.location && <p className="text-[11px] text-slate-500">{wh.location}</p>}
                                     </div>
                                     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">
@@ -1617,7 +1617,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     ))}
                                 </select>
                             ) : (
-                                <p className="text-[11px] text-slate-500 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">Offered to every branch rider — the first to accept gets the delivery.</p>
+                                <p className="text-[11px] text-slate-500 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">Offered to every organization rider — the first to accept gets the delivery.</p>
                             )}
 
                             {/* Delivery price offered — hidden for a System (salaried) rider */}
@@ -1662,7 +1662,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 </div>
 
                 <p className="text-[13px] text-slate-600">
-                    This branch doesn't have enough units for this order. Please adjust the quantities.
+                    This organization doesn't have enough units for this order. Please adjust the quantities.
                 </p>
             </Modal>
         </div>

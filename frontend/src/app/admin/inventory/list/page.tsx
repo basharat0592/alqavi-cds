@@ -154,25 +154,25 @@ const AssignLocationModal = ({ isOpen, onClose, onConfirm, warehouses, loading }
                         <div className="w-9 h-9 bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-lg flex items-center justify-center text-[#B4780B]">
                             <MapPin size={18} />
                         </div>
-                        <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Assign Branch</h3>
+                        <h3 className="text-[15px] font-bold text-slate-900 tracking-tight">Assign Organization</h3>
                     </div>
                     <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"><X size={18} /></button>
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Select Branch</label>
+                        <label className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Select Organization</label>
                         <select
                             className={selectCls + " text-[14px]"}
                             value={selected}
                             onChange={e => setSelected(e.target.value)}
                             autoFocus
                         >
-                            <option value="" disabled>Choose target branch...</option>
+                            <option value="" disabled>Choose target organization...</option>
                             {warehouses.map((w: any) => (
                                 <option key={w.id} value={w.id}>{w.name}</option>
                             ))}
                         </select>
-                        <p className="text-[11px] text-slate-400 italic mt-2">This will assign the selected batch signature to the branch chosen above.</p>
+                        <p className="text-[11px] text-slate-400 italic mt-2">This will assign the selected batch signature to the organization chosen above.</p>
                     </div>
                 </div>
                 <div className="px-8 py-5 bg-slate-50/60 border-t border-slate-100 flex justify-end gap-3">
@@ -552,7 +552,7 @@ export default function InventoryListPage() {
                                         onChange={e => setSelectedWarehouse(e.target.value)}
                                         className={`${selectCls} font-semibold`}
                                     >
-                                        <option value="">All Branches</option>
+                                        <option value="">All Organizations</option>
                                         {warehouses.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
                                     </select>
                                 </div>
@@ -645,7 +645,7 @@ export default function InventoryListPage() {
                                                         onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
                                                         className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] hover:bg-[#F59E0B]/15 rounded text-[9px] font-bold transition-all"
                                                     >
-                                                        <Plus size={8} strokeWidth={3} /> Assign Branch
+                                                        <Plus size={8} strokeWidth={3} /> Assign Organization
                                                     </button>
                                                 )}
                                             </div>
@@ -782,7 +782,7 @@ export default function InventoryListPage() {
                                                                 onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
                                                                 className="inline-flex items-center gap-1.5 mt-1 px-2 py-1 border border-dashed border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] hover:bg-[#F59E0B]/15 hover:border-solid rounded-lg text-[10px] font-bold transition-all animate-pulse shadow-sm"
                                                             >
-                                                                <Plus size={10} strokeWidth={3} /> Assign Branch
+                                                                <Plus size={10} strokeWidth={3} /> Assign Organization
                                                             </button>
                                                         )}
                                                     </div>
@@ -942,9 +942,9 @@ export default function InventoryListPage() {
                                                 {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                             </select>
                                         </Field>
-                                        <Field label="Target Branch" required>
+                                        <Field label="Target Organization" required>
                                             <select className={selectCls} value={form.warehouse} onChange={(e) => setForm((f: any) => ({ ...f, warehouse: e.target.value }))}>
-                                                <option value="">Select Branch</option>
+                                                <option value="">Select Organization</option>
                                                 {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                                             </select>
                                         </Field>
@@ -1014,7 +1014,7 @@ export default function InventoryListPage() {
 
                             <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-2xl p-5 text-[12px] text-[#B4780B] leading-relaxed shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <p className="font-bold mb-2 uppercase tracking-wide">Stock Policy</p>
-                                Adding stock arrival will automatically increase the recorded units in the specific branch chosen.
+                                Adding stock arrival will automatically increase the recorded units in the specific organization chosen.
                             </div>
                         </div>
                     </div>
@@ -1027,7 +1027,7 @@ export default function InventoryListPage() {
                 onConfirm={handleDelete}
                 loading={isSubmitting}
                 title={`Delete '${deleteModal.name.replace(/\s*\(.*?\)\s*$/, '')}'?`}
-                message={`This will remove the product from ALL branches. Are you sure you want to permanently delete it from the entire inventory?`}
+                message={`This will remove the product from ALL organizations. Are you sure you want to permanently delete it from the entire inventory?`}
             />
 
             <AssignLocationModal

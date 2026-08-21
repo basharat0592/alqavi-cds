@@ -473,8 +473,8 @@ export default function SaleDetailView({
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400 font-medium">Branch</span>
-                                    <span className="font-semibold text-slate-700">{order.warehouse_name || 'Main Branch'}</span>
+                                    <span className="text-slate-400 font-medium">Organization</span>
+                                    <span className="font-semibold text-slate-700">{order.warehouse_name || 'Main Organization'}</span>
                                 </div>
                                 {order.salesperson_name && (
                                     <div className="flex justify-between items-center">
@@ -576,10 +576,10 @@ export default function SaleDetailView({
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Branch (Selected)</label>
+                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Organization (Selected)</label>
                                 <p className="font-semibold text-slate-800 mt-1 flex items-center gap-1.5">
                                     <Warehouse size={14} className="text-slate-400" />
-                                    {warehouses.find(w => w.id === selectedInstallment.warehouse)?.name || 'Default Branch'}
+                                    {warehouses.find(w => w.id === selectedInstallment.warehouse)?.name || 'Default Organization'}
                                 </p>
                             </div>
 

@@ -72,7 +72,7 @@ export const NAV_GROUPS: Group[] = [
             { name: 'View Store', href: '/', icon: Store },
             { name: 'Notifications', href: '/admin/notifications', icon: Bell },
             { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },
-            { name: 'Branches', href: '/admin/branches', icon: Building2 },
+            { name: 'Organizations', href: '/admin/branches', icon: Building2 },
             { name: 'Admins', href: '/admin/users', icon: User },
             { name: 'Areas / Territories', href: '/admin/company/areas', icon: MapPin },
             { name: 'Website CMS', href: '/admin/website-settings', icon: Globe },

@@ -457,7 +457,7 @@ export default function SettingsPage() {
                         <div className="p-8">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
                                 {ADMIN_PAGE_GROUPS.map(g => {
-                                    // Branch admins can't see/toggle Super-Admin-only pages;
+                                    // Organization admins can't see/toggle Super-Admin-only pages;
                                     // a super admin can't toggle pages hidden from them either.
                                     const items = g.items.filter(i =>
                                         (isSuperAdmin || !SUPER_ONLY_HREFS.includes(i.h)) &&
