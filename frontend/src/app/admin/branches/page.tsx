@@ -89,7 +89,7 @@ export default function BranchesPage() {
     const saveBranch = async (e?: React.SyntheticEvent) => {
         e?.preventDefault();
         if (!nb.name.trim()) return toast.error('Organization name is required');
-        if (nb.area === '__new__' && !nb.newCity.trim()) return toast.error('Enter the new city name');
+        if (editing && nb.area === '__new__' && !nb.newCity.trim()) return toast.error('Enter the new city name');
         if (!editing && !nb.email.trim()) return toast.error("Enter the admin's email — the invite is sent to it");
         setCreating(true);
         try {
@@ -113,13 +113,13 @@ export default function BranchesPage() {
                 // Creating an organization creates the org row AND a pending
                 // invite; the admin account itself is only created when the
                 // invitee opens the link. The link comes back here to be copied.
+                // No address/area: the organization's own admin sets those when
+                // they accept the invite.
                 const invite = await onboardingService.createOrganization({
                     organization_name: nb.name.trim(),
                     email: nb.email.trim(),
                     admin_name: nb.adminName.trim(),
                     phone: nb.phone.trim(),
-                    address: nb.address.trim(),
-                    area: areaId,
                 });
                 setShowNew(false);
                 setLinkFor(invite);
@@ -586,7 +586,7 @@ export default function BranchesPage() {
                     <p className="text-[12px] text-slate-500">
                         {editing
                             ? 'Rename the organization or move it to a different city.'
-                            : 'Name the organization and say who will run it. We create the organization now and give you a link to send them — they set their own password and finish the details.'}
+                            : 'Name the organization and say who will run it. We create the organization now and give you a link to send them — they set their own password and fill in their city and address.'}
                     </p>
                     <div>
                         <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
@@ -598,38 +598,45 @@ export default function BranchesPage() {
                             placeholder="e.g. Gilgit Main Store"
                         />
                     </div>
-                    <div>
-                        <label className="block text-[12px] font-bold text-slate-700 mb-1.5">City</label>
-                        <select
-                            value={nb.area}
-                            onChange={e => setNb(p => ({ ...p, area: e.target.value }))}
-                            className={ui.inputBase}
-                        >
-                            <option value="">— No city —</option>
-                            {areas.map(a => <option key={a.id} value={String(a.id)}>{a.name}{a.code ? ` (${a.code})` : ''}</option>)}
-                            <option value="__new__">+ Add a new city…</option>
-                        </select>
-                    </div>
-                    {nb.area === '__new__' && (
-                        <div>
-                            <label className="block text-[12px] font-bold text-slate-700 mb-1.5">New City Name <span className="text-rose-600">*</span></label>
-                            <input
-                                value={nb.newCity}
-                                onChange={e => setNb(p => ({ ...p, newCity: e.target.value }))}
-                                className={ui.inputBase}
-                                placeholder="e.g. Hunza"
-                            />
-                        </div>
+                    {/* City and address belong to the organization, so its own admin
+                        fills them in during onboarding. They stay editable here for an
+                        organization that already exists. */}
+                    {editing && (
+                        <>
+                            <div>
+                                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">City</label>
+                                <select
+                                    value={nb.area}
+                                    onChange={e => setNb(p => ({ ...p, area: e.target.value }))}
+                                    className={ui.inputBase}
+                                >
+                                    <option value="">— No city —</option>
+                                    {areas.map(a => <option key={a.id} value={String(a.id)}>{a.name}{a.code ? ` (${a.code})` : ''}</option>)}
+                                    <option value="__new__">+ Add a new city…</option>
+                                </select>
+                            </div>
+                            {nb.area === '__new__' && (
+                                <div>
+                                    <label className="block text-[12px] font-bold text-slate-700 mb-1.5">New City Name <span className="text-rose-600">*</span></label>
+                                    <input
+                                        value={nb.newCity}
+                                        onChange={e => setNb(p => ({ ...p, newCity: e.target.value }))}
+                                        className={ui.inputBase}
+                                        placeholder="e.g. Hunza"
+                                    />
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Address <span className="text-slate-400 font-medium">(optional)</span></label>
+                                <input
+                                    value={nb.address}
+                                    onChange={e => setNb(p => ({ ...p, address: e.target.value }))}
+                                    className={ui.inputBase}
+                                    placeholder="e.g. Plot 42, Main Bazaar"
+                                />
+                            </div>
+                        </>
                     )}
-                    <div>
-                        <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Address <span className="text-slate-400 font-medium">(optional)</span></label>
-                        <input
-                            value={nb.address}
-                            onChange={e => setNb(p => ({ ...p, address: e.target.value }))}
-                            className={ui.inputBase}
-                            placeholder="e.g. Plot 42, Main Bazaar"
-                        />
-                    </div>
                     {!editing && (
                         <div className="pt-4 mt-1 border-t border-slate-200 space-y-4">
                             <div className="flex items-center gap-2">
