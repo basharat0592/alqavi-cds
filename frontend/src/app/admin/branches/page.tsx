@@ -37,6 +37,7 @@ export default function BranchesPage() {
     const [linkFor, setLinkFor] = useState<OrgInvite | null>(null);
     const [copied, setCopied] = useState(false);
     const [busyInvite, setBusyInvite] = useState<number | null>(null);
+    const [togglingId, setTogglingId] = useState<any>(null);
     const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [deletingBranch, setDeletingBranch] = useState(false);
 
@@ -138,6 +139,27 @@ export default function BranchesPage() {
             toast.error(String(first || (editing ? 'Failed to update organization' : 'Failed to create organization')));
         } finally {
             setCreating(false);
+        }
+    };
+
+    // Deactivating an organization suspends it: the backend then refuses both a
+    // login and any request carrying an already-issued token from anyone whose
+    // organizations are all deactivated.
+    const toggleActive = async (wh: any) => {
+        const next = !(wh.is_active ?? true);
+        setTogglingId(wh.id);
+        // Flip locally first so the switch responds immediately, and put it back
+        // if the write fails -- a switch that silently stayed wrong would be read
+        // as the organization having been suspended when it had not.
+        setWarehouses(list => list.map(w => (w.id === wh.id ? { ...w, is_active: next } : w)));
+        try {
+            await inventoryService.updateWarehouse(wh.id, { is_active: next });
+            toast.success(next ? `${wh.name} activated` : `${wh.name} deactivated — its admins can no longer sign in`);
+        } catch {
+            setWarehouses(list => list.map(w => (w.id === wh.id ? { ...w, is_active: !next } : w)));
+            toast.error('Could not change the status');
+        } finally {
+            setTogglingId(null);
         }
     };
 
@@ -407,11 +429,12 @@ export default function BranchesPage() {
                         </div>
 
                         <div className={ui.tableWrap}>
-                            <table className={ui.table + ' min-w-[940px]'}>
+                            <table className={ui.table + ' min-w-[1040px]'}>
                                 <thead className="sticky top-0 z-10">
                                     <tr>
                                         <th className={ui.th}>Organization</th>
                                         <th className={ui.th}>Area</th>
+                                        <th className={ui.th}>Status</th>
                                         <th className={ui.th + ' text-right'}>Products</th>
                                         <th className={ui.th}>Admins</th>
                                         <th className={ui.th + ' text-right'}>Actions</th>
@@ -421,8 +444,9 @@ export default function BranchesPage() {
                                     {pageRows.map((wh, idx) => {
                                         const admins = adminsFor(wh.id);
                                         const invite = inviteFor(wh.id);
+                                        const active = wh.is_active ?? true;
                                         return (
-                                            <tr key={wh.id} className={`${idx % 2 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group`}>
+                                            <tr key={wh.id} className={`${idx % 2 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group ${active ? '' : 'opacity-60'}`}>
                                                 <td className={ui.td + ' relative'}>
                                                     <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-transparent group-hover:bg-[#F59E0B] transition-colors" />
                                                     <div className="flex items-center gap-2.5 min-w-0">
@@ -443,6 +467,24 @@ export default function BranchesPage() {
                                                     ) : (
                                                         <span className="text-[11.5px] text-slate-400 italic">No city</span>
                                                     )}
+                                                </td>
+                                                <td className={ui.td}>
+                                                    <button
+                                                        type="button"
+                                                        role="switch"
+                                                        aria-checked={active}
+                                                        disabled={togglingId === wh.id}
+                                                        onClick={() => toggleActive(wh)}
+                                                        title={active ? 'Deactivate this organization' : 'Activate this organization'}
+                                                        className="inline-flex items-center gap-2 group/sw disabled:opacity-50"
+                                                    >
+                                                        <span className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${active ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                                                            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${active ? 'left-[18px]' : 'left-0.5'}`} />
+                                                        </span>
+                                                        <span className={`text-[11px] font-bold uppercase tracking-wider ${active ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                                            {active ? 'Active' : 'Off'}
+                                                        </span>
+                                                    </button>
                                                 </td>
                                                 <td className={ui.td + ' text-right'}>
                                                     {Number(wh.stock_count || 0) > 0 ? (
@@ -555,6 +597,9 @@ export default function BranchesPage() {
                             {filtersOn && <> of <b className="text-slate-700 tabular-nums">{warehouses.length}</b></>}
                             {' · '}
                             <b className="text-slate-700 tabular-nums">{rows.filter(w => adminsFor(w.id).length === 0).length}</b> without an admin
+                            {rows.some(w => !(w.is_active ?? true)) && (
+                                <> · <b className="text-slate-700 tabular-nums">{rows.filter(w => !(w.is_active ?? true)).length}</b> deactivated</>
+                            )}
                         </div>
                         <Pagination
                             page={page}

@@ -297,8 +297,24 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 data = super().validate(auth_attrs)
                 user = self.user
                 
+                # Without this the login would succeed and every request after
+                # it would fail on the authentication guard, which reads as a
+                # broken app rather than a suspended organization.
+                from core.scoping import suspended_organization_names
+                suspended = suspended_organization_names(user)
+                if suspended:
+                    raise serializers.ValidationError({
+                        'detail': f"{', '.join(suspended)} is deactivated. Contact your administrator."
+                    })
+
                 data['user'] = build_user_payload(user)
                 return data
+            except serializers.ValidationError:
+                # A deliberate rejection (suspended organization), not a failed
+                # password. The blanket except below would swallow it and fall
+                # through to the supplier/customer tables, turning a clear
+                # message into "invalid credentials".
+                raise
             except Exception:
                 # If standard login fails, continue to check Supplier/Customer tables
                 pass

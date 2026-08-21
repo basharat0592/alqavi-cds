@@ -130,6 +130,42 @@ def user_warehouse_ids(user):
         return set()
 
 
+def suspended_organization_names(user):
+    """The user's organizations, when EVERY one of them is deactivated.
+
+    Deactivating an organization suspends it: nobody who belongs to it can sign
+    in or use the API. Returns a list of names in that case, otherwise an empty
+    list.
+
+    Not applicable to:
+      * the platform operator (super admin / superuser) -- they span every
+        organization and are not a member of any one of them;
+      * supplier / customer / delivery shadow logins -- governed by their own
+        is_active flags;
+      * a staff user with no organization at all -- that is not a suspension,
+        and branch scoping already fails them closed.
+
+    A user assigned to several organizations stays active while ANY of them is,
+    so deactivating one branch of a multi-branch admin does not lock them out.
+    """
+    if not user or not getattr(user, 'is_authenticated', False):
+        return []
+    if (getattr(user, 'is_supplier', False) or getattr(user, 'is_customer', False)
+            or getattr(user, 'is_delivery', False)):
+        return []
+    if is_unscoped_admin(user):
+        return []
+    try:
+        rows = list(user.warehouses.values_list('name', 'is_active'))
+    except Exception:
+        return []
+    if not rows:
+        return []
+    if any(active for _, active in rows):
+        return []
+    return [name for name, _ in rows]
+
+
 def scope_queryset(user, queryset, field='warehouse'):
     """Filter a queryset to the user's assigned branch(es).
 
