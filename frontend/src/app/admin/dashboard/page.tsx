@@ -164,7 +164,7 @@ function MobileWelcomeHero({ subtitle }: { subtitle: string }) {
 }
 
 export default function AdminDashboard() {
-    const { stats, products, lowStock: serverLowStock, loading, revenueData30, recentOrders, activityLogs } = useAdminDashboard();
+    const { stats, products, lowStock: serverLowStock, loading, revenueData30, activityLogs } = useAdminDashboard();
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     // Pages this user may open (null = full access). Mirrors the sidebar so the
     // dashboard only shows cards for pages the user actually has access to.
@@ -953,7 +953,7 @@ export default function AdminDashboard() {
                     job here is monitoring, so the numbers lead and navigation follows. */}
                 {isSuperAdmin && (
                     <div className="px-3 md:px-0 mb-6 md:mb-8">
-                        <SuperAdminOverview revenueData={revenueData30} stats={stats} recentOrders={recentOrders} lowStock={serverLowStock} activityLogs={activityLogs} />
+                        <SuperAdminOverview revenueData={revenueData30} stats={stats} lowStock={serverLowStock} activityLogs={activityLogs} />
                     </div>
                 )}
 
