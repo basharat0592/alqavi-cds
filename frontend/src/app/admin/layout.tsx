@@ -246,7 +246,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminRole, setAdminRole] = useState('');
     const [adminId, setAdminId] = useState<string | number>('');
     const [branchLabel, setBranchLabel] = useState('');
-    const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
+    const [isSuperAdminUser, setIsSuperAdminUser] = useState<boolean | null>(null);
 
     // Settings & Display
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -638,8 +638,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     </div>
 
-                    {/* â•â•â• TOP MENU BAR (5 groups) â€” shown on the dashboard only â•â•â• */}
-                    {pathname === '/admin/dashboard' && <DesktopNavMenu />}
+                    {/* â•â•â• TOP MENU BAR (5 groups) â€” branch admin dashboard only; the super
+                        admin navigates from the sidebar instead â•â•â• */}
+                    {pathname === '/admin/dashboard' && isSuperAdminUser === false && <DesktopNavMenu />}
 
                     {/* â•â•â• MAIN CONTENT â•â•â• */}
                     <main className={cn(
