@@ -5,8 +5,7 @@ import {
     ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
 import {
-    TrendingUp, Building2, Users, Truck, ArrowDownLeft, ArrowUpRight,
-    Wallet, Receipt, ShoppingBag,
+    TrendingUp, Building2, ShoppingBag, PackageX, Activity, Clock,
 } from 'lucide-react';
 import { paymentService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
@@ -62,42 +61,16 @@ function Panel({ icon: Icon, title, subtitle, children, className = '' }: any) {
     );
 }
 
-function Kpi({ icon: Icon, label, value, sub, tone = 'slate' }: {
-    icon: any; label: string; value: string; sub?: string;
-    tone?: 'slate' | 'amber' | 'emerald' | 'rose';
-}) {
-    const tones = {
-        slate: 'text-slate-900',
-        amber: 'text-[#B4780B]',
-        emerald: 'text-emerald-700',
-        rose: 'text-rose-600',
-    } as const;
-    const chips = {
-        slate: 'bg-slate-100 text-slate-500',
-        amber: 'bg-[#F59E0B]/12 text-[#B4780B]',
-        emerald: 'bg-emerald-50 text-emerald-600',
-        rose: 'bg-rose-50 text-rose-600',
-    } as const;
-    return (
-        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-3.5 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-                <span className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${chips[tone]}`}><Icon size={14} /></span>
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 truncate">{label}</span>
-            </div>
-            <div className={`text-[19px] font-black tabular-nums leading-none truncate ${tones[tone]}`}>{value}</div>
-            {sub && <div className="text-[11px] text-slate-400 font-medium mt-1 truncate">{sub}</div>}
-        </div>
-    );
-}
-
 type BranchRow = { name: string; income: number; expense: number; net: number; count: number };
 
-export default function SuperAdminOverview({ revenueData, counts }: {
+export default function SuperAdminOverview({ revenueData, stats, recentOrders, lowStock, activityLogs }: {
     revenueData: RevenueDataPoint[];
-    counts?: { branches: number | null; customers: number | null; suppliers: number | null };
+    stats?: any;
+    recentOrders?: any[];
+    lowStock?: any[];
+    activityLogs?: any[];
 }) {
     const [branches, setBranches] = useState<BranchRow[]>([]);
-    const [totals, setTotals] = useState<{ income: number; expense: number; net: number; count: number } | null>(null);
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
@@ -111,15 +84,6 @@ export default function SuperAdminOverview({ revenueData, counts }: {
                     count: Number(b.count || 0),
                 }));
                 setBranches(rows.sort((a, b) => b.net - a.net));
-                const t = d?.totals;
-                if (t) {
-                    setTotals({
-                        income: Number(t.income || 0),
-                        expense: Number(t.expense || 0),
-                        net: Number(t.net || 0),
-                        count: Number(t.count || 0),
-                    });
-                }
             })
             .catch(() => { /* leave empty; the panels show their own empty state */ })
             .finally(() => setLoaded(true));
@@ -127,38 +91,31 @@ export default function SuperAdminOverview({ revenueData, counts }: {
 
     const trend = (revenueData || []).map((r) => ({ date: r.date, sales: Number(r.sales ?? r.revenue ?? 0) }));
     const hasTrend = trend.some((t) => t.sales > 0);
-    const totalSales = trend.reduce((s, t) => s + t.sales, 0);
-    const totalOrders = (revenueData || []).reduce((s, r: any) => s + Number(r.orders ?? 0), 0);
-    const avgDay = trend.length ? totalSales / trend.length : 0;
-    const peakDay = trend.reduce((m, t) => (t.sales > m ? t.sales : m), 0);
-
     // Widest bar in the branch table is scaled against the largest gross activity,
     // so income and expense stay comparable across rows.
     const maxGross = Math.max(1, ...branches.map((b) => Math.max(b.income, b.expense)));
 
+    const orders = (recentOrders || []).slice(0, 12);
+    const stockRows = (lowStock || []).slice(0, 12);
+    const logs = (activityLogs || []).slice(0, 8);
+
+    const pipeline = [
+        { label: 'Pending', value: Number(stats?.pendingOrders || 0), bar: 'bg-[#F59E0B]' },
+        { label: 'Active', value: Number(stats?.totalActive || 0), bar: 'bg-sky-500' },
+        { label: 'Delivered', value: Number(stats?.deliveredOrders || 0), bar: 'bg-emerald-500' },
+        { label: 'Today', value: Number(stats?.ordersToday || 0), bar: 'bg-violet-500' },
+    ];
+    const pipelineMax = Math.max(1, ...pipeline.map((r) => r.value));
+
     return (
         <div className="space-y-4">
 
-            {/* ── Headline numbers ── */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
-                <Kpi icon={ArrowDownLeft} tone="emerald" label="Income" value={formatCurrency(totals?.income ?? 0)} sub="All branches" />
-                <Kpi icon={ArrowUpRight} tone="rose" label="Expense" value={formatCurrency(totals?.expense ?? 0)} sub="All branches" />
-                <Kpi
-                    icon={Wallet}
-                    tone={(totals?.net ?? 0) >= 0 ? 'emerald' : 'rose'}
-                    label="Net Position"
-                    value={formatCurrency(totals?.net ?? 0)}
-                    sub={`${totals?.count ?? 0} transactions`}
-                />
-                <Kpi icon={TrendingUp} tone="amber" label="Revenue 30d" value={formatCurrency(totalSales)} sub={`${formatCurrency(avgDay)} / day avg`} />
-                <Kpi icon={ShoppingBag} label="Orders 30d" value={String(totalOrders)} sub={`Peak day ${formatCurrency(peakDay)}`} />
-                <Kpi icon={Building2} label="Branches" value={counts?.branches != null ? String(counts.branches) : '—'} sub={`${counts?.customers ?? '—'} customers · ${counts?.suppliers ?? '—'} suppliers`} />
-            </div>
+            {/* The headline KPI row was removed on request. */}
 
             {/* ── Revenue trend + branch breakdown ── */}
             <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-4">
 
-                <Panel icon={TrendingUp} title="Revenue Trend" subtitle="Sales across all branches · last 30 days">
+                <Panel icon={TrendingUp} title="Revenue Trend" subtitle="Delivered sales · last 7 days">
                     {hasTrend ? (
                         <ResponsiveContainer width="100%" height={230}>
                             <AreaChart data={trend} margin={{ top: 6, right: 8, left: -14, bottom: 0 }}>
@@ -177,7 +134,7 @@ export default function SuperAdminOverview({ revenueData, counts }: {
                         </ResponsiveContainer>
                     ) : (
                         <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">
-                            {loaded ? 'No sales recorded in the last 30 days.' : 'Loading…'}
+                            {loaded ? 'No delivered orders in the last 7 days.' : 'Loading…'}
                         </div>
                     )}
                 </Panel>
@@ -211,6 +168,124 @@ export default function SuperAdminOverview({ revenueData, counts }: {
                         <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">
                             {loaded ? 'No branch activity recorded yet.' : 'Loading…'}
                         </div>
+                    )}
+                </Panel>
+            </div>
+
+            {/* ── Orders + pipeline ── */}
+            <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-4">
+
+                <Panel icon={ShoppingBag} title="Recent Orders" subtitle="Latest activity across every branch">
+                    {orders.length ? (
+                        <div className="max-h-[260px] overflow-y-auto custom-scrollbar -mx-1 px-1">
+                            <div className="divide-y divide-slate-100">
+                                {orders.map((o: any) => {
+                                    const st = String(o.status || '').toUpperCase();
+                                    const tone = st === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700'
+                                        : st === 'CANCELLED' ? 'bg-rose-50 text-rose-600'
+                                            : 'bg-[#F59E0B]/12 text-[#B4780B]';
+                                    return (
+                                        <div key={o.id} className="flex items-center gap-3 py-2">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[12.5px] font-semibold text-slate-800 truncate">
+                                                    {o.customer_name || 'Walk-in'}
+                                                </p>
+                                                <p className="text-[10.5px] text-slate-400 font-medium truncate">
+                                                    {o.order_number || String(o.id).slice(0, 8)}
+                                                    {o.warehouse_name ? ` · ${o.warehouse_name}` : ''}
+                                                </p>
+                                            </div>
+                                            <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider ${tone}`}>
+                                                {st || 'PENDING'}
+                                            </span>
+                                            <span className="shrink-0 text-[12.5px] font-black tabular-nums text-slate-900 w-[92px] text-right">
+                                                {formatCurrency(Number(o.total_amount || 0))}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-[260px] flex items-center justify-center text-[12px] text-slate-400">No orders yet.</div>
+                    )}
+                </Panel>
+
+                <Panel icon={Activity} title="Order Pipeline" subtitle="Where orders currently sit">
+                    <div className="space-y-2.5">
+                        {pipeline.map((row) => (
+                            <div key={row.label}>
+                                <div className="flex items-baseline justify-between gap-2 mb-1">
+                                    <span className="text-[12px] font-semibold text-slate-600">{row.label}</span>
+                                    <span className="text-[13px] font-black tabular-nums text-slate-900">{row.value}</span>
+                                </div>
+                                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                    <div className={`h-full rounded-full ${row.bar}`} style={{ width: `${pipelineMax ? (row.value / pipelineMax) * 100 : 0}%` }} />
+                                </div>
+                            </div>
+                        ))}
+                        <div className="pt-2 mt-1 border-t border-slate-100 grid grid-cols-2 gap-2">
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Receivable</p>
+                                <p className="text-[14px] font-black tabular-nums text-rose-600">{formatCurrency(Number(stats?.totalPayable || 0))}</p>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Profit</p>
+                                <p className="text-[14px] font-black tabular-nums text-emerald-700">{formatCurrency(Number(stats?.totalProfit || 0))}</p>
+                            </div>
+                        </div>
+                    </div>
+                </Panel>
+            </div>
+
+            {/* ── Stock risk + audit trail ── */}
+            <div className="grid grid-cols-1 xl:grid-cols-[1.35fr_1fr] gap-4">
+
+                <Panel icon={PackageX} title="Low Stock" subtitle="Products at or below their reorder point">
+                    {stockRows.length ? (
+                        <div className="max-h-[230px] overflow-y-auto custom-scrollbar -mx-1 px-1">
+                            <div className="divide-y divide-slate-100">
+                                {stockRows.map((p: any, i: number) => (
+                                    <div key={i} className="flex items-center gap-3 py-2">
+                                        <span className="min-w-0 flex-1 text-[12.5px] font-semibold text-slate-800 truncate">
+                                            {p.product_name || p.name || 'Unnamed product'}
+                                        </span>
+                                        <span className="shrink-0 text-[11px] text-slate-400 font-medium tabular-nums">
+                                            min {Number(p.min ?? p.reorder_level ?? 0)}
+                                        </span>
+                                        <span className={`shrink-0 w-[58px] text-right text-[12.5px] font-black tabular-nums ${Number(p.qty ?? p.total_quantity ?? 0) <= 0 ? 'text-rose-600' : 'text-[#B4780B]'}`}>
+                                            {Number(p.qty ?? p.total_quantity ?? 0)}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">Nothing below its reorder point.</div>
+                    )}
+                </Panel>
+
+                <Panel icon={Clock} title="Recent Activity" subtitle="Latest system events">
+                    {logs.length ? (
+                        <div className="max-h-[230px] overflow-y-auto custom-scrollbar -mx-1 px-1">
+                            <div className="space-y-2.5">
+                                {logs.map((l: any, i: number) => (
+                                    <div key={i} className="flex gap-2.5">
+                                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                                        <div className="min-w-0">
+                                            <p className="text-[12px] font-semibold text-slate-700 leading-snug line-clamp-2">
+                                                {l.description || l.action || l.title || 'Activity'}
+                                            </p>
+                                            <p className="text-[10.5px] text-slate-400 font-medium">
+                                                {(l.created_at || l.timestamp || '').toString().slice(0, 16).replace('T', ' ')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">No recent activity.</div>
                     )}
                 </Panel>
             </div>

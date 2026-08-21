@@ -164,7 +164,7 @@ function MobileWelcomeHero({ subtitle }: { subtitle: string }) {
 }
 
 export default function AdminDashboard() {
-    const { stats, products, lowStock: serverLowStock, loading, revenueData30 } = useAdminDashboard();
+    const { stats, products, lowStock: serverLowStock, loading, revenueData30, recentOrders, activityLogs } = useAdminDashboard();
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     // Pages this user may open (null = full access). Mirrors the sidebar so the
     // dashboard only shows cards for pages the user actually has access to.
@@ -874,33 +874,6 @@ export default function AdminDashboard() {
     ];
     const dashTiles = DASH_TILES.filter((t) => canSee(t.href));
 
-    // Super-admin pill colours (bright, distinct) keyed by page â€” reuses each page's
-    // own icon from `groupedCore`, so the super admin gets the same clean pill buttons.
-    const SUPER_TILE_COLOR: Record<string, string> = {
-        '/admin/branches': '#4F46E5',
-        '/admin/users': '#7C3AED',
-        '/admin/company/suppliers': '#D97706',
-        '/admin/company/customers': '#0284C7',
-        '/admin/company/areas': '#0D9488',
-        '/admin/reports': '#C026D3',
-        '/admin/income': '#059669',
-        '/admin/expense': '#E11D48',
-        '/admin/payments': '#6D28D9',
-        '/admin/website-settings': '#2563EB',
-        '/admin/settings': '#475569',
-        '/admin/alerts': '#EA580C',
-        '/admin/notifications': '#0891B2',
-    };
-    const superTileGroups = groupedCore.map((g) => ({
-        title: g.title,
-        tiles: g.items.map((p) => ({
-            name: p.name,
-            href: p.href,
-            icon: p.icon,
-            color: SUPER_TILE_COLOR[p.href] || '#6366f1',
-        })),
-    }));
-
     // Clean pill button (matches the reference): bright colour body, white circle +
     // icon poking out on the left, white uppercase label, soft drop shadow.
     const renderTile = (t: Tile) => {
@@ -980,7 +953,7 @@ export default function AdminDashboard() {
                     job here is monitoring, so the numbers lead and navigation follows. */}
                 {isSuperAdmin && (
                     <div className="px-3 md:px-0 mb-6 md:mb-8">
-                        <SuperAdminOverview revenueData={revenueData30} counts={overviewCounts} />
+                        <SuperAdminOverview revenueData={revenueData30} stats={stats} recentOrders={recentOrders} lowStock={serverLowStock} activityLogs={activityLogs} />
                     </div>
                 )}
 
@@ -1031,23 +1004,9 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* â”€â”€ SUPER ADMIN: same clean pill buttons, grouped by area â”€â”€ */}
-                        {isSuperAdmin && (
-                        <div className="space-y-5 md:space-y-7">
-                            {superTileGroups.map((grp) => (
-                                <div key={grp.title} className="space-y-3">
-                                    <div className="flex items-center gap-3 select-none">
-                                        <h2 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">{grp.title}</h2>
-                                        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">{grp.tiles.length}</span>
-                                        <div className="h-px flex-1 bg-slate-200/70" />
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                        {grp.tiles.map(renderTile)}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        )}
+                        {/* Super Admin shortcut tiles (Administration / System & CMS)
+                            removed on request: the sidebar already lists every page this
+                            role can open, so the tiles only repeated it. */}
                     </div>
 
                     {/* â”€â”€ RIGHT: SUPER ADMIN â†’ BUSINESS OVERVIEW Â· BRANCH ADMIN â†’ LOW STOCK â”€â”€ */}
