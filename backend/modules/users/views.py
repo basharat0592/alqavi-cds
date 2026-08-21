@@ -861,9 +861,19 @@ def signup_supplier(request):
     }, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def signup_admin(request):
-    """Public admin registration with 'Admin' role auto-assignment."""
+    """Create an Admin (tenant owner) directly. Super Admin only.
+
+    This was AllowAny, which let anyone on the internet POST an email and a
+    password and receive a staff Admin account owning its own tenant. Nothing in
+    the app called it. Organizations are now onboarded through the invite flow
+    (modules.users.invite_views), so this stays only as an operator escape
+    hatch.
+    """
+    if not is_platform_operator(request.user):
+        return Response({'error': 'Only the Super Admin can create an Admin account directly.'},
+                        status=status.HTTP_403_FORBIDDEN)
     data = request.data.copy()
     
     # Ensure 'Admin' role exists

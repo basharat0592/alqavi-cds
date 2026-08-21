@@ -2,7 +2,7 @@
 Users module API URLs.
 """
 from django.urls import path
-from . import views
+from . import views, invite_views
 
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -21,6 +21,14 @@ urlpatterns = [
     path('register/supplier/', views.signup_supplier, name='supplier-register'),
     path('register/admin/', views.signup_admin, name='admin-register'),
     path('register/rider/', views.signup_rider, name='rider-register'),
+
+    # Organization onboarding (literal — must precede <str:user_id>).
+    # The two onboard/ routes are public: whoever holds the link is not signed in.
+    path('org-invites/', invite_views.org_invites, name='org-invite-list'),
+    path('org-invites/<int:invite_id>/regenerate/', invite_views.regenerate_invite, name='org-invite-regenerate'),
+    path('org-invites/<int:invite_id>/revoke/', invite_views.revoke_invite, name='org-invite-revoke'),
+    path('onboard/<str:token>/', invite_views.onboard_preview, name='org-onboard-preview'),
+    path('onboard/<str:token>/accept/', invite_views.onboard_accept, name='org-onboard-accept'),
 
     # User Management (literal)
     path('', views.list_users, name='user-list'),

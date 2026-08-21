@@ -3,10 +3,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail, Search, X as XIcon
+    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail,
+    Search, X as XIcon, Link2, Copy, Check, Clock, Phone, Ban, RotateCcw, UserPlus
 } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils';
-import { userService } from '@/lib/api';
+import { userService, onboardingService, inviteUrl } from '@/lib/api';
+import type { OrgInvite } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
 import { areaService, Area } from '@/services/area.service';
 import { authService } from '@/lib/auth';
@@ -26,7 +28,15 @@ export default function BranchesPage() {
     const [showNew, setShowNew] = useState(false);
     const [editing, setEditing] = useState<any | null>(null);
     const [creating, setCreating] = useState(false);
-    const [nb, setNb] = useState({ name: '', area: '', newCity: '', address: '' });
+    const [nb, setNb] = useState({ name: '', area: '', newCity: '', address: '', adminName: '', email: '', phone: '' });
+
+    // Pending invites, keyed by the organization they belong to. An organization
+    // created through the invite flow has no admin account yet, so without this
+    // the row would just read "None assigned" with no sign anyone was invited.
+    const [invites, setInvites] = useState<OrgInvite[]>([]);
+    const [linkFor, setLinkFor] = useState<OrgInvite | null>(null);
+    const [copied, setCopied] = useState(false);
+    const [busyInvite, setBusyInvite] = useState<number | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [deletingBranch, setDeletingBranch] = useState(false);
 
@@ -38,14 +48,16 @@ export default function BranchesPage() {
     const load = async () => {
         setLoading(true);
         try {
-            const [u, w, a] = await Promise.all([
+            const [u, w, a, inv] = await Promise.all([
                 userService.getAll(),
                 inventoryService.getWarehouses(),
                 areaService.getActive().catch(() => [] as Area[]),
+                onboardingService.listInvites().catch(() => [] as OrgInvite[]),
             ]);
             setUsers(Array.isArray(u) ? u : (u as any)?.results || []);
             setWarehouses(w || []);
             setAreas(a || []);
+            setInvites(inv || []);
         } catch {
             /* surfaced via empty state */
         } finally {
@@ -55,7 +67,7 @@ export default function BranchesPage() {
 
     const openCreate = () => {
         setEditing(null);
-        setNb({ name: '', area: '', newCity: '', address: '' });
+        setNb({ name: '', area: '', newCity: '', address: '', adminName: '', email: '', phone: '' });
         setShowNew(true);
     };
 
@@ -67,6 +79,7 @@ export default function BranchesPage() {
             area: wh.area ? String(wh.area) : '',
             newCity: '',
             address: wh.location || '',
+            adminName: '', email: '', phone: '',
         });
         setShowNew(true);
     };
@@ -77,6 +90,7 @@ export default function BranchesPage() {
         e?.preventDefault();
         if (!nb.name.trim()) return toast.error('Organization name is required');
         if (nb.area === '__new__' && !nb.newCity.trim()) return toast.error('Enter the new city name');
+        if (!editing && !nb.email.trim()) return toast.error("Enter the admin's email — the invite is sent to it");
         setCreating(true);
         try {
             let areaId: number | null = nb.area && nb.area !== '__new__' ? Number(nb.area) : null;
@@ -86,26 +100,94 @@ export default function BranchesPage() {
                 });
                 areaId = city.id;
             }
-            const payload = {
-                name: nb.name.trim(),
-                location: nb.address.trim() || nb.name.trim(),
-                area: areaId,
-            };
             if (editing) {
-                await inventoryService.updateWarehouse(editing.id, payload);
+                await inventoryService.updateWarehouse(editing.id, {
+                    name: nb.name.trim(),
+                    location: nb.address.trim() || nb.name.trim(),
+                    area: areaId,
+                });
                 toast.success('Organization updated');
+                setShowNew(false);
+                setEditing(null);
             } else {
-                await inventoryService.createWarehouse(payload);
-                toast.success('Organization created');
+                // Creating an organization creates the org row AND a pending
+                // invite; the admin account itself is only created when the
+                // invitee opens the link. The link comes back here to be copied.
+                const invite = await onboardingService.createOrganization({
+                    organization_name: nb.name.trim(),
+                    email: nb.email.trim(),
+                    admin_name: nb.adminName.trim(),
+                    phone: nb.phone.trim(),
+                    address: nb.address.trim(),
+                    area: areaId,
+                });
+                setShowNew(false);
+                setLinkFor(invite);
+                setCopied(false);
+                toast.success('Organization created — send the invite link');
             }
-            setShowNew(false);
-            setEditing(null);
-            setNb({ name: '', area: '', newCity: '', address: '' });
+            setNb({ name: '', area: '', newCity: '', address: '', adminName: '', email: '', phone: '' });
             load();
-        } catch {
-            toast.error(editing ? 'Failed to update organization' : 'Failed to create organization');
+        } catch (err: any) {
+            // The API reports per-field problems (email already used, invite
+            // already pending); showing them beats a flat "failed".
+            const data = err?.response?.data;
+            const first = data && typeof data === 'object'
+                ? Object.values(data).flat()[0]
+                : null;
+            toast.error(String(first || (editing ? 'Failed to update organization' : 'Failed to create organization')));
         } finally {
             setCreating(false);
+        }
+    };
+
+    // The live invite for an organization, if it still has one. An accepted
+    // invite is not shown as a link — the admin exists and appears in Admins.
+    const inviteFor = (whId: any) =>
+        invites.find(i => String(i.warehouse) === String(whId) && i.state !== 'accepted') || null;
+
+    const copyLink = async (inv: OrgInvite) => {
+        const url = inviteUrl(inv.path);
+        if (!url) return;
+        try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            toast.success('Link copied');
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // Clipboard is blocked outside a secure context (plain http on a LAN
+            // address, for one), so leave the text selectable rather than
+            // claiming a copy that did not happen.
+            toast.error('Could not copy — select the link and copy it manually');
+        }
+    };
+
+    const regenerate = async (inv: OrgInvite) => {
+        setBusyInvite(inv.id);
+        try {
+            const fresh = await onboardingService.regenerateInvite(inv.id);
+            setInvites(list => list.map(i => (i.id === fresh.id ? fresh : i)));
+            setLinkFor(fresh);
+            setCopied(false);
+            toast.success('New link generated — the old one no longer works');
+        } catch {
+            toast.error('Could not generate a new link');
+        } finally {
+            setBusyInvite(null);
+        }
+    };
+
+    const revoke = async (inv: OrgInvite) => {
+        setBusyInvite(inv.id);
+        try {
+            const dead = await onboardingService.revokeInvite(inv.id);
+            setInvites(list => list.map(i => (i.id === dead.id ? dead : i)));
+            if (linkFor?.id === dead.id) setLinkFor(null);
+            toast.success('Invite cancelled');
+        } catch {
+            toast.error('Could not cancel the invite');
+        } finally {
+            setBusyInvite(null);
         }
     };
 
@@ -338,6 +420,7 @@ export default function BranchesPage() {
                                 <tbody>
                                     {pageRows.map((wh, idx) => {
                                         const admins = adminsFor(wh.id);
+                                        const invite = inviteFor(wh.id);
                                         return (
                                             <tr key={wh.id} className={`${idx % 2 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group`}>
                                                 <td className={ui.td + ' relative'}>
@@ -371,7 +454,39 @@ export default function BranchesPage() {
                                                     )}
                                                 </td>
                                                 <td className={ui.td}>
-                                                    {admins.length === 0 ? (
+                                                    {admins.length === 0 && invite ? (
+                                                        /* Invited but not yet accepted: the account does not exist yet,
+                                                           so the row offers the link rather than an admin chip. */
+                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-black uppercase tracking-wider ${
+                                                                invite.state === 'pending' ? 'bg-[#F59E0B]/12 text-[#B4780B]'
+                                                                    : invite.state === 'expired' ? 'bg-slate-100 text-slate-500'
+                                                                        : 'bg-rose-50 text-rose-600'}`}>
+                                                                <Clock size={10} /> {invite.state}
+                                                            </span>
+                                                            <span className="text-[11.5px] text-slate-500 truncate max-w-[160px]" title={invite.email}>
+                                                                {invite.admin_name || invite.email}
+                                                            </span>
+                                                            {invite.state === 'pending' ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => { setLinkFor(invite); setCopied(false); }}
+                                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                                                >
+                                                                    <Link2 size={11} /> Link
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={busyInvite === invite.id}
+                                                                    onClick={() => regenerate(invite)}
+                                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-md px-2 py-1 transition-colors disabled:opacity-50"
+                                                                >
+                                                                    <RotateCcw size={11} /> New link
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    ) : admins.length === 0 ? (
                                                         <div className="flex flex-wrap items-center gap-1.5">
                                                             <span className="text-[11.5px] text-slate-400 italic mr-1">None assigned</span>
                                                             <button
@@ -469,7 +584,9 @@ export default function BranchesPage() {
             >
                 <form onSubmit={saveBranch} className="space-y-4">
                     <p className="text-[12px] text-slate-500">
-                        A organization is a store/location in a city. Name it and pick its city — each organization is managed by one admin.
+                        {editing
+                            ? 'Rename the organization or move it to a different city.'
+                            : 'Name the organization and say who will run it. We create the organization now and give you a link to send them — they set their own password and finish the details.'}
                     </p>
                     <div>
                         <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
@@ -513,9 +630,126 @@ export default function BranchesPage() {
                             placeholder="e.g. Plot 42, Main Bazaar"
                         />
                     </div>
+                    {!editing && (
+                        <div className="pt-4 mt-1 border-t border-slate-200 space-y-4">
+                            <div className="flex items-center gap-2">
+                                <span className="w-7 h-7 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                                    <UserPlus size={14} />
+                                </span>
+                                <div>
+                                    <p className="text-[12.5px] font-bold text-slate-800 leading-none">Who will run it</p>
+                                    <p className="text-[11px] text-slate-400 mt-1">No account is created until they open the link.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Name</label>
+                                    <input
+                                        value={nb.adminName}
+                                        onChange={e => setNb(p => ({ ...p, adminName: e.target.value }))}
+                                        className={ui.inputBase}
+                                        placeholder="e.g. Ali Raza"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Phone <span className="text-slate-400 font-medium">(optional)</span></label>
+                                    <input
+                                        value={nb.phone}
+                                        onChange={e => setNb(p => ({ ...p, phone: e.target.value }))}
+                                        className={ui.inputBase}
+                                        placeholder="+92 300 1234567"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
+                                <input
+                                    type="email"
+                                    value={nb.email}
+                                    onChange={e => setNb(p => ({ ...p, email: e.target.value }))}
+                                    className={ui.inputBase}
+                                    placeholder="admin@example.com"
+                                />
+                                <p className="mt-1 text-[11px] text-slate-400">
+                                    The invite is issued to this address, and they sign in with it.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Hidden submit lets Enter create the branch. */}
                     <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
                 </form>
+            </Modal>
+
+            {/* Invite link — shown right after creating, and from the Link button. */}
+            <Modal
+                open={!!linkFor}
+                onClose={() => setLinkFor(null)}
+                title="Invite link"
+                size="md"
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => linkFor && revoke(linkFor)} disabled={busyInvite === linkFor?.id}>
+                            <Ban size={14} /> Cancel invite
+                        </Button>
+                        <Button onClick={() => linkFor && copyLink(linkFor)}>
+                            {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy link'}
+                        </Button>
+                    </>
+                }
+            >
+                {linkFor && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                            <span className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                                <Building2 size={18} />
+                            </span>
+                            <div className="min-w-0">
+                                <p className="text-[14px] font-black text-slate-900 truncate">{linkFor.organization_name}</p>
+                                <p className="text-[11.5px] text-slate-500 truncate">
+                                    {linkFor.admin_name ? `${linkFor.admin_name} · ` : ''}{linkFor.email}
+                                    {linkFor.phone ? ` · ${linkFor.phone}` : ''}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Send them this link</label>
+                            {/* Selectable input rather than plain text: if the clipboard
+                                API is unavailable the link can still be copied by hand. */}
+                            <input
+                                readOnly
+                                value={inviteUrl(linkFor.path)}
+                                onFocus={e => e.currentTarget.select()}
+                                className={ui.inputBase + ' font-mono text-[12px]'}
+                            />
+                        </div>
+
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11.5px] text-slate-600 leading-relaxed">
+                            <Clock size={14} className="shrink-0 mt-px text-slate-400" />
+                            <span>
+                                Works once, and expires{' '}
+                                <b className="text-slate-800">
+                                    {linkFor.expires_at ? new Date(linkFor.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'in 7 days'}
+                                </b>.
+                                Anyone holding it can claim this organization, so send it to {linkFor.email} directly.
+                                If it expires or goes astray, generate a new one — the old link stops working.
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => regenerate(linkFor)}
+                            disabled={busyInvite === linkFor.id}
+                            className="inline-flex items-center gap-1.5 text-[12px] font-bold text-slate-600 hover:text-[#B4780B] transition-colors disabled:opacity-50"
+                        >
+                            <RotateCcw size={13} className={busyInvite === linkFor.id ? 'animate-spin' : ''} /> Generate a new link
+                        </button>
+                    </div>
+                )}
             </Modal>
 
             {/* Delete branch confirmation */}

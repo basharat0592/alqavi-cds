@@ -259,3 +259,90 @@ class UserSettings(models.Model):
 
     def __str__(self):
         return f'Settings for {self.user.username}'
+
+
+class OrganizationInvite(models.Model):
+    """A pending organization + its owning Admin, created by the Super Admin.
+
+    The Super Admin fills in the organization name and who will run it; the
+    Warehouse (organization) row is created immediately so it shows in the
+    Organizations list right away, while the Admin account does NOT exist yet.
+    It is created only when the invitee opens the link and accepts, so an
+    unaccepted invite can never be logged into.
+
+    The token is the credential. It is generated with ``secrets`` (not a uuid4,
+    which is not documented as cryptographically secure), single-use, and
+    expires -- see ``is_usable``.
+    """
+
+    TOKEN_BYTES = 32          # -> 43-char urlsafe string
+    DEFAULT_TTL_DAYS = 7
+
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    warehouse = models.ForeignKey(
+        'inventory.Warehouse', on_delete=models.CASCADE, related_name='invites'
+    )
+
+    # Who the Super Admin says will run this organization. Prefills the
+    # onboarding form; the invitee can correct the name and phone, but not the
+    # email -- the invite was issued to that address.
+    admin_name = models.CharField(max_length=255, blank=True)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True)
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='sent_org_invites'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    accepted_user = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='accepted_org_invite'
+    )
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'organization_invites'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['warehouse']),
+        ]
+
+    def __str__(self):
+        return f'Invite for {self.email} -> {self.warehouse_id}'
+
+    @staticmethod
+    def new_token():
+        import secrets
+        return secrets.token_urlsafe(OrganizationInvite.TOKEN_BYTES)
+
+    @staticmethod
+    def default_expiry():
+        from django.utils import timezone
+        return timezone.now() + timezone.timedelta(days=OrganizationInvite.DEFAULT_TTL_DAYS)
+
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return bool(self.expires_at and timezone.now() >= self.expires_at)
+
+    @property
+    def is_usable(self):
+        """Single-use and time-boxed: never accepted, never revoked, not expired."""
+        return not self.accepted_at and not self.revoked_at and not self.is_expired
+
+    @property
+    def state(self):
+        """One word for the UI. Checked in the order that matters: an accepted
+        invite reads as accepted even after its window would have closed."""
+        if self.accepted_at:
+            return 'accepted'
+        if self.revoked_at:
+            return 'revoked'
+        if self.is_expired:
+            return 'expired'
+        return 'pending'

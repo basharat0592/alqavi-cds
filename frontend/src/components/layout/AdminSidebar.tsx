@@ -39,10 +39,24 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
     // Resolve current user's page_permissions from session
     const [userPagePerms, setUserPagePerms] = useState<string[] | null>(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    // The tenant's own organization name, so each admin's console is branded as
+    // theirs rather than as the platform. Empty for the Super Admin, who spans
+    // every organization and keeps the platform branding.
+    const [orgName, setOrgName] = useState('');
 
     useEffect(() => {
         const user = authService.getUser();
         setIsSuperAdmin(authService.isSuperAdmin());
+        if (user && !authService.isSuperAdmin()) {
+            const whs = (user as any).warehouses;
+            // More than one organization is possible; joining them keeps the
+            // header honest instead of silently showing only the first.
+            setOrgName(Array.isArray(whs) && whs.length
+                ? whs.map((w: any) => w?.name).filter(Boolean).join(', ')
+                : '');
+        } else {
+            setOrgName('');
+        }
         if (!user) { setUserPagePerms(null); return; }
         // role may arrive as the string name (login) or a numeric FK id (a profile
         // refetch); prefer the string, else fall back to role_name.
@@ -177,6 +191,12 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         items: group.items.filter(item => isPageAllowed(item.href))
     })).filter(group => group.items.length > 0);
 
+    // Two letters for the badge: initials of the organization, or the platform's
+    // own "AQ" when there is no organization to speak for.
+    const orgInitials = orgName
+        ? orgName.split(/[\s,]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'AQ'
+        : 'AQ';
+
     return (
         <>
             <style>{`
@@ -191,12 +211,16 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 <div className="px-4 h-[66px] flex-shrink-0 flex items-center justify-between border-b border-white/[0.07]">
                     <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 group/brand">
                         <div className="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center bg-[#F59E0B] shadow-lg shadow-[#F59E0B]/25 group-hover/brand:scale-105 transition-transform">
-                            <span className="font-black text-[13px] text-white">AQ</span>
+                            <span className="font-black text-[13px] text-white">{orgInitials}</span>
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] font-bold uppercase tracking-[0.16em] leading-none mb-1 text-[#FBBF24]">Central Console</span>
-                                <span className="text-[14px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
+                                <span className="text-[9px] font-bold uppercase tracking-[0.16em] leading-none mb-1 text-[#FBBF24]">
+                                    {orgName ? 'Organization Console' : 'Central Console'}
+                                </span>
+                                <span className="text-[14px] font-bold leading-none tracking-tight text-white truncate" title={orgName || 'Al-Qavi Hub'}>
+                                    {orgName || 'Al-Qavi Hub'}
+                                </span>
                             </div>
                         )}
                     </Link>
