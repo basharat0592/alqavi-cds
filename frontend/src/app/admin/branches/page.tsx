@@ -151,7 +151,6 @@ export default function BranchesPage() {
     const adminsFor = (whId: string | number) =>
         users.filter(u => !u.is_super_admin && (u.warehouses || []).some((w: any) => String(w.id) === String(whId)));
 
-    const superAdmins = useMemo(() => users.filter(u => u.is_super_admin), [users]);
     const unassigned = useMemo(
         () => users.filter(u => !u.is_super_admin && (u.warehouses || []).length === 0),
         [users]
@@ -249,23 +248,6 @@ export default function BranchesPage() {
                     }
                 />
 
-                {/* Global super admins */}
-                <Card className="p-5 mb-6 flex flex-wrap items-center gap-3">
-                    <span className="inline-flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-[#B4780B]">
-                        <ShieldCheck size={15} /> Global (all organizations)
-                    </span>
-                    {superAdmins.length === 0 ? (
-                        <span className="text-[12px] text-slate-400 italic">No super admins.</span>
-                    ) : (
-                        superAdmins.map(u => (
-                            <button key={u.id} onClick={() => router.push(`/admin/users/edit/${u.id}`)}
-                                className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 rounded-full transition-colors">
-                                {name(u)}
-                            </button>
-                        ))
-                    )}
-                </Card>
-
                 {/* Unassigned branch admins (fail-closed: they see nothing) */}
                 {unassigned.length > 0 && (
                     <Card className="p-5 mb-6 border-amber-200 bg-amber-50/40">
@@ -293,8 +275,8 @@ export default function BranchesPage() {
                 ) : (
                     <Card className="overflow-hidden">
                         {/* Filters */}
-                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center gap-2.5">
-                            <div className="relative flex-1 min-w-[200px]">
+                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/70 flex items-center gap-2.5 overflow-x-auto custom-scrollbar">
+                            <div className="relative flex-1 min-w-[180px]">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                 <input
                                     value={q}
@@ -316,7 +298,7 @@ export default function BranchesPage() {
                             <select
                                 value={areaFilter}
                                 onChange={e => setAreaFilter(e.target.value)}
-                                className={ui.inputBase + ' h-9 w-auto min-w-[150px] text-[12.5px] cursor-pointer'}
+                                className={ui.inputBase + ' h-9 w-[150px] shrink-0 text-[12.5px] cursor-pointer'}
                             >
                                 <option value="">All areas</option>
                                 {areaOptions.map(a => <option key={a} value={a}>{a}</option>)}
@@ -325,7 +307,7 @@ export default function BranchesPage() {
                             <select
                                 value={adminFilter}
                                 onChange={e => setAdminFilter(e.target.value as '' | 'with' | 'without')}
-                                className={ui.inputBase + ' h-9 w-auto min-w-[160px] text-[12.5px] cursor-pointer'}
+                                className={ui.inputBase + ' h-9 w-[168px] shrink-0 text-[12.5px] cursor-pointer'}
                             >
                                 <option value="">Any admin status</option>
                                 <option value="with">Has an admin</option>
@@ -335,7 +317,7 @@ export default function BranchesPage() {
                             {filtersOn && (
                                 <button
                                     onClick={clearFilters}
-                                    className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 bg-white text-[12px] font-bold text-slate-600 hover:border-[#F59E0B]/40 hover:text-[#B4780B] transition-colors"
+                                    className="inline-flex items-center gap-1 h-9 px-3 shrink-0 rounded-lg border border-slate-200 bg-white text-[12px] font-bold text-slate-600 hover:border-[#F59E0B]/40 hover:text-[#B4780B] transition-colors"
                                 >
                                     <XIcon size={13} /> Clear
                                 </button>
@@ -344,7 +326,7 @@ export default function BranchesPage() {
 
                         <div className={ui.tableWrap}>
                             <table className={ui.table + ' min-w-[940px]'}>
-                                <thead>
+                                <thead className="sticky top-0 z-10">
                                     <tr>
                                         <th className={ui.th}>Organization</th>
                                         <th className={ui.th}>Area</th>
@@ -354,28 +336,39 @@ export default function BranchesPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {pageRows.map(wh => {
+                                    {pageRows.map((wh, idx) => {
                                         const admins = adminsFor(wh.id);
                                         return (
-                                            <tr key={wh.id} className={ui.trHover}>
-                                                <td className={ui.td}>
+                                            <tr key={wh.id} className={`${idx % 2 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group`}>
+                                                <td className={ui.td + ' relative'}>
+                                                    <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-transparent group-hover:bg-[#F59E0B] transition-colors" />
                                                     <div className="flex items-center gap-2.5 min-w-0">
-                                                        <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/15 text-[#B4780B] flex items-center justify-center shrink-0">
-                                                            <Building2 size={15} />
+                                                        <span className="w-9 h-9 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                                                            <Building2 size={16} />
                                                         </span>
-                                                        <span className="font-bold text-[13px] text-slate-900 truncate">{wh.name}</span>
+                                                        <div className="min-w-0">
+                                                            <p className="font-bold text-[13px] text-slate-900 truncate leading-tight">{wh.name}</p>
+                                                            {wh.location && <p className="text-[11px] text-slate-400 truncate">{wh.location}</p>}
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className={ui.td}>
-                                                    <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-600">
-                                                        <MapPin size={12} className="text-slate-400 shrink-0" />
-                                                        {wh.area_name || <span className="text-slate-400 italic">No city</span>}
-                                                    </span>
+                                                    {wh.area_name ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 text-[11.5px] font-semibold text-slate-600">
+                                                            <MapPin size={11} className="text-slate-400 shrink-0" /> {wh.area_name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[11.5px] text-slate-400 italic">No city</span>
+                                                    )}
                                                 </td>
                                                 <td className={ui.td + ' text-right'}>
-                                                    <span className={`inline-flex items-center gap-1 text-[12.5px] font-bold tabular-nums ${Number(wh.stock_count || 0) > 0 ? 'text-slate-800' : 'text-slate-300'}`}>
-                                                        <Boxes size={12} className="text-slate-400" /> {wh.stock_count || 0}
-                                                    </span>
+                                                    {Number(wh.stock_count || 0) > 0 ? (
+                                                        <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold tabular-nums text-slate-800">
+                                                            <Boxes size={12} className="text-slate-400" /> {wh.stock_count}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[12.5px] text-slate-300 tabular-nums">—</span>
+                                                    )}
                                                 </td>
                                                 <td className={ui.td}>
                                                     {admins.length === 0 ? (
@@ -420,14 +413,16 @@ export default function BranchesPage() {
                                                     )}
                                                 </td>
                                                 <td className={ui.td + ' text-right whitespace-nowrap'}>
+                                                    <div className="inline-flex items-center gap-1.5 opacity-100 xl:opacity-60 xl:group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => openEdit(wh)} title="Edit organization"
                                                         className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#92600A] hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Pencil size={12} /> Edit
                                                     </button>
                                                     <button onClick={() => setDeleteTarget(wh)} title="Delete organization"
-                                                        className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors ml-1.5">
+                                                        className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Trash2 size={12} /> Delete
                                                     </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
