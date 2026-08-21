@@ -3,14 +3,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail
+    Building2, MapPin, Users, ShieldCheck, Plus, RefreshCw, AlertTriangle, ChevronRight, Boxes, Pencil, Trash2, Mail, Search, X as XIcon
 } from 'lucide-react';
 import { getImageUrl } from '@/lib/utils';
 import { userService } from '@/lib/api';
 import { inventoryService } from '@/services/inventory.service';
 import { areaService, Area } from '@/services/area.service';
 import { authService } from '@/lib/auth';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, Pagination } from '@/components/admin/ui';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 
@@ -159,12 +159,60 @@ export default function BranchesPage() {
 
     // One flat list for the table, ordered by area then name so rows from the same
     // city still sit together without needing separate grouped tables.
-    const rows = useMemo(
+    const sorted = useMemo(
         () => [...warehouses].sort((a, b) =>
             String(a.area_name || 'zzz').localeCompare(String(b.area_name || 'zzz'))
             || String(a.name || '').localeCompare(String(b.name || ''))),
         [warehouses]
     );
+
+    // ── Filters ──
+    const [q, setQ] = useState('');
+    const [areaFilter, setAreaFilter] = useState('');
+    const [adminFilter, setAdminFilter] = useState<'' | 'with' | 'without'>('');
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 10;
+
+    // Areas actually present on an organization — a filter listing empty areas
+    // would offer choices that can only ever return nothing.
+    const areaOptions = useMemo(() => {
+        const set = new Set<string>();
+        warehouses.forEach(w => { if (w.area_name) set.add(String(w.area_name)); });
+        return [...set].sort((a, b) => a.localeCompare(b));
+    }, [warehouses]);
+
+    const rows = useMemo(() => {
+        const needle = q.trim().toLowerCase();
+        return sorted.filter(w => {
+            if (areaFilter && String(w.area_name || '') !== areaFilter) return false;
+            if (adminFilter) {
+                const has = adminsFor(w.id).length > 0;
+                if (adminFilter === 'with' && !has) return false;
+                if (adminFilter === 'without' && has) return false;
+            }
+            if (!needle) return true;
+            // Match the organization, its area, and its admins' names/emails, so
+            // searching for a person finds the organization they run.
+            const hay = [
+                w.name, w.area_name, w.address,
+                ...adminsFor(w.id).flatMap((u: any) => [u.full_name, u.username, u.email]),
+            ].filter(Boolean).join(' ').toLowerCase();
+            return hay.includes(needle);
+        });
+    }, [sorted, q, areaFilter, adminFilter, users]);
+
+    const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+    const pageRows = useMemo(
+        () => rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+        [rows, page]
+    );
+
+    // A filter change can leave you past the end of the shorter result set.
+    useEffect(() => { setPage(1); }, [q, areaFilter, adminFilter]);
+    useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+    const filtersOn = !!(q.trim() || areaFilter || adminFilter);
+    const clearFilters = () => { setQ(''); setAreaFilter(''); setAdminFilter(''); };
 
     const name = (u: any) => `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || u.email;
 
@@ -244,6 +292,56 @@ export default function BranchesPage() {
                     <Card className="py-20 text-center text-[13px] text-slate-500">No organizations yet. Click “New Organization” to create one.</Card>
                 ) : (
                     <Card className="overflow-hidden">
+                        {/* Filters */}
+                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center gap-2.5">
+                            <div className="relative flex-1 min-w-[200px]">
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <input
+                                    value={q}
+                                    onChange={e => setQ(e.target.value)}
+                                    placeholder="Search organization, area or admin…"
+                                    className={ui.inputBase + ' h-9 pl-9 pr-8 text-[12.5px]'}
+                                />
+                                {q && (
+                                    <button
+                                        onClick={() => setQ('')}
+                                        aria-label="Clear search"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                                    >
+                                        <XIcon size={14} />
+                                    </button>
+                                )}
+                            </div>
+
+                            <select
+                                value={areaFilter}
+                                onChange={e => setAreaFilter(e.target.value)}
+                                className={ui.inputBase + ' h-9 w-auto min-w-[150px] text-[12.5px] cursor-pointer'}
+                            >
+                                <option value="">All areas</option>
+                                {areaOptions.map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+
+                            <select
+                                value={adminFilter}
+                                onChange={e => setAdminFilter(e.target.value as '' | 'with' | 'without')}
+                                className={ui.inputBase + ' h-9 w-auto min-w-[160px] text-[12.5px] cursor-pointer'}
+                            >
+                                <option value="">Any admin status</option>
+                                <option value="with">Has an admin</option>
+                                <option value="without">Missing an admin</option>
+                            </select>
+
+                            {filtersOn && (
+                                <button
+                                    onClick={clearFilters}
+                                    className="inline-flex items-center gap-1 h-9 px-3 rounded-lg border border-slate-200 bg-white text-[12px] font-bold text-slate-600 hover:border-[#F59E0B]/40 hover:text-[#B4780B] transition-colors"
+                                >
+                                    <XIcon size={13} /> Clear
+                                </button>
+                            )}
+                        </div>
+
                         <div className={ui.tableWrap}>
                             <table className={ui.table + ' min-w-[940px]'}>
                                 <thead>
@@ -256,7 +354,7 @@ export default function BranchesPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map(wh => {
+                                    {pageRows.map(wh => {
                                         const admins = adminsFor(wh.id);
                                         return (
                                             <tr key={wh.id} className={ui.trHover}>
@@ -336,12 +434,25 @@ export default function BranchesPage() {
                                     })}
                                 </tbody>
                             </table>
+                            {rows.length === 0 && (
+                                <div className="py-14 text-center text-[12.5px] text-slate-400">
+                                    No organizations match these filters.
+                                </div>
+                            )}
                         </div>
                         <div className="px-4 py-2.5 border-t border-slate-200 bg-slate-50/70 text-[11.5px] text-slate-500">
                             <b className="text-slate-700 tabular-nums">{rows.length}</b> {rows.length === 1 ? 'organization' : 'organizations'}
+                            {filtersOn && <> of <b className="text-slate-700 tabular-nums">{warehouses.length}</b></>}
                             {' · '}
                             <b className="text-slate-700 tabular-nums">{rows.filter(w => adminsFor(w.id).length === 0).length}</b> without an admin
                         </div>
+                        <Pagination
+                            page={page}
+                            totalPages={totalPages}
+                            onPage={setPage}
+                            total={rows.length}
+                            pageSize={PAGE_SIZE}
+                        />
                     </Card>
                 )}
             </div>
