@@ -162,7 +162,7 @@ function SuperAdminBottomNav({ pathname }: { pathname: string }) {
             <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="grid grid-cols-5">
                     <BottomTab href="/admin/branches" label="Organizations" icon={Building2} active={isActive('/admin/branches')} />
-                    <BottomTab href="/admin/company/areas" label="Areas" icon={MapPin} active={isActive('/admin/company/areas')} />
+                    <BottomTab href="/admin/company/areas" label="Region" icon={MapPin} active={isActive('/admin/company/areas')} />
                     <div aria-hidden />{/* center slot for the raised Home button */}
                     <BottomTab href="/admin/website-settings" label="CMS" icon={Globe} active={isActive('/admin/website-settings')} />
                     <BottomTab href="/admin/settings" label="Settings" icon={Settings} active={isActive('/admin/settings')} />

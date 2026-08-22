@@ -120,7 +120,9 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
                 { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
                 { name: 'Delivery Persons', href: '/admin/delivery', icon: Truck },
-                { name: 'Areas', href: '/admin/company/areas', icon: MapPin },
+                // Super-admin-only page (SUPER_ONLY_HREFS), so this label is only
+                // ever shown on the platform side.
+                { name: 'Region', href: '/admin/company/areas', icon: MapPin },
                 { name: 'Admins', href: '/admin/users', icon: User },
                 { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
                 { name: 'System Users', href: '/admin/system-users', icon: UserCog },
