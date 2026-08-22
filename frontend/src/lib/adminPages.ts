@@ -32,6 +32,10 @@ export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
     '/admin/inventory/warehouses', // Warehouses
     '/admin/company/companies', // Companies
     '/admin/users/roles',       // Staff Roles
+    // Admins are onboarded by invite from the Organizations page, so the Super
+    // Admin has no directory of admin accounts to create from. The route itself
+    // stays: /admin/users/edit/<id> is still reached from an organization row.
+    '/admin/users',             // Admins
     // Finance is a branch-admin concern — hidden from the Super Admin side.
     '/admin/payments',          // Global Payments
     '/admin/income',            // Income

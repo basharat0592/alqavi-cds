@@ -97,6 +97,10 @@ def org_invites(request):
         return Response([_invite_brief(i) for i in qs])
 
     data = request.data
+    # A warehouse id means "invite someone to run THIS existing organization"
+    # (organizations that predate the invite flow, or a replacement admin);
+    # without one a new organization is created from the name.
+    existing_id = data.get('warehouse') or None
     org_name = (data.get('organization_name') or data.get('name') or '').strip()
     email = (data.get('email') or '').strip().lower()
     admin_name = (data.get('admin_name') or '').strip()
@@ -104,8 +108,12 @@ def org_invites(request):
     address = (data.get('address') or '').strip()
     area_id = data.get('area') or None
 
+    existing = Warehouse.objects.filter(id=existing_id).first() if existing_id else None
+
     errors = {}
-    if not org_name:
+    if existing_id and not existing:
+        errors['warehouse'] = ['That organization no longer exists.']
+    if not existing and not org_name:
         errors['organization_name'] = ['Organization name is required.']
     if not email:
         errors['email'] = ['Admin email is required.']
@@ -124,7 +132,7 @@ def org_invites(request):
 
     try:
         with transaction.atomic():
-            warehouse = Warehouse.objects.create(
+            warehouse = existing or Warehouse.objects.create(
                 name=org_name,
                 location=address or org_name,
                 area=area,
@@ -146,7 +154,8 @@ def org_invites(request):
     UserActivityLog.objects.create(
         user=request.user,
         action='create',
-        description=f'Created organization "{org_name}" and invited {email} to run it',
+        description=(f'Invited {email} to run "{warehouse.name}"' if existing
+                     else f'Created organization "{warehouse.name}" and invited {email} to run it'),
         tenant_id=tenant_id_for(request.user),
     )
     return Response(_invite_brief(invite), status=status.HTTP_201_CREATED)

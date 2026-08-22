@@ -38,6 +38,12 @@ export default function BranchesPage() {
     const [copied, setCopied] = useState(false);
     const [busyInvite, setBusyInvite] = useState<number | null>(null);
     const [togglingId, setTogglingId] = useState<any>(null);
+
+    // Inviting an admin into an organization that already exists — organizations
+    // created before the invite flow, or one whose admin has left.
+    const [inviteFor2, setInviteFor2] = useState<any | null>(null);
+    const [inviteForm, setInviteForm] = useState({ adminName: '', email: '', phone: '' });
+    const [sendingInvite, setSendingInvite] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [deletingBranch, setDeletingBranch] = useState(false);
 
@@ -139,6 +145,36 @@ export default function BranchesPage() {
             toast.error(String(first || (editing ? 'Failed to update organization' : 'Failed to create organization')));
         } finally {
             setCreating(false);
+        }
+    };
+
+    const openInvite = (wh: any) => {
+        setInviteForm({ adminName: '', email: '', phone: '' });
+        setInviteFor2(wh);
+    };
+
+    const sendInvite = async (e?: React.SyntheticEvent) => {
+        e?.preventDefault();
+        if (!inviteForm.email.trim()) return toast.error("Enter the admin's email");
+        setSendingInvite(true);
+        try {
+            const invite = await onboardingService.createOrganization({
+                warehouse: String(inviteFor2.id),
+                email: inviteForm.email.trim(),
+                admin_name: inviteForm.adminName.trim(),
+                phone: inviteForm.phone.trim(),
+            });
+            setInviteFor2(null);
+            setLinkFor(invite);
+            setCopied(false);
+            toast.success('Invite created — send the link');
+            load();
+        } catch (err: any) {
+            const data = err?.response?.data;
+            const first = data && typeof data === 'object' ? Object.values(data).flat()[0] : null;
+            toast.error(String(first || 'Could not create the invite'));
+        } finally {
+            setSendingInvite(false);
         }
     };
 
@@ -540,10 +576,10 @@ export default function BranchesPage() {
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => router.push(`/admin/users/add?warehouse=${wh.id}`)}
+                                                                onClick={() => openInvite(wh)}
                                                                 className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                                             >
-                                                                <Plus size={11} /> Create
+                                                                <Mail size={11} /> Invite
                                                             </button>
                                                         </div>
                                                     ) : (
@@ -721,6 +757,66 @@ export default function BranchesPage() {
                     )}
 
                     {/* Hidden submit lets Enter create the branch. */}
+                    <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
+                </form>
+            </Modal>
+
+            {/* Invite an admin into an organization that already exists. */}
+            <Modal
+                open={!!inviteFor2}
+                onClose={() => { if (!sendingInvite) setInviteFor2(null); }}
+                title="Invite an admin"
+                size="sm"
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setInviteFor2(null)} disabled={sendingInvite}>Cancel</Button>
+                        <Button onClick={() => sendInvite()} disabled={sendingInvite}>
+                            {sendingInvite ? <RefreshCw size={14} className="animate-spin" /> : <Mail size={14} />} Create Link
+                        </Button>
+                    </>
+                }
+            >
+                <form onSubmit={sendInvite} className="space-y-4">
+                    <div className="flex items-center gap-2.5">
+                        <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                            <Building2 size={15} />
+                        </span>
+                        <p className="text-[13px] font-bold text-slate-900 truncate">{inviteFor2?.name}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Name</label>
+                            <input
+                                autoFocus
+                                value={inviteForm.adminName}
+                                onChange={e => setInviteForm(p => ({ ...p, adminName: e.target.value }))}
+                                className={ui.inputBase}
+                                placeholder="e.g. Ali Raza"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Phone <span className="text-slate-400 font-medium">(optional)</span></label>
+                            <input
+                                value={inviteForm.phone}
+                                onChange={e => setInviteForm(p => ({ ...p, phone: e.target.value }))}
+                                className={ui.inputBase}
+                                placeholder="+92 300 1234567"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
+                        <input
+                            type="email"
+                            value={inviteForm.email}
+                            onChange={e => setInviteForm(p => ({ ...p, email: e.target.value }))}
+                            className={ui.inputBase}
+                            placeholder="admin@example.com"
+                        />
+                    </div>
+
                     <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
                 </form>
             </Modal>

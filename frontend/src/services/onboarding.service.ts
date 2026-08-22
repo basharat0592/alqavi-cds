@@ -32,7 +32,10 @@ export const onboardingService = {
     },
 
     createOrganization: async (payload: {
-        organization_name: string;
+        /** Omit to create a new organization; pass an existing organization's id
+         *  to invite someone to run one that already exists. */
+        warehouse?: string;
+        organization_name?: string;
         email: string;
         admin_name?: string;
         phone?: string;
