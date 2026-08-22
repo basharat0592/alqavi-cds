@@ -44,6 +44,9 @@ export default function BranchesPage() {
     const [inviteFor2, setInviteFor2] = useState<any | null>(null);
     const [inviteForm, setInviteForm] = useState({ adminName: '', email: '', phone: '' });
     const [sendingInvite, setSendingInvite] = useState(false);
+
+    // Row click opens the organization's details.
+    const [detailFor, setDetailFor] = useState<any | null>(null);
     const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
     const [deletingBranch, setDeletingBranch] = useState(false);
 
@@ -482,7 +485,11 @@ export default function BranchesPage() {
                                         const invite = inviteFor(wh.id);
                                         const active = wh.is_active ?? true;
                                         return (
-                                            <tr key={wh.id} className={`${idx % 2 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group ${active ? '' : 'opacity-60'}`}>
+                                            <tr
+                                                key={wh.id}
+                                                onClick={() => setDetailFor(wh)}
+                                                className={`${idx % 2 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group cursor-pointer ${active ? '' : 'opacity-60'}`}
+                                            >
                                                 <td className={ui.td + ' relative'}>
                                                     <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-transparent group-hover:bg-[#F59E0B] transition-colors" />
                                                     <div className="flex items-center gap-2.5 min-w-0">
@@ -510,7 +517,7 @@ export default function BranchesPage() {
                                                         role="switch"
                                                         aria-checked={active}
                                                         disabled={togglingId === wh.id}
-                                                        onClick={() => toggleActive(wh)}
+                                                        onClick={e => { e.stopPropagation(); toggleActive(wh); }}
                                                         title={active ? 'Deactivate this organization' : 'Activate this organization'}
                                                         className="inline-flex items-center gap-2 group/sw disabled:opacity-50"
                                                     >
@@ -548,7 +555,7 @@ export default function BranchesPage() {
                                                             {invite.state === 'pending' ? (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => { setLinkFor(invite); setCopied(false); }}
+                                                                    onClick={e => { e.stopPropagation(); setLinkFor(invite); setCopied(false); }}
                                                                     className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                                                 >
                                                                     <Link2 size={11} /> Link
@@ -557,7 +564,7 @@ export default function BranchesPage() {
                                                                 <button
                                                                     type="button"
                                                                     disabled={busyInvite === invite.id}
-                                                                    onClick={() => regenerate(invite)}
+                                                                    onClick={e => { e.stopPropagation(); regenerate(invite); }}
                                                                     className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-md px-2 py-1 transition-colors disabled:opacity-50"
                                                                 >
                                                                     <RotateCcw size={11} /> New link
@@ -569,14 +576,14 @@ export default function BranchesPage() {
                                                             <span className="text-[11.5px] text-slate-400 italic mr-1">None assigned</span>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => setSelectFor(wh)}
+                                                                onClick={e => { e.stopPropagation(); setSelectFor(wh); }}
                                                                 className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-md px-2 py-1 transition-colors"
                                                             >
                                                                 <Users size={11} className="text-slate-400" /> Select
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => openInvite(wh)}
+                                                                onClick={e => { e.stopPropagation(); openInvite(wh); }}
                                                                 className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                                             >
                                                                 <Mail size={11} /> Invite
@@ -587,7 +594,7 @@ export default function BranchesPage() {
                                                             {admins.map(u => (
                                                                 <button
                                                                     key={u.id}
-                                                                    onClick={() => router.push(`/admin/users/edit/${u.id}`)}
+                                                                    onClick={e => { e.stopPropagation(); router.push(`/admin/users/edit/${u.id}`); }}
                                                                     title={`${u.email || ''}${u.phone ? ' · ' + u.phone : ''} — view / edit`}
                                                                     className="inline-flex items-center gap-1.5 max-w-[220px] text-[11.5px] font-semibold text-slate-700 bg-white hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/30 rounded-full pl-1 pr-2.5 py-1 transition-colors group"
                                                                 >
@@ -607,11 +614,11 @@ export default function BranchesPage() {
                                                 </td>
                                                 <td className={ui.td + ' text-right whitespace-nowrap'}>
                                                     <div className="inline-flex items-center gap-1.5 opacity-100 xl:opacity-60 xl:group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => openEdit(wh)} title="Edit organization"
+                                                    <button onClick={e => { e.stopPropagation(); openEdit(wh); }} title="Edit organization"
                                                         className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#92600A] hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Pencil size={12} /> Edit
                                                     </button>
-                                                    <button onClick={() => setDeleteTarget(wh)} title="Delete organization"
+                                                    <button onClick={e => { e.stopPropagation(); setDeleteTarget(wh); }} title="Delete organization"
                                                         className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Trash2 size={12} /> Delete
                                                     </button>
@@ -759,6 +766,118 @@ export default function BranchesPage() {
                     {/* Hidden submit lets Enter create the branch. */}
                     <button type="submit" className="hidden" aria-hidden tabIndex={-1} />
                 </form>
+            </Modal>
+
+            {/* Organization details — opened by clicking anywhere on a row. */}
+            <Modal
+                open={!!detailFor}
+                onClose={() => setDetailFor(null)}
+                title="Organization"
+                size="md"
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setDetailFor(null)}>Close</Button>
+                        <Button onClick={() => { const wh = detailFor; setDetailFor(null); openEdit(wh); }}>
+                            <Pencil size={14} /> Edit
+                        </Button>
+                    </>
+                }
+            >
+                {detailFor && (() => {
+                    const dAdmins = adminsFor(detailFor.id);
+                    const dInvite = inviteFor(detailFor.id);
+                    const dActive = detailFor.is_active ?? true;
+                    return (
+                        <div className="space-y-5">
+                            <div className="flex items-start gap-3">
+                                <span className="w-12 h-12 rounded-xl bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                                    <Building2 size={22} />
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[17px] font-black text-slate-900 tracking-tight truncate">{detailFor.name}</p>
+                                    <p className="text-[12px] text-slate-500 truncate">{detailFor.location || 'No address on file'}</p>
+                                </div>
+                                <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${dActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                    {dActive ? 'Active' : 'Deactivated'}
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">City</p>
+                                    <p className="text-[13px] font-bold text-slate-800 mt-1 truncate">
+                                        {detailFor.area_name || <span className="text-slate-400 font-medium italic">Not set</span>}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Products</p>
+                                    <p className="text-[13px] font-bold text-slate-800 mt-1 tabular-nums">{detailFor.stock_count || 0}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400 pb-2 mb-2.5 border-b border-slate-100">
+                                    Who runs it
+                                </p>
+                                {dAdmins.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {dAdmins.map(u => (
+                                            <button
+                                                key={u.id}
+                                                onClick={() => router.push(`/admin/users/edit/${u.id}`)}
+                                                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 hover:border-[#F59E0B]/40 hover:bg-[#F59E0B]/[0.05] transition-colors text-left"
+                                            >
+                                                <span className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[10px] font-bold text-slate-500">
+                                                    {u.avatar
+                                                        ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                                        : (u.full_name || u.username || 'A').split(' ').map((x: string) => x[0]).join('').slice(0, 2).toUpperCase()}
+                                                </span>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-[12.5px] font-bold text-slate-800 truncate">{u.full_name?.trim() || u.username}</p>
+                                                    <p className="text-[11px] text-slate-400 truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
+                                                </div>
+                                                <ChevronRight size={14} className="text-slate-300 shrink-0" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : dInvite ? (
+                                    <div className="flex items-center gap-2.5 p-3 rounded-xl border border-dashed border-[#F59E0B]/40 bg-[#F59E0B]/[0.05]">
+                                        <Clock size={15} className="text-[#B4780B] shrink-0" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[12.5px] font-bold text-slate-800 truncate">
+                                                {dInvite.admin_name || dInvite.email}
+                                            </p>
+                                            <p className="text-[11px] text-slate-500">
+                                                Invite {dInvite.state}
+                                                {dInvite.expires_at && dInvite.state === 'pending'
+                                                    ? ` · expires ${new Date(dInvite.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
+                                                    : ''}
+                                            </p>
+                                        </div>
+                                        {dInvite.state === 'pending' && (
+                                            <button
+                                                onClick={() => { setLinkFor(dInvite); setCopied(false); setDetailFor(null); }}
+                                                className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/15 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                            >
+                                                <Link2 size={11} /> Link
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60">
+                                        <p className="text-[12px] text-slate-400 italic">Nobody runs this organization yet.</p>
+                                        <button
+                                            onClick={() => { const wh = detailFor; setDetailFor(null); openInvite(wh); }}
+                                            className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                        >
+                                            <Mail size={11} /> Invite
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()}
             </Modal>
 
             {/* Invite an admin into an organization that already exists. */}

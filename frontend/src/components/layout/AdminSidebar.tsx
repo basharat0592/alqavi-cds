@@ -8,12 +8,17 @@ import {
     Boxes, Settings, UserCheck, ShoppingBag,
     ShoppingCart, History, RefreshCcw, Monitor,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
-    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, Bell
+    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import { orderService } from '@/lib/api';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
+
+/** The platform itself, which is NOT one of the organizations it hosts —
+ *  Al-Qavi is a tenant like any other. Shown only to the Super Admin; a tenant
+ *  admin sees their own organization's name in this slot. */
+const PLATFORM_NAME = 'Zulfi';
 
 interface NavItem {
     name: string;
@@ -80,7 +85,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
                 { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
                 { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor },
-                { name: 'Notifications', href: '/admin/notifications', icon: Bell },
             ],
         },
         {
@@ -193,9 +197,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
     // Two letters for the badge: initials of the organization, or the platform's
     // own "AQ" when there is no organization to speak for.
-    const orgInitials = orgName
-        ? orgName.split(/[\s,]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'AQ'
-        : 'AQ';
+    const orgInitials = (orgName || PLATFORM_NAME)
+        .split(/[\s,]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'Z';
 
     return (
         <>
@@ -216,10 +219,10 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
                                 <span className="text-[9px] font-bold uppercase tracking-[0.16em] leading-none mb-1 text-[#FBBF24]">
-                                    {orgName ? 'Organization Console' : 'Central Console'}
+                                    {orgName ? 'Organization Console' : 'Platform Console'}
                                 </span>
-                                <span className="text-[14px] font-bold leading-none tracking-tight text-white truncate" title={orgName || 'Al-Qavi Hub'}>
-                                    {orgName || 'Al-Qavi Hub'}
+                                <span className="text-[14px] font-bold leading-none tracking-tight text-white truncate" title={orgName || PLATFORM_NAME}>
+                                    {orgName || PLATFORM_NAME}
                                 </span>
                             </div>
                         )}
