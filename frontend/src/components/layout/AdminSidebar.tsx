@@ -217,6 +217,12 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
     return (
         <>
             <style>{`
+                .sb-root {
+                    font-family: var(--font-inter), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+                    font-feature-settings: 'cv05' 1, 'ss01' 1;
+                    -webkit-font-smoothing: antialiased;
+                }
+
                 .sidebar-scroll::-webkit-scrollbar { width: 4px; }
                 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
                 .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 99px; }
@@ -231,21 +237,21 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 @media (prefers-reduced-motion: reduce) { .sb-reveal > * { animation: none; } }
             `}</style>
 
-            <div className={`relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden border-r border-white/[0.06] bg-[#0B1120] ${isCollapsed ? 'w-[64px]' : 'w-[235px]'}`}
+            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden border-r border-white/[0.06] bg-[#0B1120] ${isCollapsed ? 'w-[70px]' : 'w-[258px]'}`}
                 style={{ backgroundImage: 'radial-gradient(120% 60% at 0% 0%, rgba(245,158,11,0.09) 0%, rgba(245,158,11,0) 55%), linear-gradient(to bottom, #101A2E 0%, #0B1120 45%, #070B14 100%)' }}>
 
-                <div className="px-4 h-[70px] flex-shrink-0 flex items-center justify-between border-b border-white/[0.06]">
+                <div className="px-4 h-[76px] flex-shrink-0 flex items-center justify-between border-b border-white/[0.06]">
                     <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 min-w-0 group/brand">
-                        <div className="relative w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center transition-transform duration-200 group-hover/brand:scale-[1.06]"
+                        <div className="relative w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-transform duration-200 group-hover/brand:scale-[1.06]"
                             style={{ backgroundImage: 'linear-gradient(140deg, #FBBF24 0%, #F59E0B 55%, #D97706 100%)', boxShadow: '0 6px 16px -6px rgba(245,158,11,0.75), inset 0 1px 0 rgba(255,255,255,0.35)' }}>
-                            <span className="font-black text-[13px] text-[#3B2503] tracking-tight">{orgInitials}</span>
+                            <span className="font-black text-[14px] text-[#3B2503] tracking-tight">{orgInitials}</span>
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[8.5px] font-bold uppercase tracking-[0.18em] leading-none mb-[5px] text-[#FBBF24]/80">
+                                <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] leading-none mb-[6px] text-[#FBBF24]/85">
                                     {orgName ? 'Organization Console' : 'Platform Console'}
                                 </span>
-                                <span className="text-[14px] font-bold leading-none tracking-tight text-white truncate" title={orgName || PLATFORM_NAME}>
+                                <span className="text-[15.5px] font-bold leading-none tracking-[-0.01em] text-white truncate" title={orgName || PLATFORM_NAME}>
                                     {orgName || PLATFORM_NAME}
                                 </span>
                             </div>
@@ -279,16 +285,16 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                     type="button"
                                     onClick={() => toggleGroup(group.label, groupOpen)}
                                     aria-expanded={groupOpen}
-                                    className="group/hdr mx-2 px-2.5 py-2 mb-0.5 flex items-center gap-2 rounded-lg hover:bg-white/[0.05] transition-colors"
+                                    className="group/hdr mx-2 px-3 py-2.5 mb-1 flex items-center gap-2.5 rounded-lg hover:bg-white/[0.05] transition-colors"
                                     style={{ width: 'calc(100% - 1rem)' }}
                                 >
                                     {/* A closed group that holds the current page still says so. */}
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 transition-colors ${groupActive ? 'bg-[#F59E0B] shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-white/15 group-hover/hdr:bg-white/30'}`} />
-                                    <span className={`text-[9.5px] font-bold uppercase tracking-[0.18em] transition-colors ${groupActive ? 'text-[#FBBF24]' : 'text-slate-500 group-hover/hdr:text-slate-300'}`}>
+                                    <span className={`text-[10.5px] font-semibold uppercase tracking-[0.15em] transition-colors ${groupActive ? 'text-[#FBBF24]' : 'text-slate-400 group-hover/hdr:text-slate-200'}`}>
                                         {group.label}
                                     </span>
                                     <ChevronDown
-                                        size={12}
+                                        size={14}
                                         className={`ml-auto shrink-0 transition-all duration-200 ${groupOpen ? 'rotate-180' : ''} ${groupActive ? 'text-[#FBBF24]/70' : 'text-slate-600 group-hover/hdr:text-slate-400'}`}
                                     />
                                 </button>
@@ -303,7 +309,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                     return (
                                         <Link key={item.href} href={item.href}
                                             onClick={() => onNavigate?.()}
-                                            className={`group relative flex items-center gap-2.5 rounded-lg overflow-visible transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-[9px] hover:translate-x-0.5'} ${active
+                                            className={`group relative flex items-center gap-2.5 rounded-lg overflow-visible transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px] hover:translate-x-0.5'} ${active
                                                 ? 'bg-gradient-to-r from-[#F59E0B]/[0.22] via-[#F59E0B]/[0.10] to-transparent'
                                                 : 'hover:bg-white/[0.055]'}`}>
 
@@ -317,11 +323,11 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
                                             <item.icon
                                                 className={`shrink-0 transition-colors duration-150 ${active ? 'text-[#FBBF24]' : 'text-slate-400 group-hover:text-slate-200'}`}
-                                                size={16}
+                                                size={18}
                                             />
 
                                             {!isCollapsed && (
-                                                <span className={`text-[13.5px] tracking-tight whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
+                                                <span className={`text-[14.5px] tracking-[-0.006em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                                     {item.name}
                                                 </span>
                                             )}
@@ -338,7 +344,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
                                             {/* Tooltip when collapsed */}
                                             {isCollapsed && (
-                                                <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
+                                                <div className="absolute left-full ml-3 px-3 py-2 rounded-lg text-[13px] font-semibold whitespace-nowrap pointer-events-none
                                                     opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
                                                     bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
                                                     {item.name}
@@ -358,7 +364,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                     <div className="flex-shrink-0 px-2.5 pb-3 pt-2 border-t border-white/[0.06]">
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
-                            className={`group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-[9px] hover:translate-x-0.5'} ${isActive('/admin/settings')
+                            className={`group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px] hover:translate-x-0.5'} ${isActive('/admin/settings')
                                 ? 'bg-gradient-to-r from-[#F59E0B]/[0.22] via-[#F59E0B]/[0.10] to-transparent'
                                 : 'hover:bg-white/[0.055]'}`}>
 
@@ -367,18 +373,18 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                             )}
 
                             <Settings
-                                size={16}
+                                size={18}
                                 className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-[#FBBF24]' : 'text-slate-400 group-hover:text-slate-200'}`}
                             />
 
                             {!isCollapsed && (
-                                <span className={`text-[13.5px] tracking-tight transition-colors duration-150 ${isActive('/admin/settings') ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
+                                <span className={`text-[14.5px] tracking-[-0.006em] transition-colors duration-150 ${isActive('/admin/settings') ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                     Settings
                                 </span>
                             )}
 
                             {isCollapsed && (
-                                <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
+                                <div className="absolute left-full ml-3 px-3 py-2 rounded-lg text-[13px] font-semibold whitespace-nowrap pointer-events-none
                                     opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
                                     bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
                                     System Settings
