@@ -53,7 +53,6 @@ const BRANCH_ADMIN_IMPORTANT_HREFS = new Set<string>([
     '/admin/sales',           // Sales History
     '/admin/sale-returns',    // Sale Returns
     '/admin/orders',          // Order List
-    '/admin/tracking',        // Order Tracking
     // Purchasing & Inventory
     '/admin/purchases/add',   // New Purchase Order
     '/admin/inventory/list',  // Current Stocks
@@ -429,20 +428,6 @@ export default function AdminDashboard() {
             keywords: ['orders', 'shipping', 'list']
         },
         {
-            name: 'Order Tracking',
-            desc: 'Delivery & dispatch status',
-            href: '/admin/tracking',
-            icon: Truck,
-            theme: {
-                border: 'hover:border-sky-500',
-                iconBg: 'bg-sky-50 border-sky-100 text-sky-600 group-hover:bg-sky-600 group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(2,132,199,0.2)]',
-                leftBar: 'bg-sky-600',
-                chevron: 'text-sky-400 group-hover:text-sky-600',
-                hoverGlow: 'hover:shadow-[0_12px_24px_rgba(2,132,199,0.06)]'
-            },
-            keywords: ['delivery', 'courier', 'dispatch', 'order tracking']
-        },
-        {
             name: 'Admins',
             desc: 'Staff logins & accounts',
             href: '/admin/users',
@@ -667,7 +652,6 @@ export default function AdminDashboard() {
                 { name: 'Sales History', href: '/admin/sales', icon: TrendingUp, keywords: ['sales list', 'transactions', 'revenue ledger'] },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw, keywords: ['returns', 'refunds', 'customer returns'] },
                 { name: 'Recent Orders', href: '/admin/orders', icon: ClipboardList, keywords: ['orders', 'shipping', 'list', 'recent', 'active'] },
-                { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, keywords: ['delivery', 'courier', 'dispatch'] },
                 { name: 'Delivery Persons', href: '/admin/delivery', icon: Bike, keywords: ['rider', 'riders', 'courier', 'driver', 'delivery boy'] },
             ]
         },
@@ -754,7 +738,7 @@ export default function AdminDashboard() {
 
     // â”€â”€ Group the core button-cards into labeled sections (order = display order) â”€â”€
     const CORE_GROUPS: { title: string; hrefs: string[] }[] = [
-        { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/sales', '/admin/sale-returns', '/admin/orders', '/admin/tracking'] },
+        { title: 'Sales & Orders', hrefs: ['/admin/sale', '/admin/sales', '/admin/sale-returns', '/admin/orders'] },
         { title: 'Purchasing & Inventory', hrefs: ['/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns', '/admin/products', '/admin/products/add', '/admin/inventory/list'] },
         { title: 'Finance & Reports', hrefs: ['/admin/reports', '/admin/income', '/admin/expense', '/admin/payments'] },
         { title: 'Administration', hrefs: ['/admin/branches', '/admin/users', '/admin/website-settings', '/admin/settings', '/admin/company/suppliers', '/admin/company/customers'] },
@@ -928,9 +912,8 @@ export default function AdminDashboard() {
     const mobileNavGroups = NAV_GROUPS
         .map((g) => ({ ...g, items: g.items.filter((i) => (i as any).action ? true : canSee(i.href)) }))
         .filter((g) => g.items.length > 0);
-    // Payments + Reports get their own pills on the mobile dashboard (Order Tracking
-    // stays in the header / drawer, not here).
-    const mobileStandalone = STANDALONE_ITEMS.filter((s) => s.href !== '/admin/tracking' && canSee(s.href));
+    // Payments + Reports get their own pills on the mobile dashboard.
+    const mobileStandalone = STANDALONE_ITEMS.filter((s) => canSee(s.href));
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">

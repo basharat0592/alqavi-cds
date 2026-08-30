@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-    LayoutDashboard, ScanLine, TrendingUp, RotateCcw, ClipboardList, Truck,
+    LayoutDashboard, ScanLine, TrendingUp, RotateCcw, ClipboardList,
     ShoppingCart, History, RefreshCcw, UserCheck, Package, PackagePlus, Boxes, Store,
     CreditCard, ArrowDownLeft, ArrowUpRight, BarChart3, Users, Bell, AlertTriangle,
     Building2, User, MapPin, Globe, Settings, ChevronDown, ChevronRight, X, Bike, LogOut,
@@ -28,7 +28,6 @@ type Group = { label: string; items: Item[] };
 export const STANDALONE_ITEMS: { name: string; href: string; icon: any; color: string; accent: string; accentActive: string }[] = [
     { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#6B46C1', accent: 'bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100', accentActive: 'bg-[#6B46C1] text-white border-[#6B46C1] shadow-sm shadow-violet-700/20' },
     { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#553C9A', accent: 'bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100', accentActive: 'bg-[#553C9A] text-white border-[#553C9A] shadow-sm shadow-purple-700/20' },
-    { name: 'Order Tracking', href: '/admin/tracking', icon: Truck, color: '#2C5282', accent: 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 hover:border-blue-200', accentActive: 'bg-[#2C5282] text-white border-[#2C5282] shadow-sm shadow-blue-800/20' },
 ];
 
 export const NAV_GROUPS: Group[] = [
@@ -247,14 +246,6 @@ export function MobileNavMenu({ open, onClose }: { open: boolean; onClose: () =>
                             pathname === '/admin/dashboard' ? 'bg-[#F59E0B]/10 text-[#B4780B]' : 'text-slate-700')}>
                         <LayoutDashboard size={16} /> Dashboard
                     </Link>
-                    {canSee('/admin/tracking') && (
-                        <Link href="/admin/tracking" onClick={onClose}
-                            className={cn('flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-bold',
-                                isActive('/admin/tracking') ? 'bg-sky-50 text-sky-700' : 'text-slate-700')}>
-                            <Truck size={16} /> Order Tracking
-                        </Link>
-                    )}
-
                     {groups.map((g) => (
                         <div key={g.label} className="border-t border-slate-50">
                             <button

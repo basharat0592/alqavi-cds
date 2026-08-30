@@ -6,7 +6,7 @@
 
 export const ROLE_PAGE_PRESETS: Record<string, string[]> = {
     'operations manager': [
-        '/admin/dashboard', '/admin/orders', '/admin/sales', '/admin/tracking',
+        '/admin/dashboard', '/admin/orders', '/admin/sales',
         '/admin/products', '/admin/products/add',
         '/admin/inventory/list',
         '/admin/purchases/add', '/admin/purchases', '/admin/purchases/returns',
@@ -15,7 +15,7 @@ export const ROLE_PAGE_PRESETS: Record<string, string[]> = {
         '/admin/reports',
     ],
     'sales manager': [
-        '/admin/dashboard', '/admin/orders', '/admin/sales', '/admin/tracking',
+        '/admin/dashboard', '/admin/orders', '/admin/sales',
         '/admin/sale', '/admin/payments', '/admin/sale-returns',
         '/admin/company/customers',
         '/admin/reports',
@@ -34,7 +34,7 @@ export const ROLE_PAGE_PRESETS: Record<string, string[]> = {
         '/admin/reports',
     ],
     'area manager': [
-        '/admin/dashboard', '/admin/orders', '/admin/sales', '/admin/tracking',
+        '/admin/dashboard', '/admin/orders', '/admin/sales',
         '/admin/sale', '/admin/payments', '/admin/sale-returns',
         '/admin/company/customers', '/admin/inventory/list',
         '/admin/reports',

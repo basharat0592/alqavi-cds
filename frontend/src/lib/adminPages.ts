@@ -20,7 +20,6 @@ export const SUPER_ADMIN_HIDDEN_HREFS: string[] = [
     '/admin/sale-returns',      // Sale Returns
     '/admin/purchases/add',     // New Purchase Order
     '/admin/purchases/returns', // Purchase Returns
-    '/admin/tracking',          // Order Tracking
     '/admin/delivery',          // Delivery Persons
     '/admin/system-users',      // System Users (branch-admin-only)
     '/admin/sales',             // Sales History
@@ -74,7 +73,6 @@ export const ADMIN_PAGE_GROUPS: { group: string; items: { n: string; h: string }
             { n: 'Sales History', h: '/admin/sales' },
             { n: 'Sale Returns', h: '/admin/sale-returns' },
             { n: 'Recent Orders', h: '/admin/orders' },
-            { n: 'Order Tracking', h: '/admin/tracking' },
             { n: 'Delivery Persons', h: '/admin/delivery' },
         ],
     },
@@ -147,7 +145,6 @@ export const ADMIN_PAGES: AdminPage[] = [
     { name: 'Add Listing', href: '/admin/products/add', keywords: ['create', 'new item', 'upload', 'add product', 'add listing'] },
     { name: 'Current Stocks', href: '/admin/inventory/list', keywords: ['volumes', 'quantities', 'adjustments', 'stock', 'inventory'] },
     { name: 'Branches', href: '/admin/branches', keywords: ['branch', 'branches', 'city', 'assign', 'warehouse admin', 'multi branch', 'who manages'] },
-    { name: 'Order Tracking', href: '/admin/tracking', keywords: ['delivery', 'courier', 'dispatch', 'tracking'] },
     { name: 'Supplier Registry', href: '/admin/company/suppliers', keywords: ['vendors', 'manufacturers', 'contacts', 'supplier'] },
     { name: 'Customer Registry', href: '/admin/company/customers', keywords: ['clients', 'profiles', 'ledger', 'customer'] },
     { name: 'Delivery Persons', href: '/admin/delivery', keywords: ['rider', 'riders', 'courier', 'dispatch', 'delivery boy', 'delivery person', 'driver'] },

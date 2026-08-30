@@ -83,7 +83,6 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
                 { name: 'Recent Orders', href: '/admin/orders', icon: ShoppingBag },
                 { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
-                { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
                 { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor },
             ],
         },
