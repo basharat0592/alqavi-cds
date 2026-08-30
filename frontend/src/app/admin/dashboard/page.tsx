@@ -17,7 +17,7 @@ import { getImageUrl } from '@/lib/utils';
 import { useAdminDashboard } from '@/hooks';
 import SuperAdminCharts from '@/components/admin/SuperAdminCharts';
 import SuperAdminOverview from '@/components/admin/SuperAdminOverview';
-import BranchAdminOverview from '@/components/admin/BranchAdminOverview';
+import BranchAdminOverview, { StockRiskCard } from '@/components/admin/BranchAdminOverview';
 import { NAV_GROUPS, STANDALONE_ITEMS } from '@/components/layout/AdminNavMenu';
 import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
@@ -979,7 +979,16 @@ export default function AdminDashboard() {
                             </div>
                         )}
 
-                        {/* â”€â”€ BRANCH ADMIN â€” ANALYTICS â”€â”€ */}
+                        {/* â”€â”€ BRANCH ADMIN â€” DESKTOP: flat quick-action grid (all modules) â”€â”€ */}
+                        {!isSuperAdmin && (
+                            <div className="hidden md:block">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                    {dashTiles.map(renderTile)}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* â”€â”€ BRANCH ADMIN â€” ANALYTICS (under the quick actions) â”€â”€ */}
                         {!isSuperAdmin && (
                             <div className="hidden md:block">
                                 <BranchAdminOverview
@@ -987,19 +996,9 @@ export default function AdminDashboard() {
                                     revenueData={revenueData30}
                                     recentOrders={recentOrders}
                                     lowStock={serverLowStock}
-                                    activityLogs={activityLogs}
                                     productCount={products?.length}
                                     loading={loading}
                                 />
-                            </div>
-                        )}
-
-                        {/* â”€â”€ BRANCH ADMIN â€” DESKTOP: flat quick-action grid (all modules) â”€â”€ */}
-                        {!isSuperAdmin && (
-                            <div className="hidden md:block">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                                    {dashTiles.map(renderTile)}
-                                </div>
                             </div>
                         )}
 
@@ -1166,6 +1165,10 @@ export default function AdminDashboard() {
                             )}
                         </div>
                         )}
+
+                        {/* Stock risk sits under the Low Stock / Payments Due panel in
+                            the right rail, matching the reference layout. */}
+                        {!isSuperAdmin && <StockRiskCard lowStock={serverLowStock} />}
                     </aside>
                 </div>
 

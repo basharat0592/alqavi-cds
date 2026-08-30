@@ -277,17 +277,15 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                         // the accordion does not apply and every icon stays reachable.
                         const groupOpen = isCollapsed || (openGroups[group.label] ?? groupActive);
                         return (
-                        <div key={group.label} className={`${gIdx !== 0 ? 'mt-2.5' : ''} ${isCollapsed
-                            ? ''
-                            : 'mx-3 rounded-xl border border-white/[0.09] bg-white/[0.025] overflow-hidden'}`}>
+                        <div key={group.label} className={gIdx !== 0 ? 'mt-4' : ''}>
                             {!isCollapsed && (
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(group.label, groupOpen)}
                                     aria-expanded={groupOpen}
-                                    className="group/hdr w-full px-3.5 py-3 flex items-center gap-2.5 hover:bg-white/[0.045] transition-colors" 
+                                    className="group/hdr w-full px-5 py-2 mb-1 flex items-center gap-2.5 hover:bg-white/[0.03] transition-colors" 
                                 >
-                                    <span className={`text-[12.5px] font-semibold uppercase tracking-[0.07em] transition-colors ${groupActive ? 'text-white' : 'text-slate-300 group-hover/hdr:text-white'}`}>
+                                    <span className={`text-[11.5px] font-semibold uppercase tracking-[0.12em] transition-colors ${groupActive ? 'text-slate-200' : 'text-slate-500 group-hover/hdr:text-slate-300'}`}>
                                         {group.label}
                                     </span>
                                     {/* A closed group that holds the current page still says so. */}
@@ -304,15 +302,15 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                 <div className="mx-3 mb-1 h-px bg-white/5" />
                             )}
 
-                            <div className={`space-y-1 ${isCollapsed ? 'px-3' : 'px-2 pt-2 pb-2 border-t border-white/[0.07]'} ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
+                            <div className={`space-y-1 ${isCollapsed ? 'px-3' : 'px-3'} ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
                                 {group.items.map((item) => {
                                     const active = isActive(item.href);
                                     return (
                                         <Link key={item.href} href={item.href}
                                             onClick={() => onNavigate?.()}
                                             className={`group relative flex items-center gap-3 rounded-lg overflow-visible transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px]'} ${active
-                                                ? 'bg-[#243349]'
-                                                : 'hover:bg-white/[0.06]'}`}>
+                                                ? 'bg-[#F59E0B]/[0.14] ring-1 ring-inset ring-[#F59E0B]/25'
+                                                : 'hover:bg-white/[0.05]'}`}>
 
                                             {/* Active left rail, on the row's own edge. */}
                                             {active && (
@@ -359,12 +357,12 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
                 {/* ── FOOTER / SETTINGS ── */}
                 {isPageAllowed('/admin/settings') && (
-                    <div className="flex-shrink-0 px-3 pb-4 pt-3 mt-1 border-t border-white/[0.07]">
+                    <div className="flex-shrink-0 mx-5 px-0 pb-4 pt-4 mt-2 border-t border-white/[0.08]">
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
                             className={`group relative flex items-center gap-3 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px]'} ${isActive('/admin/settings')
-                                ? 'bg-[#243349]'
-                                : 'hover:bg-white/[0.06]'}`}>
+                                ? 'bg-[#F59E0B]/[0.14] ring-1 ring-inset ring-[#F59E0B]/25'
+                                : 'hover:bg-white/[0.05]'}`}>
 
                             {isActive('/admin/settings') && (
                                 <span className="absolute left-0 inset-y-[5px] w-[3px] rounded-full bg-[#F59E0B]" />
