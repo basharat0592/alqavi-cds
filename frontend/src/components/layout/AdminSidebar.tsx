@@ -237,21 +237,19 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 @media (prefers-reduced-motion: reduce) { .sb-reveal > * { animation: none; } }
             `}</style>
 
-            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden border-r border-white/[0.06] bg-[#0B1120] ${isCollapsed ? 'w-[70px]' : 'w-[258px]'}`}
-                style={{ backgroundImage: 'radial-gradient(120% 60% at 0% 0%, rgba(245,158,11,0.09) 0%, rgba(245,158,11,0) 55%), linear-gradient(to bottom, #101A2E 0%, #0B1120 45%, #070B14 100%)' }}>
+            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-[#111827] ${isCollapsed ? 'w-[76px]' : 'w-[268px]'}`}>
 
-                <div className="px-4 h-[76px] flex-shrink-0 flex items-center justify-between border-b border-white/[0.06]">
-                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 min-w-0 group/brand">
-                        <div className="relative w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center transition-transform duration-200 group-hover/brand:scale-[1.06]"
-                            style={{ backgroundImage: 'linear-gradient(140deg, #FBBF24 0%, #F59E0B 55%, #D97706 100%)', boxShadow: '0 6px 16px -6px rgba(245,158,11,0.75), inset 0 1px 0 rgba(255,255,255,0.35)' }}>
-                            <span className="font-black text-[14px] text-[#3B2503] tracking-tight">{orgInitials}</span>
+                <div className="px-4 py-4 flex-shrink-0 flex items-center gap-3">
+                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-3 min-w-0 flex-1 group/brand">
+                        <div className="relative w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center bg-[#F59E0B] transition-transform duration-200 group-hover/brand:scale-[1.05]">
+                            <span className="font-bold text-[15px] text-white tracking-tight">{orgInitials}</span>
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[9.5px] font-semibold uppercase tracking-[0.16em] leading-none mb-[6px] text-[#FBBF24]/85">
+                                <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] leading-[1.25] mb-1 text-slate-400">
                                     {orgName ? 'Organization Console' : 'Platform Console'}
                                 </span>
-                                <span className="text-[15.5px] font-bold leading-none tracking-[-0.01em] text-white truncate" title={orgName || PLATFORM_NAME}>
+                                <span className="text-[16px] font-bold leading-tight tracking-[-0.01em] text-white truncate" title={orgName || PLATFORM_NAME}>
                                     {orgName || PLATFORM_NAME}
                                 </span>
                             </div>
@@ -285,17 +283,19 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                     type="button"
                                     onClick={() => toggleGroup(group.label, groupOpen)}
                                     aria-expanded={groupOpen}
-                                    className="group/hdr mx-2 px-3 py-2.5 mb-1 flex items-center gap-2.5 rounded-lg hover:bg-white/[0.05] transition-colors"
+                                    className="group/hdr mx-3 px-3 py-2 mb-1.5 mt-1 flex items-center gap-2 rounded-lg hover:bg-white/[0.04] transition-colors"
                                     style={{ width: 'calc(100% - 1rem)' }}
                                 >
-                                    {/* A closed group that holds the current page still says so. */}
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 transition-colors ${groupActive ? 'bg-[#F59E0B] shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 'bg-white/15 group-hover/hdr:bg-white/30'}`} />
-                                    <span className={`text-[10.5px] font-semibold uppercase tracking-[0.15em] transition-colors ${groupActive ? 'text-[#FBBF24]' : 'text-slate-400 group-hover/hdr:text-slate-200'}`}>
+                                    <span className={`text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${groupActive ? 'text-slate-300' : 'text-slate-500 group-hover/hdr:text-slate-300'}`}>
                                         {group.label}
                                     </span>
+                                    {/* A closed group that holds the current page still says so. */}
+                                    {groupActive && !groupOpen && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                                    )}
                                     <ChevronDown
                                         size={14}
-                                        className={`ml-auto shrink-0 transition-all duration-200 ${groupOpen ? 'rotate-180' : ''} ${groupActive ? 'text-[#FBBF24]/70' : 'text-slate-600 group-hover/hdr:text-slate-400'}`}
+                                        className={`ml-auto shrink-0 transition-all duration-200 ${groupOpen ? 'rotate-180' : ''} text-slate-600 group-hover/hdr:text-slate-400`}
                                     />
                                 </button>
                             )}
@@ -303,31 +303,28 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                 <div className="mx-3 mb-1 h-px bg-white/5" />
                             )}
 
-                            <div className={`space-y-0.5 px-2.5 ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
+                            <div className={`space-y-1 px-3 ml-3 ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
                                 {group.items.map((item) => {
                                     const active = isActive(item.href);
                                     return (
                                         <Link key={item.href} href={item.href}
                                             onClick={() => onNavigate?.()}
-                                            className={`group relative flex items-center gap-2.5 rounded-lg overflow-visible transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px] hover:translate-x-0.5'} ${active
-                                                ? 'bg-gradient-to-r from-[#F59E0B]/[0.22] via-[#F59E0B]/[0.10] to-transparent'
-                                                : 'hover:bg-white/[0.055]'}`}>
+                                            className={`group relative flex items-center gap-3 rounded-lg overflow-visible transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px]'} ${active
+                                                ? 'bg-[#1E293B]'
+                                                : 'hover:bg-white/[0.045]'}`}>
 
-                                            {/* Active left rail — a ring around the whole row read as a button. */}
-                                            {active && !isCollapsed && (
-                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-r-full bg-[#FBBF24] shadow-[0_0_10px_rgba(251,191,36,0.7)]" />
-                                            )}
-                                            {active && isCollapsed && (
-                                                <span className="absolute inset-y-1 left-0 w-[3px] rounded-r-full bg-[#FBBF24]" />
+                                            {/* Active left rail, flush to the panel edge. */}
+                                            {active && (
+                                                <span className="absolute -left-3 inset-y-0 w-[3px] rounded-r bg-[#F59E0B]" />
                                             )}
 
                                             <item.icon
-                                                className={`shrink-0 transition-colors duration-150 ${active ? 'text-[#FBBF24]' : 'text-slate-400 group-hover:text-slate-200'}`}
-                                                size={18}
+                                                className={`shrink-0 transition-colors duration-150 ${active ? 'text-[#F59E0B]' : 'text-slate-400 group-hover:text-slate-200'}`}
+                                                size={19}
                                             />
 
                                             {!isCollapsed && (
-                                                <span className={`text-[14.5px] tracking-[-0.006em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
+                                                <span className={`text-[15px] tracking-[-0.006em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-[#F59E0B] font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                                     {item.name}
                                                 </span>
                                             )}
@@ -361,24 +358,24 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
                 {/* ── FOOTER / SETTINGS ── */}
                 {isPageAllowed('/admin/settings') && (
-                    <div className="flex-shrink-0 px-2.5 pb-3 pt-2 border-t border-white/[0.06]">
+                    <div className="flex-shrink-0 px-3 pb-4 pt-3 mt-2">
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
-                            className={`group relative flex items-center gap-2.5 rounded-lg transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px] hover:translate-x-0.5'} ${isActive('/admin/settings')
-                                ? 'bg-gradient-to-r from-[#F59E0B]/[0.22] via-[#F59E0B]/[0.10] to-transparent'
-                                : 'hover:bg-white/[0.055]'}`}>
+                            className={`group relative flex items-center gap-3 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px]'} ${isActive('/admin/settings')
+                                ? 'bg-[#1E293B]'
+                                : 'hover:bg-white/[0.045]'}`}>
 
-                            {isActive('/admin/settings') && !isCollapsed && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-r-full bg-[#FBBF24] shadow-[0_0_10px_rgba(251,191,36,0.7)]" />
+                            {isActive('/admin/settings') && (
+                                <span className="absolute -left-2 inset-y-0 w-[3px] rounded-r bg-[#F59E0B]" />
                             )}
 
                             <Settings
-                                size={18}
-                                className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-[#FBBF24]' : 'text-slate-400 group-hover:text-slate-200'}`}
+                                size={19}
+                                className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-[#F59E0B]' : 'text-slate-400 group-hover:text-slate-200'}`}
                             />
 
                             {!isCollapsed && (
-                                <span className={`text-[14.5px] tracking-[-0.006em] transition-colors duration-150 ${isActive('/admin/settings') ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
+                                <span className={`text-[15px] tracking-[-0.006em] transition-colors duration-150 ${isActive('/admin/settings') ? 'text-[#F59E0B] font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
                                     Settings
                                 </span>
                             )}

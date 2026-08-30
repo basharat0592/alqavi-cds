@@ -489,9 +489,10 @@ export default function PaymentsPage() {
                             )}
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                         <FlowPanel
                             title="Money In" tone="emerald" total={totalIncome} loading={loading}
+                            caption="Sales, purchase returns and other income"
                             rows={[
                                 { label: 'Sales', val: flow.sales },
                                 { label: 'Purchase Returns', val: flow.purchaseReturns },
@@ -500,12 +501,18 @@ export default function PaymentsPage() {
                         />
                         <FlowPanel
                             title="Money Out" tone="rose" total={totalExpense} loading={loading}
+                            caption="Purchases, returns, delivery and expenses"
                             rows={[
                                 { label: 'Purchases', val: flow.purchases },
                                 { label: 'Sale Returns', val: flow.saleReturns },
                                 { label: 'Delivery Charges', val: flow.delivery },
                                 { label: 'Other Expenses', val: flow.expenses },
                             ]}
+                        />
+                        {/* Net is derived, so it carries no breakdown of its own. */}
+                        <FlowPanel
+                            title="Net Balance" tone="sky" total={totalIncome - totalExpense} loading={loading}
+                            caption="Current period net"
                         />
                     </div>
 
@@ -1145,36 +1152,73 @@ function DetailCell({ label, children, mono }: { label: string; children: React.
 
 // A breakdown card that lists what makes up income (or expense) and shows the
 // subtotal. The listed rows always sum to `total`, so the maths is transparent.
-function FlowPanel({ title, tone, total, rows, loading }: {
-    title: string; tone: 'emerald' | 'rose'; total: number;
-    rows: { label: string; val: number }[]; loading?: boolean;
+/**
+ * Headline figure card: a coloured rule across the top, the label with its
+ * direction icon, the amount, and a caption line.
+ *
+ * The per-source breakdown that used to be listed under every figure now sits
+ * behind the info button. Three figures are the point of this row; spelling out
+ * seven contributing lines underneath buried them.
+ */
+function FlowPanel({ title, tone, total, rows, loading, caption }: {
+    title: string; tone: 'emerald' | 'rose' | 'sky'; total: number;
+    rows?: { label: string; val: number }[]; loading?: boolean; caption?: string;
 }) {
+    const [showRows, setShowRows] = useState(false);
     const toneMap = {
-        emerald: { text: 'text-emerald-700', dot: 'bg-emerald-500', ring: 'border-emerald-100', head: 'text-emerald-600' },
-        rose: { text: 'text-rose-600', dot: 'bg-rose-500', ring: 'border-rose-100', head: 'text-rose-600' },
+        emerald: { rule: 'bg-emerald-600', icon: 'text-emerald-600', Icon: TrendingDown },
+        rose: { rule: 'bg-rose-600', icon: 'text-rose-600', Icon: TrendingUp },
+        sky: { rule: 'bg-sky-700', icon: 'text-sky-700', Icon: Wallet },
     }[tone];
+    const Icon = toneMap.Icon;
+    const hasRows = !!(rows && rows.length);
+
     return (
-        <Card className={`p-4 border ${toneMap.ring}`}>
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                    <span className={`h-2 w-2 rounded-full ${toneMap.dot}`} />
-                    <h3 className={`text-[11px] font-bold uppercase tracking-widest ${toneMap.head}`}>{title}</h3>
-                </div>
-                <span className={`text-[15px] font-black tabular-nums ${toneMap.text}`}>
-                    {tone === 'emerald' ? '+' : '-'}{formatCurrency(total)}
-                </span>
-            </div>
-            <div className="divide-y divide-slate-100">
-                {rows.map((r) => (
-                    <div key={r.label} className="flex items-center justify-between py-1.5">
-                        <span className="text-[12px] text-slate-500">{r.label}</span>
-                        <span className={`text-[12.5px] font-bold tabular-nums ${r.val ? 'text-slate-800' : 'text-slate-300'}`}>
-                            {loading ? '—' : formatCurrency(r.val)}
-                        </span>
+        <div className="relative bg-white rounded-xl border border-slate-200 shadow-[0_1px_2px_rgba(15,23,42,0.05)] overflow-hidden">
+            <div className={`h-[3px] w-full ${toneMap.rule}`} />
+            <div className="p-5">
+                <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <Icon size={17} className={`${toneMap.icon} shrink-0`} />
+                        <h3 className="text-[15px] font-semibold text-slate-800 truncate">{title}</h3>
                     </div>
-                ))}
+                    {hasRows && (
+                        <button
+                            type="button"
+                            onClick={() => setShowRows(v => !v)}
+                            aria-label={`What makes up ${title}`}
+                            aria-expanded={showRows}
+                            className={`shrink-0 w-[18px] h-[18px] rounded-full border text-[10px] font-bold leading-none transition-colors ${showRows
+                                ? 'border-[#F59E0B] text-[#B4780B] bg-[#F59E0B]/10'
+                                : 'border-slate-300 text-slate-400 hover:border-slate-400 hover:text-slate-600'}`}
+                        >
+                            i
+                        </button>
+                    )}
+                </div>
+
+                <p className="text-[30px] leading-none font-bold text-slate-900 tabular-nums tracking-[-0.02em]">
+                    {loading ? '—' : formatCurrency(total)}
+                </p>
+
+                {caption && !showRows && (
+                    <p className="mt-3 text-[12.5px] text-slate-500">{caption}</p>
+                )}
+
+                {hasRows && showRows && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 divide-y divide-slate-100">
+                        {rows!.map((r) => (
+                            <div key={r.label} className="flex items-center justify-between py-1.5">
+                                <span className="text-[12.5px] text-slate-500">{r.label}</span>
+                                <span className={`text-[12.5px] font-semibold tabular-nums ${r.val ? 'text-slate-800' : 'text-slate-300'}`}>
+                                    {loading ? '—' : formatCurrency(r.val)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
-        </Card>
+        </div>
     );
 }
 
