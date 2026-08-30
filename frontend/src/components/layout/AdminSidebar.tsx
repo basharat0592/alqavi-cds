@@ -4,9 +4,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-    LayoutDashboard, Package, TrendingUp,
+    LayoutDashboard, Package, PackagePlus, TrendingUp, Globe, ScanLine,
     Boxes, Settings, UserCheck, ShoppingBag,
-    ShoppingCart, History, RefreshCcw, Monitor,
+    ShoppingCart, History, RefreshCcw,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
     Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2
 } from 'lucide-react';
@@ -78,60 +78,60 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
     const menuGroups: NavGroup[] = [
         {
-            label: 'Main Dashboard',
+            label: 'Main',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'Recent Orders', href: '/admin/orders', icon: ShoppingBag },
-                { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
-                { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor },
+                { name: 'Orders', href: '/admin/orders', icon: ShoppingBag },
+                { name: 'Sales', href: '/admin/sales', icon: TrendingUp },
+                { name: 'Website', href: '/admin/website-settings', icon: Globe },
             ],
         },
         {
-            label: 'Inventory & Stock',
+            label: 'Inventory',
             items: [
-                { name: 'Live Products', href: '/admin/products', icon: LayoutDashboard },
-                { name: 'Add Listing', href: '/admin/products/add', icon: Package },
-                { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
+                { name: 'Products', href: '/admin/products', icon: Package },
+                { name: 'Add Product', href: '/admin/products/add', icon: PackagePlus },
+                { name: 'Stock', href: '/admin/inventory/list', icon: Boxes },
             ],
         },
         {
-            label: 'Procurement',
+            label: 'Purchases',
             items: [
                 { name: 'New Purchase', href: '/admin/purchases/add', icon: ShoppingCart },
-                { name: 'Purchase History', href: '/admin/purchases', icon: History },
-                { name: 'Returns / Refunds', href: '/admin/purchases/returns', icon: RefreshCcw },
+                { name: 'Purchases', href: '/admin/purchases', icon: History },
+                { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw },
             ],
         },
         {
-            label: 'Sales Console',
+            label: 'Sales',
             items: [
-                { name: 'Point of Sale', href: '/admin/sale', icon: Monitor },
-                { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
+                { name: 'POS', href: '/admin/sale', icon: ScanLine },
+                { name: 'Payments', href: '/admin/payments', icon: CreditCard },
                 { name: 'Income', href: '/admin/income', icon: ArrowDownLeft },
                 { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
             ],
         },
         {
-            label: 'Security & Logs',
+            label: 'Manage',
             items: [
                 { name: 'Organizations', href: '/admin/branches', icon: Building2 },
-                { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
-                { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
-                { name: 'Delivery Persons', href: '/admin/delivery', icon: Truck },
+                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'Customers', href: '/admin/company/customers', icon: Users },
+                { name: 'Delivery', href: '/admin/delivery', icon: Truck },
                 // Super-admin-only page (SUPER_ONLY_HREFS), so this label is only
                 // ever shown on the platform side.
                 { name: 'Region', href: '/admin/company/areas', icon: MapPin },
                 { name: 'Admins', href: '/admin/users', icon: User },
-                { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
-                { name: 'System Users', href: '/admin/system-users', icon: UserCog },
-                { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },
+                { name: 'Roles', href: '/admin/users/roles', icon: ShieldCheck },
+                { name: 'Users', href: '/admin/system-users', icon: UserCog },
+                { name: 'Alerts', href: '/admin/alerts', icon: AlertTriangle },
             ],
         },
         {
-            label: 'Detailed Reports',
+            label: 'Analytics',
             items: [
-                { name: 'Reports Center', href: '/admin/reports', icon: BarChart3 },
+                { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
             ],
         },
     ];
