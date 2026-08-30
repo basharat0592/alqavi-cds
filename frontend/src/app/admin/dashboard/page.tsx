@@ -982,7 +982,9 @@ export default function AdminDashboard() {
                         {/* â”€â”€ BRANCH ADMIN â€” DESKTOP: flat quick-action grid (all modules) â”€â”€ */}
                         {!isSuperAdmin && (
                             <div className="hidden md:block">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                {/* Five across, as in the reference. Steps down on
+                                    narrower desktops so labels never truncate. */}
+                                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                                     {dashTiles.map(renderTile)}
                                 </div>
                             </div>

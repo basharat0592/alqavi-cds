@@ -10,14 +10,14 @@ import {
     TrendingUp, BarChart3, PieChart as PieIcon, Activity, ClipboardList,
     ArrowRight, PackageCheck, AlertTriangle,
 } from 'lucide-react';
-import { paymentService, productService } from '@/lib/api';
+import { orderService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 import type { RevenueDataPoint } from '@/types';
 
-/* Branch admin analytics. Everything is drawn from data the app already
-   exposes: orders/stats/ for the totals, seven-day history and recent orders;
-   payments/transactions/ for the monthly in/out split; the product list for the
-   category mix. */
+/* Branch admin analytics. orders/stats/ supplies the totals, the seven-day
+   history and the recent orders; orders/analytics/ supplies the monthly gross
+   profit vs expenses and delivered sales by category. Both are scoped to the
+   requesting admin's own branch server-side. */
 
 const AMBER = '#F59E0B';
 const TEAL = '#0F766E';
@@ -129,69 +129,31 @@ export default function BranchAdminOverview({
     const hasTrend = trend.some(t => t.sales > 0);
     const weekTotal = trend.reduce((s, t) => s + t.sales, 0);
 
-    // ── Income vs expenses, last six months ──
-    // Built from the payment ledger rather than a dedicated endpoint: every sale,
-    // purchase, return and manual entry already lands there as inbound/outbound.
-    const [months, setMonths] = useState<{ m: string; income: number; expense: number }[]>([]);
-    const [flowLoaded, setFlowLoaded] = useState(false);
-    useEffect(() => {
-        let cancelled = false;
-        paymentService.getAll()
-            .then((rows: any[]) => {
-                if (cancelled) return;
-                const now = new Date();
-                const buckets: { key: string; m: string; income: number; expense: number }[] = [];
-                for (let i = 5; i >= 0; i--) {
-                    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                    buckets.push({
-                        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-                        m: d.toLocaleDateString(undefined, { month: 'short' }).toUpperCase(),
-                        income: 0, expense: 0,
-                    });
-                }
-                const byKey = new Map(buckets.map(b => [b.key, b]));
-                for (const p of (Array.isArray(rows) ? rows : [])) {
-                    const raw = String(p?.date || p?.created_at || '');
-                    const key = raw.slice(0, 7);
-                    const b = byKey.get(key);
-                    if (!b) continue;
-                    const amt = Math.abs(Number(p.amount || 0));
-                    if (String(p.payment_type) === 'outbound') b.expense += amt;
-                    else b.income += amt;
-                }
-                setMonths(buckets.map(({ m, income, expense }) => ({ m, income, expense })));
-            })
-            .catch(() => { if (!cancelled) setMonths([]); })
-            .finally(() => { if (!cancelled) setFlowLoaded(true); });
-        return () => { cancelled = true; };
-    }, []);
-    const hasFlow = months.some(m => m.income > 0 || m.expense > 0);
-
-    // ── Category mix ──
-    // The catalogue's split by category. Sales-by-category would need the order
-    // lines joined to categories, which no endpoint returns today.
+    // ── Gross profit vs expenses, and sales by category ──
+    // One scoped request. Both series were previously approximated on the client
+    // -- the payment ledger's inbound total standing in for profit, and a count
+    // of catalogue rows standing in for sales by category. Neither could express
+    // what it was labelled as.
+    const [months, setMonths] = useState<{ m: string; profit: number; expenses: number }[]>([]);
     const [cats, setCats] = useState<{ name: string; value: number }[]>([]);
-    const [catsLoaded, setCatsLoaded] = useState(false);
+    const [seriesLoaded, setSeriesLoaded] = useState(false);
     useEffect(() => {
         let cancelled = false;
-        productService.getAll?.({ all_items: 'true' } as any)
-            .then((res: any) => {
+        orderService.getAnalytics()
+            .then((d) => {
                 if (cancelled) return;
-                const list = Array.isArray(res) ? res : (res?.results || []);
-                const tally = new Map<string, number>();
-                for (const p of list) {
-                    const name = String(p?.category_name || 'Uncategorised').trim() || 'Uncategorised';
-                    tally.set(name, (tally.get(name) || 0) + 1);
-                }
-                setCats([...tally.entries()]
-                    .map(([name, value]) => ({ name, value }))
-                    .sort((a, b) => b.value - a.value)
-                    .slice(0, 6));
+                setMonths((d?.monthly || []).map(r => ({
+                    m: r.month, profit: Number(r.profit || 0), expenses: Number(r.expenses || 0),
+                })));
+                setCats((d?.categories || []).map(c => ({
+                    name: c.name, value: Number(c.value || 0),
+                })));
             })
-            .catch(() => { if (!cancelled) setCats([]); })
-            .finally(() => { if (!cancelled) setCatsLoaded(true); });
+            .catch(() => { if (!cancelled) { setMonths([]); setCats([]); } })
+            .finally(() => { if (!cancelled) setSeriesLoaded(true); });
         return () => { cancelled = true; };
     }, []);
+    const hasFlow = months.some(m => m.profit !== 0 || m.expenses !== 0);
     const catTotal = cats.reduce((s, c) => s + c.value, 0);
 
     // ── Pipeline ──
@@ -261,7 +223,7 @@ export default function BranchAdminOverview({
                 <Panel
                     icon={BarChart3}
                     title="Profitability Analysis"
-                    subtitle="Income vs expenses · last 6 months"
+                    subtitle="Gross Profit vs. Expenses (6mo)"
                 >
                     {hasFlow ? (
                         <ResponsiveContainer width="100%" height={218}>
@@ -274,13 +236,13 @@ export default function BranchAdminOverview({
                                     verticalAlign="bottom" height={26} iconType="circle" iconSize={8}
                                     formatter={(v) => <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{String(v).toUpperCase()}</span>}
                                 />
-                                <Bar dataKey="income" name="Income" fill={TEAL} radius={[3, 3, 0, 0]} maxBarSize={16} />
+                                <Bar dataKey="profit" name="Profit" fill={TEAL} radius={[3, 3, 0, 0]} maxBarSize={16} />
                                 <Bar dataKey="expense" name="Expenses" fill={RED} radius={[3, 3, 0, 0]} maxBarSize={16} />
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
                         <div className="h-[218px] flex items-center justify-center text-[12.5px] text-slate-400">
-                            {flowLoaded ? 'No payments recorded in the last 6 months.' : 'Loading…'}
+                            {seriesLoaded ? 'No delivered sales in the last 6 months.' : 'Loading…'}
                         </div>
                     )}
                 </Panel>
@@ -289,7 +251,7 @@ export default function BranchAdminOverview({
             {/* ── Category mix · pipeline ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                <Panel icon={PieIcon} title="Top Categories" subtitle="Products by category">
+                <Panel icon={PieIcon} title="Top Categories" subtitle="Sales distribution by type">
                     {cats.length ? (
                         <>
                             <div className="relative">
@@ -303,14 +265,17 @@ export default function BranchAdminOverview({
                                             {cats.map((_, i) => <Cell key={i} fill={SLICE[i % SLICE.length]} />)}
                                         </Pie>
                                         <Tooltip
-                                            formatter={(v: any, n: any) => [`${v} product${Number(v) === 1 ? '' : 's'}`, n]}
+                                            formatter={(v: any, n: any) => [
+                                                `${formatCurrency(Number(v))}${catTotal ? ` · ${Math.round((Number(v) / catTotal) * 100)}%` : ''}`,
+                                                n,
+                                            ]}
                                             contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 12 }}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                     <span className="text-[13px] font-bold text-slate-800 leading-none">Total</span>
-                                    <span className="text-[12px] text-slate-400 mt-1 tabular-nums">{catTotal}</span>
+                                    <span className="text-[12px] text-slate-400 mt-1 tabular-nums">100%</span>
                                 </div>
                             </div>
                             <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-x-4 gap-y-2">
@@ -318,16 +283,13 @@ export default function BranchAdminOverview({
                                     <div key={c.name} className="flex items-center gap-2 min-w-0">
                                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: SLICE[i % SLICE.length] }} />
                                         <span className="text-[12px] text-slate-600 truncate">{c.name}</span>
-                                        <span className="ml-auto text-[11.5px] font-semibold text-slate-400 tabular-nums shrink-0">
-                                            {catTotal ? Math.round((c.value / catTotal) * 100) : 0}%
-                                        </span>
                                     </div>
                                 ))}
                             </div>
                         </>
                     ) : (
                         <div className="h-[240px] flex items-center justify-center text-[12.5px] text-slate-400">
-                            {catsLoaded ? 'No products yet.' : 'Loading…'}
+                            {seriesLoaded ? 'No delivered sales yet.' : 'Loading…'}
                         </div>
                     )}
                 </Panel>

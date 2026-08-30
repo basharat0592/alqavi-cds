@@ -45,6 +45,15 @@ export const orderService = {
         const response = await api.get('v1/sales/orders/stats/', { params });
         return response.data;
     },
+    // Dashboard series the stats endpoint does not cover: monthly gross profit
+    // vs expenses, and delivered sales by product category.
+    getAnalytics: async (params?: any) => {
+        const response = await api.get('v1/sales/orders/analytics/', { params });
+        return response.data as {
+            monthly: { month: string; key: string; profit: number; expenses: number }[];
+            categories: { name: string; value: number }[];
+        };
+    },
     getBoughtProducts: async () => {
         const response = await api.get('v1/sales/orders/bought_products/');
         return response.data.results || response.data || [];
