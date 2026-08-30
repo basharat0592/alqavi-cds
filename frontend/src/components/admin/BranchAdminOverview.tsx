@@ -158,10 +158,10 @@ export default function BranchAdminOverview({
 
     // ── Pipeline ──
     const pipeline = [
-        { label: 'Pending', value: Number(stats?.pendingOrders || 0), bar: 'bg-[#F59E0B]', tone: 'text-[#B4780B]' },
-        { label: 'Active', value: Number(stats?.totalActive || 0), bar: 'bg-[#0F766E]', tone: 'text-[#0F766E]' },
-        { label: 'Delivered', value: Number(stats?.deliveredOrders || 0), bar: 'bg-emerald-500', tone: 'text-emerald-600' },
-        { label: 'Today', value: Number(stats?.ordersToday || 0), bar: 'bg-violet-500', tone: 'text-violet-600' },
+        { label: 'Pending', value: Number(stats?.pendingOrders || 0) },
+        { label: 'Active', value: Number(stats?.totalActive || 0) },
+        { label: 'Delivered', value: Number(stats?.deliveredOrders || 0) },
+        { label: 'Today', value: Number(stats?.ordersToday || 0) },
     ];
     const pipelineMax = Math.max(1, ...pipeline.map(r => r.value));
     const orders = (recentOrders || []).slice(0, 5);
@@ -183,10 +183,10 @@ export default function BranchAdminOverview({
                     subtitle="Delivered sales · last 7 days"
                     action={
                         <>
-                            <p className="text-[19px] font-bold text-slate-900 tabular-nums leading-none">
+                            <p className="text-[21px] font-bold text-slate-900 tabular-nums leading-[1.15] max-w-[92px]">
                                 {formatCurrency(weekTotal)}
                             </p>
-                            <p className="text-[11px] text-slate-400 mt-1">7-day total</p>
+                            <p className="text-[11.5px] text-slate-400 mt-1.5">7-day total</p>
                         </>
                     }
                 >
@@ -227,17 +227,28 @@ export default function BranchAdminOverview({
                 >
                     {hasFlow ? (
                         <ResponsiveContainer width="100%" height={218}>
-                            <BarChart data={months} margin={{ top: 6, right: 8, left: -18, bottom: 0 }} barGap={4}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={GRID} />
-                                <XAxis dataKey="m" tick={{ fontSize: 10, fill: AXIS }} axisLine={false} tickLine={false} />
-                                <YAxis tickFormatter={kFmt} tick={{ fontSize: 10, fill: AXIS }} axisLine={false} tickLine={false} width={44} />
+                            {/* No gridlines and no value axis: the reference reads the
+                                bars against each other, and the exact figures live in
+                                the tooltip. */}
+                            <BarChart data={months} margin={{ top: 8, right: 4, left: 4, bottom: 0 }} barGap={3} barCategoryGap="26%">
+                                <XAxis
+                                    dataKey="m"
+                                    tick={{ fontSize: 10.5, fill: '#94a3b8', fontWeight: 600 }}
+                                    axisLine={false} tickLine={false} dy={4}
+                                />
+                                <YAxis hide />
                                 <Tooltip content={<MoneyTip />} cursor={{ fill: 'rgba(15,23,42,0.035)' }} />
                                 <Legend
-                                    verticalAlign="bottom" height={26} iconType="circle" iconSize={8}
-                                    formatter={(v) => <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>{String(v).toUpperCase()}</span>}
+                                    verticalAlign="bottom" align="left" height={28} iconType="circle" iconSize={7}
+                                    wrapperStyle={{ paddingLeft: 4 }}
+                                    formatter={(v) => (
+                                        <span style={{ fontSize: 10.5, color: '#64748b', fontWeight: 700, letterSpacing: '0.04em' }}>
+                                            {String(v).toUpperCase()}
+                                        </span>
+                                    )}
                                 />
-                                <Bar dataKey="profit" name="Profit" fill={TEAL} radius={[3, 3, 0, 0]} maxBarSize={16} />
-                                <Bar dataKey="expense" name="Expenses" fill={RED} radius={[3, 3, 0, 0]} maxBarSize={16} />
+                                <Bar dataKey="profit" name="Profit" fill={TEAL} radius={[2, 2, 0, 0]} maxBarSize={14} />
+                                <Bar dataKey="expenses" name="Expenses" fill={RED} radius={[2, 2, 0, 0]} maxBarSize={14} />
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
@@ -274,8 +285,8 @@ export default function BranchAdminOverview({
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-[13px] font-bold text-slate-800 leading-none">Total</span>
-                                    <span className="text-[12px] text-slate-400 mt-1 tabular-nums">100%</span>
+                                    <span className="text-[14px] font-bold text-slate-800 leading-none">Total</span>
+                                    <span className="text-[12.5px] text-slate-400 mt-1.5 tabular-nums">100%</span>
                                 </div>
                             </div>
                             <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-x-4 gap-y-2">
@@ -295,28 +306,28 @@ export default function BranchAdminOverview({
                 </Panel>
 
                 <Panel icon={Activity} title="Order Pipeline" subtitle="Where orders currently sit">
-                    <div className="space-y-3.5">
+                    <div className="space-y-4">
                         {pipeline.map(row => (
                             <div key={row.label}>
-                                <div className="flex items-baseline justify-between gap-2 mb-1.5">
-                                    <span className="text-[13.5px] font-semibold text-slate-700">{row.label}</span>
-                                    <span className={`text-[14px] font-bold tabular-nums ${row.tone}`}>{row.value}</span>
+                                <div className="flex items-baseline justify-between gap-2 mb-2">
+                                    <span className="text-[14px] font-semibold text-slate-800">{row.label}</span>
+                                    <span className="text-[14px] font-bold tabular-nums text-[#F59E0B]">{row.value}</span>
                                 </div>
-                                <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                                    <div className={`h-full rounded-full ${row.bar} transition-[width] duration-500`}
+                                <div className="h-[3px] rounded-full bg-slate-100 overflow-hidden">
+                                    <div className="h-full rounded-full bg-[#0F766E] transition-[width] duration-500"
                                         style={{ width: `${(row.value / pipelineMax) * 100}%` }} />
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="mt-5 pt-4 border-t border-slate-100 flex items-start justify-between gap-4">
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400">Products</p>
-                            <p className="text-[22px] font-bold text-slate-900 tabular-nums leading-none mt-1.5">{productCount ?? 0}</p>
+                            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400">Products</p>
+                            <p className="text-[26px] font-bold text-slate-900 tabular-nums leading-none mt-2">{productCount ?? 0}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10.5px] font-semibold uppercase tracking-wider text-slate-400">Out of stock</p>
-                            <p className={`text-[22px] font-bold tabular-nums leading-none mt-1.5 ${outOfStock ? 'text-rose-600' : 'text-slate-900'}`}>
+                            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400">Out of stock</p>
+                            <p className={`text-[26px] font-bold tabular-nums leading-none mt-2 ${outOfStock ? 'text-rose-600' : 'text-slate-900'}`}>
                                 {outOfStock}
                             </p>
                         </div>
