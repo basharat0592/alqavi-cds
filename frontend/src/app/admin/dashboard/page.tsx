@@ -918,7 +918,7 @@ export default function AdminDashboard() {
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
-            <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-1 md:pt-1.5">
+            <div className="max-w-[1440px] mx-auto px-0 md:px-8 pt-0 md:pt-3">
                 {/* Super-admin greeting hero (desktop only; mobile uses the shared hero) */}
                 {isSuperAdmin && (
                     <div className="hidden md:flex px-3 md:px-0 mb-5 items-center gap-3">
@@ -941,10 +941,21 @@ export default function AdminDashboard() {
                     </div>
                 )}
 
-                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-stretch">
+                {/* Quick actions run the full content width, above the two-column
+                    region â€” sharing the row with the right rail squeezed them into
+                    three columns and truncated the labels. */}
+                {!isSuperAdmin && (
+                    <div className="hidden md:block px-3 md:px-0 mb-5">
+                        <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                            {dashTiles.map(renderTile)}
+                        </div>
+                    </div>
+                )}
+
+                <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
 
                 {/* â”€â”€ MAIN: DIRECTORY â”€â”€ */}
-                <div className="flex-1 min-w-0 space-y-6 md:space-y-12 animate-in fade-in duration-300 text-left px-3 md:px-0">
+                <div className="flex-1 min-w-0 space-y-4 animate-in fade-in duration-300 text-left px-3 md:px-0">
 
                         {/* Shared mobile welcome hero (branch + super admin) */}
                         <MobileWelcomeHero subtitle={isSuperAdmin ? 'Your business across all organizations.' : 'Everything you need, one tap away.'} />
@@ -980,16 +991,6 @@ export default function AdminDashboard() {
                         )}
 
                         {/* â”€â”€ BRANCH ADMIN â€” DESKTOP: flat quick-action grid (all modules) â”€â”€ */}
-                        {!isSuperAdmin && (
-                            <div className="hidden md:block">
-                                {/* Five across, as in the reference. Steps down on
-                                    narrower desktops so labels never truncate. */}
-                                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-                                    {dashTiles.map(renderTile)}
-                                </div>
-                            </div>
-                        )}
-
                         {/* â”€â”€ BRANCH ADMIN â€” ANALYTICS (under the quick actions) â”€â”€ */}
                         {!isSuperAdmin && (
                             <div className="hidden md:block">

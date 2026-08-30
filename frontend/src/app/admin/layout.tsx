@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
-import { DesktopNavMenu, MobileNavMenu } from '@/components/layout/AdminNavMenu';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import NotificationPanel, { type ActivityItem } from '@/components/admin/NotificationPanel';
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
@@ -637,14 +636,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </div>
                         </div>
                     </div>
-
-                    {/* â•â•â• TOP MENU BAR (5 groups) â€” branch admin dashboard only; the super
-                        admin navigates from the sidebar instead â•â•â• */}
-                    {pathname === '/admin/dashboard' && isSuperAdminUser === false && <DesktopNavMenu />}
-
                     {/* â•â•â• MAIN CONTENT â•â•â• */}
                     <main className={cn(
-                        "flex-1 overflow-y-auto px-3 py-3 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white",
+                        "flex-1 overflow-y-auto px-3 pt-2 pb-3 md:px-4 md:pt-3 md:pb-4 lg:px-8 lg:pt-4 lg:pb-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white",
                         isSuperAdminUser && "pb-24 lg:pb-8"
                     )}>
                         {isNavigating && <PageLoader />}
