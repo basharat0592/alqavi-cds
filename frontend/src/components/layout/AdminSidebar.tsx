@@ -277,16 +277,16 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                         // the accordion does not apply and every icon stays reachable.
                         const groupOpen = isCollapsed || (openGroups[group.label] ?? groupActive);
                         return (
-                        <div key={group.label} className={gIdx !== 0 ? 'mt-3' : ''}>
+                        <div key={group.label} className={gIdx !== 0 ? 'mt-4' : ''}>
                             {!isCollapsed && (
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(group.label, groupOpen)}
                                     aria-expanded={groupOpen}
-                                    className="group/hdr mx-3 px-3 py-2 mb-1.5 mt-1 flex items-center gap-2 rounded-lg hover:bg-white/[0.04] transition-colors"
+                                    className="group/hdr mx-3 px-3 py-2.5 mb-2 mt-1.5 flex items-center gap-2.5 rounded-lg hover:bg-white/[0.04] transition-colors"
                                     style={{ width: 'calc(100% - 1rem)' }}
                                 >
-                                    <span className={`text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${groupActive ? 'text-slate-300' : 'text-slate-500 group-hover/hdr:text-slate-300'}`}>
+                                    <span className={`text-[12.5px] font-semibold uppercase tracking-[0.07em] transition-colors ${groupActive ? 'text-slate-200' : 'text-slate-400 group-hover/hdr:text-slate-200'}`}>
                                         {group.label}
                                     </span>
                                     {/* A closed group that holds the current page still says so. */}
@@ -294,7 +294,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                         <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
                                     )}
                                     <ChevronDown
-                                        size={14}
+                                        size={16}
                                         className={`ml-auto shrink-0 transition-all duration-200 ${groupOpen ? 'rotate-180' : ''} text-slate-600 group-hover/hdr:text-slate-400`}
                                     />
                                 </button>
