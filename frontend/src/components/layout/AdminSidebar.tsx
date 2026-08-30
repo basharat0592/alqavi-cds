@@ -8,7 +8,7 @@ import {
     Boxes, Settings, UserCheck, ShoppingBag,
     ShoppingCart, History, RefreshCcw,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
-    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2
+    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, ChevronDown
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import { orderService } from '@/lib/api';
@@ -138,6 +138,19 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
     // Live count of active (not delivered / cancelled) orders for the branch — shown
     // as a blinking badge on the Order List link. Polled so it stays fresh.
+    // Menu groups are accordions and start CLOSED. Only the group holding the
+    // current page opens, so the sidebar still shows where you are without
+    // listing every page at once.
+    //
+    // The map holds explicit user toggles only; a group with no entry falls back
+    // to "open if it contains the current page". Navigating clears the map, so
+    // every page load and every jump starts from that default rather than
+    // inheriting whatever was left open.
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+    useEffect(() => { setOpenGroups({}); }, [pathname]);
+    const toggleGroup = (label: string, isOpen: boolean) =>
+        setOpenGroups(prev => ({ ...prev, [label]: !isOpen }));
+
     const [activeOrders, setActiveOrders] = useState(0);
     useEffect(() => {
         let cancelled = false;
@@ -246,21 +259,33 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                         // The section holding the current page is marked in the secondary
                         // amber, so you can see where you are without hunting for the row.
                         const groupActive = group.items.some(it => isActive(it.href));
+                        // Collapsed to an icon rail there is no room for headings, so
+                        // the accordion does not apply and every icon stays reachable.
+                        const groupOpen = isCollapsed || (openGroups[group.label] ?? groupActive);
                         return (
-                        <div key={group.label} className={gIdx !== 0 ? 'mt-6' : ''}>
+                        <div key={group.label} className={gIdx !== 0 ? 'mt-3' : ''}>
                             {!isCollapsed && (
-                                <div className="px-4 mb-2 flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGroup(group.label, groupOpen)}
+                                    aria-expanded={groupOpen}
+                                    className="w-full px-4 py-1.5 mb-1 flex items-center gap-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                                >
                                     {groupActive && <span className="w-1 h-1 rounded-full bg-[#F59E0B] shrink-0" />}
                                     <span className={`text-[10px] font-bold uppercase tracking-[0.16em] ${groupActive ? 'text-[#F59E0B]' : 'text-slate-400'}`}>
                                         {group.label}
                                     </span>
-                                </div>
+                                    <ChevronDown
+                                        size={13}
+                                        className={`ml-auto shrink-0 transition-transform duration-200 ${groupOpen ? 'rotate-180' : ''} ${groupActive ? 'text-[#F59E0B]' : 'text-slate-500'}`}
+                                    />
+                                </button>
                             )}
                             {isCollapsed && gIdx !== 0 && (
                                 <div className="mx-3 mb-1 h-px bg-white/5" />
                             )}
 
-                            <div className="space-y-0.5 px-2.5">
+                            <div className={`space-y-0.5 px-2.5 ${groupOpen ? '' : 'hidden'}`}>
                                 {group.items.map((item) => {
                                     const active = isActive(item.href);
                                     return (

@@ -215,7 +215,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [isNavigating, setIsNavigating] = useState(false);
     // Desktop sidebar collapse, remembered across visits. Mobile keeps using the
     // bottom tab bar, so the sidebar is desktop-only.
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // Profile & panel states
     const [notifOpen, setNotifOpen] = useState(false);
@@ -259,13 +259,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     // Restore the collapse preference on mount only â€” reading it in useState would
     // run on the server and mismatch the first client render.
-    // The sidebar starts COLLAPSED: nothing stored means collapsed, and only an
-    // explicit '0' (the user having opened it) expands it. Checking for '0'
-    // rather than '1' is what makes closed the default without discarding the
-    // preference of anyone who has already opened it.
     useEffect(() => {
         try {
-            setSidebarCollapsed(window.localStorage.getItem('admin.sidebarCollapsed') !== '0');
+            setSidebarCollapsed(window.localStorage.getItem('admin.sidebarCollapsed') === '1');
         } catch { /* private mode / storage disabled */ }
     }, []);
 
