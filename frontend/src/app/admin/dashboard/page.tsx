@@ -17,6 +17,7 @@ import { getImageUrl } from '@/lib/utils';
 import { useAdminDashboard } from '@/hooks';
 import SuperAdminCharts from '@/components/admin/SuperAdminCharts';
 import SuperAdminOverview from '@/components/admin/SuperAdminOverview';
+import BranchAdminOverview from '@/components/admin/BranchAdminOverview';
 import { NAV_GROUPS, STANDALONE_ITEMS } from '@/components/layout/AdminNavMenu';
 import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
@@ -163,7 +164,7 @@ function MobileWelcomeHero({ subtitle }: { subtitle: string }) {
 }
 
 export default function AdminDashboard() {
-    const { stats, products, lowStock: serverLowStock, loading, revenueData30, activityLogs } = useAdminDashboard();
+    const { stats, products, lowStock: serverLowStock, loading, revenueData30, recentOrders, activityLogs } = useAdminDashboard();
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
     // Pages this user may open (null = full access). Mirrors the sidebar so the
     // dashboard only shows cards for pages the user actually has access to.
@@ -975,6 +976,21 @@ export default function AdminDashboard() {
                                     {/* Payments + Reports â€” separate pills (not a group) */}
                                     {mobileStandalone.map((s) => renderTile({ name: s.name, href: s.href, icon: s.icon, color: s.color }))}
                                 </div>
+                            </div>
+                        )}
+
+                        {/* â”€â”€ BRANCH ADMIN â€” ANALYTICS â”€â”€ */}
+                        {!isSuperAdmin && (
+                            <div className="hidden md:block">
+                                <BranchAdminOverview
+                                    stats={stats}
+                                    revenueData={revenueData30}
+                                    recentOrders={recentOrders}
+                                    lowStock={serverLowStock}
+                                    activityLogs={activityLogs}
+                                    productCount={products?.length}
+                                    loading={loading}
+                                />
                             </div>
                         )}
 
