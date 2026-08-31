@@ -211,6 +211,9 @@ function BranchAdminBottomNav({ pathname }: { pathname: string }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
+    // The top bar belongs to the dashboard only; every other admin page runs
+    // full-bleed under the sidebar.
+    const isDashboardRoute = pathname === '/admin' || pathname === '/admin/dashboard';
     const [isNavigating, setIsNavigating] = useState(false);
     // Desktop sidebar collapse, remembered across visits. Mobile keeps using the
     // bottom tab bar, so the sidebar is desktop-only.
@@ -244,7 +247,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
     const [adminRole, setAdminRole] = useState('');
     const [adminId, setAdminId] = useState<string | number>('');
-    const [branchLabel, setBranchLabel] = useState('');
     const [isSuperAdminUser, setIsSuperAdminUser] = useState<boolean | null>(null);
 
     // Settings & Display
@@ -319,10 +321,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             setAdminAvatar(user.avatar || null);
             setAdminRole(user.role || 'Admin');
             setAdminId(user.id || '');
-            const wh = (user as any).warehouses;
-            setBranchLabel(authService.isSuperAdmin()
-                ? 'All Organizations'
-                : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No organization'));
         }
 
         const loadSettings = async () => {
@@ -342,10 +340,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     setAdminAvatar(p.image || p.avatar || null);
                     setAdminRole(p.role_name || (p.role && typeof p.role === 'object' ? p.role.name : p.role) || 'Admin');
                     setAdminId(p.id);
-                    const wh = (p as any).warehouses;
-                    setBranchLabel((p as any).is_super_admin
-                        ? 'All Organizations'
-                        : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No organization'));
                 }
             } catch { }
         };
@@ -485,6 +479,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     )}
 
                     {/* â•â•â• NAVBAR (takes remaining width) â•â•â• */}
+                    {isDashboardRoute && (
                     <div className="hidden md:flex h-[66px] w-full flex-shrink-0 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-[0_1px_0_rgba(15,23,42,0.03),0_6px_20px_-12px_rgba(15,23,42,0.15)] sticky top-0 transition-colors duration-300 print:hidden">
 
                         <div className="flex items-center gap-4 flex-1">
@@ -570,23 +565,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                         {/* Actions */}
                         <div className="flex items-center gap-3">
-                            {/* Hide the branch badge entirely for users with no branch (e.g. staff). */}
-                            {branchLabel && branchLabel !== 'No organization' && (
-                                <div
-                                    title={branchLabel === 'All Organizations' ? 'You can see every organization' : `Your organization: ${branchLabel}`}
-                                    className={cn(
-                                        "hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold select-none",
-                                        branchLabel === 'All Organizations'
-                                            ? "bg-[#F59E0B]/10 border-[#F59E0B]/25 text-[#B4780B]"
-                                            : branchLabel === 'No organization'
-                                                ? "bg-rose-50 border-rose-200 text-rose-600"
-                                                : "bg-slate-50 border-slate-200 text-slate-600"
-                                    )}
-                                >
-                                    <Building2 className="h-3.5 w-3.5 opacity-80" />
-                                    <span className="truncate max-w-[160px]">{branchLabel}</span>
-                                </div>
-                            )}
                             <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
                             {/* Dues pill removed from the navbar for all admins â€” it lives on System Alerts. */}
                             <button
@@ -636,6 +614,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </div>
                         </div>
                     </div>
+                    )}
                     {/* â•â•â• MAIN CONTENT â•â•â• */}
                     <main className={cn(
                         "flex-1 overflow-y-auto px-3 pt-2 pb-3 md:px-4 md:pt-3 md:pb-4 lg:px-8 lg:pt-4 lg:pb-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white",
