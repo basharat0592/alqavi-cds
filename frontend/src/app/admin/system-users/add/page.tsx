@@ -265,11 +265,11 @@ export default function AddSystemUserPage() {
                                                             <span className="text-[12px] text-slate-700">{item.name}</span>
                                                             <div className="flex items-center gap-4">
                                                                 <label className="flex items-center gap-1 cursor-pointer select-none">
-                                                                    <input type="checkbox" checked={selectedPages.includes(item.href)} onChange={() => toggleView(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B]" />
+                                                                    <input type="checkbox" checked={selectedPages.includes(item.href)} onChange={() => toggleView(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]" />
                                                                     <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">View</span>
                                                                 </label>
                                                                 <label className={`flex items-center gap-1 select-none ${selectedPages.includes(item.href) ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}>
-                                                                    <input type="checkbox" checked={selectedEditPages.includes(item.href)} disabled={!selectedPages.includes(item.href)} onChange={() => toggleEdit(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B] disabled:cursor-not-allowed" />
+                                                                    <input type="checkbox" checked={selectedEditPages.includes(item.href)} disabled={!selectedPages.includes(item.href)} onChange={() => toggleEdit(item.href)} className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B] disabled:cursor-not-allowed" />
                                                                     <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Edit</span>
                                                                 </label>
                                                             </div>

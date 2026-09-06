@@ -488,7 +488,7 @@ export default function BranchesPage() {
                                             <tr
                                                 key={wh.id}
                                                 onClick={() => setDetailFor(wh)}
-                                                className={`${idx % 2 ? 'bg-[#FAFAF8]/40' : 'bg-white'} hover:bg-[#1A1A1A]/[0.06] transition-colors group cursor-pointer ${active ? '' : 'opacity-60'}`}
+                                                className={`${idx % 2 ? 'bg-[#FAFAF8]/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group cursor-pointer ${active ? '' : 'opacity-60'}`}
                                             >
                                                 <td className={ui.td + ' relative'}>
                                                     <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-transparent group-hover:bg-[#F59E0B] transition-colors" />

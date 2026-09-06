@@ -323,7 +323,7 @@ export function PaymentPanel({
                         {allowVerify && (
                             <label className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-slate-600 cursor-pointer">
                                 <input type="checkbox" checked={needsVerify} onChange={e => setNeedsVerify(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B]" />
+                                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]" />
                                 Needs verification
                             </label>
                         )}

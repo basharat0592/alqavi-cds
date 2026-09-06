@@ -294,10 +294,10 @@ export default function AdminDashboard() {
             href: '/admin/sale',
             icon: ScanLine,
             theme: {
-                border: 'hover:border-[#1A1A1A]',
-                iconBg: 'bg-[#1A1A1A]/10 border-[#1A1A1A]/15 text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
-                leftBar: 'bg-[#1A1A1A]',
-                chevron: 'text-[#1A1A1A] group-hover:text-[#1A1A1A]',
+                border: 'hover:border-[#F59E0B]',
+                iconBg: 'bg-[#F59E0B]/10 border-[#F59E0B]/15 text-[#1A1A1A] group-hover:bg-[#F59E0B] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-[#F59E0B]',
+                chevron: 'text-[#1A1A1A] group-hover:text-[#0E7F98]',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
             },
             keywords: ['counter', 'cashier', 'barcode', 'checkout', 'pos', 'sales']
@@ -490,10 +490,10 @@ export default function AdminDashboard() {
             href: '/admin/inventory/list?action=add',
             icon: PackagePlus,
             theme: {
-                border: 'hover:border-[#1A1A1A]',
-                iconBg: 'bg-[#1A1A1A]/10 border-[#1A1A1A]/15 text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
-                leftBar: 'bg-[#1A1A1A]',
-                chevron: 'text-[#1A1A1A] group-hover:text-[#1A1A1A]',
+                border: 'hover:border-[#F59E0B]',
+                iconBg: 'bg-[#F59E0B]/10 border-[#F59E0B]/15 text-[#1A1A1A] group-hover:bg-[#F59E0B] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-[#F59E0B]',
+                chevron: 'text-[#1A1A1A] group-hover:text-[#0E7F98]',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(79,70,229,0.06)]'
             },
             keywords: ['add stock', 'new stock', 'incoming', 'inventory', 'receive']
@@ -532,10 +532,10 @@ export default function AdminDashboard() {
             href: '/admin/branches',
             icon: Building2,
             theme: {
-                border: 'hover:border-[#1A1A1A]',
-                iconBg: 'bg-[#1A1A1A]/10 border-[#1A1A1A]/15 text-[#1A1A1A] group-hover:bg-[#1A1A1A] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
-                leftBar: 'bg-[#1A1A1A]',
-                chevron: 'text-[#1A1A1A] group-hover:text-[#1A1A1A]',
+                border: 'hover:border-[#F59E0B]',
+                iconBg: 'bg-[#F59E0B]/10 border-[#F59E0B]/15 text-[#1A1A1A] group-hover:bg-[#F59E0B] group-hover:text-white group-hover:shadow-[0_4px_12px_rgba(79,70,229,0.2)]',
+                leftBar: 'bg-[#F59E0B]',
+                chevron: 'text-[#1A1A1A] group-hover:text-[#0E7F98]',
                 hoverGlow: 'hover:shadow-[0_12px_24px_rgba(99,102,241,0.06)]'
             },
             keywords: ['organization', 'organizations', 'city', 'assign', 'warehouse admin', 'multi organization']
@@ -1060,7 +1060,7 @@ export default function AdminDashboard() {
 
                                     <Link
                                         href="/admin/inventory/list"
-                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-[#B4780B] hover:text-[#0E7F98] hover:bg-[#F59E0B]/50 border-t border-slate-100 transition-colors"
+                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] hover:bg-[#F59E0B]/50 border-t border-slate-100 transition-colors"
                                     >
                                         View full inventory <ChevronRight size={13} />
                                     </Link>
@@ -1137,7 +1137,7 @@ export default function AdminDashboard() {
 
                                     <Link
                                         href="/admin/alerts"
-                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-[#B4780B] hover:text-[#0E7F98] hover:bg-[#F59E0B]/50 border-t border-slate-100 transition-colors"
+                                        className="flex items-center justify-center gap-1.5 px-5 py-3 text-[11.5px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] hover:bg-[#F59E0B]/50 border-t border-slate-100 transition-colors"
                                     >
                                         View all dues <ChevronRight size={13} />
                                     </Link>

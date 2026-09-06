@@ -478,7 +478,7 @@ export default function SuppliersPage() {
                                     <div className="relative flex items-center">
                                         <input
                                             type="checkbox"
-                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-[#1A1A1A] checked:bg-[#1A1A1A] transition-all"
+                                            className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:border-[#F59E0B] checked:bg-[#F59E0B] transition-all"
                                             checked={view === 'add' ? addForm.is_active : editForm.is_active}
                                             onChange={(e) => view === 'add' ? setAddForm(f => ({ ...f, is_active: e.target.checked })) : setEditForm(f => ({ ...f, is_active: e.target.checked }))}
                                         />

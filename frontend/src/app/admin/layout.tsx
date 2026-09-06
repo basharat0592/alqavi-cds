@@ -552,7 +552,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <p className="text-slate-800 dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
                                             {adminName} <ChevronDown size={12} className="text-slate-400 dark:text-zinc-500" />
                                         </p>
-                                        <span className="inline-block text-[9px] font-extrabold text-[#B4780B] bg-[#F59E0B]/10 dark:text-[#1A1A1A] dark:bg-[#1A1A1A]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/20 dark:border-[#1A1A1A]/10 mt-1 uppercase tracking-wider">
+                                        <span className="inline-block text-[9px] font-extrabold text-[#B4780B] bg-[#F59E0B]/10 dark:text-[#FBBF24] dark:bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/20 dark:border-[#1A1A1A]/10 mt-1 uppercase tracking-wider">
                                             {adminRole}
                                         </span>
                                     </div>

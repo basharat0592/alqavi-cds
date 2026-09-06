@@ -169,7 +169,7 @@ export default function BranchAdminOverview({
     const statusTone = (st: string) =>
         st === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700'
             : st === 'CANCELLED' ? 'bg-rose-50 text-rose-600'
-                : 'bg-[#1A1A1A]/12 text-[#1A1A1A]';
+                : 'bg-[#F59E0B]/12 text-[#1A1A1A]';
 
     return (
         <div className="space-y-4">

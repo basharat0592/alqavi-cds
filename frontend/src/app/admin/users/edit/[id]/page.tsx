@@ -480,7 +480,7 @@ export default function EditUserPage() {
                                                 type="checkbox"
                                                 checked={selectedWarehouses.includes(String(w.id))}
                                                 onChange={() => toggleWarehouse(String(w.id))}
-                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B]"
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
                                             />
                                             <span className="text-[12px] font-medium text-slate-700 truncate">
                                                 {w.name}{w.area_name ? ` · ${w.area_name}` : (w.location ? ` · ${w.location}` : '')}
@@ -569,7 +569,7 @@ export default function EditUserPage() {
                                                                             type="checkbox"
                                                                             checked={selectedPages.includes(item.href)}
                                                                             onChange={() => toggleView(item.href)}
-                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B]"
+                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
                                                                         />
                                                                         <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">View</span>
                                                                     </label>
@@ -579,7 +579,7 @@ export default function EditUserPage() {
                                                                             checked={selectedEditPages.includes(item.href)}
                                                                             disabled={!selectedPages.includes(item.href)}
                                                                             onChange={() => toggleEdit(item.href)}
-                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B] disabled:cursor-not-allowed"
+                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B] disabled:cursor-not-allowed"
                                                                         />
                                                                         <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Edit</span>
                                                                     </label>
@@ -617,7 +617,7 @@ export default function EditUserPage() {
                                                 type="checkbox"
                                                 checked={selectedAreas.includes(area.id)}
                                                 onChange={() => toggleArea(area.id)}
-                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#B4780B] focus:ring-[#F59E0B]"
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
                                             />
                                             <span className="text-[12px] font-medium text-slate-700">{area.name}{area.code ? ` (${area.code})` : ''}</span>
                                         </label>

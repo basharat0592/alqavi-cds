@@ -41,7 +41,7 @@ export const gridFoot = 'bg-[#FAFAF8] border-t border-[#EDEDEA] items-center';
 /** A row: zebra striped, with a rail that lights up on the row being edited. */
 export const gridRow = (index: number) =>
     'relative border-b border-[#F2F2F0] last:border-b-0 transition-colors ' +
-    'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#1A1A1A] ' +
+    'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#F59E0B] ' +
     (index % 2 ? 'bg-[#FAFAF8] ' : 'bg-white ') +
     'hover:bg-[#F5F5F3] focus-within:bg-black/[0.03]';
 

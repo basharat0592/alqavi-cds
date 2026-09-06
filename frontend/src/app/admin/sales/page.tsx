@@ -220,7 +220,7 @@ export default function SalesPage() {
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 placeholder="Search by order #, customer or phone…"
-                                className="w-full h-11 pl-11 pr-9 rounded-xl border border-[#EDEDEA] bg-[#FAFAF8] text-[13px] font-medium text-[#B4780B] placeholder:text-[#9C9C98] outline-none focus:bg-white focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all"
+                                className="w-full h-11 pl-11 pr-9 rounded-xl border border-[#EDEDEA] bg-[#FAFAF8] text-[13px] font-medium text-[#1A1A1A] placeholder:text-[#9C9C98] outline-none focus:bg-white focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all"
                             />
                             {searchTerm && (
                                 <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9C9C98] hover:text-[#3A3A38] transition-colors">
@@ -249,7 +249,7 @@ export default function SalesPage() {
                                 <select
                                     value={channelFilter}
                                     onChange={e => setChannelFilter(e.target.value)}
-                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#1A1A1A]/10 appearance-none cursor-pointer transition-all ${channelFilter !== 'All' ? 'border-transparent bg-[#F59E0B] text-white' : 'border-[#EDEDEA] bg-white text-[#3A3A38] hover:border-slate-300'}`}
+                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#F59E0B]/10 appearance-none cursor-pointer transition-all ${channelFilter !== 'All' ? 'border-transparent bg-[#F59E0B] text-white' : 'border-[#EDEDEA] bg-white text-[#3A3A38] hover:border-slate-300'}`}
                                 >
                                     <option value="All">All Channels</option>
                                     <option value="POS">POS / Counter</option>
@@ -263,7 +263,7 @@ export default function SalesPage() {
                                 <select
                                     value={payFilter}
                                     onChange={e => setPayFilter(e.target.value)}
-                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#1A1A1A]/10 appearance-none cursor-pointer transition-all ${payFilter !== 'All' ? 'border-transparent bg-[#F59E0B] text-white' : 'border-[#EDEDEA] bg-white text-[#3A3A38] hover:border-slate-300'}`}
+                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#F59E0B]/10 appearance-none cursor-pointer transition-all ${payFilter !== 'All' ? 'border-transparent bg-[#F59E0B] text-white' : 'border-[#EDEDEA] bg-white text-[#3A3A38] hover:border-slate-300'}`}
                                 >
                                     <option value="All">All Payments</option>
                                     <option value="Paid">Paid in full</option>

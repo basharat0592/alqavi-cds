@@ -935,7 +935,7 @@ export default function AdminOrdersPage() {
                                     <select
                                         value={selectedWarehouse}
                                         onChange={(e) => setSelectedWarehouse(e.target.value)}
-                                        className="w-full h-11 px-4 border border-[#EDEDEA] rounded-lg text-[13px] font-semibold text-[#B4780B] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white transition-all appearance-none cursor-pointer"
+                                        className="w-full h-11 px-4 border border-[#EDEDEA] rounded-lg text-[13px] font-semibold text-[#1A1A1A] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 bg-white transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="" className="text-[#9C9C98]">Choose a warehouse...</option>
                                         {deliveryWarehouseOptions.map((w: any) => (
@@ -1019,7 +1019,7 @@ export default function AdminOrdersPage() {
                                     value={waModal.message}
                                     onChange={(e) => setWaModal(m => m ? { ...m, message: e.target.value } : m)}
                                     rows={5}
-                                    className="w-full min-h-[120px] px-3.5 py-2.5 bg-white rounded-lg text-[13px] text-[#B4780B] outline-none border border-[#EDEDEA] focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all resize-y leading-relaxed"
+                                    className="w-full min-h-[120px] px-3.5 py-2.5 bg-white rounded-lg text-[13px] text-[#1A1A1A] outline-none border border-[#EDEDEA] focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all resize-y leading-relaxed"
                                 />
                             </div>
                         </div>

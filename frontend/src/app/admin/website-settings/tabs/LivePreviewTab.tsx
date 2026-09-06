@@ -362,7 +362,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         {[...Array(4)].map((_, i) => (
                             <span key={i} className="text-white font-black text-sm uppercase tracking-[0.3em] flex items-center shrink-0">
                                 {content.text}
-                                <Star size={14} className="mx-8 text-[#B4780B] fill-[#F59E0B]" />
+                                <Star size={14} className="mx-8 text-[#1A1A1A] fill-[#F59E0B]" />
                             </span>
                         ))}
                     </div>

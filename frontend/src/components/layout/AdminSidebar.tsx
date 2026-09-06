@@ -241,12 +241,12 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
        this system, so it carries a real shadow rather than a tint. */
     const rowCls = (active: boolean) =>
         `group relative flex items-center gap-3 rounded-[10px] overflow-visible transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'pl-3 pr-2.5 py-[9px]'} ${active
-            ? 'bg-white/[0.10] ring-1 ring-inset ring-white/[0.08]'
+            ? 'bg-[#F59E0B]/[0.16] ring-1 ring-inset ring-[#F59E0B]/30'
             : 'hover:bg-white/[0.06]'}`;
     const rowIconCls = (active: boolean) =>
-        `shrink-0 transition-colors duration-150 ${active ? 'text-white' : 'text-[#8E8E88] group-hover:text-[#E6E6E1]'}`;
+        `shrink-0 transition-colors duration-150 ${active ? 'text-[#FBBF24]' : 'text-[#8E8E88] group-hover:text-[#E6E6E1]'}`;
     const rowTextCls = (active: boolean) =>
-        `text-[13.5px] tracking-[-0.01em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-[#A6A6A0] font-medium group-hover:text-white'}`;
+        `text-[13.5px] tracking-[-0.01em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-[#FBBF24] font-semibold' : 'text-[#A6A6A0] font-medium group-hover:text-white'}`;
     const tooltipCls = `absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12.5px] font-medium whitespace-nowrap pointer-events-none
         opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
         bg-white text-[#1A1A1A] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)]`;
@@ -278,8 +278,8 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                 {/* ── BRAND ── */}
                 <div className={`flex-shrink-0 flex items-center gap-2.5 border-b border-white/[0.08] ${isCollapsed ? 'px-4 py-4 justify-center' : 'pl-4 pr-3 py-4'}`}>
                     <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 min-w-0 flex-1 group/brand">
-                        <div className="relative w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center bg-white transition-transform duration-200 group-hover/brand:scale-[1.04]">
-                            <span className="font-semibold text-[12.5px] text-[#1A1A1A] tracking-[-0.01em]">{orgInitials}</span>
+                        <div className="relative w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center bg-[#F59E0B] transition-transform duration-200 group-hover/brand:scale-[1.04]">
+                            <span className="font-semibold text-[12.5px] text-white tracking-[-0.01em]">{orgInitials}</span>
                         </div>
                         {!isCollapsed && (
                             <div className="flex flex-col min-w-0 leading-none">
@@ -348,7 +348,7 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                         {group.label}
                                     </span>
                                     {groupActive && !groupOpen && (
-                                        <span className="w-1 h-1 rounded-full bg-white shrink-0" />
+                                        <span className="w-1 h-1 rounded-full bg-[#F59E0B] shrink-0" />
                                     )}
                                     <ChevronDown
                                         size={13}

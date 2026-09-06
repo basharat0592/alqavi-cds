@@ -67,7 +67,7 @@ export function Pagination({
                         value={pageSize ?? pageSizeOptions[0]}
                         onChange={e => onPageSize(Number(e.target.value))}
                         aria-label="Rows per page"
-                        className="h-8 pl-2.5 pr-7 rounded-lg bg-[#F2F2F0] border border-transparent text-[12.5px] font-medium text-[#B4780B] outline-none cursor-pointer transition-colors hover:bg-[#EDEDEA] focus:bg-white focus:border-[#F59E0B]/40 focus:ring-4 focus:ring-[#F59E0B]/15"
+                        className="h-8 pl-2.5 pr-7 rounded-lg bg-[#F2F2F0] border border-transparent text-[12.5px] font-medium text-[#1A1A1A] outline-none cursor-pointer transition-colors hover:bg-[#EDEDEA] focus:bg-white focus:border-[#F59E0B]/40 focus:ring-4 focus:ring-[#F59E0B]/15"
                     >
                         {pageSizeOptions.map(n => <option key={n} value={n}>{n}</option>)}
                     </select>

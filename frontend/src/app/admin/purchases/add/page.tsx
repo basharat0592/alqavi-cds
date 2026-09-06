@@ -1288,7 +1288,7 @@ export default function AddPurchasePage() {
                     <div className="px-2 py-1.5 border-r border-slate-200/80">
                         <button
                             onClick={addItem}
-                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#B4780B] hover:text-[#0E7F98] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
+                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
                         >
                             <Plus size={13} /> Add row
                         </button>
