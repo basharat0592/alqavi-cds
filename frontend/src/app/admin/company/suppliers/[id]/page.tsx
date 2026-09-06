@@ -74,7 +74,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                         </div>
 
                         <div className="p-8 flex flex-col items-center border-b border-slate-100">
-                            <div className="h-24 w-24 bg-indigo-50 border-4 border-indigo-100 text-indigo-600 rounded-3xl flex items-center justify-center font-bold text-3xl shadow-sm mb-4">
+                            <div className="h-24 w-24 bg-[#F59E0B]/10 border-4 border-[#F59E0B]/15 text-[#B4780B] rounded-3xl flex items-center justify-center font-bold text-3xl shadow-sm mb-4">
                                 {initials}
                             </div>
                             <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">{supplier.first_name} {supplier.last_name}</h1>
@@ -114,7 +114,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                     <Card className="overflow-hidden">
                         <div className="bg-slate-50/60 px-6 py-4 flex items-center justify-between border-b border-slate-100">
                             <div className="flex items-center gap-3">
-                                <Building2 className="h-5 w-5 text-indigo-600" />
+                                <Building2 className="h-5 w-5 text-[#1A1A1A]" />
                                 <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Catalogs Managed</h2>
                             </div>
                             <Badge tone="indigo">{products.length} Assets</Badge>

@@ -7,7 +7,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { Printer, Share2, Check, ChevronRight } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
-import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
+import { InvoiceHeader, InvoiceFooter, invoiceStylesA5, useA5AutoFit } from '@/components/admin/invoice/InvoiceParts';
 
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
@@ -26,6 +26,9 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
     const { id } = use(params);
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
+    // Shrinks the sheet if the item list is longer than one A5 page holds.
+    // Runs once the data is in, since the height depends on it.
+    const paperRef = useA5AutoFit<HTMLDivElement>(!loading);
     const [shared, setShared] = useState(false);
 
     useEffect(() => {
@@ -62,7 +65,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
     const totalAmount = parseFloat(order.total_amount || '0');
 
     return (
-        <div className="min-h-screen bg-white pb-20 font-sans text-slate-900 selection:bg-amber-100 text-left">
+        <div className="invoice-a5 min-h-screen bg-white pb-20 font-sans text-slate-900 selection:bg-amber-100 text-left">
 
             {/* Integrated Action Bar (Transparent Style) */}
             <div className="max-w-[850px] mx-auto pt-8 px-4 print:hidden">
@@ -90,7 +93,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Paper Container */}
-            <div className="max-w-[850px] mx-auto bg-white p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:p-0">
+            <div ref={paperRef} className="invoice-paper max-w-[850px] mx-auto bg-white p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:p-0">
 
                 <InvoiceHeader
                     docTitle="Invoice"
@@ -161,7 +164,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 <InvoiceFooter />
             </div>
 
-            <style jsx global>{invoiceStyles}</style>
+            <style jsx global>{invoiceStylesA5}</style>
         </div>
     );
 }

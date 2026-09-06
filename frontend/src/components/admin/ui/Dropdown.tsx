@@ -31,7 +31,7 @@ export function Dropdown({
             {open && (
                 <div
                     className={cn(
-                        'absolute z-[100] mt-2 min-w-[200px] bg-white border border-slate-200 rounded-xl shadow-[0_16px_40px_-12px_rgba(0,0,0,0.25)] py-1.5 animate-in fade-in zoom-in-95 duration-150',
+                        'absolute z-[100] mt-2 min-w-[200px] bg-white rounded-2xl shadow-[0_2px_4px_rgba(0,0,0,0.04),0_18px_44px_-16px_rgba(0,0,0,0.28)] py-2 animate-in fade-in zoom-in-95 duration-150',
                         align === 'right' ? 'right-0' : 'left-0',
                         className,
                     )}
@@ -58,8 +58,8 @@ export function DropdownItem({
     danger?: boolean;
 }) {
     const cls = cn(
-        'flex items-center gap-2.5 w-full px-3.5 py-2 text-[13px] font-medium transition-colors text-left',
-        danger ? 'text-rose-600 hover:bg-rose-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+        'flex items-center gap-2.5 w-full px-3.5 py-2.5 text-[13.5px] font-medium tracking-[-0.01em] transition-colors text-left',
+        danger ? 'text-[#DC2626] hover:bg-[#FCE9E9]' : 'text-[#5B5B58] hover:bg-[#F5F5F3] hover:text-[#0E7F98]',
     );
     const inner = (
         <>

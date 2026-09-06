@@ -19,3 +19,5 @@ export { paymentService, paymentCategoryService, installmentService } from '../s
 export { purchaseService } from '../services/purchase.service';
 export { salesService } from '../services/sales.service';
 export { supplierService } from '../services/supplier.service';
+export { onboardingService, inviteUrl } from '../services/onboarding.service';
+export type { OrgInvite, InviteState } from '../services/onboarding.service';

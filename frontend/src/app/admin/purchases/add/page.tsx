@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, CheckCircle, Package, ArrowLeft, RefreshCw, Search, ChevronDown, Building2, PackagePlus, History } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, RefreshCw, Search, ChevronDown, Building2, History, AlertTriangle, CreditCard, ArrowLeft } from 'lucide-react';
 import { purchaseService } from '@/services/purchase.service';
 import { productService } from '@/services/product.service';
 import { companyService } from '@/services/company.service';
@@ -11,7 +12,11 @@ import { inventoryService } from '@/services/inventory.service';
 import { formatCurrency, getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { WarehouseSelectionModal } from '@/components/admin/WarehouseSelectionModal';
-import { PageHeader, Card, Button, Modal, ui } from '@/components/admin/ui';
+import { Card, Button, Modal, ui } from '@/components/admin/ui';
+import {
+    cellCls, cellNum, cellDisabled, Th, Cell,
+    settleInput, settleSelect, SField, gridScroller, gridHead, gridFoot, gridRow,
+} from '@/components/admin/ui/grid';
 
 /* ─── Shared Components ─── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => (
@@ -29,15 +34,22 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[12px] font-bold text-slate-700 mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
+        <label className={ui.fieldLabel}>{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
 
-const inputCls = ui.inputBase
-    .replace('h-10', 'h-9')
-    .replace('text-[13.5px]', 'text-[12.5px]');
+const inputCls = ui.inputBase;
 const selectCls = `${inputCls} cursor-pointer`;
+/* ─── Line-items spreadsheet ───
+   Column widths are shared by the header and every row so they stay aligned; the whole
+   grid scrolls horizontally as one unit below ~1290px. */
+const GRID_COLS =
+    'grid grid-cols-[minmax(150px,1.25fr)_minmax(170px,1.5fr)_94px_86px_78px_66px_66px_92px_92px_92px_36px]';
+const GRID_MIN = 'min-w-[1000px]';
+
+// Cell chrome, header cells, dividers and the settlement strip all come from the
+// shared grid module, so this screen and the POS are the same code, not copies.
 
 const EMPTY_FORM = {
     purchase_number: '', supplier: '', supplier_name: '',
@@ -91,11 +103,55 @@ type LineItem = {
     apply_expiry: boolean;     // whether the Exp Date field is enabled for this line
 };
 
+/* Anchored portal menu. The line-items grid scrolls horizontally, and an `overflow-x`
+   container clips absolutely-positioned children on both axes — so dropdowns render in a
+   portal with fixed coords instead. Same approach as the sale-returns picker. */
+const usePortalMenu = (open: boolean, onClose: () => void) => {
+    const anchorRef = useRef<HTMLDivElement>(null);
+    const popRef = useRef<HTMLDivElement>(null);
+    const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+    // Kept in a ref so an inline arrow from the caller doesn't re-run the effect each render.
+    const closeRef = useRef(onClose);
+    closeRef.current = onClose;
+
+    useEffect(() => {
+        if (!open) { setCoords(null); return; }
+        const place = () => {
+            const r = anchorRef.current?.getBoundingClientRect();
+            if (!r) return;
+            const width = Math.max(r.width, 260);
+            const roomBelow = window.innerHeight - r.bottom;
+            // Flip above the field when the menu wouldn't fit underneath.
+            const top = roomBelow < 240 && r.top > roomBelow ? Math.max(8, r.top - 244) : r.bottom + 4;
+            setCoords({ top, left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), width });
+        };
+        place();
+        const onScroll = (e: Event) => { if (popRef.current?.contains(e.target as Node)) return; place(); };
+        const onDown = (e: MouseEvent) => {
+            if (anchorRef.current?.contains(e.target as Node)) return;
+            if (popRef.current?.contains(e.target as Node)) return;
+            closeRef.current();
+        };
+        window.addEventListener('scroll', onScroll, true);
+        window.addEventListener('resize', place);
+        document.addEventListener('mousedown', onDown);
+        return () => {
+            window.removeEventListener('scroll', onScroll, true);
+            window.removeEventListener('resize', place);
+            document.removeEventListener('mousedown', onDown);
+        };
+    }, [open]);
+
+    return { anchorRef, popRef, coords };
+};
+
+const menuCls = 'bg-white border border-slate-200 rounded-xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] overflow-hidden';
+
 /* ─── Product Selector — single searchable input (type to filter or write custom) ─── */
 const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const { anchorRef, popRef, coords } = usePortalMenu(open, () => { setOpen(false); setSearch(''); });
 
     const selected = String(selectedId).startsWith('__custom__:')
         ? { id: selectedId, name: String(selectedId).replace('__custom__:', ''), isCustom: true }
@@ -106,32 +162,32 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
         ? products.filter((p: any) => (p.name || '').toLowerCase().includes(q) || (p.sku && String(p.sku).toLowerCase().includes(q)))
         : products;
 
-    useEffect(() => {
-        const h = (e: MouseEvent) => { if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false); };
-        document.addEventListener('mousedown', h);
-        return () => document.removeEventListener('mousedown', h);
-    }, []);
-
     return (
-        <div className="relative w-full" ref={containerRef}>
-            <div className="relative">
-                <input
-                    className={inputCls + ' pr-8'}
-                    value={open ? search : (selected ? selected.name : '')}
-                    placeholder="Search or type product…"
-                    onFocus={() => setOpen(true)}
-                    onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
-                />
-                <ChevronDown size={14} className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-indigo-600' : ''}`} />
-            </div>
+        <div className="relative w-full" ref={anchorRef}>
+            <input
+                className={inputCls + ' pr-6'}
+                value={open ? search : (selected ? selected.name : '')}
+                placeholder="Search product…"
+                onFocus={() => setOpen(true)}
+                onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+                onKeyDown={(e) => {
+                    // Enter takes the top match, then the grid's handler moves focus on.
+                    if (e.key === 'Enter' && open && filtered.length) {
+                        onSelect(filtered[0].id); setOpen(false); setSearch('');
+                    } else if (e.key === 'Escape' && open) {
+                        e.stopPropagation(); setOpen(false); setSearch('');
+                    }
+                }}
+            />
+            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#1A1A1A]' : ''}`} />
 
-            {open && (
-                <div className="absolute z-[100] top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_10px_30px_rgba(15,23,42,0.18)] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+            {open && coords && createPortal(
+                <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[260px] overflow-y-auto custom-scrollbar">
                         {filtered.slice(0, 60).map((p: any) => (
                             <div
                                 key={p.id}
-                                className="px-3 py-2 hover:bg-indigo-50/60 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
+                                className="px-3 py-2 hover:bg-[#F59E0B]/10 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
                                 onClick={() => { onSelect(p.id); setOpen(false); setSearch(''); }}
                             >
                                 <div className="min-w-0">
@@ -148,7 +204,8 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -181,7 +238,7 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
             </button>
             {open && (
                 <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/20 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                         {filtered.map((s: any) => (
                             <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[12px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
@@ -202,37 +259,34 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
 const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const { anchorRef, popRef, coords } = usePortalMenu(open, () => { setOpen(false); setSearch(''); });
 
     const selected = companies.find((c: any) => String(c.id) === String(selectedId));
     const q = search.trim().toLowerCase();
     const filtered = q ? companies.filter((c: any) => (c.name || '').toLowerCase().includes(q)) : companies;
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) { setOpen(false); setSearch(''); }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     return (
-        <div className="relative w-full" ref={containerRef}>
-            <div className="relative">
-                <input
-                    className={inputCls + ' pr-8'}
-                    value={open ? search : (selected ? selected.name : '')}
-                    placeholder="Search company…"
-                    onFocus={() => setOpen(true)}
-                    onChange={e => { setSearch(e.target.value); setOpen(true); }}
-                />
-                <ChevronDown size={14} className="text-slate-400 shrink-0 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
-            {open && (
-                <div className="absolute z-[100] top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="relative w-full" ref={anchorRef}>
+            <input
+                className={inputCls + ' pr-6'}
+                value={open ? search : (selected ? selected.name : '')}
+                placeholder="Search company…"
+                onFocus={() => setOpen(true)}
+                onChange={e => { setSearch(e.target.value); setOpen(true); }}
+                onKeyDown={e => {
+                    if (e.key === 'Enter' && open && filtered.length) {
+                        onSelect(String(filtered[0].id)); setOpen(false); setSearch('');
+                    } else if (e.key === 'Escape' && open) {
+                        e.stopPropagation(); setOpen(false); setSearch('');
+                    }
+                }}
+            />
+            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#1A1A1A]' : ''}`} />
+            {open && coords && createPortal(
+                <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
                         {filtered.map((c: any) => (
-                            <div key={c.id} className="px-4 py-2 hover:bg-indigo-50/60 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
+                            <div key={c.id} className="px-4 py-2 hover:bg-[#F59E0B]/10 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
                                 <span className="font-semibold text-slate-800 truncate">{c.name}</span>
                                 {c.category && <span className="text-[9px] text-slate-400 uppercase font-bold shrink-0">{c.category}</span>}
                             </div>
@@ -243,7 +297,8 @@ const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => 
                             </div>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
@@ -257,6 +312,9 @@ export default function AddPurchasePage() {
     // Products that exist in Current Stocks (keyed by product id + name) — the line-item
     // Product dropdown lists ONLY these. Brand-new products are added via the popup.
     const [stockKeys, setStockKeys] = useState<{ ids: Set<string>; names: Set<string> }>({ ids: new Set(), names: new Set() });
+    // Latest purchase / sale / cost price per product (by id AND by name), read from
+    // Current Stocks — used to auto-fill the rate fields when a product is selected.
+    const [priceMap, setPriceMap] = useState<Record<string, { purchase: number; sale: number; cost: number }>>({});
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -264,6 +322,8 @@ export default function AddPurchasePage() {
     const [form, setForm] = useState({ ...EMPTY_FORM });
     const [staffList, setStaffList] = useState<any[]>([]);
     const [items, setItems] = useState<LineItem[]>([{ ...EMPTY_ITEM }]);
+    // Only true once a save has been rejected — keeps the grid quiet while typing.
+    const [showErrors, setShowErrors] = useState(false);
     const [successOrder, setSuccessOrder] = useState<any | null>(null);
     const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState(false);
     const [tempPayload, setTempPayload] = useState<any>(null);
@@ -293,11 +353,21 @@ export default function AddPurchasePage() {
                 const list = Array.isArray(rows) ? rows : (rows?.results || []);
                 const ids = new Set<string>();
                 const names = new Set<string>();
+                const prices: Record<string, { purchase: number; sale: number; cost: number }> = {};
                 for (const s of list) {
                     if (s.product) ids.add(String(s.product));
                     if (s.product_name) names.add(String(s.product_name).trim().toLowerCase());
+                    // Latest purchase price = price_per_item; cost = cost_price; sale = sale_price.
+                    const entry = {
+                        purchase: parseFloat(s.price_per_item ?? s.cost_price ?? 0) || 0,
+                        sale: parseFloat(s.sale_price ?? 0) || 0,
+                        cost: parseFloat(s.cost_price ?? s.price_per_item ?? 0) || 0,
+                    };
+                    if (s.product) prices[`id:${s.product}`] = entry;
+                    if (s.product_name) prices[`name:${String(s.product_name).trim().toLowerCase()}`] = entry;
                 }
                 setStockKeys({ ids, names });
+                setPriceMap(prices);
             })
             .catch(() => { });
     }, []);
@@ -567,8 +637,22 @@ export default function AddPurchasePage() {
 
     const handleSave = async (warehouseIdOrEvent?: any) => {
         const warehouseId = typeof warehouseIdOrEvent === 'string' ? warehouseIdOrEvent : undefined;
-        if (items.some(i => !i.product)) return toast.error('Please select a product for all items');
+        // An impatient double-click would otherwise post the order twice.
+        if (saving) return;
 
+        // Point at the offending row instead of just naming the field — with many
+        // rows on screen, "for all items" isn't enough to find the gap.
+        const rowNo = (pred: (i: LineItem) => boolean) => items.findIndex(pred) + 1;
+        const fail = (msg: string) => { setShowErrors(true); toast.error(msg); return undefined; };
+
+        if (items.some(i => !i.company)) return fail(`Row ${rowNo(i => !i.company)}: select a company`);
+        if (items.some(i => !i.product)) return fail(`Row ${rowNo(i => !i.product)}: select a product`);
+        if (items.some(i => !(i.quantity > 0))) return fail(`Row ${rowNo(i => !(i.quantity > 0))}: enter the quantity`);
+        if (items.some(i => !(i.unit_price > 0))) return fail(`Row ${rowNo(i => !(i.unit_price > 0))}: enter the purchase rate`);
+        if (items.some(i => !(i.selling_price > 0))) return fail(`Row ${rowNo(i => !(i.selling_price > 0))}: enter the sale rate`);
+        if (items.some(i => !(i.retail_rate > 0))) return fail(`Row ${rowNo(i => !(i.retail_rate > 0))}: enter the retail rate`);
+
+        setShowErrors(false);
         setSaving(true);
         // Supplier is optional — use the chosen one, else the first registered supplier
         // if any, else none (the purchase order's supplier is nullable).
@@ -612,10 +696,23 @@ export default function AddPurchasePage() {
         // folds shipping + tax into the grand total, so compute it here.
         const taxAmount = (totalAmount * ((form as any).tax_rate || 0)) / 100;
 
+        // The UI clamps the grand total at zero, the backend does not — an extra
+        // discount larger than the bill would show Rs 0 here but store a negative
+        // total and mis-derive payment status. Cap it before it goes out.
+        const chargeable = totalAmount + ((form as any).shipping_cost || 0) + taxAmount;
+        const enteredDiscount = Number((form as any).extra_discount) || 0;
+        const cappedDiscount = Math.min(enteredDiscount, chargeable);
+        if (cappedDiscount !== enteredDiscount) {
+            toast(`Extra discount capped at ${formatCurrency(chargeable)} (the bill total).`, { icon: '⚠️' });
+            setForm(f => ({ ...f, extra_discount: cappedDiscount }));
+        }
+        // Everything below builds its payload from this, not from `form` directly.
+        const formOut = { ...form, extra_discount: cappedDiscount };
+
         // Edit mode: update the existing order (full header + items recompute).
         if (editId) {
             try {
-                await purchaseService.updateFull(editId, { ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount });
+                await purchaseService.updateFull(editId, { ...formOut, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount });
                 toast.success('Purchase order updated!');
                 router.push('/admin/purchases');
             } catch (err: any) {
@@ -630,7 +727,7 @@ export default function AddPurchasePage() {
         // Only prompt for a branch when the admin genuinely has multiple; otherwise
         // the received stock lands in their single/assigned branch automatically.
         if (form.status === 'RECEIVED' && !warehouseId && !form.warehouse && warehouses.length > 1) {
-            setTempPayload({ ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems });
+            setTempPayload({ ...formOut, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems });
             setIsWarehouseModalOpen(true);
             setSaving(false);
             return;
@@ -646,7 +743,7 @@ export default function AddPurchasePage() {
             const grandTotal = Math.max(0, totalAmount + ((form as any).shipping_cost || 0) + taxAmount - (Number((form as any).extra_discount) || 0));
             const paidNow = Number((form as any).paid_amount) || 0;
             const payment_status = paidNow <= 0 ? 'UNPAID' : paidNow >= grandTotal ? 'PAID' : 'PARTIAL';
-            const payload: any = { ...form, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
+            const payload: any = { ...formOut, supplier: finalSupplier || null, supplier_name: finalSupplierName, items: finalItems, tax_amount: taxAmount, payment_status };
             if (finalWarehouseId) payload.warehouse = finalWarehouseId;
             const data = await purchaseService.create(payload);
             setSuccessOrder(data);
@@ -659,27 +756,41 @@ export default function AddPurchasePage() {
     };
 
     // Load past purchase-order lines for the products currently on this order.
-    const loadPrevHistory = async () => {
+    // `silent` skips the "add a product first" toast so it can run automatically
+    // whenever the selected product changes.
+    const loadPrevHistory = async (silent = false) => {
         const productIds = new Set(
             items.filter(i => i.product && !String(i.product).startsWith('__custom__:')).map(i => String(i.product))
         );
-        if (productIds.size === 0) { toast.error('Add a product first to see its history.'); return; }
+        const productNames = new Set(
+            items.filter(i => i.product_name).map(i => String(i.product_name).trim().toLowerCase())
+        );
+        if (productIds.size === 0 && productNames.size === 0) {
+            if (!silent) toast.error('Add a product first to see its history.');
+            setHistRows([]); setHistLoaded(false);
+            return;
+        }
         setHistLoading(true);
         try {
-            const res: any = await purchaseService.getAll({ page_size: 200 });
+            const res: any = await purchaseService.getAll({ no_pagination: 'true' });
             const orders = Array.isArray(res) ? res : (res?.results || []);
             const rows: any[] = [];
             for (const po of orders) {
                 for (const it of (po.items || [])) {
-                    if (productIds.has(String(it.product))) {
+                    const matchId = it.product && productIds.has(String(it.product));
+                    const matchName = it.product_name && productNames.has(String(it.product_name).trim().toLowerCase());
+                    if (matchId || matchName) {
+                        const qty = Number(it.quantity ?? 0) || 0;
+                        const rate = parseFloat(it.price || 0) || 0;
                         rows.push({
                             date: (po.order_date || po.created_at || '').slice(0, 10),
                             po: po.purchase_number || po.order_number || '—',
-                            supplier: po.supplier_name || '—',
+                            // Supplier concept was removed — show the product's Company instead.
+                            company: it.company_name || po.company_name || '—',
                             product: it.product_name || '—',
-                            qty: it.quantity ?? 0,
-                            rate: parseFloat(it.price || 0) || 0,
-                            subtotal: parseFloat(it.subtotal || 0) || 0,
+                            qty,
+                            rate,
+                            subtotal: qty * rate,
                         });
                     }
                 }
@@ -688,9 +799,18 @@ export default function AddPurchasePage() {
             setHistRows(rows);
             setHistLoaded(true);
         } catch {
-            toast.error('Failed to load previous history.');
+            if (!silent) toast.error('Failed to load previous history.');
         } finally { setHistLoading(false); }
     };
+
+    // Auto-load previous purchase history whenever the selected products change,
+    // so the panel always reflects the real history for the current line(s).
+    const selectedProductKey = items.map(i => i.product || i.product_name).filter(Boolean).join('|');
+    useEffect(() => {
+        if (!selectedProductKey) { setHistRows([]); setHistLoaded(false); return; }
+        loadPrevHistory(true);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedProductKey]);
 
     const addItem = () => setItems(prev => [...prev, { ...EMPTY_ITEM }]);
 
@@ -713,6 +833,10 @@ export default function AddPurchasePage() {
                     const matched = suppliers.find(s => String(s.id) === String(p.supplier));
                     setForm(f => ({ ...f, supplier: String(p.supplier), supplier_name: matched?.name || f.supplier_name }));
                 }
+                // Pull this product's previous purchase / sale / cost prices from Current
+                // Stocks so the rate fields pre-fill (matched by id first, then by name).
+                const prev = priceMap[`id:${val}`]
+                    || priceMap[`name:${String(p?.name || '').trim().toLowerCase()}`];
                 return {
                     ...item,
                     product: val,
@@ -720,7 +844,11 @@ export default function AddPurchasePage() {
                     // Adopt the product's own company + bar code so the row stays in sync.
                     company: p?.company ? String(p.company) : item.company,
                     barcode: p?.barcode || p?.sku || item.barcode || '',
-                    unit_price: p?.retail_price ? parseFloat(p.retail_price) : item.unit_price,
+                    // Pur. Rate ← previous purchase price, Sale Rate ← previous sale price,
+                    // Retail Rate ← previous cost price (falls back to catalog / existing).
+                    unit_price: prev?.purchase || (p?.retail_price ? parseFloat(p.retail_price) : item.unit_price),
+                    selling_price: prev?.sale || item.selling_price,
+                    retail_rate: prev?.cost || item.retail_rate,
                 };
             }
             return { ...item, [field]: val };
@@ -752,182 +880,381 @@ export default function AddPurchasePage() {
         UNPAID: 'bg-slate-100 text-slate-500 border-slate-200',
     }[paymentStatus];
 
+    /* ─── Keyboard-first entry ───
+       The grid is driven from one container-level handler rather than per-input
+       props: querying live DOM order means disabled cells (Pack on a non-carton
+       row, Expiry where it doesn't apply) are skipped for free, and the column
+       count never has to be kept in sync by hand. */
+    const gridRef = useRef<HTMLDivElement>(null);
+
+    const gridCells = () => Array.from(
+        gridRef.current?.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])') ?? []
+    );
+
+    const focusCell = (el?: HTMLElement) => {
+        if (!el) return;
+        el.focus();
+        if (el instanceof HTMLInputElement && el.type !== 'date') el.select();
+    };
+
+    const onGridKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
+
+        // Ctrl/Cmd+Enter saves from anywhere in the grid.
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleSave();
+            return;
+        }
+
+        const cells = gridCells();
+        const idx = cells.indexOf(target);
+        if (idx === -1) return;
+
+        // Columns can vary per row (disabled cells drop out), so step vertically by
+        // matching the target's position within its own row element.
+        const rowOf = (el: HTMLElement) => el.closest('[data-row]');
+        const stepRow = (dir: 1 | -1) => {
+            const row = rowOf(target);
+            if (!row) return;
+            const inRow = Array.from(row.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
+            const col = inRow.indexOf(target);
+            let j = idx;
+            while ((j = j + dir) >= 0 && j < cells.length) {
+                const otherRow = rowOf(cells[j]);
+                if (otherRow && otherRow !== row) {
+                    const others = Array.from(otherRow.querySelectorAll<HTMLElement>('input:not([disabled]), select:not([disabled])'));
+                    focusCell(others[Math.min(col, others.length - 1)]);
+                    return;
+                }
+            }
+        };
+
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const next = cells[idx + (e.shiftKey ? -1 : 1)];
+            if (next) { focusCell(next); return; }
+            // Past the last cell — start a fresh row and land on it.
+            if (!e.shiftKey) {
+                addItem();
+                requestAnimationFrame(() => focusCell(gridCells()[idx + 1]));
+            }
+            return;
+        }
+        // Arrows would otherwise increment number inputs instead of moving.
+        if (e.key === 'ArrowDown') { e.preventDefault(); stepRow(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); stepRow(-1); }
+        else if (e.key === 'Escape') target.blur();
+    };
+
+    /* ─── Duplicate supplier bill ───
+       Re-keying the same invoice double-counts stock and payables, so warn on blur.
+       Advisory only: suppliers do occasionally reuse numbers across years. */
+    const [dupBill, setDupBill] = useState<{ number: string; date?: string } | null>(null);
+
+    const checkDuplicateBill = useCallback(async (ref: string) => {
+        const number = (ref || '').trim();
+        if (!number || editId) { setDupBill(null); return; }
+        try {
+            const res: any = await purchaseService.getAll({ search: number, page_size: 20 });
+            const rows: any[] = res?.results ?? res ?? [];
+            const hit = rows.find((r: any) =>
+                String(r.reference_number ?? '').trim().toLowerCase() === number.toLowerCase() &&
+                String(r.id) !== String(editId ?? '')
+            );
+            setDupBill(hit ? { number, date: hit.order_date || hit.created_at?.slice(0, 10) } : null);
+        } catch {
+            setDupBill(null); // never block entry on a lookup failure
+        }
+    }, [editId]);
+
+    /* ─── Barcode resolution ───
+       The Bar Code column used to be free text that went nowhere. Entering or
+       scanning a known code now selects that product onto the row, which also
+       pulls its company and last-known rates through the normal update path. */
+    const findProductByCode = (code: string) => {
+        const q = code.trim().toLowerCase();
+        if (!q) return null;
+        return products.find((p: any) =>
+            String(p.barcode ?? '').toLowerCase() === q ||
+            String(p.sku ?? '').toLowerCase() === q
+        ) ?? null;
+    };
+
+    const applyScannedProduct = (rowIndex: number, p: any) => {
+        // Route through updateItem so rate auto-fill and apply_expiry stay in one place.
+        if (p.company) updateItem(rowIndex, 'company', String(p.company));
+        updateItem(rowIndex, 'product', String(p.id));
+        toast.success(`${p.name}`, { id: 'pur-scan-hit' });
+    };
+
+    // Rows that fail validation, surfaced only after a save attempt so the form
+    // doesn't shout at someone who is still filling it in.
+    const rowInvalid = (it: LineItem) => ({
+        company: !it.company,
+        product: !it.product,
+        quantity: !(it.quantity > 0),
+        unit_price: !(it.unit_price > 0),
+    });
+
+    // Same product on more than one row — legal, but almost always a mistake.
+    const duplicateRows = (() => {
+        const seen = new Map<string, number>();
+        const dupes = new Set<number>();
+        items.forEach((it, i) => {
+            if (!it.product) return;
+            const key = String(it.product);
+            if (seen.has(key)) { dupes.add(seen.get(key)!); dupes.add(i); }
+            else seen.set(key, i);
+        });
+        return dupes;
+    })();
+
+    // Column sums for reconciling against the supplier's paper bill.
+    const totalUnits = items.reduce((s, it) => s + (it.packaging_type === 'CARTON' ? (it.quantity || 0) * (it.items_per_carton || 0) : (it.quantity || 0)), 0);
+    const totalBonus = items.reduce((s, it) => s + (it.bonus_quantity || 0), 0);
+
+    // Warn before losing a part-filled order to a reload or a closed tab.
+    const hasUnsavedWork = !successOrder && items.some(it => it.product || it.company || it.unit_price > 0);
+    useEffect(() => {
+        if (!hasUnsavedWork) return;
+        const onBeforeUnload = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [hasUnsavedWork]);
+
+    /* ─── Draft persistence ───
+       The warning above only asks; it doesn't save. Mirror the live form into
+       localStorage so a crash, a stray reload or a closed tab is recoverable.
+       Editing an existing PO is excluded — that already has a server record. */
+    const DRAFT_KEY = 'purchase.draft.v1';
+    const [draftOffer, setDraftOffer] = useState<any | null>(null);
+    const draftRestored = useRef(false);
+
+    useEffect(() => {
+        if (editId || loading || draftRestored.current) return;
+        draftRestored.current = true;
+        try {
+            const raw = window.localStorage.getItem(DRAFT_KEY);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            if (Array.isArray(d?.items) && d.items.some((it: any) => it.product)) setDraftOffer(d);
+        } catch { /* corrupt or unavailable */ }
+    }, [editId, loading]);
+
+    useEffect(() => {
+        if (editId || successOrder) return;
+        if (!hasUnsavedWork) { try { window.localStorage.removeItem(DRAFT_KEY); } catch {} return; }
+        // Debounced so keystrokes don't hammer storage.
+        const t = setTimeout(() => {
+            try {
+                window.localStorage.setItem(DRAFT_KEY, JSON.stringify({
+                    items, form, savedAtLabel: new Date().toLocaleString(),
+                }));
+            } catch { /* quota or private mode */ }
+        }, 800);
+        return () => clearTimeout(t);
+    }, [items, form, hasUnsavedWork, editId, successOrder]);
+
+    const restoreDraft = () => {
+        if (!draftOffer) return;
+        if (Array.isArray(draftOffer.items) && draftOffer.items.length) setItems(draftOffer.items);
+        if (draftOffer.form) setForm((f: any) => ({ ...f, ...draftOffer.form }));
+        setDraftOffer(null);
+        toast.success('Draft restored.');
+    };
+
+    const discardDraft = () => {
+        try { window.localStorage.removeItem(DRAFT_KEY); } catch {}
+        setDraftOffer(null);
+    };
+
     const renderItemsList = () => {
         return items.map((item, i) => {
             // A purchase order *adds* stock, so there is no upper cap on the order
             // quantity — current stock is shown as context only, never a limit.
             const p = products.find(prod => String(prod.id) === String(item.product));
+            const isCarton = item.packaging_type === 'CARTON';
+            const totalPcs = (isCarton ? (item.quantity * item.items_per_carton) : item.quantity) + (item.bonus_quantity || 0);
+            const profit = (item.unit_price > 0 && item.selling_price > 0)
+                ? ((item.selling_price - item.unit_price) / item.unit_price) * 100
+                : null;
+
+            const bad = showErrors ? rowInvalid(item) : { company: false, product: false, quantity: false, unit_price: false };
+            const err = (on: boolean) => on ? ' !border-rose-400 !bg-rose-50/60 focus:!border-rose-500 focus:!ring-rose-500/25' : '';
+            const isDupe = duplicateRows.has(i);
 
             return (
-                <div key={i} className={"relative" + (i > 0 ? " border-t border-slate-100 pt-6 mt-6" : "")}>
-                    {/* Row 1 — company / product / bar code + remove */}
-                    <div className="flex items-end gap-3">
-                        <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px] gap-4">
-                            <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Company</label>
-                                <CompanySelector selectedId={item.company} companies={companies} inputCls={selectCls} onSelect={(val: any) => updateItem(i, 'company', val)} />
-                            </div>
-                            <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Product</label>
-                                <ProductSelector
-                                    selectedId={item.product}
-                                    products={products.filter((p: any) => {
-                                        const companyOk = !item.company || String(p.company ?? '') === String(item.company);
-                                        // Only products that are in Current Stocks (by id or name).
-                                        const inStock = stockKeys.ids.has(String(p.id)) || stockKeys.names.has((p.name || '').trim().toLowerCase());
-                                        return companyOk && inStock;
-                                    })}
-                                    inputCls={selectCls}
-                                    onSelect={(val: any) => updateItem(i, 'product', val)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1">Bar Code</label>
-                                <input
-                                    className={selectCls + ' tabular-nums bg-slate-50 text-center font-bold text-slate-700'}
-                                    value={item.barcode || ''}
-                                    onChange={e => updateItem(i, 'barcode', e.target.value)}
-                                    placeholder="—"
-                                />
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => removeItem(i)}
-                            title="Remove item"
-                            className="shrink-0 mb-0.5 w-9 h-9 flex items-center justify-center rounded-lg text-slate-350 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-colors"
-                        >
-                            <Trash2 size={15} />
-                        </button>
-                    </div>
-
-                    {/* Row 2 — quantities & pricing grid */}
-                    <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
-                        {/* Type */}
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Type</label>
-                            <select className={selectCls} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
+                <div
+                    key={i}
+                    data-row={i}
+                    className={gridRow(i)}
+                >
+                    <div className={GRID_COLS + ' ' + GRID_MIN}>
+                        <Cell>
+                            <CompanySelector selectedId={item.company} companies={companies} inputCls={cellCls + err(bad.company)} onSelect={(val: any) => updateItem(i, 'company', val)} />
+                        </Cell>
+                        <Cell>
+                            <ProductSelector
+                                selectedId={item.product}
+                                products={products.filter((prod: any) => {
+                                    // Always keep this line's already-chosen product (e.g. one just
+                                    // created from the "Add New Products" popup) so it stays visible.
+                                    if (String(prod.id) === String(item.product)) return true;
+                                    const companyOk = !item.company || String(prod.company ?? '') === String(item.company);
+                                    // Otherwise only products that are in Current Stocks (by id or name).
+                                    const inStock = stockKeys.ids.has(String(prod.id)) || stockKeys.names.has((prod.name || '').trim().toLowerCase());
+                                    return companyOk && inStock;
+                                })}
+                                inputCls={cellCls + err(bad.product) + (isDupe && !bad.product ? ' !border-amber-400 !bg-amber-50/60' : '')}
+                                onSelect={(val: any) => updateItem(i, 'product', val)}
+                            />
+                        </Cell>
+                        <Cell>
+                            <input
+                                className={cellCls + ' tabular-nums tracking-wide text-slate-600'}
+                                value={item.barcode || ''}
+                                onChange={e => updateItem(i, 'barcode', e.target.value)}
+                                onKeyDown={e => {
+                                    // Enter resolves the code to a product on this row rather
+                                    // than just moving on, so a scanner fills the line.
+                                    if (e.key !== 'Enter') return;
+                                    const code = (e.target as HTMLInputElement).value.trim();
+                                    if (!code) return;
+                                    const hit = findProductByCode(code);
+                                    if (hit) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        applyScannedProduct(i, hit);
+                                    } else {
+                                        toast.error(`No product matches "${code}"`, { id: 'pur-scan-miss' });
+                                    }
+                                }}
+                                placeholder="scan / type"
+                            />
+                        </Cell>
+                        <Cell>
+                            <select className={cellCls + ' cursor-pointer'} value={item.packaging_type} onChange={e => updateItem(i, 'packaging_type', e.target.value)}>
                                 <option value="SINGLE">Single</option>
                                 <option value="CARTON">Carton</option>
                             </select>
-                        </div>
-
-                        {/* Qty */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">{item.packaging_type === 'CARTON' ? 'Cartons' : 'Qty'}</label>
+                        </Cell>
+                        <Cell>
                             <input
-                                className={inputCls + " text-center font-bold tabular-nums text-indigo-650"}
-                                type="number"
-                                min="1"
+                                className={cellNum + ' text-[#1A1A1A]' + err(bad.quantity)}
+                                type="number" min="1"
                                 value={item.quantity || ''}
                                 onChange={e => updateItem(i, 'quantity', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
                             />
-                        </div>
-
-                        {/* Packing */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Packing</label>
-                            <input className={inputCls + (item.packaging_type !== 'CARTON' ? ' opacity-50 bg-slate-50' : '') + " text-center tabular-nums"} type="number" min="1" disabled={item.packaging_type !== 'CARTON'} value={item.items_per_carton || ''} onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)} />
-                        </div>
-
-                        {/* Bonus */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Bonus (U)</label>
+                        </Cell>
+                        <Cell>
                             <input
-                                className={inputCls + " text-center tabular-nums text-emerald-700 font-bold"}
-                                type="number"
-                                min="0"
+                                className={cellNum + (isCarton ? '' : ' ' + cellDisabled)}
+                                type="number" min="1"
+                                disabled={!isCarton}
+                                title={isCarton ? '' : 'Only applies to carton purchases'}
+                                value={item.items_per_carton || ''}
+                                onChange={e => updateItem(i, 'items_per_carton', parseInt(e.target.value) || 0)}
+                            />
+                        </Cell>
+                        <Cell>
+                            <input
+                                className={cellNum + ' text-emerald-700'}
+                                type="number" min="0"
                                 value={item.bonus_quantity || ''}
                                 onChange={e => updateItem(i, 'bonus_quantity', Math.max(0, parseInt(e.target.value) || 0))}
                                 placeholder="0"
                             />
-                        </div>
-
-                        {/* Pur. Rate */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Pur. Rate</label>
-                            <div className="relative flex items-center">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
-                                <input
-                                    type="number" min="0" step="0.01"
-                                    className={inputCls + " pl-6 font-bold text-slate-800 text-center"}
-                                    value={item.unit_price || ''}
-                                    onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Sale Rate */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Sale Rate</label>
-                            <div className="relative flex items-center">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
-                                <input
-                                    type="number" min="0" step="0.01"
-                                    className={inputCls + " pl-6 text-center tabular-nums"}
-                                    value={item.selling_price || ''}
-                                    onChange={e => updateItem(i, 'selling_price', parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Retail Rate */}
-                        <div>
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Retail Rate</label>
-                            <div className="relative flex items-center">
-                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">Rs</span>
-                                <input
-                                    type="number" min="0" step="0.01"
-                                    className={inputCls + " pl-6 text-center tabular-nums"}
-                                    value={item.retail_rate || ''}
-                                    onChange={e => updateItem(i, 'retail_rate', parseFloat(e.target.value) || 0)}
-                                    placeholder="0.00"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Exp Date — enabled only when the product's "Apply Expiry Date" is Yes */}
-                        <div className="col-span-2 sm:col-span-1">
-                            <label className="block text-[11.5px] font-bold text-slate-700 mb-1">Exp Date</label>
+                        </Cell>
+                        <Cell>
                             <input
-                                type="date"
-                                disabled={!item.apply_expiry}
-                                title={item.apply_expiry ? '' : 'Expiry not applicable for this product'}
-                                className={inputCls + " text-center tabular-nums" + (item.apply_expiry ? '' : ' opacity-50 bg-slate-100 cursor-not-allowed')}
-                                value={item.expiry_date || ''}
-                                onChange={e => updateItem(i, 'expiry_date', e.target.value)}
+                                type="number" min="0" step="0.01"
+                                className={cellNum + err(bad.unit_price)}
+                                value={item.unit_price || ''}
+                                onChange={e => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
                             />
-                        </div>
+                        </Cell>
+                        <Cell>
+                            <input
+                                type="number" min="0" step="0.01"
+                                className={cellNum}
+                                value={item.selling_price || ''}
+                                onChange={e => updateItem(i, 'selling_price', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                            />
+                        </Cell>
+                        <Cell>
+                            <input
+                                type="number" min="0" step="0.01"
+                                className={cellNum}
+                                value={item.retail_rate || ''}
+                                onChange={e => updateItem(i, 'retail_rate', parseFloat(e.target.value) || 0)}
+                                placeholder="0.00"
+                            />
+                        </Cell>
+                        <Cell className="justify-center">
+                            <button
+                                onClick={() => removeItem(i)}
+                                disabled={items.length === 1}
+                                title={items.length === 1 ? 'A purchase needs at least one row' : 'Remove row'}
+                                className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </Cell>
                     </div>
+
+                    {/* Per-row readout — only once the row actually has a product on it. */}
                     {item.product && (
-                        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-x-4 gap-y-1 justify-between items-center text-[11px] text-slate-500">
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                                <span>Total Pcs: <b className="text-slate-700 tabular-nums">{(item.packaging_type === 'CARTON' ? (item.quantity * item.items_per_carton) : item.quantity) + (item.bonus_quantity || 0)} Pcs</b></span>
-                                {(item.bonus_quantity || 0) > 0 && (
-                                    <>
-                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                        <span className="text-emerald-700">incl. {item.bonus_quantity} bonus</span>
-                                    </>
-                                )}
-                                {p && (
-                                    <>
-                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                        <span>Current stock: <b className="text-slate-700 tabular-nums">{p.quantity}</b></span>
-                                    </>
-                                )}
-                                {(item.unit_price > 0 && item.selling_price > 0) && (() => {
-                                    const profit = ((item.selling_price - item.unit_price) / item.unit_price) * 100;
-                                    return (
-                                        <>
-                                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                            <span>%Profit: <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                            <div className="text-[13px] font-bold text-slate-900 tabular-nums">
-                                Subtotal: {formatCurrency(calculateSubtotal(item))}
-                            </div>
+                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[11px] text-slate-500'}>
+                            <span className="font-bold text-slate-400 tabular-nums">#{i + 1}</span>
+                            {isDupe && (
+                                <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
+                                    <AlertTriangle size={12} /> duplicate product
+                                </span>
+                            )}
+                            <span>Total <b className="text-slate-700 tabular-nums">{totalPcs}</b> pcs</span>
+                            {(item.bonus_quantity || 0) > 0 && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <span className="text-emerald-700">incl. {item.bonus_quantity} bonus</span>
+                                </>
+                            )}
+                            {p && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <span>stock <b className="text-slate-700 tabular-nums">{p.quantity}</b></span>
+                                </>
+                            )}
+                            {profit !== null && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <span>profit <b className={profit >= 0 ? 'text-emerald-700' : 'text-rose-600'}>{profit.toFixed(1)}%</b></span>
+                                </>
+                            )}
+                            {/* Per-row expiry override. The Settlement field sets a default for
+                                the whole order; this lets one line differ when a delivery mixes
+                                batches, without giving the grid another column. */}
+                            {item.apply_expiry && (
+                                <>
+                                    <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                    <label className="inline-flex items-center gap-1.5">
+                                        <span>expiry</span>
+                                        <input
+                                            type="date"
+                                            value={item.expiry_date || ''}
+                                            onChange={e => updateItem(i, 'expiry_date', e.target.value)}
+                                            title="Expiry for this line — overrides the order default"
+                                            className="h-6 px-1.5 rounded border border-slate-200 bg-slate-50 text-[11px] tabular-nums text-slate-700 outline-none transition-colors hover:border-slate-300 focus:border-[#F59E0B] focus:bg-white focus:ring-2 focus:ring-[#F59E0B]/25"
+                                        />
+                                    </label>
+                                </>
+                            )}
+                            <span className="ml-auto text-[12.5px] font-bold text-[#1A1A1A] tabular-nums">
+                                {formatCurrency(calculateSubtotal(item))}
+                            </span>
                         </div>
                     )}
                 </div>
@@ -938,63 +1265,115 @@ export default function AddPurchasePage() {
     /* ─── Order Items section (identical in both modes) ─── */
     const renderItemsCard = () => (
         <>
-            <div className="px-5 sm:px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-transparent">
-                <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center ring-1 ring-inset ring-indigo-100 shrink-0">
-                        <Package size={17} strokeWidth={2} />
-                    </div>
-                    <div>
-                        <h2 className="text-[14px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                            Order Items
-                            <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full tabular-nums">{items.length}</span>
-                        </h2>
-                        <p className="text-[11.5px] text-slate-500">Products, quantities, and pricing.</p>
-                    </div>
+            {/* One horizontal scroller wraps header + rows so their columns stay locked together. */}
+            <div ref={gridRef} onKeyDown={onGridKeyDown} className={gridScroller}>
+                <div className={GRID_COLS + ' ' + GRID_MIN + ' ' + gridHead}>
+                    <Th required>Company</Th>
+                    <Th required>Product</Th>
+                    <Th>Bar Code</Th>
+                    <Th>Type</Th>
+                    <Th align="right" required>{items.some(it => it.packaging_type === 'CARTON') ? 'Ctns' : 'Qty'}</Th>
+                    <Th align="right">Pack</Th>
+                    <Th align="right">Bonus</Th>
+                    <Th align="right" required>Pur. Rs</Th>
+                    <Th align="right" required>Sale Rs</Th>
+                    <Th align="right" required>Retail Rs</Th>
+                    <Th> </Th>
                 </div>
-                <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5 h-8.5" onClick={openAddProduct}><Plus size={14} /> Add New Products</Btn>
-            </div>
-            <div className="p-5 sm:p-6 bg-white">
                 {renderItemsList()}
+
+                {/* Column totals — aligned to the grid so each sum sits under its column.
+                    "Add row" lives here rather than in a separate bar below. */}
+                <div className={GRID_COLS + ' ' + GRID_MIN + ' ' + gridFoot}>
+                    <div className="px-2 py-1.5 border-r border-slate-200/80">
+                        <button
+                            onClick={addItem}
+                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
+                        >
+                            <Plus size={13} /> Add row
+                        </button>
+                    </div>
+                    <div className="px-2 py-2 text-[11.5px] text-slate-500 border-r border-slate-200/80">
+                        <b className="text-slate-700 tabular-nums">{items.length}</b> {items.length === 1 ? 'line' : 'lines'}
+                    </div>
+                    <div className="border-r border-slate-200/80" />
+                    <div className="border-r border-slate-200/80" />
+                    <div className="px-2 py-2 text-[12px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnits}</div>
+                    <div className="border-r border-slate-200/80" />
+                    <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonus || ''}</div>
+                    <div className="border-r border-slate-200/80" />
+                    <div className="border-r border-slate-200/80" />
+                    <div className="px-2 py-2 text-[12.5px] font-black text-[#1A1A1A] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
+                </div>
             </div>
-            {/* Settlement & charges — one line: staff, advance, discounts, freight, tax, due date */}
-            <div className="px-5 sm:px-6 py-5 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                <Field label="Staff">
-                    <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
+        </>
+    );
+
+    /* ─── Settlement & Charges — standalone card, shown at the very bottom ───
+       Also hosts Expiry now that it's off the grid: it writes to every line whose
+       product actually tracks expiry, so one date covers the whole delivery. */
+    const expiryApplies = items.some(it => it.apply_expiry);
+    const bulkExpiry = items.find(it => it.apply_expiry)?.expiry_date || '';
+    const setBulkExpiry = (v: string) =>
+        setItems(prev => prev.map(it => it.apply_expiry ? { ...it, expiry_date: v } : it));
+
+    const renderSettlementCard = () => (
+        <div className="px-4 sm:px-5 py-4">
+            <div className="flex items-center gap-2.5 mb-4 select-none">
+                {/* Money section — amber, matching Net Amount and the row totals. */}
+                <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/12 text-[#B4780B] flex items-center justify-center ring-1 ring-inset ring-[#F59E0B]/30 shrink-0">
+                    <CreditCard size={14} strokeWidth={2} />
+                </div>
+                <span className="text-[12px] font-bold text-slate-800 tracking-tight">Settlement &amp; Charges</span>
+                <div className="h-px flex-1 bg-slate-200/70" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-x-3 gap-y-3.5">
+                <SField label="Staff">
+                    <select className={settleSelect} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
                         <option value="">Select any one</option>
                         {staffList.map(s => (
                             <option key={s.id} value={s.id}>{s.name}</option>
                         ))}
                     </select>
-                </Field>
-                <Field label="Paid Now (Advance)">
+                </SField>
+                <SField label="Paid Now">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
-                        <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).paid_amount || ''} onChange={e => setForm(f => ({ ...f, paid_amount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
+                        <span className={ui.fieldAffix + ' left-2.5'}>Rs</span>
+                        <input className={settleInput + " pl-8 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).paid_amount || ''} onChange={e => setForm(f => ({ ...f, paid_amount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
-                </Field>
-                <Field label="Extra Discount">
+                </SField>
+                <SField label="Extra Discount">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
-                        <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).extra_discount || ''} onChange={e => setForm(f => ({ ...f, extra_discount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
+                        <span className={ui.fieldAffix + ' left-2.5'}>Rs</span>
+                        <input className={settleInput + " pl-8 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).extra_discount || ''} onChange={e => setForm(f => ({ ...f, extra_discount: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
-                </Field>
-                <Field label="Freight / Shipping Cost">
+                </SField>
+                <SField label="Freight">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
-                        <input className={inputCls + " pl-9"} type="number" min="0" value={(form as any).shipping_cost || ''} onChange={e => setForm(f => ({ ...f, shipping_cost: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
+                        <span className={ui.fieldAffix + ' left-2.5'}>Rs</span>
+                        <input className={settleInput + " pl-8 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).shipping_cost || ''} onChange={e => setForm(f => ({ ...f, shipping_cost: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0.00" />
                     </div>
-                </Field>
-                <Field label="Tax Rate (%)">
+                </SField>
+                <SField label="Tax Rate">
                     <div className="relative">
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">%</span>
-                        <input className={inputCls + " pr-8"} type="number" min="0" value={(form as any).tax_rate || ''} onChange={e => setForm(f => ({ ...f, tax_rate: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0" />
+                        <span className={ui.fieldAffix + ' right-2.5'}>%</span>
+                        <input className={settleInput + " pr-7 text-right tabular-nums no-spinner"} type="number" min="0" value={(form as any).tax_rate || ''} onChange={e => setForm(f => ({ ...f, tax_rate: Math.max(0, parseFloat(e.target.value) || 0) }))} placeholder="0" />
                     </div>
-                </Field>
-                <Field label="Balance Due Date">
-                    <input className={inputCls} type="date" value={(form as any).due_date || ''} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
-                </Field>
+                </SField>
+                <SField label="Balance Due Date">
+                    <input className={settleInput + ' tabular-nums'} type="date" value={(form as any).due_date || ''} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
+                </SField>
+                <SField label="Expiry (all lines)" hint={expiryApplies ? 'Sets every line that tracks expiry; a line can still be overridden individually below its row' : 'No item on this order tracks expiry'}>
+                    <input
+                        className={settleInput + ' tabular-nums' + (expiryApplies ? '' : ' ' + ui.inputDisabled)}
+                        type="date"
+                        disabled={!expiryApplies}
+                        value={bulkExpiry}
+                        onChange={e => setBulkExpiry(e.target.value)}
+                    />
+                </SField>
             </div>
-        </>
+        </div>
     );
 
     /* ─── Order Information section — shared shell; only the Supplier field differs per mode ─── */
@@ -1011,7 +1390,19 @@ export default function AddPurchasePage() {
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
                 <Field label="Supplier Bill No.">
-                    <input className={inputCls} value={form.reference_number} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} placeholder="Supplier's invoice / bill no." />
+                    <input
+                        className={inputCls + (dupBill ? ' !border-amber-400 !bg-amber-50/60' : '')}
+                        value={form.reference_number}
+                        onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))}
+                        onBlur={() => checkDuplicateBill(form.reference_number)}
+                        placeholder="Supplier's invoice / bill no."
+                    />
+                    {dupBill && (
+                        <p className="mt-1.5 flex items-start gap-1.5 text-[11.5px] font-semibold text-amber-700">
+                            <AlertTriangle size={13} className="mt-px shrink-0" />
+                            <span>Bill <b>{dupBill.number}</b> is already recorded{dupBill.date ? ` on ${dupBill.date}` : ''}. Saving again will double-count stock and payables.</span>
+                        </p>
+                    )}
                 </Field>
                 <Field label="Staff">
                     <select className={selectCls} value={form.staff} onChange={e => setForm(f => ({ ...f, staff: e.target.value }))}>
@@ -1032,7 +1423,7 @@ export default function AddPurchasePage() {
                 </Field>
                 <Field label="Paid Now (Advance)">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                        <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                         <input
                             className={inputCls + " pl-9"}
                             type="number"
@@ -1044,9 +1435,9 @@ export default function AddPurchasePage() {
                     </div>
                 </Field>
                 {warehouses.length > 1 && (
-                    <Field label="Branch / Warehouse" required>
+                    <Field label="Organization / Warehouse" required>
                         <select className={selectCls} value={form.warehouse} onChange={e => setForm(f => ({ ...f, warehouse: e.target.value }))}>
-                            <option value="">Select branch</option>
+                            <option value="">Select organization</option>
                             {warehouses.map(w => (
                                 <option key={w.id} value={w.id}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                             ))}
@@ -1058,7 +1449,7 @@ export default function AddPurchasePage() {
                     <button
                         type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="text-[12px] font-bold text-indigo-650 hover:text-indigo-700 flex items-center gap-1 transition-colors"
+                        className="text-[12px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] flex items-center gap-1 transition-colors"
                     >
                         {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Freight, Tax, Extra Discount, Balance Date)'}
                     </button>
@@ -1068,7 +1459,7 @@ export default function AddPurchasePage() {
                     <>
                         <Field label="Extra Discount">
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                                 <input
                                     className={inputCls + " pl-9"}
                                     type="number"
@@ -1081,7 +1472,7 @@ export default function AddPurchasePage() {
                         </Field>
                         <Field label="Freight / Shipping Cost">
                             <div className="relative">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                <span className={ui.fieldAffix + ' left-3'}>Rs</span>
                                 <input
                                     className={inputCls + " pl-9"}
                                     type="number"
@@ -1094,7 +1485,7 @@ export default function AddPurchasePage() {
                         </Field>
                         <Field label="Tax Rate (%)">
                             <div className="relative">
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">%</span>
+                                <span className={ui.fieldAffix + ' right-3'}>%</span>
                                 <input
                                     className={inputCls + " pr-8"}
                                     type="number"
@@ -1132,18 +1523,51 @@ export default function AddPurchasePage() {
     return (
         <div className="pb-20">
             <div className="max-w-[1320px] mx-auto">
-                <PageHeader
-                    title={editId ? `Edit Purchase ${form.purchase_number || ''}`.trim() : 'New Purchase'}
-                    subtitle={editId ? 'Update this purchase order — supplier, items, and totals.' : 'Create a purchase order with supplier, items, and totals.'}
-                    breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Purchases', href: '/admin/purchases' }, { label: editId ? 'Edit Purchase' : 'New Purchase' }]}
-                />
+                {/* Breadcrumb doubles as the page's action bar — the title block and the
+                    Order Items header were both removed, so this is the only chrome left. */}
+                <div className="flex items-center justify-between gap-4 mb-4">
+                    <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 min-w-0">
+                        <button
+                            onClick={() => router.push('/admin/purchases')}
+                            title="Back to Purchases"
+                            aria-label="Back to Purchases"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#0E7F98] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
+                        >
+                            <ArrowLeft size={15} />
+                        </button>
+                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
+                        <span className="text-slate-300">/</span>
+                        <button onClick={() => router.push('/admin/purchases')} className="hover:text-slate-600 transition-colors">Purchases</button>
+                        <span className="text-slate-300">/</span>
+                        <span className="text-slate-600 truncate">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
+                    </nav>
+                    {/* Secondary action — a tint, so it reads as lighter than the solid Save CTA. */}
+                    <Btn variant="secondary" className="shrink-0 text-[12px] py-1.5 px-3.5 !bg-[#F59E0B]/10 !border-[#F59E0B]/40 !text-[#B4780B] hover:!bg-[#F59E0B]/20 hover:!border-[#F59E0B]/60" onClick={openAddProduct}>
+                        <Plus size={14} /> Add New Products
+                    </Btn>
+                </div>
+
+                {draftOffer && (
+                    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-4 py-3">
+                        <AlertTriangle size={16} className="text-[#1A1A1A] shrink-0" />
+                        <span className="text-[12.5px] font-semibold text-slate-700">
+                            An unsaved purchase from {draftOffer.savedAtLabel} was recovered.
+                        </span>
+                        <div className="ml-auto flex items-center gap-2">
+                            <button onClick={restoreDraft} className="px-3 py-1.5 rounded-lg bg-[#F59E0B] text-white text-[12px] font-bold hover:bg-[#D97706] transition-colors">Restore</button>
+                            <button onClick={discardDraft} className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-colors">Discard</button>
+                        </div>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
                 ) : (
                     <div className="space-y-5">
                         {/* Order Items (rows + settlement fields) — full width */}
-                        <Card className="relative z-[10]">
+                        {/* overflow-hidden clips the grid's square header/totals bands to
+                            the card's rounded corners, now that the grid sits flush at the top. */}
+                        <Card className="relative z-[10] overflow-hidden">
                             {renderItemsCard()}
                         </Card>
 
@@ -1153,14 +1577,14 @@ export default function AddPurchasePage() {
                             <div className="flex-1 min-w-0 w-full">
                                 <Card className="overflow-hidden">
                                     <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent flex items-center justify-between gap-3 flex-wrap">
-                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-indigo-600" /> Previous Purchase History</h3>
+                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-[#1A1A1A]" /> Previous Purchase History</h3>
                                         <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5" loading={histLoading} onClick={loadPrevHistory}>Show Previous History</Btn>
                                     </div>
                                     <div className="p-4 sm:p-5">
                                         {!histLoaded ? (
-                                            <div className="text-center py-12 text-[12.5px] text-slate-400">Click “Show Previous History” to load past purchases for the products on this order.</div>
+                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400"><History size={22} className="opacity-40" /><p className="text-[12.5px]">Select a product to see its previous purchase history.</p></div>
                                         ) : histRows.length === 0 ? (
-                                            <div className="text-center py-12 text-[12.5px] text-slate-400">No previous purchase history for these products.</div>
+                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400"><History size={22} className="opacity-40" /><p className="text-[12.5px]">No previous purchase history for these products.</p></div>
                                         ) : (
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-left text-[12px] border-collapse min-w-[640px]">
@@ -1169,7 +1593,7 @@ export default function AddPurchasePage() {
                                                             <th className="px-3 py-2">Date</th>
                                                             <th className="px-3 py-2">PO No.</th>
                                                             <th className="px-3 py-2">Product</th>
-                                                            <th className="px-3 py-2">Supplier</th>
+                                                            <th className="px-3 py-2">Company</th>
                                                             <th className="px-3 py-2 text-right">Qty</th>
                                                             <th className="px-3 py-2 text-right">Rate</th>
                                                             <th className="px-3 py-2 text-right">Subtotal</th>
@@ -1181,7 +1605,7 @@ export default function AddPurchasePage() {
                                                                 <td className="px-3 py-2 tabular-nums text-slate-600 whitespace-nowrap">{r.date || '—'}</td>
                                                                 <td className="px-3 py-2 font-semibold text-slate-700 whitespace-nowrap">{r.po}</td>
                                                                 <td className="px-3 py-2 text-slate-800">{r.product}</td>
-                                                                <td className="px-3 py-2 text-slate-500">{r.supplier}</td>
+                                                                <td className="px-3 py-2 text-slate-500">{r.company}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums">{r.qty}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(r.rate)}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums font-bold">{formatCurrency(r.subtotal)}</td>
@@ -1196,10 +1620,12 @@ export default function AddPurchasePage() {
                             </div>
 
                             {/* RIGHT: totals panel + actions */}
-                            <div className="w-full lg:w-[360px] shrink-0">
+                            <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4">
                             <Card className="overflow-hidden">
-                                <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent">
+                                <div className="px-5 py-3.5 border-b border-slate-200 flex items-center gap-2.5 bg-gradient-to-r from-slate-50 to-transparent">
+                                    <span className="w-1 h-4 rounded-full bg-[#F59E0B] shrink-0" />
                                     <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
+                                    <span className="ml-auto text-[11px] font-semibold text-slate-400 tabular-nums">{items.filter(i => i.product).length} items</span>
                                 </div>
                                 <div className="p-5 space-y-2.5">
                                     <div className="flex justify-between items-center">
@@ -1231,9 +1657,9 @@ export default function AddPurchasePage() {
                                         </div>
                                     )}
                                     <div className="h-px bg-slate-100 my-1" />
-                                    <div className="flex justify-between items-center pt-0.5">
-                                        <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
-                                        <span className="text-[20px] font-black text-indigo-650 tabular-nums">{formatCurrency(grandTotal)}</span>
+                                    <div className="flex justify-between items-center rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/35 px-4 py-3">
+                                        <span className="text-slate-700 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
+                                        <span className="text-[21px] font-black text-[#1A1A1A] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
                                     </div>
                                     {paidNow > 0 && (
                                         <div className="flex justify-between items-center">
@@ -1241,18 +1667,17 @@ export default function AddPurchasePage() {
                                             <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(paidNow)}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-center pt-1 border-t border-slate-100">
                                         <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Balance</span>
                                         <span className={`text-[16px] font-black tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
                                     </div>
-                                    <div className="flex justify-between items-center pt-1">
+                                    <div className="flex justify-between items-center">
                                         <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wide">Status</span>
                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${paymentPill}`}>{paymentStatus}</span>
                                     </div>
-                                    <div className="text-[11px] text-slate-400 font-semibold pt-1">Total Products = {items.filter(i => i.product).length}</div>
 
                                     <div className="pt-3 space-y-2 border-t border-slate-100 mt-2">
-                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px]" loading={saving} onClick={() => handleSave()} disabled={items.some(i => !i.product)}>
+                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#F59E0B] hover:!bg-[#F59E0B] shadow-sm shadow-[#F59E0B]/30" loading={saving} onClick={() => handleSave()}>
                                             {editId ? 'Update Order' : 'Save Purchase'}
                                         </Btn>
                                         <div className="grid grid-cols-2 gap-2">
@@ -1264,6 +1689,11 @@ export default function AddPurchasePage() {
                             </Card>
                         </div>
                         </div>
+
+                        {/* Settlement & Charges — bottom-most section */}
+                        <Card className="overflow-hidden">
+                            {renderSettlementCard()}
+                        </Card>
                     </div>
                     )}
 
@@ -1274,7 +1704,7 @@ export default function AddPurchasePage() {
                         <p className="text-[13px] text-slate-500 mb-6">Your purchase order <b className="text-slate-900">{successOrder?.purchase_number}</b> has been recorded.</p>
                         <div className="flex flex-col gap-2">
                             <Btn className="w-full justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
-                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline">Create Another Order</button>
+                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline">Create Another Order</button>
                         </div>
                     </div>
                 </Modal>
@@ -1289,7 +1719,7 @@ export default function AddPurchasePage() {
                         </Field>
                         <Field label="Bar Code (auto)">
                             <div className="flex gap-2">
-                                <input className={inputCls + ' tabular-nums bg-slate-50'} value={pForm.barcode} onChange={e => setPForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Auto-generated" />
+                                <input className={inputCls + ' tabular-nums tracking-wide'} value={pForm.barcode} onChange={e => setPForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Auto-generated" />
                                 <Btn variant="secondary" className="shrink-0 px-2.5 text-[12px]" onClick={() => setPForm(f => ({ ...f, barcode: genBarcode() }))} title="Generate a new bar code"><RefreshCw size={13} /></Btn>
                             </div>
                         </Field>

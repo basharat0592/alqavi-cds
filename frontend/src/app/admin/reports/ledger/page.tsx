@@ -103,7 +103,7 @@ export default function CustomerLedgerReport() {
                 <div className="py-24 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
             ) : !data ? (
                 <Card className="py-16 text-center print:hidden">
-                    <BookUser className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                    <BookUser className="w-10 h-10 text-[#DCDCD8] mx-auto mb-3" />
                     <p className="text-[13px] text-slate-500">Select a customer and click <b>Generate</b> to view the ledger.</p>
                 </Card>
             ) : data.rows.length === 0 ? (
@@ -148,7 +148,7 @@ export default function CustomerLedgerReport() {
                                     <td className="py-2 px-2" colSpan={3}>Closing Balance</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(data.totals.debit)}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(data.totals.credit)}</td>
-                                    <td className="py-2 px-2 text-right tabular-nums text-indigo-700">{formatCurrency(data.closing)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums text-[#1A1A1A]">{formatCurrency(data.closing)}</td>
                                 </tr>
                             </tbody>
                         </table>

@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import {
-    ResponsiveContainer, AreaChart, Area, BarChart, Bar,
+    ResponsiveContainer, BarChart, Bar,
     XAxis, YAxis, CartesianGrid, Tooltip, Cell,
 } from 'recharts';
-import { TrendingUp, Building2 } from 'lucide-react';
-import { paymentService } from '@/lib/api';
+import { Building2 } from 'lucide-react';
+import { paymentService, inventoryService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
-import type { RevenueDataPoint } from '@/types';
 
-const INDIGO = '#6366F1';
 const TEAL = '#119AB8';
 const GRID = '#eef2f7';
 const AXIS = '#94a3b8';
@@ -56,31 +54,37 @@ function Panel({ icon: Icon, title, subtitle, children }: any) {
     );
 }
 
-export default function SuperAdminCharts({ revenueData }: { revenueData: RevenueDataPoint[] }) {
+/* Narrow sidebar companion to SuperAdminOverview: just the net-by-branch bars.
+   The revenue trend and the income/expense detail live in the full-width band,
+   which has the room to render them properly. */
+export default function SuperAdminCharts() {
     const [branches, setBranches] = useState<{ name: string; net: number }[]>([]);
 
     useEffect(() => {
-        paymentService.getByBranch?.()
-            .then((d: any) => {
-                const rows = (d?.branches || []).map((b: any) => ({
-                    name: b.warehouse_name || 'Branch', net: Number(b.net || 0),
-                }));
-                setBranches(rows.sort((a: any, b: any) => b.net - a.net).slice(0, 8));
+        // Include organizations with no payment activity, which by-branch omits.
+        Promise.all([
+            paymentService.getByBranch?.() ?? Promise.resolve(null),
+            inventoryService.getWarehouses().catch(() => []),
+        ])
+            .then(([d, whs]: any[]) => {
+                const byName = new Map<string, { name: string; net: number }>();
+                for (const w of (whs || [])) {
+                    const name = String(w?.name || '').trim();
+                    if (name) byName.set(name.toLowerCase(), { name, net: 0 });
+                }
+                for (const b of (d?.branches || [])) {
+                    const name = String(b.warehouse_name || '').trim() || 'Organization';
+                    byName.set(name.toLowerCase(), { name, net: Number(b.net || 0) });
+                }
+                setBranches([...byName.values()].sort((a, b) => b.net - a.net).slice(0, 10));
             })
             .catch(() => setBranches([]));
     }, []);
 
-    const trend = (revenueData || []).map((r) => ({ date: r.date, sales: Number(r.sales ?? r.revenue ?? 0) }));
-    const hasTrend = trend.some((t) => t.sales > 0);
-    const totalSales = trend.reduce((s, t) => s + t.sales, 0);
-    const totalOrders = (revenueData || []).reduce((s, r: any) => s + Number(r.orders ?? 0), 0);
-    const peakDay = trend.reduce((m, t) => (t.sales > m ? t.sales : m), 0);
-    const avgDay = trend.length ? totalSales / trend.length : 0;
-
     return (
         <div className="space-y-4">
             {/* Net by branch — magnitude by identity → bars */}
-            <Panel icon={Building2} title="Net by Branch" subtitle="Income minus expense · per branch">
+            <Panel icon={Building2} title="Net by Organization" subtitle="Income minus expense · per organization">
                 {branches.length ? (
                     <ResponsiveContainer width="100%" height={200}>
                         <BarChart data={branches} margin={{ top: 6, right: 6, left: -12, bottom: 0 }}>
@@ -96,7 +100,7 @@ export default function SuperAdminCharts({ revenueData }: { revenueData: Revenue
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div className="h-[200px] flex items-center justify-center text-[12px] text-slate-400">No branch data yet.</div>
+                    <div className="h-[200px] flex items-center justify-center text-[12px] text-slate-400">No organization data yet.</div>
                 )}
             </Panel>
         </div>

@@ -18,7 +18,7 @@ import { authService } from '@/lib/auth';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
     <div className="flex items-center gap-2 mb-4">
-        <Icon className="h-4 w-4 text-indigo-600" />
+        <Icon className="h-4 w-4 text-[#1A1A1A]" />
         <span className="text-xs font-bold text-slate-900 uppercase tracking-tight">{title}</span>
     </div>
 );
@@ -30,7 +30,6 @@ const PAGE_GROUPS = [
             { name: 'Dashboard', href: '/admin/dashboard' },
             { name: 'Recent Orders', href: '/admin/orders' },
             { name: 'All Sales', href: '/admin/sales' },
-            { name: 'Order Tracking', href: '/admin/tracking' },
             { name: 'Website CMS', href: '/admin/website-settings' },
         ],
     },
@@ -346,7 +345,7 @@ export default function EditUserPage() {
     const inputCls = (field: string) =>
         `w-full px-4 py-2 bg-white border rounded-lg text-sm font-medium text-slate-900 outline-none transition-all focus:ring-4 ${errors[field]
             ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-500/10'
-            : 'border-slate-200 focus:border-indigo-400 focus:ring-indigo-500/10'
+            : 'border-slate-200 focus:border-[#F59E0B] focus:ring-[#F59E0B]/10'
         }`;
 
     const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5";
@@ -417,22 +416,22 @@ export default function EditUserPage() {
                             <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200/70 rounded-lg">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-2">Account State</span>
                                 <button type="button" onClick={() => handle('is_active', !form.is_active)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Assigned Branches — appears right under the role field once an
+                    {/* Assigned Organizations — appears right under the role field once an
                         Admin is selected. A branch admin only sees data for the
                         warehouse(s) chosen here. */}
                     {showBranches && (
                         <div className="space-y-4 pt-4 border-t border-slate-100">
-                            <SectionHeader title="Assigned Branches" icon={Building2} />
+                            <SectionHeader title="Assigned Organizations" icon={Building2} />
                             <p className="text-xs text-slate-500">
                                 This admin has their own fully independent workspace — their own products,
-                                stock, customers, sales and payments. Optionally tag the branch warehouse(s)
+                                stock, customers, sales and payments. Optionally tag the organization warehouse(s)
                                 they work in (organizational only); it can be left empty.
                             </p>
 
@@ -455,7 +454,7 @@ export default function EditUserPage() {
                                     <div className="flex gap-2 pb-2.5">
                                         <button type="button"
                                             onClick={() => setSelectedWarehouses(prev => [...new Set([...prev, ...branchWarehouses.map(w => String(w.id))])])}
-                                            className="text-[11px] font-semibold text-indigo-600 hover:underline">
+                                            className="text-[11px] font-semibold text-[#119AB8] hover:underline">
                                             Select all shown
                                         </button>
                                         <span className="text-slate-300">|</span>
@@ -481,7 +480,7 @@ export default function EditUserPage() {
                                                 type="checkbox"
                                                 checked={selectedWarehouses.includes(String(w.id))}
                                                 onChange={() => toggleWarehouse(String(w.id))}
-                                                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
                                             />
                                             <span className="text-[12px] font-medium text-slate-700 truncate">
                                                 {w.name}{w.area_name ? ` · ${w.area_name}` : (w.location ? ` · ${w.location}` : '')}
@@ -494,11 +493,11 @@ export default function EditUserPage() {
                                 <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
                                     <Info className="w-3.5 h-3.5 shrink-0" />
                                     Optional — leaving this empty is fine. This admin has their own independent
-                                    workspace regardless of branch tagging.
+                                    workspace regardless of organization tagging.
                                 </p>
                             )}
                             {selectedWarehouses.length > 0 && (
-                                <p className="text-[11px] text-indigo-600 font-medium">
+                                <p className="text-[11px] text-[#1A1A1A] font-medium">
                                     {selectedWarehouses.length} branch{selectedWarehouses.length !== 1 ? 'es' : ''} selected
                                 </p>
                             )}
@@ -519,9 +518,9 @@ export default function EditUserPage() {
                             <SectionHeader title="Page Access" icon={ShieldCheck} />
 
                             {isFullAccess ? (
-                                <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                                    <ShieldCheck className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                                    <p className="text-xs text-indigo-700 font-medium">
+                                <div className="flex items-center gap-2 px-4 py-3 bg-[#F59E0B]/10 rounded-lg border border-[#F59E0B]/15">
+                                    <ShieldCheck className="w-4 h-4 text-[#1A1A1A] flex-shrink-0" />
+                                    <p className="text-xs text-[#1A1A1A] font-medium">
                                         This role has full access to all pages — no restrictions apply.
                                     </p>
                                 </div>
@@ -531,7 +530,7 @@ export default function EditUserPage() {
                                         <p className="text-xs text-slate-500">Select which pages this user can access after login.</p>
                                         <div className="flex gap-2">
                                             <button type="button" onClick={selectAll}
-                                                className="text-[11px] font-semibold text-indigo-600 hover:underline">
+                                                className="text-[11px] font-semibold text-[#119AB8] hover:underline">
                                                 Select All
                                             </button>
                                             <span className="text-slate-300">|</span>
@@ -553,9 +552,9 @@ export default function EditUserPage() {
                                                         className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 cursor-pointer select-none"
                                                         onClick={() => toggleGroup(groupHrefs)}
                                                     >
-                                                        <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-indigo-600 border-indigo-600' : someChecked ? 'bg-indigo-200 border-indigo-400' : 'border-slate-300 bg-white'}`}>
+                                                        <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-[#F59E0B] border-[#F59E0B]' : someChecked ? 'bg-[#F59E0B]/25 border-[#F59E0B]' : 'border-slate-300 bg-white'}`}>
                                                             {allChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                                            {someChecked && !allChecked && <div className="w-2 h-0.5 bg-indigo-600 rounded" />}
+                                                            {someChecked && !allChecked && <div className="w-2 h-0.5 bg-[#F59E0B] rounded" />}
                                                         </div>
                                                         <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{group.label}</span>
                                                         <span className="ml-auto text-[10px] text-slate-400">{groupHrefs.filter(h => selectedPages.includes(h)).length}/{groupHrefs.length}</span>
@@ -570,7 +569,7 @@ export default function EditUserPage() {
                                                                             type="checkbox"
                                                                             checked={selectedPages.includes(item.href)}
                                                                             onChange={() => toggleView(item.href)}
-                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
                                                                         />
                                                                         <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">View</span>
                                                                     </label>
@@ -580,7 +579,7 @@ export default function EditUserPage() {
                                                                             checked={selectedEditPages.includes(item.href)}
                                                                             disabled={!selectedPages.includes(item.href)}
                                                                             onChange={() => toggleEdit(item.href)}
-                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
+                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B] disabled:cursor-not-allowed"
                                                                         />
                                                                         <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Edit</span>
                                                                     </label>
@@ -594,7 +593,7 @@ export default function EditUserPage() {
                                     </div>
 
                                     {selectedPages.length > 0 && (
-                                        <p className="text-[11px] text-indigo-600 font-medium">
+                                        <p className="text-[11px] text-[#1A1A1A] font-medium">
                                             {selectedPages.length} page{selectedPages.length !== 1 ? 's' : ''} selected
                                         </p>
                                     )}
@@ -618,7 +617,7 @@ export default function EditUserPage() {
                                                 type="checkbox"
                                                 checked={selectedAreas.includes(area.id)}
                                                 onChange={() => toggleArea(area.id)}
-                                                className="w-3.5 h-3.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
                                             />
                                             <span className="text-[12px] font-medium text-slate-700">{area.name}{area.code ? ` (${area.code})` : ''}</span>
                                         </label>
@@ -626,7 +625,7 @@ export default function EditUserPage() {
                                 </div>
                             )}
                             {selectedAreas.length > 0 && (
-                                <p className="text-[11px] text-indigo-600 font-medium">
+                                <p className="text-[11px] text-[#1A1A1A] font-medium">
                                     {selectedAreas.length} area{selectedAreas.length !== 1 ? 's' : ''} selected
                                 </p>
                             )}
@@ -650,7 +649,7 @@ export default function EditUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
                                     >
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
@@ -669,7 +668,7 @@ export default function EditUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
                                     >
                                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="w-4 h-4" />}
                                     </button>

@@ -6,6 +6,10 @@ export { Card } from './Card';
 export { PageHeader } from './PageHeader';
 export type { Crumb } from './PageHeader';
 export { Modal } from './Modal';
+export { Pagination } from './Pagination';
+export { TableShell } from './TableShell';
+export { RowActions } from './RowActions';
+export type { RowAction, RowActionInput } from './RowActions';
 export { Dropdown, DropdownItem } from './Dropdown';
 export {
     useTableSelection,

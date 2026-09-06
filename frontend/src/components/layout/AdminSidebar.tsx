@@ -2,18 +2,24 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
-    LayoutDashboard, Package, TrendingUp,
+    LayoutDashboard, Package, PackagePlus, TrendingUp, Globe, ScanLine,
     Boxes, Settings, UserCheck, ShoppingBag,
-    ShoppingCart, History, RefreshCcw, Monitor,
+    ShoppingCart, History, RefreshCcw,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
-    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, Bell
+    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
+import { getImageUrl } from '@/lib/utils';
 import { orderService } from '@/lib/api';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
+
+/** The platform itself, which is NOT one of the organizations it hosts —
+ *  Al-Qavi is a tenant like any other. Shown only to the Super Admin; a tenant
+ *  admin sees their own organization's name in this slot. */
+const PLATFORM_NAME = 'Zulfi';
 
 interface NavItem {
     name: string;
@@ -31,6 +37,11 @@ const FULL_ACCESS_ROLES = ['admin', 'superadmin', 'super admin'];
 
 export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate }: { isCollapsed?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
     const pathname = usePathname();
+    const router = useRouter();
+    // The signed-in account, shown in the footer. The top bar only renders on the
+    // dashboard now, so this is the one place logout is reachable from every page.
+    const [account, setAccount] = useState<{ name: string; role: string; avatar: string | null }>(
+        { name: '', role: '', avatar: null });
 
     useEffect(() => {
         cmsService.getFullState().catch(() => {});
@@ -39,10 +50,29 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
     // Resolve current user's page_permissions from session
     const [userPagePerms, setUserPagePerms] = useState<string[] | null>(null);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    // The tenant's own organization name, so each admin's console is branded as
+    // theirs rather than as the platform. Empty for the Super Admin, who spans
+    // every organization and keeps the platform branding.
+    const [orgName, setOrgName] = useState('');
 
     useEffect(() => {
         const user = authService.getUser();
         setIsSuperAdmin(authService.isSuperAdmin());
+        setAccount({
+            name: user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Administrator',
+            role: (typeof user?.role === 'string' ? user.role : (user as any)?.role_name) || 'Admin',
+            avatar: user?.avatar || null,
+        });
+        if (user && !authService.isSuperAdmin()) {
+            const whs = (user as any).warehouses;
+            // More than one organization is possible; joining them keeps the
+            // header honest instead of silently showing only the first.
+            setOrgName(Array.isArray(whs) && whs.length
+                ? whs.map((w: any) => w?.name).filter(Boolean).join(', ')
+                : '');
+        } else {
+            setOrgName('');
+        }
         if (!user) { setUserPagePerms(null); return; }
         // role may arrive as the string name (login) or a numeric FK id (a profile
         // refetch); prefer the string, else fall back to role_name.
@@ -59,66 +89,79 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
 
     const menuGroups: NavGroup[] = [
         {
-            label: 'Main Dashboard',
+            label: 'Main',
             items: [
                 { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-                { name: 'Recent Orders', href: '/admin/orders', icon: ShoppingBag },
-                { name: 'All Sales', href: '/admin/sales', icon: TrendingUp },
-                { name: 'Order Tracking', href: '/admin/tracking', icon: Truck },
-                { name: 'Website CMS', href: '/admin/website-settings', icon: Monitor },
-                { name: 'Notifications', href: '/admin/notifications', icon: Bell },
+                { name: 'Orders', href: '/admin/orders', icon: ShoppingBag },
+                { name: 'Sales', href: '/admin/sales', icon: TrendingUp },
+                { name: 'Website', href: '/admin/website-settings', icon: Globe },
             ],
         },
         {
-            label: 'Inventory & Stock',
+            label: 'Inventory',
             items: [
-                { name: 'Live Products', href: '/admin/products', icon: LayoutDashboard },
-                { name: 'Add Listing', href: '/admin/products/add', icon: Package },
-                { name: 'Current Stocks', href: '/admin/inventory/list', icon: Boxes },
+                { name: 'Products', href: '/admin/products', icon: Package },
+                { name: 'Add Product', href: '/admin/products/add', icon: PackagePlus },
+                { name: 'Stock', href: '/admin/inventory/list', icon: Boxes },
             ],
         },
         {
-            label: 'Procurement',
+            label: 'Purchases',
             items: [
                 { name: 'New Purchase', href: '/admin/purchases/add', icon: ShoppingCart },
-                { name: 'Purchase History', href: '/admin/purchases', icon: History },
-                { name: 'Returns / Refunds', href: '/admin/purchases/returns', icon: RefreshCcw },
+                { name: 'Purchases', href: '/admin/purchases', icon: History },
+                { name: 'Purchase Returns', href: '/admin/purchases/returns', icon: RefreshCcw },
             ],
         },
         {
-            label: 'Sales Console',
+            label: 'Sales',
             items: [
-                { name: 'Point of Sale', href: '/admin/sale', icon: Monitor },
-                { name: 'Global Payments', href: '/admin/payments', icon: CreditCard },
+                { name: 'POS', href: '/admin/sale', icon: ScanLine },
+                { name: 'Payments', href: '/admin/payments', icon: CreditCard },
                 { name: 'Income', href: '/admin/income', icon: ArrowDownLeft },
                 { name: 'Expense', href: '/admin/expense', icon: ArrowUpRight },
                 { name: 'Sale Returns', href: '/admin/sale-returns', icon: RotateCcw },
             ],
         },
         {
-            label: 'Security & Logs',
+            label: 'Manage',
             items: [
-                { name: 'Branches', href: '/admin/branches', icon: Building2 },
-                { name: 'Supplier Registry', href: '/admin/company/suppliers', icon: UserCheck },
-                { name: 'Customer Registry', href: '/admin/company/customers', icon: Users },
-                { name: 'Delivery Persons', href: '/admin/delivery', icon: Truck },
-                { name: 'Areas', href: '/admin/company/areas', icon: MapPin },
+                { name: 'Organizations', href: '/admin/branches', icon: Building2 },
+                { name: 'Suppliers', href: '/admin/company/suppliers', icon: UserCheck },
+                { name: 'Customers', href: '/admin/company/customers', icon: Users },
+                { name: 'Delivery', href: '/admin/delivery', icon: Truck },
+                // Super-admin-only page (SUPER_ONLY_HREFS), so this label is only
+                // ever shown on the platform side.
+                { name: 'Region', href: '/admin/company/areas', icon: MapPin },
                 { name: 'Admins', href: '/admin/users', icon: User },
-                { name: 'Staff Roles', href: '/admin/users/roles', icon: ShieldCheck },
-                { name: 'System Users', href: '/admin/system-users', icon: UserCog },
-                { name: 'System Alerts', href: '/admin/alerts', icon: AlertTriangle },
+                { name: 'Roles', href: '/admin/users/roles', icon: ShieldCheck },
+                { name: 'Users', href: '/admin/system-users', icon: UserCog },
+                { name: 'Alerts', href: '/admin/alerts', icon: AlertTriangle },
             ],
         },
         {
-            label: 'Detailed Reports',
+            label: 'Analytics',
             items: [
-                { name: 'Reports Center', href: '/admin/reports', icon: BarChart3 },
+                { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
             ],
         },
     ];
 
     // Live count of active (not delivered / cancelled) orders for the branch — shown
     // as a blinking badge on the Order List link. Polled so it stays fresh.
+    // Menu groups are accordions and start CLOSED. Only the group holding the
+    // current page opens, so the sidebar still shows where you are without
+    // listing every page at once.
+    //
+    // The map holds explicit user toggles only; a group with no entry falls back
+    // to "open if it contains the current page". Navigating clears the map, so
+    // every page load and every jump starts from that default rather than
+    // inheriting whatever was left open.
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+    useEffect(() => { setOpenGroups({}); }, [pathname]);
+    const toggleGroup = (label: string, isOpen: boolean) =>
+        setOpenGroups(prev => ({ ...prev, [label]: !isOpen }));
+
     const [activeOrders, setActiveOrders] = useState(0);
     useEffect(() => {
         let cancelled = false;
@@ -177,138 +220,222 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
         items: group.items.filter(item => isPageAllowed(item.href))
     })).filter(group => group.items.length > 0);
 
+    // Two letters for the badge: initials of the organization, or the platform's
+    // own "AQ" when there is no organization to speak for.
+    const orgInitials = (orgName || PLATFORM_NAME)
+        .split(/[\s,]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'Z';
+
+    // Signing out from a nav rail is easy to hit by accident, so confirm first.
+    const handleLogout = () => {
+        if (!window.confirm('Sign out of the console?')) return;
+        authService.logout();
+        onNavigate?.();
+        router.push('/login');
+    };
+
+    const accountInitials = (account.name || 'A')
+        .split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+    /* One row treatment shared by the nav links and the Settings row. The active
+       state is a lifted white pill — that lift is the only "selected" signal in
+       this system, so it carries a real shadow rather than a tint. */
+    const rowCls = (active: boolean) =>
+        `group relative flex items-center gap-3 rounded-[10px] overflow-visible transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'pl-3 pr-2.5 py-[9px]'} ${active
+            ? 'bg-[#F59E0B]/[0.16] ring-1 ring-inset ring-[#F59E0B]/30'
+            : 'hover:bg-white/[0.06]'}`;
+    const rowIconCls = (active: boolean) =>
+        `shrink-0 transition-colors duration-150 ${active ? 'text-[#FBBF24]' : 'text-[#8E8E88] group-hover:text-[#E6E6E1]'}`;
+    const rowTextCls = (active: boolean) =>
+        `text-[13.5px] tracking-[-0.01em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-[#FBBF24] font-semibold' : 'text-[#A6A6A0] font-medium group-hover:text-white'}`;
+    const tooltipCls = `absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12.5px] font-medium whitespace-nowrap pointer-events-none
+        opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
+        bg-white text-[#1A1A1A] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)]`;
+
     return (
         <>
             <style>{`
-                .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+                .sb-root {
+                    font-family: var(--font-inter), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+                    font-feature-settings: 'cv05' 1, 'ss01' 1;
+                    -webkit-font-smoothing: antialiased;
+                }
+
+                /* The rail only shows its scrollbar while actually scrolling, so a
+                   short menu never carries a stray line down its edge. */
+                .sidebar-scroll { scrollbar-gutter: stable; }
+                .sidebar-scroll::-webkit-scrollbar { width: 3px; }
                 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-                .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 99px; }
-                .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+                .sidebar-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; }
+                .sidebar-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
+
+                .sb-reveal > * { animation: sbReveal .18s ease-out both; }
+                @keyframes sbReveal { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+                @media (prefers-reduced-motion: reduce) { .sb-reveal > * { animation: none; } }
             `}</style>
 
-            <div className={`h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-slate-900 border-r border-slate-800/70 ${isCollapsed ? 'w-[64px]' : 'w-[235px]'}`}>
+            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-[#1A1A1A] ${isCollapsed ? 'w-[72px]' : 'w-[252px]'}`}>
 
-                <div className="px-4 py-4 flex-shrink-0 flex items-center justify-between border-b border-white/5">
-                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center bg-indigo-500/15 border border-indigo-400/30">
-                            <span className="font-black text-[13px] text-indigo-400">AQ</span>
+                {/* ── BRAND ── */}
+                <div className={`flex-shrink-0 flex items-center gap-2.5 border-b border-white/[0.08] ${isCollapsed ? 'px-4 py-4 justify-center' : 'pl-4 pr-3 py-4'}`}>
+                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 min-w-0 flex-1 group/brand">
+                        <div className="relative w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center bg-[#F59E0B] transition-transform duration-200 group-hover/brand:scale-[1.04]">
+                            <span className="font-semibold text-[12.5px] text-white tracking-[-0.01em]">{orgInitials}</span>
                         </div>
                         {!isCollapsed && (
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5 text-indigo-400">Central Console</span>
-                                <span className="text-[13px] font-bold leading-none tracking-tight text-white">Al-Qavi Hub</span>
+                            <div className="flex flex-col min-w-0 leading-none">
+                                <span className="text-[14px] font-semibold tracking-[-0.02em] text-white truncate" title={orgName || PLATFORM_NAME}>
+                                    {orgName || PLATFORM_NAME}
+                                </span>
+                                <span className="mt-1 text-[10.5px] font-medium text-[#7C7C76] truncate">
+                                    {orgName ? 'Organization' : 'Platform'}
+                                </span>
                             </div>
                         )}
                     </Link>
-                    {/* Close button — mobile only */}
+
+                    {/* Desktop rail collapse. Mobile gets a close button instead. */}
+                    {!isCollapsed && (
+                        <button
+                            onClick={onToggle}
+                            title="Collapse sidebar"
+                            aria-label="Collapse sidebar"
+                            className="hidden md:flex w-7 h-7 shrink-0 rounded-lg items-center justify-center text-[#7C7C76] hover:text-white hover:bg-white/[0.08] transition-colors"
+                        >
+                            <PanelLeftClose size={16} strokeWidth={1.7} />
+                        </button>
+                    )}
                     <button
                         onClick={onToggle}
-                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/10 text-slate-400 hover:text-white"
+                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/[0.08] text-[#8E8E88] hover:text-white"
                         aria-label="Close sidebar"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
+                {/* Expanding again needs its own affordance once the labels are gone. */}
+                {isCollapsed && (
+                    <button
+                        onClick={onToggle}
+                        title="Expand sidebar"
+                        aria-label="Expand sidebar"
+                        className="hidden md:flex mx-auto mt-3 w-9 h-9 rounded-[10px] items-center justify-center text-[#7C7C76] hover:text-white hover:bg-white/[0.08] transition-colors"
+                    >
+                        <PanelLeftOpen size={17} strokeWidth={1.7} />
+                    </button>
+                )}
+
                 {/* ── NAVIGATION ── */}
-                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll pt-4 pb-3">
-
-
-                    {filteredGroups.map((group, gIdx) => (
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll px-3 pt-3 pb-4">
+                    {filteredGroups.map((group, gIdx) => {
+                        const groupActive = group.items.some(it => isActive(it.href));
+                        // Collapsed to an icon rail there is no room for headings, so
+                        // the accordion does not apply and every icon stays reachable.
+                        const groupOpen = isCollapsed || (openGroups[group.label] ?? groupActive);
+                        return (
                         <div key={group.label} className={gIdx !== 0 ? 'mt-5' : ''}>
+                            {/* A quiet section label, deliberately unlike a nav row so the
+                                hierarchy reads at a glance. The chevron only appears on
+                                hover, keeping the resting state calm. */}
                             {!isCollapsed && (
-                                <div className="px-4 mb-1.5">
-                                    <span className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGroup(group.label, groupOpen)}
+                                    aria-expanded={groupOpen}
+                                    className="group/hdr w-full px-3 pb-1.5 pt-1 flex items-center gap-1.5 text-left"
+                                >
+                                    <span className={`text-[10.5px] font-semibold uppercase tracking-[0.09em] transition-colors ${groupActive ? 'text-[#9A9A94]' : 'text-[#6E6E68] group-hover/hdr:text-[#9A9A94]'}`}>
                                         {group.label}
                                     </span>
-                                </div>
+                                    {groupActive && !groupOpen && (
+                                        <span className="w-1 h-1 rounded-full bg-[#F59E0B] shrink-0" />
+                                    )}
+                                    <ChevronDown
+                                        size={13}
+                                        className={`ml-auto shrink-0 transition-all duration-200 text-[#7C7C76] opacity-0 group-hover/hdr:opacity-100 ${groupOpen ? '' : '-rotate-90'}`}
+                                    />
+                                </button>
                             )}
                             {isCollapsed && gIdx !== 0 && (
-                                <div className="mx-3 mb-1 h-px bg-white/5" />
+                                <div className="mx-2 my-2 h-px bg-white/[0.08]" />
                             )}
 
-                            <div className="space-y-[1px] px-2">
+                            <div className={`space-y-0.5 ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
                                 {group.items.map((item) => {
                                     const active = isActive(item.href);
                                     return (
                                         <Link key={item.href} href={item.href}
                                             onClick={() => onNavigate?.()}
-                                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'} ${active ? 'bg-indigo-500/15 ring-1 ring-indigo-400/20' : 'hover:bg-white/5'}`}>
+                                            className={rowCls(active)}>
 
-                                            {/* Active left indicator */}
-                                            {active && !isCollapsed && (
-                                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-indigo-400" />
-                                            )}
-
-                                            <item.icon
-                                                className={`shrink-0 transition-colors duration-150 ${active ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'}`}
-                                                size={15}
-                                            />
+                                            <item.icon className={rowIconCls(active)} size={17} strokeWidth={1.7} />
 
                                             {!isCollapsed && (
-                                                <span className={`text-[13px] tracking-tight whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
-                                                    {item.name}
-                                                </span>
+                                                <span className={rowTextCls(active)}>{item.name}</span>
                                             )}
 
-                                            {/* Live active-orders badge (blinks) on the Order List link */}
+                                            {/* Live active-orders count */}
                                             {item.href === '/admin/orders' && activeOrders > 0 && (
-                                                <span className={`inline-flex items-center justify-center shrink-0 ${isCollapsed ? 'absolute top-1 right-1.5' : 'relative ml-auto'}`}>
-                                                    <span className="absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-60 motion-safe:animate-ping" />
-                                                    <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-rose-600 text-white text-[10px] font-bold tabular-nums shadow-sm shadow-rose-600/40">
+                                                <span className={`inline-flex items-center justify-center shrink-0 ${isCollapsed ? 'absolute top-0.5 right-1' : 'relative ml-auto'}`}>
+                                                    <span className="relative inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full bg-[#F9C9A7] text-[#7C3A10] text-[11px] font-semibold tabular-nums">
                                                         {activeOrders}
                                                     </span>
                                                 </span>
                                             )}
 
-                                            {/* Tooltip when collapsed */}
-                                            {isCollapsed && (
-                                                <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
-                                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
-                                                    bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
-                                                    {item.name}
-                                                </div>
-                                            )}
+                                            {isCollapsed && <div className={tooltipCls}>{item.name}</div>}
                                         </Link>
                                     );
                                 })}
                             </div>
                         </div>
-                    ))}
+                        );
+                    })}
                 </nav>
 
-                {/* ── FOOTER / SETTINGS ── */}
-                {isPageAllowed('/admin/settings') && (
-                    <div className="flex-shrink-0 px-2 pb-3 pt-2 border-t border-white/5">
+                {/* ── FOOTER: settings + the signed-in account ── */}
+                <div className="flex-shrink-0 px-3 pt-2 pb-3 border-t border-white/[0.08]">
+                    {isPageAllowed('/admin/settings') && (
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
-                            className={`group relative flex items-center gap-2.5 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2'} ${isActive('/admin/settings') ? 'bg-indigo-500/15 ring-1 ring-indigo-400/20' : 'hover:bg-white/5'}`}>
-
-                            {isActive('/admin/settings') && !isCollapsed && (
-                                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-indigo-400" />
-                            )}
-
-                            <Settings
-                                size={15}
-                                className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'}`}
-                            />
-
-                            {!isCollapsed && (
-                                <span className={`text-[13px] tracking-tight transition-colors duration-150 ${isActive('/admin/settings') ? 'text-white font-semibold' : 'text-slate-300 font-medium group-hover:text-white'}`}>
-                                    System Settings
-                                </span>
-                            )}
-
-                            {isCollapsed && (
-                                <div className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap pointer-events-none
-                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
-                                    bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
-                                    System Settings
-                                </div>
-                            )}
+                            className={rowCls(isActive('/admin/settings'))}>
+                            <Settings size={17} strokeWidth={1.7} className={rowIconCls(isActive('/admin/settings'))} />
+                            {!isCollapsed && <span className={rowTextCls(isActive('/admin/settings'))}>Settings</span>}
+                            {isCollapsed && <div className={tooltipCls}>System Settings</div>}
                         </Link>
+                    )}
+
+                    {/* The account block. Logout lives here because the top bar is
+                        dashboard-only — this is the one exit reachable everywhere. */}
+                    <div className={`mt-1.5 pt-2 border-t border-white/[0.07] ${isCollapsed ? 'flex flex-col items-center gap-1.5' : 'group/acct flex items-center gap-2.5 pl-1.5 pr-1 py-1 rounded-[10px] transition-colors hover:bg-white/[0.06]'}`}>
+                        <div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden bg-white/[0.10] flex items-center justify-center ring-1 ring-white/[0.08]">
+                            {account.avatar
+                                ? <img src={getImageUrl(account.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                : <span className="text-[11.5px] font-semibold text-[#D8D8D2]">{accountInitials}</span>}
+                        </div>
+
+                        {!isCollapsed && (
+                            <div className="min-w-0 flex-1 leading-none">
+                                <p className="text-[12.5px] font-semibold tracking-[-0.01em] text-white truncate" title={account.name}>
+                                    {account.name}
+                                </p>
+                                <span className="block mt-1 text-[10.5px] font-medium text-[#7C7C76] capitalize truncate">
+                                    {account.role}
+                                </span>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleLogout}
+                            title="Sign out"
+                            aria-label="Sign out"
+                            className="group relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[#7C7C76] hover:text-[#FCA5A5] hover:bg-white/[0.08] transition-colors"
+                        >
+                            <LogOut size={15} strokeWidth={1.8} />
+                            {isCollapsed && <div className={tooltipCls}>Sign out</div>}
+                        </button>
                     </div>
-                )}
+                </div>
             </div>
         </>
     );

@@ -562,6 +562,109 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             "low_stock": low_stock,
         })
 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def analytics(self, request):
+        """Dashboard analytics that the stats endpoint does not cover.
+
+        Two series, both scoped exactly like /stats/ so a branch admin sees only
+        their own figures:
+
+        * ``monthly`` — gross profit and expenses per month for the last six
+          months. Profit is margin on DELIVERED order lines, net of accepted
+          sale returns, matching how /stats/ computes total_profit. Expenses are
+          outbound payments in the same month, which is what the Payments page
+          counts as money out.
+        * ``categories`` — delivered sales value grouped by the product's
+          category, for the same six-month window.
+
+        Both were previously computed on the client from proxies (the payment
+        ledger's inbound total, and a count of catalogue rows), which could not
+        express profit or sales-by-category at all.
+        """
+        from core.scoping import apply_report_scope
+        from .models import OrderItem, SaleReturnItem
+        from modules.payments.models import Payment
+        from decimal import Decimal as _D
+
+        orders = apply_report_scope(
+            request, Order.objects.all(), 'warehouse', 'created_by', tenant_field='tenant')
+
+        today = timezone.now().date()
+        # Six month buckets, oldest first, keyed 'YYYY-MM'.
+        buckets = []
+        y, m = today.year, today.month
+        for _ in range(6):
+            buckets.append((y, m))
+            m -= 1
+            if m == 0:
+                y, m = y - 1, 12
+        buckets.reverse()
+        start = timezone.datetime(buckets[0][0], buckets[0][1], 1).date()
+
+        delivered = orders.filter(status='DELIVERED', created_at__date__gte=start)
+
+        # ── Profit per month ──
+        profit = {f'{yy:04d}-{mm:02d}': _D('0') for yy, mm in buckets}
+        item_rows = OrderItem.objects.filter(order__in=delivered).values(
+            'order_id', 'product_id', 'price', 'cost_price', 'quantity',
+            'order__created_at',
+        )
+        cost_map = {}
+        for it in item_rows:
+            d = it['order__created_at']
+            key = f"{d.year:04d}-{d.month:02d}"
+            if key in profit:
+                margin = (_D(str(it['price'] or 0)) - _D(str(it['cost_price'] or 0))) * (it['quantity'] or 0)
+                profit[key] += margin
+            cost_map[(it['order_id'], it['product_id'])] = (it['price'], it['cost_price'])
+
+        # A returned unit reverses its margin in the month of the original sale,
+        # so the series matches total_profit rather than drifting from it.
+        for ri in SaleReturnItem.objects.filter(
+                sale_return__order__in=delivered,
+                sale_return__status='ACCEPTED',
+        ).values('sale_return__order_id', 'product_id', 'quantity', 'price',
+                 'sale_return__order__created_at'):
+            d = ri['sale_return__order__created_at']
+            key = f"{d.year:04d}-{d.month:02d}"
+            if key not in profit:
+                continue
+            sell, cost = cost_map.get(
+                (ri['sale_return__order_id'], ri['product_id']), (ri['price'], 0))
+            profit[key] -= (_D(str(sell)) - _D(str(cost))) * (ri['quantity'] or 0)
+
+        # ── Expenses per month ──
+        expenses = {f'{yy:04d}-{mm:02d}': _D('0') for yy, mm in buckets}
+        pay = apply_report_scope(
+            request, Payment.objects.all(), 'warehouse', 'user', tenant_field='tenant')
+        for row in pay.filter(payment_type='outbound', date__gte=start).values('date', 'amount'):
+            d = row['date']
+            key = f"{d.year:04d}-{d.month:02d}"
+            if key in expenses:
+                expenses[key] += _D(str(row['amount'] or 0))
+
+        month_names = ['', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+                       'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+        monthly = [{
+            'month': month_names[mm],
+            'key': f'{yy:04d}-{mm:02d}',
+            'profit': float(profit[f'{yy:04d}-{mm:02d}']),
+            'expenses': float(expenses[f'{yy:04d}-{mm:02d}']),
+        } for yy, mm in buckets]
+
+        # ── Sales by category ──
+        cats = {}
+        for it in OrderItem.objects.filter(order__in=delivered).values(
+                'price', 'quantity', 'discount', 'product__category__name'):
+            name = it['product__category__name'] or 'Uncategorised'
+            net = (_D(str(it['price'] or 0)) * (it['quantity'] or 0)) - _D(str(it['discount'] or 0))
+            cats[name] = cats.get(name, _D('0')) + net
+        categories = sorted(
+            ({'name': k, 'value': float(v)} for k, v in cats.items()),
+            key=lambda r: r['value'], reverse=True)[:6]
+
+        return Response({'monthly': monthly, 'categories': categories})
+
     def partial_update(self, request, *args, **kwargs):
         try:
             from django.db import transaction
@@ -1516,7 +1619,10 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     success, msg = self._sync_to_inventory(purchase)
                     if not success:
                         raise Exception(f"Inventory sync failed: {msg}")
-            
+
+            # Reload so date fields assigned as raw client strings come back as
+            # proper date objects for serialization (is_overdue etc.).
+            purchase.refresh_from_db()
             return Response(PurchaseOrderSerializer(purchase).data, status=status.HTTP_201_CREATED)
             
         except IntegrityError as e:

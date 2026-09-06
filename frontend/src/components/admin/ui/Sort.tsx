@@ -67,7 +67,7 @@ export function SortableTh({
             <button
                 type="button"
                 onClick={() => sort.toggle(sortKey)}
-                className={`inline-flex items-center gap-1 hover:text-slate-700 transition-colors select-none ${align === 'right' ? 'flex-row-reverse' : ''} ${active ? 'text-slate-700' : ''}`}
+                className={`inline-flex items-center gap-1 hover:text-[#0E7F98] transition-colors select-none ${align === 'right' ? 'flex-row-reverse' : ''} ${active ? 'text-[#1A1A1A]' : ''}`}
             >
                 {label}
                 {active

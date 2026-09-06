@@ -114,7 +114,7 @@ export default function PaymentsStatementPage() {
                         </div>
                         <div className="flex justify-between items-center pt-1 border-t border-slate-200">
                             <span className="text-slate-900 font-black uppercase text-[12px]">Net Balance</span>
-                            <span className={`font-black text-[16px] tabular-nums ${net >= 0 ? 'text-indigo-600' : 'text-rose-600'}`}>{formatCurrency(net)}</span>
+                            <span className={`font-black text-[16px] tabular-nums ${net >= 0 ? 'text-[#1A1A1A]' : 'text-rose-600'}`}>{formatCurrency(net)}</span>
                         </div>
                     </div>
                 </div>

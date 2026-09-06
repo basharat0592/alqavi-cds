@@ -6,17 +6,19 @@ import { cn } from '@/lib/utils';
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
+// Ink leads: a solid near-black fill is the primary CTA, a faint grey chip is
+// the secondary action. No brand hue — hierarchy is fill weight, not colour.
 const variants: Record<Variant, string> = {
-    primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-600/20',
-    secondary: 'bg-slate-100 hover:bg-slate-200 text-slate-800',
-    outline: 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700',
-    ghost: 'text-slate-600 hover:text-slate-900 hover:bg-slate-100',
-    danger: 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-600/20',
+    primary: 'bg-[#F59E0B] hover:bg-[#D97706] text-white shadow-[0_1px_2px_rgba(0,0,0,0.12)]',
+    secondary: 'bg-[#119AB8]/10 hover:bg-[#119AB8]/[0.16] text-[#0E7F98]',
+    outline: 'bg-white hover:bg-[#FAFAF8] text-[#3A3A38] shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
+    ghost: 'text-[#5B5B58] hover:text-[#0E7F98] hover:bg-black/[0.04]',
+    danger: 'bg-[#DC2626] hover:bg-[#B91C1C] text-white shadow-[0_1px_2px_rgba(0,0,0,0.12)]',
 };
 
 const sizes: Record<Size, string> = {
     sm: 'h-8 px-3 text-[12.5px] gap-1.5 rounded-lg',
-    md: 'h-10 px-4 text-[13.5px] gap-2 rounded-lg',
+    md: 'h-10 px-4 text-[13.5px] gap-2 rounded-xl',
     lg: 'h-11 px-5 text-[14px] gap-2 rounded-xl',
 };
 
@@ -29,7 +31,8 @@ export function Button({ variant = 'primary', size = 'md', className, ...props }
     return (
         <button
             className={cn(
-                'inline-flex items-center justify-center font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none',
+                'inline-flex items-center justify-center font-medium tracking-[-0.01em] transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none',
+                'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-black/[0.08]',
                 variants[variant],
                 sizes[size],
                 className,

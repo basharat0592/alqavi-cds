@@ -92,6 +92,18 @@
     background: linear-gradient(135deg, #D4AF37 0%, #F4EBD0 50%, #D4AF37 100%);
   }
 
+  /* Dense numeric grids: the native spinner steals width from the cell and pushes
+     right-aligned digits out of alignment. Typing and arrow keys still work. */
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
   /* Compatibility with existing admin classes but modernized */
   .admin-card {
     @apply bg-white dark:bg-[#1a1a1a] rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-md transition-all duration-300;

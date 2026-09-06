@@ -240,6 +240,40 @@ class UserSettingsSerializer(serializers.ModelSerializer):
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
+def build_user_payload(user):
+    """The `user` object returned alongside a token pair on login.
+
+    Extracted so anything else that signs a user in -- currently accepting an
+    organization invite -- returns the SAME shape. The frontend stores this
+    verbatim as the session user, and every role/scoping check reads from it, so
+    a second hand-rolled copy that drifted would produce a session that looks
+    valid but is scoped wrong.
+    """
+    # Prefer the user's actual role name so restricted staff roles (Sales
+    # Manager, Area Manager, ...) keep their page/area scoping. Only fall back to
+    # 'admin' for staff with no explicit role.
+    role = 'customer'
+    if user.role:
+        role = user.role.name.lower()
+    elif user.is_superuser or user.is_staff:
+        role = 'admin'
+
+    return {
+        'id': str(user.id),
+        'name': user.get_full_name() or user.username,
+        'email': user.email,
+        'avatar': user.avatar.url if user.avatar else None,
+        'role': role,
+        'is_staff': user.is_staff,
+        'is_superuser': user.is_superuser,
+        'page_permissions': user.page_permissions or [],
+        'page_edit_permissions': user.page_edit_permissions or [],
+        'areas': [{'id': a.id, 'name': a.name, 'code': a.code} for a in user.areas.all()],
+        'warehouses': _warehouse_brief(user),
+        'is_super_admin': _is_super_admin(user),
+    }
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         username = attrs.get('username')
@@ -263,30 +297,24 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 data = super().validate(auth_attrs)
                 user = self.user
                 
-                # Prefer the user's actual role name so restricted staff roles
-                # (Sales Manager, Area Manager, …) keep their page/area scoping.
-                # Only fall back to 'admin' for staff with no explicit role.
-                role = 'customer'
-                if user.role:
-                    role = user.role.name.lower()
-                elif user.is_superuser or user.is_staff:
-                    role = 'admin'
+                # Without this the login would succeed and every request after
+                # it would fail on the authentication guard, which reads as a
+                # broken app rather than a suspended organization.
+                from core.scoping import suspended_organization_names
+                suspended = suspended_organization_names(user)
+                if suspended:
+                    raise serializers.ValidationError({
+                        'detail': f"{', '.join(suspended)} is deactivated. Contact your administrator."
+                    })
 
-                data['user'] = {
-                    'id': str(user.id),
-                    'name': user.get_full_name() or user.username,
-                    'email': user.email,
-                    'avatar': user.avatar.url if user.avatar else None,
-                    'role': role,
-                    'is_staff': user.is_staff,
-                    'is_superuser': user.is_superuser,
-                    'page_permissions': user.page_permissions or [],
-                    'page_edit_permissions': user.page_edit_permissions or [],
-                    'areas': [{'id': a.id, 'name': a.name, 'code': a.code} for a in user.areas.all()],
-                    'warehouses': _warehouse_brief(user),
-                    'is_super_admin': _is_super_admin(user),
-                }
+                data['user'] = build_user_payload(user)
                 return data
+            except serializers.ValidationError:
+                # A deliberate rejection (suspended organization), not a failed
+                # password. The blanket except below would swallow it and fall
+                # through to the supplier/customer tables, turning a clear
+                # message into "invalid credentials".
+                raise
             except Exception:
                 # If standard login fails, continue to check Supplier/Customer tables
                 pass

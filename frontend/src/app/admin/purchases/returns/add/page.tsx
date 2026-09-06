@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   ADMIN DESIGN SYSTEM - ADD RETURN (indigo / slate)
+   ADMIN DESIGN SYSTEM - ADD RETURN (amber / slate)
    ───────────────────────────────────────────────────────────────────────────── */
 const inputCls = ui.inputBase;
 const selectCls = `${inputCls} cursor-pointer`;
@@ -101,7 +101,7 @@ const ProductSelector = ({ value, products, onSelect, disabled }: {
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Search products..."
-                                className="w-full h-9 pl-8 pr-3 text-[13px] bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10"
+                                className="w-full h-9 pl-8 pr-3 text-[13px] bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10"
                             />
                         </div>
                     </div>
@@ -112,7 +112,7 @@ const ProductSelector = ({ value, products, onSelect, disabled }: {
                             <div
                                 key={p.id}
                                 onClick={() => { onSelect(p); setOpen(false); }}
-                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-indigo-50/50 cursor-pointer border-b last:border-0 border-slate-100"
+                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#F59E0B]/50 cursor-pointer border-b last:border-0 border-slate-100"
                             >
                                 <div className="w-9 h-9 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                                     {p.product_image ? (
@@ -278,7 +278,7 @@ export default function AddPurchaseReturnPage() {
                                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-semibold text-slate-700">Return ID</label>
-                                        <input className={inputCls + " bg-slate-50 text-slate-500"} value={form.return_number} disabled />
+                                        <input className={inputCls + " " + ui.inputDisabled} value={form.return_number} disabled />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-semibold text-slate-700">Supplier *</label>
@@ -328,7 +328,7 @@ export default function AddPurchaseReturnPage() {
                                     </select>
                                     
                                     <textarea
-                                        className="w-full h-24 px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 resize-none"
+                                        className="w-full h-24 px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 resize-none"
                                         value={form.reason}
                                         onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                                         placeholder="Write detailed manual reason here..."
@@ -343,7 +343,7 @@ export default function AddPurchaseReturnPage() {
                                         <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Return Items</h2>
                                         <p className="text-[12px] text-slate-500">Specify the products being returned and their refund prices.</p>
                                     </div>
-                                    <button onClick={addItem} className="text-[12px] text-indigo-600 hover:text-indigo-700 font-bold flex items-center gap-1">
+                                    <button onClick={addItem} className="text-[12px] text-[#1A1A1A] hover:text-[#0E7F98] font-bold flex items-center gap-1">
                                         <Plus size={14} /> ADD ITEM
                                     </button>
                                 </div>

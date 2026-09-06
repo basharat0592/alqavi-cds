@@ -46,6 +46,16 @@ class MultiTableJWTAuthentication(authentication.BaseAuthentication):
             if user:
                 if not user.is_active:
                     raise exceptions.AuthenticationFailed('User account is inactive.')
+                # Checked here rather than only at login so suspending an
+                # organization takes effect immediately: a token issued before
+                # the switch was flipped stops working on the next request,
+                # instead of lasting until it expires.
+                from core.scoping import suspended_organization_names
+                suspended = suspended_organization_names(user)
+                if suspended:
+                    raise exceptions.AuthenticationFailed(
+                        f"{', '.join(suspended)} is deactivated. Contact your administrator."
+                    )
                 return user
 
         # 2. Supplier (prefixed with sup_)

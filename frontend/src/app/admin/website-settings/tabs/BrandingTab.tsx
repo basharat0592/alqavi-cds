@@ -6,6 +6,7 @@ import cmsService from '@/services/cms.service';
 import toast from 'react-hot-toast';
 import { cn, getImageUrl } from '@/lib/utils';
 import MediaPickerModal from '../components/MediaPickerModal';
+import { ui } from '@/components/admin/ui';
 
 interface Props {
     settings: SiteSettings;
@@ -19,20 +20,19 @@ interface Props {
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[29px] px-4 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[29px] px-4 rounded-lg text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <RefreshCw className="h-3 w-3 animate-spin" />}
             {children}
         </button>
     );
 };
 
-const inputCls = "w-full h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
-
+const inputCls = ui.inputBase.replace('h-10', 'h-9');
 export default function BrandingTab({ settings, onSave, saving, setSettings }: Props) {
     const [form, setForm] = useState({ ...settings });
     const [uploading, setUploading] = useState<string | null>(null);
@@ -69,8 +69,8 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
     const BrandingUpload = ({ field, label, desc }: { field: keyof SiteSettings; label: string; desc: string }) => (
         <div className="space-y-1.5 text-left">
             <label className="text-[13px] font-bold text-[#111]">{label}</label>
-            <div className="relative border border-[#ddd] rounded-[4px] bg-white p-4 flex flex-col gap-3 shadow-sm">
-                <div className="relative h-24 w-full bg-[#f7f8fa] border border-[#eee] rounded-[3px] flex items-center justify-center p-2 group overflow-hidden">
+            <div className="relative border border-[#e2e8f0] rounded-lg bg-white p-4 flex flex-col gap-3 shadow-sm">
+                <div className="relative h-24 w-full bg-[#f8fafc] border border-[#eee] rounded-lg flex items-center justify-center p-2 group overflow-hidden">
                     {form[field] ? (
                         <img 
                             key={form[field] as string}
@@ -88,17 +88,17 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                             }}
                         />
                     ) : (
-                        <ImageIcon size={32} className="text-[#ddd]" />
+                        <ImageIcon size={32} className="text-[#e2e8f0]" />
                     )}
                     
                     {/* Hover Quick Actions */}
                     <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button onClick={() => setPicker({ open: true, field: field as string })} 
-                            className="p-1.5 bg-white border border-[#ddd] rounded-full shadow-md hover:bg-[#f7f8fa] text-[#565959]">
+                            className="p-1.5 bg-white border border-[#e2e8f0] rounded-full shadow-md hover:bg-[#f8fafc] text-[#64748B]">
                             <Search size={14} />
                         </button>
                         <button onClick={() => document.getElementById(`upload_${field}`)?.click()}
-                            className="p-1.5 bg-white border border-[#ddd] rounded-full shadow-md hover:bg-[#f7f8fa] text-[#565959]">
+                            className="p-1.5 bg-white border border-[#e2e8f0] rounded-full shadow-md hover:bg-[#f8fafc] text-[#64748B]">
                             <Upload size={14} />
                         </button>
                     </div>
@@ -125,8 +125,8 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
             </div>
 
             {/* Main Branding Section */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-5 py-3 flex items-center justify-between">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-5 py-3 flex items-center justify-between">
                     <h3 className="font-bold text-[#111] text-[15px]">Brand Assets</h3>
                 </div>
                 <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
@@ -139,8 +139,8 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
 
             <div>
                 {/* Visual Identity */}
-                <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left w-full">
-                    <div className="bg-[#f7f8fa] border-b border-[#ddd] px-5 py-3">
+                <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden text-left w-full">
+                    <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-5 py-3">
                         <h3 className="font-bold text-[#111] text-[15px]">Visual Identity</h3>
                     </div>
                     <div className="p-6 space-y-6">
@@ -156,7 +156,7 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                                 <div className="flex items-center gap-2">
                                     <input type="color" value={form.primary_color}
                                         onChange={e => setForm(f => ({ ...f, primary_color: e.target.value }))}
-                                        className="w-9 h-[31px] rounded-[3px] border border-[#ddd] cursor-pointer p-0.5" />
+                                        className="w-9 h-[31px] rounded-lg border border-[#e2e8f0] cursor-pointer p-0.5" />
                                     <input type="text" value={form.primary_color}
                                         onChange={e => setForm(f => ({ ...f, primary_color: e.target.value }))}
                                         className={inputCls + " font-mono uppercase"} />
@@ -167,7 +167,7 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
                                 <div className="flex items-center gap-2">
                                     <input type="color" value={form.secondary_color}
                                         onChange={e => setForm(f => ({ ...f, secondary_color: e.target.value }))}
-                                        className="w-9 h-[31px] rounded-[3px] border border-[#ddd] cursor-pointer p-0.5" />
+                                        className="w-9 h-[31px] rounded-lg border border-[#e2e8f0] cursor-pointer p-0.5" />
                                     <input type="text" value={form.secondary_color}
                                         onChange={e => setForm(f => ({ ...f, secondary_color: e.target.value }))}
                                         className={inputCls + " font-mono uppercase"} />
@@ -179,7 +179,7 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
             </div>
 
             {/* Footer Aligned Action */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#ddd] rounded-[4px] p-4 md:p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#e2e8f0] rounded-lg p-4 md:p-6 shadow-sm">
                 <div className="flex items-center gap-3 text-slate-400">
                     <History size={18} />
                     <p className="text-[13px] font-medium italic">All branding changes update the live site instantly.</p>

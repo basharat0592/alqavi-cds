@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
-import { DesktopNavMenu, MobileNavMenu } from '@/components/layout/AdminNavMenu';
+import AdminSidebar from '@/components/layout/AdminSidebar';
 import NotificationPanel, { type ActivityItem } from '@/components/admin/NotificationPanel';
 import ProfileDropdown from '@/components/admin/ProfileDropdown';
 import ReadOnlyController from '@/components/admin/ReadOnlyController';
@@ -10,7 +10,7 @@ import {
     Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Building2,
-    Home, Globe, Settings, ScanLine, TrendingUp, Boxes
+    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, MapPin
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -22,9 +22,9 @@ import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 
-/* ═══════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MOBILE TOP BAR (CLEAN LIGHT THEME)
-   ═══════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, unreadCount, onToggleNotifications, onToggleProfile, showBack, onBack }: {
     onMenuToggle: () => void; showMenu?: boolean; adminName: string; adminAvatar: string | null; unreadCount: number;
     onToggleNotifications: () => void; onToggleProfile: () => void;
@@ -44,7 +44,7 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
             )}
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center group">
                 <span className="font-extrabold text-sm tracking-widest text-slate-800 dark:text-white group-hover:opacity-85 transition-opacity">
-                    AL-QAVI <span className="bg-gradient-to-r from-indigo-500 to-indigo-600 bg-clip-text text-transparent">TRADES</span>
+                    AL-QAVI <span className="bg-gradient-to-r from-[#F59E0B] to-[#F59E0B] bg-clip-text text-transparent">TRADES</span>
                 </span>
             </Link>
             <div className="flex items-center gap-2">
@@ -81,10 +81,10 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
     );
 }
 
-/* ═══════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    MAIN ADMIN LAYOUT
-   ═══════════════════════════════════════════════ */
-/* Live session timer — shown in the navbar (global across all admin pages) */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* Live session timer â€” shown in the navbar (global across all admin pages) */
 const SESSION_MAX_SECONDS = 24 * 60 * 60; // auto sign-out after 24 hours
 
 function SessionTimer({ className = '', onTimeout }: { className?: string; onTimeout?: () => void }) {
@@ -132,9 +132,9 @@ function SessionTimer({ className = '', onTimeout }: { className?: string; onTim
     );
 }
 
-/* ═══════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    SUPER-ADMIN MOBILE BOTTOM NAV (app-style tab bar)
-   ═══════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 /* A bottom-tab that echoes the gradient pill buttons: the active tab is a mini
    gradient circle with a white icon; inactive tabs show a colour-inked icon. */
 function BottomTab({ href, label, icon: Icon, active }: { href: string; label: string; icon: any; active: boolean }) {
@@ -160,13 +160,13 @@ function SuperAdminBottomNav({ pathname }: { pathname: string }) {
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[80] print:hidden">
             <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="grid grid-cols-5">
-                    <BottomTab href="/admin/users" label="Admins" icon={Users} active={isActive('/admin/users')} />
-                    <BottomTab href="/admin/branches" label="Branches" icon={Building2} active={isActive('/admin/branches')} />
+                    <BottomTab href="/admin/branches" label="Organizations" icon={Building2} active={isActive('/admin/branches')} />
+                    <BottomTab href="/admin/company/areas" label="Region" icon={MapPin} active={isActive('/admin/company/areas')} />
                     <div aria-hidden />{/* center slot for the raised Home button */}
                     <BottomTab href="/admin/website-settings" label="CMS" icon={Globe} active={isActive('/admin/website-settings')} />
                     <BottomTab href="/admin/settings" label="Settings" icon={Settings} active={isActive('/admin/settings')} />
                 </div>
-                {/* Raised center Home — gradient fill to match the pill buttons */}
+                {/* Raised center Home â€” gradient fill to match the pill buttons */}
                 <Link
                     href="/admin/dashboard"
                     aria-label="Dashboard"
@@ -180,7 +180,7 @@ function SuperAdminBottomNav({ pathname }: { pathname: string }) {
     );
 }
 
-/* App-style bottom tab bar for BRANCH ADMINS (mobile only) — same design as the
+/* App-style bottom tab bar for BRANCH ADMINS (mobile only) â€” same design as the
    super-admin bar, but with the branch's day-to-day quick actions. */
 function BranchAdminBottomNav({ pathname }: { pathname: string }) {
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
@@ -194,7 +194,7 @@ function BranchAdminBottomNav({ pathname }: { pathname: string }) {
                     <BottomTab href="/admin/inventory/list" label="Stock" icon={Boxes} active={isActive('/admin/inventory/list')} />
                     <BottomTab href="/admin/purchases/add" label="Purchase" icon={ShoppingCart} active={isActive('/admin/purchases/add')} />
                 </div>
-                {/* Raised center Home — gradient fill to match the pill buttons */}
+                {/* Raised center Home â€” gradient fill to match the pill buttons */}
                 <Link
                     href="/admin/dashboard"
                     aria-label="Dashboard"
@@ -211,8 +211,13 @@ function BranchAdminBottomNav({ pathname }: { pathname: string }) {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
-    const [mobileOpen, setMobileOpen] = useState(false);
+    // The top bar belongs to the dashboard only; every other admin page runs
+    // full-bleed under the sidebar.
+    const isDashboardRoute = pathname === '/admin' || pathname === '/admin/dashboard';
     const [isNavigating, setIsNavigating] = useState(false);
+    // Desktop sidebar collapse, remembered across visits. Mobile keeps using the
+    // bottom tab bar, so the sidebar is desktop-only.
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
     // Profile & panel states
     const [notifOpen, setNotifOpen] = useState(false);
@@ -242,8 +247,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
     const [adminRole, setAdminRole] = useState('');
     const [adminId, setAdminId] = useState<string | number>('');
-    const [branchLabel, setBranchLabel] = useState('');
-    const [isSuperAdminUser, setIsSuperAdminUser] = useState(false);
+    const [isSuperAdminUser, setIsSuperAdminUser] = useState<boolean | null>(null);
 
     // Settings & Display
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -253,6 +257,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // Notifications
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [actLoading, setActLoading] = useState(false);
+
+    // Restore the collapse preference on mount only â€” reading it in useState would
+    // run on the server and mismatch the first client render.
+    useEffect(() => {
+        try {
+            setSidebarCollapsed(window.localStorage.getItem('admin.sidebarCollapsed') === '1');
+        } catch { /* private mode / storage disabled */ }
+    }, []);
+
+
+    const toggleSidebar = () => {
+        setSidebarCollapsed(prev => {
+            const next = !prev;
+            try { window.localStorage.setItem('admin.sidebarCollapsed', next ? '1' : '0'); } catch { /* ignore */ }
+            return next;
+        });
+    };
 
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
@@ -269,10 +290,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             setAdminAvatar(user.avatar || null);
             setAdminRole(user.role || 'Admin');
             setAdminId(user.id || '');
-            const wh = (user as any).warehouses;
-            setBranchLabel(authService.isSuperAdmin()
-                ? 'All Branches'
-                : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No branch'));
         }
 
         const loadSettings = async () => {
@@ -292,10 +309,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     setAdminAvatar(p.image || p.avatar || null);
                     setAdminRole(p.role_name || (p.role && typeof p.role === 'object' ? p.role.name : p.role) || 'Admin');
                     setAdminId(p.id);
-                    const wh = (p as any).warehouses;
-                    setBranchLabel((p as any).is_super_admin
-                        ? 'All Branches'
-                        : (Array.isArray(wh) && wh.length ? wh.map((w: any) => w.name).join(', ') : 'No branch'));
                 }
             } catch { }
         };
@@ -348,8 +361,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     href: isOrder ? '/admin/sales' : isUser ? '/admin/users' : '/admin/notifications',
                     read: log.is_read || false,
                     icon: isOrder ? ShoppingBag : isUser ? Users : isSecurity ? Shield : Bell,
-                    color: isOrder ? 'text-blue-600' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-slate-600',
-                    bg: isOrder ? 'bg-blue-50' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-slate-50'
+                    color: isOrder ? 'text-[#5B5B58]' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-slate-600',
+                    bg: isOrder ? 'bg-[#FAFAF8]' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-slate-50'
                 };
             }));
         } catch { } finally { setActLoading(false); }
@@ -403,15 +416,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <AuthGuard allowedRoles={['admin', 'staff']}>
-            <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-row font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
-                
+            <div className={cn("h-screen print:h-auto bg-[#F7F7F5] font-sans overflow-hidden print:overflow-visible print:bg-white text-[#1A1A1A]", theme)}>
+              {/* Full-bleed: the console fills the viewport rather than floating
+                  on a canvas, so there is no gutter, radius or drop shadow. */}
+              <div className="h-full w-full flex flex-row overflow-hidden bg-[#F7F7F5] print:overflow-visible">
 
-                {/* ═══ RIGHT CONTAINER (Navbar + Main Content) ═══ */}
+                {/* ═══ SIDEBAR — desktop only; mobile navigates via the bottom tab bar ═══ */}
+                <div className="hidden md:block h-full shrink-0 print:hidden">
+                    <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+                </div>
+
+                {/* â•â•â• RIGHT CONTAINER (Navbar + Main Content) â•â•â• */}
                 <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
-                    {/* Mobile top bar is hidden for everyone — nav is via the dashboard
+                    {/* Mobile top bar is hidden for everyone â€” nav is via the dashboard
                         pills/tiles + the fixed bottom tab bar on all mobile pages. */}
 
-                    {/* ═══ MOBILE NOTIFICATIONS PANEL ═══ */}
+                    {/* â•â•â• MOBILE NOTIFICATIONS PANEL â•â•â• */}
                     {notifOpen && (
                         <div className="fixed inset-0 z-[150] md:hidden" onClick={() => setNotifOpen(false)}>
                             <div ref={mobileNotifRef} className="absolute top-[52px] right-2 w-[calc(100vw-16px)] max-w-sm" onClick={e => e.stopPropagation()}>
@@ -420,7 +440,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                     )}
 
-                    {/* ═══ MOBILE PROFILE PANEL ═══ */}
+                    {/* â•â•â• MOBILE PROFILE PANEL â•â•â• */}
                     {profileOpen && (
                         <>
                             <div className="fixed inset-0 z-[200] md:hidden" onClick={() => setProfileOpen(false)} />
@@ -430,25 +450,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </>
                     )}
 
-                    {/* ═══ NAVBAR (takes remaining width) ═══ */}
-                    <div className="hidden md:flex h-[66px] w-full flex-shrink-0 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-[0_1px_0_rgba(15,23,42,0.03),0_6px_20px_-12px_rgba(15,23,42,0.15)] sticky top-0 transition-colors duration-300 print:hidden">
+                    {/* â•â•â• NAVBAR (takes remaining width) â•â•â• */}
+                    {isDashboardRoute && (
+                    <div className="hidden md:flex h-[68px] w-full flex-shrink-0 bg-[#F7F7F5]/90 backdrop-blur-xl border-b border-[#EAEAE6] px-6 items-center justify-between gap-6 z-[50] sticky top-0 transition-colors duration-300 print:hidden">
 
-                        <div className="flex items-center gap-4 flex-1">
-                            <Link href="/admin/dashboard" className="flex items-center gap-2.5 shrink-0 group pr-1">
-                                <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1e293b] to-[#0f172a] text-white flex items-center justify-center font-black text-[13px] tracking-tight shadow-sm ring-1 ring-white/10 group-hover:scale-105 group-hover:shadow-md transition-all">AQ</span>
-                                <span className="hidden lg:flex flex-col leading-none">
-                                    <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-400">Central Console</span>
-                                    <span className="text-[14px] font-extrabold tracking-tight text-slate-800">Al-Qavi <span className="text-indigo-600">Hub</span></span>
-                                </span>
-                            </Link>
+                        {/* Left: the page name, set like every other page's title. */}
+                        <h1 className="text-[26px] leading-tight tracking-[-0.03em] font-semibold text-[#1A1A1A] shrink-0">Dashboard</h1>
 
-                            <span className="hidden lg:block h-7 w-px bg-slate-200/80 shrink-0" />
-
+                        {/* Right: search, notifications, profile — nothing else. */}
+                        <div className="flex items-center gap-3">
                             {/* Search Bar */}
-                            <div className="relative flex-1 max-w-2xl" ref={searchRef}>
+                            <div className="relative w-[280px] lg:w-[360px]" ref={searchRef}>
                                 <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                    className="group flex items-center gap-2.5 h-10 px-4 bg-slate-100/70 border border-slate-200/80 rounded-xl transition-all hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-500/10 focus-within:shadow-sm">
-                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 shrink-0 transition-colors" />
+                                    className="group flex items-center gap-2.5 h-10 px-4 bg-slate-100/70 border border-slate-200/80 rounded-xl transition-all hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-[#F59E0B] focus-within:ring-4 focus-within:ring-[#F59E0B]/10 focus-within:shadow-sm">
+                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#0E7F98] shrink-0 transition-colors" />
                                     <input type="text" placeholder="Search pages, products, orders..."
                                         className="flex-1 h-full bg-transparent text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 font-medium"
                                         value={searchQuery}
@@ -483,7 +498,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                         className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left transition-colors group"
                                                     >
                                                         <div className="flex items-center gap-2.5 min-w-0">
-                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
+                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-[#F59E0B]/10 group-hover:text-[#0E7F98] flex items-center justify-center transition-colors shrink-0">
                                                                 <FileText size={13} />
                                                             </div>
                                                             <div className="min-w-0">
@@ -496,43 +511,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                                 <CornerDownLeft size={10} /> Enter
                                                             </span>
                                                         ) : (
-                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-indigo-600 transition-colors shrink-0" />
+                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-[#0E7F98] transition-colors shrink-0" />
                                                         )}
                                                     </button>
                                                 ))}
                                             </div>
                                         ) : (
                                             <div className="px-4 py-6 text-center text-[12.5px] text-slate-400">
-                                                No pages found for “{searchQuery}”
+                                                No pages found for â€œ{searchQuery}â€
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-3">
-                            {/* Hide the branch badge entirely for users with no branch (e.g. staff). */}
-                            {branchLabel && branchLabel !== 'No branch' && (
-                                <div
-                                    title={branchLabel === 'All Branches' ? 'You can see every branch' : `Your branch: ${branchLabel}`}
-                                    className={cn(
-                                        "hidden lg:inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold select-none",
-                                        branchLabel === 'All Branches'
-                                            ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                            : branchLabel === 'No branch'
-                                                ? "bg-rose-50 border-rose-200 text-rose-600"
-                                                : "bg-slate-50 border-slate-200 text-slate-600"
-                                    )}
-                                >
-                                    <Building2 className="h-3.5 w-3.5 opacity-80" />
-                                    <span className="truncate max-w-[160px]">{branchLabel}</span>
-                                </div>
-                            )}
-                            <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
-                            {/* Dues pill removed from the navbar for all admins — it lives on System Alerts. */}
-                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
+                            {/* Kept mounted but hidden: this component owns the 24-hour
+                                auto sign-out, which must keep running unseen. */}
+                            <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
                             <div className="relative" ref={notifRef}>
                                 <button onClick={() => setNotifOpen(!notifOpen)}
                                     className={`p-2.5 rounded-xl transition-all border ${notifOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20 text-slate-800 dark:text-white' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white border-transparent'}`}>
@@ -545,13 +539,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </button>
                                 {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />}
                             </div>
-                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={profileRef}>
                                 <button onClick={() => setProfileOpen(!profileOpen)}
-                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all border ${profileOpen ? 'bg-slate-150 dark:bg-white/10 border-slate-200 dark:border-white/20' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'}`}>
+                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all border ${profileOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'}`}>
                                     <div className="relative">
                                         <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-slate-200 dark:border-white/10">
-                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-slate-650 dark:text-zinc-300">{adminName[0]}</span>}
+                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">{adminName[0]}</span>}
                                         </div>
                                         <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
                                     </div>
@@ -559,7 +552,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <p className="text-slate-800 dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
                                             {adminName} <ChevronDown size={12} className="text-slate-400 dark:text-zinc-500" />
                                         </p>
-                                        <span className="inline-block text-[9px] font-extrabold text-indigo-600 bg-indigo-500/10 dark:text-indigo-400 dark:bg-indigo-500/15 px-2 py-0.5 rounded-full border border-indigo-500/20 dark:border-indigo-500/10 mt-1 uppercase tracking-wider">
+                                        <span className="inline-block text-[9px] font-extrabold text-[#B4780B] bg-[#F59E0B]/10 dark:text-[#FBBF24] dark:bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/20 dark:border-[#1A1A1A]/10 mt-1 uppercase tracking-wider">
                                             {adminRole}
                                         </span>
                                     </div>
@@ -568,13 +561,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             </div>
                         </div>
                     </div>
-
-                    {/* ═══ TOP MENU BAR (5 groups) — shown on the dashboard only ═══ */}
-                    {pathname === '/admin/dashboard' && <DesktopNavMenu />}
-
-                    {/* ═══ MAIN CONTENT ═══ */}
+                    )}
+                    {/* â•â•â• MAIN CONTENT â•â•â• */}
                     <main className={cn(
-                        "flex-1 overflow-y-auto px-3 py-3 md:p-4 lg:p-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white",
+                        "flex-1 overflow-y-auto px-3 pt-2 pb-3 md:px-4 md:pt-3 md:pb-4 lg:px-8 lg:pt-4 lg:pb-8 relative bg-transparent print:p-0 print:m-0 print:bg-white",
                         isSuperAdminUser && "pb-24 lg:pb-8"
                     )}>
                         {isNavigating && <PageLoader />}
@@ -583,10 +573,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </main>
                 </div>
 
-                {/* App-style bottom tab bar — mobile only (per role) */}
+                {/* App-style bottom tab bar â€” mobile only (per role) */}
                 {isSuperAdminUser
                     ? <SuperAdminBottomNav pathname={pathname} />
                     : <BranchAdminBottomNav pathname={pathname} />}
+              </div>
             </div>
         </AuthGuard>
 

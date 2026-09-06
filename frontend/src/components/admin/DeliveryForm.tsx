@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,7 +30,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
     const [created, setCreated] = useState<CreatedAccount | null>(null);
 
     useEffect(() => {
-        // Branches the admin manages come from their session profile (the same
+        // Organizations the admin manages come from their session profile (the same
         // source as the topbar branch chip). A super admin has none assigned, so
         // fall back to the full warehouse list for them.
         const mine = (authService.getUser() as any)?.warehouses;
@@ -103,7 +103,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
         <div className="text-left max-w-[900px] mx-auto">
             <PageHeader
                 title={isEdit ? 'Edit Rider' : 'Add Delivery Person'}
-                subtitle={isEdit ? 'Update this rider’s account and vehicle details' : 'Create a rider and their delivery login'}
+                subtitle={isEdit ? 'Update this riderâ€™s account and vehicle details' : 'Create a rider and their delivery login'}
                 breadcrumbs={[
                     { label: 'Console', href: '/admin/dashboard' },
                     { label: 'Delivery Persons', href: '/admin/delivery' },
@@ -114,7 +114,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
 
             <Card className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 mb-5">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center"><Bike size={16} /></div>
+                    <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center"><Bike size={16} /></div>
                     <h3 className="text-[14px] font-bold text-slate-900">Rider Details</h3>
                 </div>
 
@@ -132,7 +132,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
                         <div className="relative">
                             <input type={showPw ? 'text' : 'password'} className={inputCls + ' pr-10'} value={form.password}
                                 onChange={e => handle('password', e.target.value)} placeholder={isEdit ? 'Leave blank to keep' : 'Set a password'} />
-                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
+                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]">
                                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                             </button>
                         </div>
@@ -145,12 +145,12 @@ export default function DeliveryForm({ id }: { id?: string }) {
                         </select></div>
                     <div><label className={labelCls}>Vehicle Number</label>
                         <input className={inputCls} value={form.vehicle_number} onChange={e => handle('vehicle_number', e.target.value)} placeholder="ABC-123" /></div>
-                    <div><label className={labelCls}>Branch</label>
+                    <div><label className={labelCls}>Organization</label>
                         <select className={inputCls} value={form.warehouse} onChange={e => handle('warehouse', e.target.value)}>
-                            <option value="">— None —</option>
+                            <option value="">â€” None â€”</option>
                             {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
-                        <p className="text-[10.5px] text-slate-400 mt-1">Rider sees this branch’s active orders in their notifications.</p>
+                        <p className="text-[10.5px] text-slate-400 mt-1">Rider sees this organizationâ€™s active orders in their notifications.</p>
                     </div>
                     <div><label className={labelCls}>City</label>
                         <input className={inputCls} value={form.city} onChange={e => handle('city', e.target.value)} placeholder="City" /></div>
@@ -159,17 +159,17 @@ export default function DeliveryForm({ id }: { id?: string }) {
                     <div className="sm:col-span-2 flex items-center justify-between p-3 bg-slate-50 border border-slate-200/70 rounded-lg">
                         <span className="text-[12px] font-bold text-slate-600">Account Active</span>
                         <button type="button" onClick={() => handle('is_active', !form.is_active)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_active ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>
-                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-indigo-50/50 border border-indigo-200/60 rounded-lg">
+                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-[#F59E0B]/50 border border-[#F59E0B]/60 rounded-lg">
                         <div>
                             <span className="text-[12px] font-bold text-slate-700">System Rider (in-house)</span>
-                            <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug max-w-[440px]">Your own salaried rider — visible only to you, shown at the top when dispatching, and no per-delivery charge is offered.</p>
+                            <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug max-w-[440px]">Your own salaried rider â€” visible only to you, shown at the top when dispatching, and no per-delivery charge is offered.</p>
                         </div>
                         <button type="button" onClick={() => handle('is_system', !form.is_system)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.is_system ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.is_system ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_system ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>

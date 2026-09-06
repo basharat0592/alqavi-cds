@@ -4,6 +4,7 @@ import { X, Search, Loader2, Image as ImageIcon, Video, Upload, Check } from 'lu
 import cmsService, { MediaAsset } from '@/services/cms.service';
 import { getImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { ui } from '@/components/admin/ui';
 
 interface Props {
     isOpen?: boolean;
@@ -15,20 +16,19 @@ interface Props {
 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[31px] px-4 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[31px] px-4 rounded-lg text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <Loader2 className="h-3 w-3 animate-spin" />}
             {children}
         </button>
     );
 };
 
-const inputCls = "h-[31px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
-
+const inputCls = ui.inputBase.replace('h-10', 'h-9');
 export default function MediaPickerModal({ isOpen = true, onClose, onSelect, title = 'Select Media', allowVideo = false }: Props) {
     const [media, setMedia] = useState<MediaAsset[]>([]);
     const [loading, setLoading] = useState(true);
@@ -73,22 +73,22 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
 
     return (
         <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-[4px] shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                 
                 {/* Header */}
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-4 md:px-6 py-3 flex items-center justify-between">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-4 md:px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <ImageIcon size={18} className="text-[#565959]" />
+                        <ImageIcon size={18} className="text-[#64748B]" />
                         <h3 className="font-bold text-[#111] text-[15px]">{title}</h3>
                     </div>
-                    <button onClick={onClose} className="text-[#565959] hover:text-[#111] transition-colors"><X size={20} /></button>
+                    <button onClick={onClose} className="text-[#64748B] hover:text-[#111] transition-colors"><X size={20} /></button>
                 </div>
 
                 <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
                     {/* Library Main */}
-                    <div className="flex-1 md:flex-[3] flex flex-col border-b md:border-b-0 md:border-r border-[#ddd] overflow-hidden">
+                    <div className="flex-1 md:flex-[3] flex flex-col border-b md:border-b-0 md:border-r border-[#e2e8f0] overflow-hidden">
                         {/* Toolbar */}
-                        <div className="p-3 md:p-4 border-b border-[#ddd] bg-[#fcfcfc] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="p-3 md:p-4 border-b border-[#e2e8f0] bg-[#fcfcfc] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <div className="relative flex-1 sm:flex-initial">
                                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#888]" />
@@ -143,8 +143,8 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                     {filtered.map(asset => (
                                         <div key={asset.id} onClick={() => setSelectedId(asset.id!)}
                                             className={cn(
-                                                "aspect-square bg-white border-2 rounded-[3px] overflow-hidden cursor-pointer relative transition-all group",
-                                                selectedId === asset.id ? "border-[#e77600] shadow-sm ring-2 ring-[#e77600]/20" : "border-transparent hover:border-[#ddd]"
+                                                "aspect-square bg-white border-2 rounded-lg overflow-hidden cursor-pointer relative transition-all group",
+                                                selectedId === asset.id ? "border-[#F59E0B] shadow-sm ring-2 ring-[#F59E0B]/20" : "border-transparent hover:border-[#e2e8f0]"
                                             )}>
                                             {asset.file_type === 'image' ? (
                                                 <img src={getImageUrl(asset.file) || asset.file} alt={asset.alt_text} className="w-full h-full object-cover" />
@@ -157,7 +157,7 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                                 </div>
                                             )}
                                             {selectedId === asset.id && (
-                                                <div className="absolute top-1 right-1 bg-[#e77600] text-white rounded-full p-0.5 shadow-sm">
+                                                <div className="absolute top-1 right-1 bg-[#F59E0B] text-white rounded-full p-0.5 shadow-sm">
                                                     <Check size={12} strokeWidth={3} />
                                                 </div>
                                             )}
@@ -169,12 +169,12 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                     </div>
 
                     {/* Sidebar / Details */}
-                    <div className="w-full md:w-72 bg-[#fcfcfc] flex flex-col border-t md:border-t-0 md:border-l border-[#ddd] shrink-0">
+                    <div className="w-full md:w-72 bg-[#fcfcfc] flex flex-col border-t md:border-t-0 md:border-l border-[#e2e8f0] shrink-0">
                         <div className="hidden md:block p-6 flex-1 overflow-y-auto space-y-6">
                             <h4 className="text-[13px] font-bold text-[#111] uppercase tracking-wider">Asset Details</h4>
                             {selectedAsset ? (
                                 <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                                    <div className="aspect-square bg-white border border-[#ddd] rounded-[3px] overflow-hidden flex items-center justify-center relative">
+                                    <div className="aspect-square bg-white border border-[#e2e8f0] rounded-lg overflow-hidden flex items-center justify-center relative">
                                         {selectedAsset.file_type === 'image' ? (
                                             <img src={getImageUrl(selectedAsset.file) || selectedAsset.file} className="max-w-full max-h-full object-contain" />
                                         ) : (
@@ -183,29 +183,29 @@ export default function MediaPickerModal({ isOpen = true, onClose, onSelect, tit
                                     </div>
                                     <div className="space-y-3">
                                         <div className="space-y-1">
-                                            <label className="text-[11px] font-bold text-[#565959]">FILENAME</label>
+                                            <label className="text-[11px] font-bold text-[#64748B]">FILENAME</label>
                                             <p className="text-[12px] font-medium text-[#111] truncate">{selectedAsset.file.split('/').pop()}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <label className="text-[11px] font-bold text-[#565959]">TYPE</label>
+                                            <label className="text-[11px] font-bold text-[#64748B]">TYPE</label>
                                             <p className="text-[12px] font-medium text-[#111] uppercase">{selectedAsset.file_type}</p>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="h-64 flex flex-col items-center justify-center text-center px-4">
-                                    <ImageIcon size={32} className="text-[#ddd] mb-2" />
+                                    <ImageIcon size={32} className="text-[#e2e8f0] mb-2" />
                                     <p className="text-[12px] text-[#888]">Select an asset from the library to see details</p>
                                 </div>
                             )}
                         </div>
 
                         {/* Footer Actions */}
-                        <div className="p-4 bg-[#f7f8fa] border-t border-[#ddd] flex flex-row md:flex-col gap-2 items-center md:items-stretch justify-between w-full">
+                        <div className="p-4 bg-[#f8fafc] border-t border-[#e2e8f0] flex flex-row md:flex-col gap-2 items-center md:items-stretch justify-between w-full">
                             <AmazonBtn disabled={!selectedId} className="w-full md:w-full justify-center text-center" onClick={() => selectedAsset && onSelect(selectedAsset.file)}>
                                 Insert Selected Asset
                             </AmazonBtn>
-                            <button onClick={onClose} className="text-[12px] font-medium text-[#565959] hover:underline py-1 px-4 md:px-0 whitespace-nowrap">
+                            <button onClick={onClose} className="text-[12px] font-medium text-[#64748B] hover:underline py-1 px-4 md:px-0 whitespace-nowrap">
                                 Cancel
                             </button>
                         </div>

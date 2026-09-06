@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { userService } from '@/lib/api';
 import { authService } from '@/lib/auth';
-import { PageHeader, Card, Button, Badge, Modal, ui } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, TableShell, Pagination } from '@/components/admin/ui';
 import toast from 'react-hot-toast';
 
 export default function SystemUsersPage() {
@@ -55,6 +55,12 @@ export default function SystemUsersPage() {
             (u.email || '').toLowerCase().includes(q) ||
             (u.role_name || '').toLowerCase().includes(q);
     });
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+    const changePageSize = (n: number) => { setPageSize(n); setCurrentPage(1); };
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const safePage = Math.min(currentPage, totalPages);
+    const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
     const fullName = (u: any) => (u.full_name || `${u.first_name || ''} ${u.last_name || ''}`).trim() || u.username || u.email;
 
@@ -100,14 +106,14 @@ export default function SystemUsersPage() {
                 <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                     <ShieldCheck size={26} />
                 </div>
-                <h2 className="text-[18px] font-bold text-slate-900">Branch admins only</h2>
-                <p className="text-[13px] text-slate-500 mt-2">Only a branch admin can manage their own system users.</p>
+                <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Organization admins only</h2>
+                <p className="text-[13px] text-[#8A8A86] mt-2">Only a organization admin can manage their own system users.</p>
             </div>
         );
     }
 
     return (
-        <div className="pb-12 text-left text-slate-800">
+        <div className="pb-12 text-left text-[#1A1A1A]">
             <div className="max-w-[1200px] mx-auto">
                 <PageHeader
                     title="System Users"
@@ -125,51 +131,62 @@ export default function SystemUsersPage() {
                     }
                 />
 
-                <Card className="p-4 sm:p-5 mb-6">
+                <TableShell
+                    className="mb-6"
+                    filters={
                     <div className="relative max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users by name, email or role..." className={ui.inputBase + ' pl-10'} />
                     </div>
-                </Card>
-
-                <Card className="overflow-hidden">
+                    }
+                    footer={
+                        <Pagination
+                            page={safePage}
+                            totalPages={totalPages}
+                            onPage={setCurrentPage}
+                            total={filtered.length}
+                            pageSize={pageSize}
+                            onPageSize={changePageSize}
+                        />
+                    }
+                >
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className={ui.table}>
                             <thead>
-                                <tr className="bg-slate-50/60 border-b border-slate-200/70 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                                    <th className="px-6 py-4">User</th>
-                                    <th className="px-6 py-4">Role</th>
-                                    <th className="px-6 py-4">Phone</th>
-                                    <th className="px-6 py-4 text-center">Status</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
+                                <tr>
+                                    <th className={ui.th}>User</th>
+                                    <th className={ui.th}>Role</th>
+                                    <th className={ui.th}>Phone</th>
+                                    <th className={ui.th + ' text-center'}>Status</th>
+                                    <th className={ui.th + ' text-right'}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && users.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[14px] text-slate-500 font-medium">Loading...</td></tr>
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#8A8A86] font-medium">Loading...</td></tr>
                                 ) : filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[14px] text-slate-500 font-medium">No system users yet. Click “Add User” to create one.</td></tr>
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#8A8A86] font-medium">No system users yet. Click “Add User” to create one.</td></tr>
                                 ) : (
-                                    filtered.map(u => (
-                                        <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-6 py-4">
+                                    paged.map(u => (
+                                        <tr key={u.id} className="hover:bg-[#FAFAF8] transition-colors">
+                                            <td className={ui.td}>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-[13px] shrink-0">
+                                                    <div className="h-10 w-10 rounded-full bg-[#F59E0B]/10 border border-[#F59E0B]/15 text-[#B4780B] flex items-center justify-center font-semibold text-[13px] shrink-0">
                                                         {(fullName(u)[0] || 'U').toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="font-bold text-[14px] text-slate-900 truncate">{fullName(u)}</p>
-                                                        <p className="text-[11px] text-slate-500 flex items-center gap-1 truncate"><Mail size={11} /> {u.email}</p>
+                                                        <p className="font-semibold text-[13px] text-[#1A1A1A] truncate">{fullName(u)}</p>
+                                                        <p className="text-[11.5px] text-[#8A8A86] flex items-center gap-1 truncate"><Mail size={11} /> {u.email}</p>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
+                                            <td className={ui.td}>
                                                 <Badge tone="blue">{u.role_name || '—'}</Badge>
                                             </td>
-                                            <td className="px-6 py-4 text-[13px] text-slate-600">
-                                                {u.phone ? <span className="inline-flex items-center gap-1"><Phone size={11} className="text-slate-400" /> {u.phone}</span> : '—'}
+                                            <td className={ui.td}>
+                                                {u.phone ? <span className="inline-flex items-center gap-1"><Phone size={11} className="text-[#9C9C98]" /> {u.phone}</span> : '—'}
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className={ui.td + ' text-center'}>
                                                 <button
                                                     type="button"
                                                     onClick={() => toggleActive(u)}
@@ -180,8 +197,8 @@ export default function SystemUsersPage() {
                                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${u.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                                                 </button>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button onClick={() => setDeleteTarget(u)} className="text-[12px] font-bold text-rose-600 hover:underline inline-flex items-center gap-1">
+                                            <td className={ui.td + ' text-right'}>
+                                                <button onClick={() => setDeleteTarget(u)} className="text-[11.5px] font-semibold text-rose-600 hover:underline inline-flex items-center gap-1">
                                                     <Trash2 size={13} /> Remove
                                                 </button>
                                             </td>
@@ -191,7 +208,7 @@ export default function SystemUsersPage() {
                             </tbody>
                         </table>
                     </div>
-                </Card>
+                </TableShell>
             </div>
 
             {/* Delete confirm */}
@@ -209,8 +226,8 @@ export default function SystemUsersPage() {
                     <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
                         <AlertTriangle size={20} />
                     </div>
-                    <p className="text-[13px] text-slate-600">
-                        Remove <span className="font-bold text-slate-900">{deleteTarget ? fullName(deleteTarget) : ''}</span> from your workspace? They will no longer be able to sign in. This cannot be undone.
+                    <p className="text-[13px] text-[#3A3A38]">
+                        Remove <span className="font-semibold text-[#1A1A1A]">{deleteTarget ? fullName(deleteTarget) : ''}</span> from your workspace? They will no longer be able to sign in. This cannot be undone.
                     </p>
                 </div>
             </Modal>

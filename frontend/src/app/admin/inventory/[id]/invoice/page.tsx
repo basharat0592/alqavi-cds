@@ -116,7 +116,7 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
             <Card className="max-w-[850px] mx-auto p-6 flex flex-col min-h-screen print:min-h-0 print:border-none print:shadow-none print:rounded-none print:p-0">
                 <InvoiceHeader
                     docTitle="Stock Statement"
-                    metaLines={[`Branch: ${stock.warehouse_name || '—'}`, `Supplier: ${invoiceSupplier}`, ...(periodLine ? [periodLine] : [])]}
+                    metaLines={[`Organization: ${stock.warehouse_name || '—'}`, `Supplier: ${invoiceSupplier}`, ...(periodLine ? [periodLine] : [])]}
                     refLabel="SKU"
                     refValue={stock.sku || '—'}
                     date={formatDate(new Date().toISOString())}

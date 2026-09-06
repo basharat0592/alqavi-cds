@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Loader2, Phone, Mail, MapPin, MessageCircle, Instagram, Youtube, RotateCcw } from 'lucide-react';
 import { SiteSettings } from '@/services/cms.service';
+import { ui } from '@/components/admin/ui';
 
 interface Props { 
     settings: SiteSettings; 
@@ -12,20 +13,19 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111]',
-        secondary: 'bg-gradient-to-b from-[#f7f8fa] to-[#e7e9ec] border-[#adb1b8] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0f1111]',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
-            className={`h-[35px] px-8 rounded-[3px] text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
+            className={`h-[35px] px-8 rounded-lg text-[13px] font-medium border shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-60 ${styles[variant as keyof typeof styles]} ${className}`}>
             {loading && <Loader2 className="h-3 w-3 animate-spin" />}
             {children}
         </button>
     );
 };
 
-const inputCls = "w-full h-[35px] px-3 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] placeholder:text-[#aaa] bg-white transition-all";
-
+const inputCls = ui.inputBase.replace('h-10', 'h-9');
 const Field = ({ label, value, onChange, icon: Icon, type = 'text', placeholder = '' }: {
     label: string; value: string; onChange: (v: string) => void; icon?: any; type?: string; placeholder?: string;
 }) => (
@@ -56,8 +56,8 @@ export default function ContactTab({ settings, onSave, saving }: Props) {
             </div>
             
             {/* Business Contact */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden text-left">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3">
                     <h3 className="font-bold text-[#111] text-[15px]">Business Contact Details</h3>
                 </div>
                 <div className="p-6 grid md:grid-cols-2 gap-6">
@@ -71,15 +71,15 @@ export default function ContactTab({ settings, onSave, saving }: Props) {
                             <MapPin size={14} className="absolute left-3 top-3 text-slate-400" />
                             <textarea rows={2} value={form.address || ''} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                                 placeholder="Shop #123, Main Market, Lahore, Pakistan"
-                                className="w-full min-h-[60px] px-9 py-2 border border-[#888c8e] rounded-[3px] text-[13px] outline-none focus:border-[#e77600] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
+                                className="w-full min-h-[60px] px-9 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Social Links */}
-            <div className="bg-white border border-[#ddd] rounded-[4px] shadow-sm overflow-hidden text-left">
-                <div className="bg-[#f7f8fa] border-b border-[#ddd] px-6 py-3">
+            <div className="bg-white border border-[#e2e8f0] rounded-lg shadow-sm overflow-hidden text-left">
+                <div className="bg-[#f8fafc] border-b border-[#e2e8f0] px-6 py-3">
                     <h3 className="font-bold text-[#111] text-[15px]">Social Media Presence</h3>
                 </div>
                 <div className="p-6 grid md:grid-cols-2 gap-6">
@@ -100,7 +100,7 @@ export default function ContactTab({ settings, onSave, saving }: Props) {
             </div>
 
             {/* Footer Aligned Action */}
-            <div className="flex items-center justify-between bg-white border border-[#ddd] rounded-[4px] p-6 shadow-sm">
+            <div className="flex items-center justify-between bg-white border border-[#e2e8f0] rounded-lg p-6 shadow-sm">
                 <div className="flex items-center gap-3 text-slate-400">
                     <RotateCcw size={18} />
                     <p className="text-[13px] font-medium italic">Updates are applied globally across the customer storefront.</p>

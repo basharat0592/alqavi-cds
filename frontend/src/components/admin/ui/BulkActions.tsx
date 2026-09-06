@@ -111,7 +111,7 @@ export function Checkbox({
             checked={checked}
             onChange={onChange}
             onClick={(e) => e.stopPropagation()}
-            className={`w-4 h-4 accent-indigo-600 cursor-pointer rounded border-slate-300 ${className}`}
+            className={`w-4 h-4 accent-[#F59E0B] cursor-pointer rounded border-[#D4D4D0] ${className}`}
         />
     );
 }
@@ -196,11 +196,11 @@ export function BulkBar({
     return (
         <>
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[120] animate-in slide-in-from-bottom-4 fade-in duration-300">
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700/50">
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-[#F59E0B] text-white rounded-2xl shadow-[0_2px_4px_rgba(0,0,0,0.10),0_24px_60px_-20px_rgba(0,0,0,0.45)]">
                     <div className="flex items-center gap-2 pl-2 pr-3 border-r border-white/15">
-                        <CheckSquare size={16} className="text-indigo-300" />
+                        <CheckSquare size={16} className="text-white" />
                         <span className="text-[13px] font-bold tabular-nums">{sel.count}</span>
-                        <span className="text-[12px] text-slate-300">selected</span>
+                        <span className="text-[12px] text-white/60">selected</span>
                     </div>
 
                     {statusActions && statusActions.length > 0 && (
@@ -213,13 +213,13 @@ export function BulkBar({
                                 Set status <ChevronDown size={14} />
                             </button>
                             {statusOpen && (
-                                <div className="absolute bottom-full mb-2 left-0 min-w-[180px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-150">
+                                <div className="absolute bottom-full mb-2 left-0 min-w-[180px] bg-white rounded-2xl shadow-[0_2px_4px_rgba(0,0,0,0.04),0_18px_44px_-16px_rgba(0,0,0,0.28)] overflow-hidden py-1.5 animate-in fade-in zoom-in-95 duration-150">
                                     {statusActions.map((a) => (
                                         <button
                                             key={a.label}
                                             disabled={busy}
                                             onClick={() => run(() => a.apply(sel.selectedIds))}
-                                            className="w-full text-left px-4 py-2 text-[13px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                            className="w-full text-left px-4 py-2 text-[13.5px] font-medium text-[#3A3A38] hover:bg-[#F5F5F3] disabled:opacity-50"
                                         >
                                             {a.label}
                                         </button>
@@ -310,10 +310,10 @@ export function BulkBar({
                         <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 text-rose-600 border border-rose-100">
                             <AlertTriangle size={32} />
                         </div>
-                        <h3 className="text-[20px] font-bold text-slate-900 tracking-tight">
+                        <h3 className="text-[22px] font-semibold text-[#1A1A1A] tracking-[-0.02em]">
                             Delete {sel.count} {entity}?
                         </h3>
-                        <p className="text-[13px] text-slate-600 mt-3 leading-relaxed">
+                        <p className="text-[13.5px] text-[#5B5B58] mt-3 leading-relaxed">
                             This will permanently remove the selected {entity}. This action cannot be undone.
                         </p>
                     </div>

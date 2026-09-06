@@ -54,7 +54,7 @@ const PERSONAL_CATEGORIES = [
     { id: 'expense', label: 'Expense' },
 ];
 
-// Extra category shown for a branch / All Branches: the branch's system users (staff).
+// Extra category shown for a branch / All Organizations: the branch's system users (staff).
 const SYSTEM_USER_CATEGORY = { id: 'system_users', label: 'System Users' };
 
 const SUB_OPTIONS: Record<string, string[]> = {
@@ -162,7 +162,7 @@ function ReportsEngineInner() {
     const [suppliers, setSuppliers] = useState<any[]>([]);
     const [categories, setCategories] = useState<any[]>([]);
     const [stocks, setStocks] = useState<any[]>([]);
-    // Super-Admin branch scope: pick a branch and the whole report follows it.
+    // Super-Admin organization scope: pick a organization and the whole report follows it.
     const [warehouses, setWarehouses] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
@@ -218,7 +218,7 @@ function ReportsEngineInner() {
 
     useEffect(() => { loadMeta(); }, [loadMeta]);
 
-    // Branches the Super Admin can scope to: only warehouses actually assigned to a
+    // Organizations the Super Admin can scope to: only warehouses actually assigned to a
     // (non-super) admin. An unassigned branch has no admin running it, so showing it
     // here would just produce empty reports.
     const assignedWarehouses = useMemo(() => {
@@ -230,8 +230,8 @@ function ReportsEngineInner() {
         return warehouses.filter((w: any) => assigned.has(String(w.id)));
     }, [warehouses, users]);
 
-    // Net Profit mode: the Select Branch dropdown picks "Net Profit", and the second
-    // dropdown becomes a SCOPE selector (All Branches / a branch / Personal), held in
+    // Net Profit mode: the Select Organization dropdown picks "Net Profit", and the second
+    // dropdown becomes a SCOPE selector (All Organizations / a branch / Personal), held in
     // filters.category. effectiveBranch is the branch the report is actually scoped to.
     const isNetProfitMode = filters.branch === 'netprofit';
     const effectiveBranch = isNetProfitMode ? filters.category : filters.branch;
@@ -381,7 +381,7 @@ function ReportsEngineInner() {
     const generateReport = async () => {
         if (isNetProfitMode) {
             if (!filters.category) {
-                toast.error('Please select a scope (a branch, All Branches, or Personal).');
+                toast.error('Please select a scope (a organization, All Organizations, or Personal).');
                 return;
             }
         } else if (!filters.category || !filters.view) {
@@ -397,7 +397,7 @@ function ReportsEngineInner() {
 
         // Net Profit — a P&L summary (not a list). Triggered either by the Net Profit
         // view under Payments, or by the dedicated "Net Profit" branch mode whose scope
-        // (All Branches / a branch / Personal) lives in filters.category.
+        // (All Organizations / a branch / Personal) lives in filters.category.
         if (filters.view === 'Net Profit' || isNetProfitMode) {
             setGenerating(true);
             setHasGenerated(true);
@@ -429,7 +429,7 @@ function ReportsEngineInner() {
                     return;
                 }
 
-                // Branch / All Branches scope: P&L from transactions. Server filters by
+                // Organization / All Organizations scope: P&L from transactions. Server filters by
                 // ?warehouse for a super admin, so only the chosen branch's rows return.
                 const branchParam = (isSuperAdmin && effectiveBranch && effectiveBranch !== 'all' && effectiveBranch !== 'personal') ? { warehouse: effectiveBranch } : {};
                 const all = { no_pagination: 'true', ...branchParam };
@@ -537,8 +537,8 @@ function ReportsEngineInner() {
             let result: any[] = [];
 
             if (filters.category === 'system_users') {
-                // A branch's system users (staff). Server returns the branch's staff +
-                // owning admin when a warehouse is given, or everyone for All Branches.
+                // A branch's system users (staff). Server returns the organization's staff +
+                // owning admin when a warehouse is given, or everyone for All Organizations.
                 const params: any = { include_staff: 'true' };
                 if (effectiveBranch && effectiveBranch !== 'all') params.warehouse = effectiveBranch;
                 const res: any = await userService.getAll(params);
@@ -547,9 +547,9 @@ function ReportsEngineInner() {
                 // Income/Expense ledger:
                 //   • Personal     → the Super Admin's own entries (no branch attached)
                 //   • A branch      → that branch's ledger (server filters by ?warehouse)
-                //   • All Branches  → everything
+                //   • All Organizations  → everything
                 const ptype = filters.category === 'income' ? 'inbound' : 'outbound';
-                // "All Branches" must aggregate across every branch — the payments
+                // "All Organizations" must aggregate across every branch — the payments
                 // endpoint otherwise scopes a super admin to their OWN ledger only.
                 const payParams: any = { payment_type: ptype, ...branchAll };
                 if (filters.branch === 'all') payParams.scope = 'all';
@@ -692,14 +692,14 @@ function ReportsEngineInner() {
                         {/* Super Admin: branch scope comes first — the report follows it. */}
                         {isSuperAdmin && (
                             <div className="space-y-1.5">
-                                <label className="text-[13px] font-bold text-slate-900">Select Branch</label>
+                                <label className="text-[13px] font-bold text-slate-900">Select Organization</label>
                                 <select
                                     value={filters.branch}
                                     onChange={e => { setFilters({ ...filters, branch: e.target.value, category: '', view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); setReportResult([]); }}
                                     className={inputCls}
                                 >
-                                    <option value="">Select Branch...</option>
-                                    <option value="all">All Branches</option>
+                                    <option value="">Select Organization...</option>
+                                    <option value="all">All Organizations</option>
                                     {assignedWarehouses.map((w: any) => (
                                         <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                                     ))}
@@ -715,12 +715,12 @@ function ReportsEngineInner() {
                                 value={filters.category}
                                 onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
                                 disabled={isSuperAdmin && !filters.branch}
-                                className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"}
+                                className={inputCls + " disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"}
                             >
                                 {isNetProfitMode ? (
                                     <>
                                         <option value="">Select Scope...</option>
-                                        <option value="all">All Branches</option>
+                                        <option value="all">All Organizations</option>
                                         {assignedWarehouses.map((w: any) => (
                                             <option key={w.id} value={String(w.id)}>{w.name}{w.area_name ? ` · ${w.area_name}` : ''}</option>
                                         ))}
@@ -728,7 +728,7 @@ function ReportsEngineInner() {
                                     </>
                                 ) : (
                                     <>
-                                        <option value="">{isSuperAdmin && !filters.branch ? 'Select a branch first…' : 'Choose Category...'}</option>
+                                        <option value="">{isSuperAdmin && !filters.branch ? 'Select a organization first…' : 'Choose Category...'}</option>
                                         {(filters.branch === 'personal' ? PERSONAL_CATEGORIES : [...CATEGORIES, ...PERSONAL_CATEGORIES, SYSTEM_USER_CATEGORY]).map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                                     </>
                                 )}
@@ -742,7 +742,7 @@ function ReportsEngineInner() {
                                 value={filters.view}
                                 onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); setProfitSummary(null); setCustomerSummary(null); }}
                                 disabled={!filters.category}
-                                className={inputCls + " disabled:bg-slate-50 disabled:text-slate-400"}
+                                className={inputCls + " disabled:bg-slate-100 disabled:text-slate-400"}
                             >
                                 {filters.category === 'customers' ? (
                                     <>
@@ -794,7 +794,7 @@ function ReportsEngineInner() {
                                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                                             {([['today', 'Today'], ['week', 'This Week'], ['month', 'This Month'], ['year', 'This Year']] as const).map(([key, label]) => (
                                                 <button key={key} type="button" onClick={() => applyPreset(key)}
-                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors">
+                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-[#F59E0B]/10 hover:text-[#0E7F98] hover:border-[#F59E0B]/25 transition-colors">
                                                     {label}
                                                 </button>
                                             ))}
@@ -901,7 +901,7 @@ function ReportsEngineInner() {
                     <div className="animate-in fade-in duration-500 mb-6">
                         <Card className="overflow-hidden">
                             <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                                <span className="flex items-center justify-center w-11 h-11 rounded-xl bg-sky-50 text-sky-600 border border-sky-100 text-[16px] font-black">
+                                <span className="flex items-center justify-center w-11 h-11 rounded-xl bg-[#FAFAF8] text-[#5B5B58] border border-[#F2F2F0] text-[16px] font-black">
                                     {(customerSummary.name || 'C').slice(0, 1).toUpperCase()}
                                 </span>
                                 <div className="min-w-0">
@@ -932,15 +932,15 @@ function ReportsEngineInner() {
                     <div className="animate-in fade-in duration-500">
                         <Card className="overflow-hidden">
                             <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100"><DollarSign size={20} /></span>
+                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#B4780B] border border-[#F59E0B]/15"><DollarSign size={20} /></span>
                                 <div>
                                     <h3 className="text-[15px] font-bold text-slate-900">Net Profit</h3>
                                     <p className="text-[12px] text-slate-500">
                                         {profitSummary.personal
                                             ? 'Personal'
                                             : (effectiveBranch && effectiveBranch !== 'all'
-                                                ? (warehouses.find((w: any) => String(w.id) === String(effectiveBranch))?.name || 'Branch')
-                                                : 'All Branches')} · {filters.dateFrom} → {filters.dateTo}
+                                                ? (warehouses.find((w: any) => String(w.id) === String(effectiveBranch))?.name || 'Organization')
+                                                : 'All Organizations')} · {filters.dateFrom} → {filters.dateTo}
                                     </p>
                                 </div>
                             </div>
@@ -985,7 +985,7 @@ function ReportsEngineInner() {
                              </div>
                              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                                  <div className="text-[13px] text-slate-600 font-medium">
-                                     Total Amount: <span className="text-indigo-600 font-black tabular-nums">{formatCurrency(reportResult.reduce((s, r) => s + rowAmount(r), 0))}</span>
+                                     Total Amount: <span className="text-[#1A1A1A] font-black tabular-nums">{formatCurrency(reportResult.reduce((s, r) => s + rowAmount(r), 0))}</span>
                                  </div>
                                  <div className="text-[13px] text-slate-600 font-medium">
                                      Total Quantity: <span className="text-slate-900 font-black tabular-nums">{reportResult.reduce((s, r) => s + rowQty(r), 0)}</span>
@@ -1009,7 +1009,7 @@ function ReportsEngineInner() {
                                      {reportResult.map((row, idx) => (
                                          <tr key={idx} className="hover:bg-slate-50 transition-colors group text-[10px]">
                                              <RowCheckboxTd sel={sel} id={String(idx)} />
-                                             <td className="px-4 py-2 font-bold text-indigo-600 tabular-nums">
+                                             <td className="px-4 py-2 font-bold text-[#1A1A1A] tabular-nums">
                                                  #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
                                              </td>
                                              <td className="px-4 py-2 text-slate-500 font-medium">
@@ -1069,14 +1069,14 @@ function ReportsEngineInner() {
                                 <div>
                                     <h3 className="text-[9px] font-black text-[#bbb] uppercase mb-3 tracking-widest border-b border-[#eee] pb-1">Report Period</h3>
                                     <div className="space-y-1">
-                                        <p className="text-[10px] text-[#565959] font-bold">Timeline Coverage</p>
+                                        <p className="text-[10px] text-[#64748B] font-bold">Timeline Coverage</p>
                                         <p className="text-[12px] font-black text-black">{filters.dateFrom} TO {filters.dateTo}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <h3 className="text-[9px] font-black text-[#bbb] uppercase mb-3 tracking-widest border-b border-[#eee] pb-1">Dataset Status</h3>
                                     <div className="space-y-1">
-                                        <p className="text-[10px] text-[#565959] font-bold">Volume Found</p>
+                                        <p className="text-[10px] text-[#64748B] font-bold">Volume Found</p>
                                         <div className="inline-block px-3 py-1 bg-black text-white text-[9px] font-black uppercase tracking-widest rounded-full">
                                             {reportResult.length} RECORDS
                                         </div>

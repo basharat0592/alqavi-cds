@@ -217,7 +217,7 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                                     key={s}
                                     onClick={() => setSourceTab(s)}
                                     className={`px-3.5 py-1.5 text-[11px] font-bold uppercase rounded-md transition-all whitespace-nowrap
-                                        ${sourceTab === s ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        ${sourceTab === s ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                 >
                                     {s === 'all' ? 'All' : SOURCE_LABELS[s]}
                                 </button>
@@ -328,7 +328,7 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                             <button
                                 onClick={() => setConfirmEntry(null)}
                                 disabled={deleting === confirmEntry.id}
-                                className="w-full text-[13px] text-indigo-600 hover:text-indigo-700 hover:underline font-bold"
+                                className="w-full text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline font-bold"
                             >
                                 Cancel
                             </button>

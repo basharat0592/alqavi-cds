@@ -11,7 +11,7 @@ import { formatDateTime, exportToCSV, formatCurrency } from '@/lib/utils';
 import api from '@/lib/axios';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, TableShell, Pagination, RowActions } from '@/components/admin/ui';
 import { PaymentModal } from '@/components/admin/PaymentPanel';
 
 const STATUS_FILTERS = ['All', 'Pending', 'Accepted', 'Rejected'];
@@ -70,16 +70,16 @@ function ReturnDetailModal({ returnData, onClose, onUpdate }: { returnData: any;
         >
             <div className="space-y-6">
                 {/* Meta grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-6 border-b border-slate-100">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-6 border-b border-[#F2F2F0]">
                     {[
-                        { label: 'Source Order', value: <span className="text-indigo-600 font-bold">{returnData.order_tracking_id}</span> },
+                        { label: 'Source Order', value: <span className="text-[#1A1A1A] font-semibold">{returnData.order_tracking_id}</span> },
                         { label: 'Client Name', value: returnData.customer_name },
                         { label: 'Lifecycle', value: <Badge tone={getStatusTone(returnData.status)}>{returnData.status}</Badge> },
                         { label: 'Submission', value: formatDateTime(returnData.created_at) },
                     ].map(({ label, value }) => (
                         <div key={label}>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-                            <div className="text-[13px] font-bold text-slate-900">{value}</div>
+                            <p className="text-[10.5px] font-semibold text-[#9C9C98] uppercase tracking-wider mb-1">{label}</p>
+                            <div className="text-[13px] font-semibold text-[#1A1A1A]">{value}</div>
                         </div>
                     ))}
                 </div>
@@ -87,34 +87,34 @@ function ReturnDetailModal({ returnData, onClose, onUpdate }: { returnData: any;
                 <div className="p-5 bg-amber-50 border border-amber-100 rounded-xl flex gap-4">
                     <AlertTriangle className="text-amber-600 shrink-0" size={18} />
                     <div>
-                        <p className="text-[11px] font-bold text-slate-900 uppercase tracking-widest mb-1">Return Reason Statement</p>
-                        <p className="text-[13px] text-slate-600 leading-relaxed font-medium italic">"{returnData.reason}"</p>
+                        <p className="text-[11.5px] font-semibold text-[#1A1A1A] uppercase tracking-widest mb-1">Return Reason Statement</p>
+                        <p className="text-[13px] text-[#3A3A38] leading-relaxed font-medium italic">"{returnData.reason}"</p>
                     </div>
                 </div>
 
                 {/* Items */}
                 <div>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">Requested Items for Return</p>
-                    <div className="border border-slate-200/70 rounded-xl overflow-hidden">
-                        <table className="w-full text-left text-[13px]">
+                    <p className="text-[11.5px] font-semibold text-[#9C9C98] uppercase tracking-widest mb-3">Requested Items for Return</p>
+                    <div className="border border-[#EDEDEA] rounded-xl overflow-hidden">
+                        <table className={ui.table}>
                             <thead>
-                                <tr className="bg-slate-50/60 border-b border-slate-100">
-                                    <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Product Details</th>
-                                    <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Quantity</th>
-                                    <th className="px-4 py-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Refund Value</th>
+                                <tr>
+                                    <th className={ui.th}>Product Details</th>
+                                    <th className={ui.th + ' text-center'}>Quantity</th>
+                                    <th className={ui.th + ' text-right'}>Refund Value</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {returnData.items.map((item: any) => (
-                                    <tr key={item.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                                        <td className="px-4 py-4 font-bold text-indigo-600">{item.product_name}</td>
-                                        <td className="px-4 py-4 text-center font-bold text-slate-900 tabular-nums">{item.quantity} units</td>
-                                        <td className="px-4 py-4 text-right font-bold text-rose-600 tabular-nums">Rs. {(item.price * item.quantity).toLocaleString()}</td>
+                                    <tr key={item.id} className="border-t border-[#F2F2F0] hover:bg-[#FAFAF8] transition-colors">
+                                        <td className={ui.td}>{item.product_name}</td>
+                                        <td className={ui.td + ' text-center tabular-nums'}>{item.quantity} units</td>
+                                        <td className={ui.td + ' text-right tabular-nums'}>Rs. {(item.price * item.quantity).toLocaleString()}</td>
                                     </tr>
                                 ))}
-                                <tr className="border-t border-slate-100 bg-slate-50/60 font-bold">
-                                    <td colSpan={2} className="px-4 py-3 text-right text-slate-400 uppercase text-[10px] tracking-wider">Total Refund Amount</td>
-                                    <td className="px-4 py-3 text-right text-[16px] text-rose-600 tabular-nums">
+                                <tr className="border-t border-[#F2F2F0] bg-[#FAFAF8] font-semibold">
+                                    <td colSpan={2} className="px-4 py-3 text-right text-[#9C9C98] uppercase text-[10.5px] tracking-wider">Total Refund Amount</td>
+                                    <td className={ui.td + ' text-right tabular-nums'}>
                                         Rs. {(returnData.items?.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0) || 0).toLocaleString()}
                                     </td>
                                 </tr>
@@ -141,7 +141,8 @@ export default function SaleReturnsPage() {
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const changePageSize = (n: number) => { setItemsPerPage(n); setCurrentPage(1); };
 
     // Reset pagination to first page when search filters change
     useEffect(() => {
@@ -234,9 +235,12 @@ export default function SaleReturnsPage() {
                 />
 
                 {/* Filters */}
-                <Card className="p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-center gap-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                <TableShell
+                    className="mb-6 animate-in fade-in duration-500"
+                    filters={
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="relative w-full sm:flex-1 min-w-0 sm:min-w-[300px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
                         <input
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
@@ -249,66 +253,75 @@ export default function SaleReturnsPage() {
                             <button
                                 key={f}
                                 onClick={() => setStatusFilter(f)}
-                                className={`px-4 h-9 rounded-lg text-[12px] font-bold transition-all border whitespace-nowrap ${statusFilter === f ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
+                                className={`px-4 h-9 rounded-lg text-[11.5px] font-semibold transition-all border whitespace-nowrap ${statusFilter === f ? 'bg-[#F59E0B] border-[#F59E0B] text-white shadow-sm' : 'bg-white border-[#EDEDEA] text-[#3A3A38] hover:border-slate-300 hover:bg-[#FAFAF8]'}`}
                             >
                                 {f}
                             </button>
                         ))}
                     </div>
-                </Card>
-
-                {/* Returns Table */}
-                <Card className="overflow-hidden animate-in fade-in duration-700">
+                    </div>
+                    }
+                    footer={
+                        <Pagination
+                            page={currentPage}
+                            totalPages={totalPages}
+                            onPage={setCurrentPage}
+                            total={filtered.length}
+                            pageSize={itemsPerPage}
+                            onPageSize={changePageSize}
+                        />
+                    }
+                >
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className={ui.table}>
                             <thead>
-                                <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                <tr>
                                     <SelectAllTh sel={sel} />
-                                    <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Return ID</th>
-                                    <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Source Order</th>
-                                    <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Customer</th>
-                                    <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Refund Value</th>
-                                    <th className="px-2.5 sm:px-6 py-3 text-center whitespace-nowrap">Lifecycle</th>
-                                    <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Controls</th>
+                                    <th className={ui.th + ' whitespace-nowrap'}>Return ID</th>
+                                    <th className={ui.th + ' whitespace-nowrap'}>Source Order</th>
+                                    <th className={ui.th + ' whitespace-nowrap'}>Customer</th>
+                                    <th className={ui.th + ' text-right whitespace-nowrap'}>Refund Value</th>
+                                    <th className={ui.th + ' text-center whitespace-nowrap'}>Lifecycle</th>
+                                    <th className={ui.th + ' text-right whitespace-nowrap'}>Controls</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filtered.length === 0 ? (
                                     <tr><td colSpan={7} className="py-24 text-center">
-                                        <div className="text-slate-200 mb-4"><Package size={60} className="mx-auto" /></div>
-                                        <p className="text-[14px] text-slate-400 font-medium italic">No return requests found matching your criteria.</p>
+                                        <div className="text-[#DCDCD8] mb-4"><Package size={60} className="mx-auto" /></div>
+                                        <p className="text-[13px] text-[#9C9C98] font-medium italic">No return requests found matching your criteria.</p>
                                     </td></tr>
                                 ) : (
                                     paginated.map(r => (
-                                        <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50 transition-colors group text-[13px]">
+                                        <tr key={r.id} className="border-t border-[#F2F2F0] hover:bg-[#FAFAF8] transition-colors group text-[13px]">
                                             <RowCheckboxTd sel={sel} id={r.id} />
-                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                                <div className="text-[14px] font-bold text-indigo-600 group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
+                                            <td className={ui.td + ' whitespace-nowrap'}>
+                                                <div className="text-[13px] font-semibold text-[#119AB8] group-hover:underline cursor-pointer" onClick={() => setSelectedReturn(r)}>
                                                     #{r.return_number}
                                                 </div>
-                                                <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 font-medium">
-                                                    <Clock size={12} className="text-slate-400" /> {formatDateTime(r.created_at)}
+                                                <div className="text-[11.5px] text-[#8A8A86] mt-1 flex items-center gap-1.5 font-medium">
+                                                    <Clock size={12} className="text-[#9C9C98]" /> {formatDateTime(r.created_at)}
                                                 </div>
                                             </td>
-                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                                <div className="text-slate-900 font-bold">{r.order_tracking_id}</div>
-                                                <div className="text-[10px] text-emerald-600 font-bold uppercase mt-1 tracking-tighter hidden sm:block">Verified Order</div>
+                                            <td className={ui.td + ' whitespace-nowrap'}>
+                                                <div className="text-[#1A1A1A] font-semibold">{r.order_tracking_id}</div>
+                                                <div className="text-[10.5px] text-emerald-600 font-semibold uppercase mt-1 tracking-tighter hidden sm:block">Verified Order</div>
                                             </td>
-                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                                <div className="text-slate-900 font-bold flex items-center gap-2">
-                                                    <User size={14} className="text-slate-400" /> {r.customer_name}
+                                            <td className={ui.td + ' whitespace-nowrap'}>
+                                                <div className="text-[#1A1A1A] font-semibold flex items-center gap-2">
+                                                    <User size={14} className="text-[#9C9C98]" /> {r.customer_name}
                                                 </div>
-                                                <div className="text-[11px] text-slate-500 mt-1 font-medium italic hidden sm:block">Authenticated Account</div>
+                                                <div className="text-[11.5px] text-[#8A8A86] mt-1 font-medium italic hidden sm:block">Authenticated Account</div>
                                             </td>
-                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
-                                                <div className="text-[16px] font-bold text-rose-600 tabular-nums">
+                                            <td className={ui.td + ' text-right whitespace-nowrap'}>
+                                                <div className="text-[16px] font-semibold text-rose-600 tabular-nums">
                                                     Rs. {(r.items?.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0) || 0).toLocaleString()}
                                                 </div>
-                                                <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">
+                                                <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase mt-1">
                                                     {r.items?.length || 0} Item{r.items?.length !== 1 ? 's' : ''}
                                                 </div>
                                             </td>
-                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-center whitespace-nowrap">
+                                            <td className={ui.td + ' text-center whitespace-nowrap'}>
                                                 <div className="flex flex-col items-center gap-2">
                                                     <span className={`inline-block sm:hidden w-2.5 h-2.5 rounded-full ${
                                                         r.status?.toLowerCase() === 'pending' ? 'bg-amber-500' :
@@ -319,26 +332,20 @@ export default function SaleReturnsPage() {
                                                         <Badge tone={getStatusTone(r.status)}>{r.status}</Badge>
                                                     </span>
                                                     {r.status?.toUpperCase() === 'ACCEPTED' && (
-                                                        <span className={`text-[9px] font-black uppercase tracking-tighter ${r.refund_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                        <span className={`text-[10.5px] font-semibold uppercase tracking-tighter ${r.refund_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                             {r.refund_status === 'PAID' ? 'Refunded' : 'Refund pending'}
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
-                                                <div className="flex items-center justify-end gap-2.5 transition-opacity">
-                                                    {r.status?.toUpperCase() === 'ACCEPTED' && r.refund_status !== 'PAID' && (
-                                                        <>
-                                                            <button onClick={() => setPayReturn(r)} className="text-[12px] font-bold text-indigo-600 hover:underline">Settle</button>
-                                                            <span className="text-slate-300">|</span>
-                                                        </>
-                                                    )}
-                                                    <button onClick={() => setSelectedReturn(r)} className="text-[12px] font-bold text-slate-600 hover:underline">View</button>
-                                                    <span className="text-slate-300">|</span>
-                                                    <button onClick={() => { setSelectedReturn(r); setTimeout(() => window.print(), 350); }} className="text-[12px] font-bold text-slate-600 hover:underline">Print</button>
-                                                    <span className="text-slate-300">|</span>
-                                                    <button onClick={() => setReturnToDelete(r)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
-                                                </div>
+                                            <td className={ui.td + ' text-right whitespace-nowrap'}>
+                                                <RowActions items={[
+                                                    r.status?.toUpperCase() === 'ACCEPTED' && r.refund_status !== 'PAID'
+                                                        && { label: 'Settle', onClick: () => setPayReturn(r) },
+                                                    { label: 'View', onClick: () => setSelectedReturn(r) },
+                                                    { label: 'Print', onClick: () => { setSelectedReturn(r); setTimeout(() => window.print(), 350); } },
+                                                    { label: 'Delete', onClick: () => setReturnToDelete(r), danger: true },
+                                                ]} />
                                             </td>
                                         </tr>
                                     ))
@@ -346,37 +353,8 @@ export default function SaleReturnsPage() {
                             </tbody>
                         </table>
 
-                        {/* Pagination Footer Controls */}
-                        {totalPages > 1 && (
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-slate-50 border-t border-slate-100 text-[12px] text-slate-500 font-medium text-left">
-                                <div className="flex items-center gap-1.5 order-2 sm:order-1 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                                    Showing <span className="font-semibold text-slate-700">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
-                                    <span className="font-semibold text-slate-700">{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of{' '}
-                                    <span className="font-semibold text-slate-700">{filtered.length}</span> returns
-                                </div>
-                                <div className="flex items-center gap-2.5 order-1 sm:order-2 w-full sm:w-auto">
-                                    <button
-                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                        disabled={currentPage === 1}
-                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
-                                    >
-                                        Previous
-                                    </button>
-                                    <div className="text-[11.5px] font-extrabold text-slate-800 tracking-wider tabular-nums px-2">
-                                        {currentPage} / {totalPages}
-                                    </div>
-                                    <button
-                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                        disabled={currentPage === totalPages}
-                                        className="flex-1 sm:flex-initial h-8 px-4 border border-slate-200 bg-white rounded-lg hover:border-slate-350 hover:bg-slate-50 active:scale-95 disabled:opacity-40 transition-all font-bold uppercase tracking-wider text-[10px] text-slate-600 disabled:pointer-events-none select-none flex items-center justify-center gap-1.5"
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
-                </Card>
+                </TableShell>
 
                 <BulkBar
                     sel={sel}
@@ -404,8 +382,8 @@ export default function SaleReturnsPage() {
                 <div className="mt-8 bg-amber-50 border border-amber-100 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">
                     <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={18} />
                     <div>
-                        <p className="text-[13px] font-bold text-slate-900">Stock Reconciliation Warning</p>
-                        <p className="text-[12px] text-slate-600 leading-relaxed">Approving a return will automatically restock the items into the active inventory. Ensure physical items have been received and inspected for damage before 'Accepting' the request.</p>
+                        <p className="text-[13px] font-semibold text-[#1A1A1A]">Stock Reconciliation Warning</p>
+                        <p className="text-[11.5px] text-[#3A3A38] leading-relaxed">Approving a return will automatically restock the items into the active inventory. Ensure physical items have been received and inspected for damage before 'Accepting' the request.</p>
                     </div>
                 </div>
             </div>
@@ -449,8 +427,8 @@ export default function SaleReturnsPage() {
                             </div>
                         </div>
                         <div className="text-center">
-                            <h3 className="text-[15px] font-bold text-slate-900 leading-snug">Permanently delete this record?</h3>
-                            <p className="text-[12px] text-slate-600 mt-2 leading-relaxed">
+                            <h3 className="text-[15px] font-semibold text-[#1A1A1A] leading-snug">Permanently delete this record?</h3>
+                            <p className="text-[11.5px] text-[#3A3A38] mt-2 leading-relaxed">
                                 You are about to delete Return Sequence <strong>#{returnToDelete.return_number}</strong>. This action is irreversible.
                             </p>
                         </div>
