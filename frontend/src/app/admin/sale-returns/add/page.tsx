@@ -153,7 +153,7 @@ export default function AddSaleReturnPage() {
                             <span>
                                 {loading ? 'Loading recent sales...' : order ? (
                                     <span className="flex items-center gap-2">
-                                        <span className="text-[#B4780B] font-extrabold">#{order.order_number}</span>
+                                        <span className="text-[#1A1A1A] font-extrabold">#{order.order_number}</span>
                                         <span className="text-slate-300">|</span>
                                         <span className="text-slate-600 font-semibold">{order.customer_display_name || order.customer_name || 'Walk-in'}</span>
                                         <span className="text-slate-300">|</span>
@@ -192,7 +192,7 @@ export default function AddSaleReturnPage() {
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-[13px] font-black text-slate-900">#{o.order_number}</span>
                                                             <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase tracking-wide border ${
-                                                                channelOf(o) === 'Online' ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-purple-50 text-purple-700 border-purple-200'
+                                                                channelOf(o) === 'Online' ? 'bg-[#FAFAF8] text-[#3A3A38] border-[#E9E9E6]' : 'bg-[#FAFAF8] text-[#3A3A38] border-[#E9E9E6]'
                                                             }`}>
                                                                 {channelOf(o)}
                                                             </span>
@@ -263,7 +263,7 @@ export default function AddSaleReturnPage() {
                                             <tr key={it.id}>
                                                 <td className="px-4 py-2.5">
                                                     <p className="font-semibold text-slate-800">{it.product_name}</p>
-                                                    {(it.weight || it.size) && <p className="text-[10px] text-[#B4780B] font-bold uppercase">{it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}</p>}
+                                                    {(it.weight || it.size) && <p className="text-[10px] text-[#1A1A1A] font-bold uppercase">{it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}</p>}
                                                 </td>
                                                 <td className="px-3 py-2.5 text-center font-bold text-slate-500">{it.quantity}</td>
                                                 <td className="px-3 py-2.5 text-right text-slate-600 tabular-nums">{money(it.price)}</td>

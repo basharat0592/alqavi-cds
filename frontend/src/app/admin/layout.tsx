@@ -10,7 +10,7 @@ import {
     Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Building2,
-    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, PanelLeft, Maximize, Minimize, MapPin
+    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, MapPin
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
@@ -266,37 +266,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         } catch { /* private mode / storage disabled */ }
     }, []);
 
-    /* Fullscreen â€” hands the whole viewport to the admin, which matters on the
-       wide data grids. Vendor-prefixed calls are kept for older Safari/WebKit. */
-    const [isFullscreen, setIsFullscreen] = useState(false);
-
-    useEffect(() => {
-        const sync = () => setIsFullscreen(Boolean(
-            document.fullscreenElement || (document as any).webkitFullscreenElement
-        ));
-        sync();
-        document.addEventListener('fullscreenchange', sync);
-        document.addEventListener('webkitfullscreenchange', sync);
-        return () => {
-            document.removeEventListener('fullscreenchange', sync);
-            document.removeEventListener('webkitfullscreenchange', sync);
-        };
-    }, []);
-
-    const toggleFullscreen = async () => {
-        try {
-            const el = document.documentElement as any;
-            const doc = document as any;
-            if (document.fullscreenElement || doc.webkitFullscreenElement) {
-                await (document.exitFullscreen?.() ?? doc.webkitExitFullscreen?.());
-            } else {
-                await (el.requestFullscreen?.() ?? el.webkitRequestFullscreen?.());
-            }
-        } catch {
-            // Browsers reject this unless it comes from a user gesture, and some
-            // block it outright â€” leave the UI as-is rather than surfacing noise.
-        }
-    };
 
     const toggleSidebar = () => {
         setSidebarCollapsed(prev => {
@@ -392,8 +361,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     href: isOrder ? '/admin/sales' : isUser ? '/admin/users' : '/admin/notifications',
                     read: log.is_read || false,
                     icon: isOrder ? ShoppingBag : isUser ? Users : isSecurity ? Shield : Bell,
-                    color: isOrder ? 'text-blue-600' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-slate-600',
-                    bg: isOrder ? 'bg-blue-50' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-slate-50'
+                    color: isOrder ? 'text-[#5B5B58]' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-slate-600',
+                    bg: isOrder ? 'bg-[#FAFAF8]' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-slate-50'
                 };
             }));
         } catch { } finally { setActLoading(false); }
@@ -447,9 +416,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     return (
         <AuthGuard allowedRoles={['admin', 'staff']}>
-            <div className={cn("h-screen print:h-auto bg-[#F8F9FA] dark:bg-[#232F3E] flex flex-row font-sans overflow-hidden print:overflow-visible text-slate-900 dark:text-slate-100", theme)}>
+            <div className={cn("h-screen print:h-auto bg-[#F7F7F5] font-sans overflow-hidden print:overflow-visible print:bg-white text-[#1A1A1A]", theme)}>
+              {/* Full-bleed: the console fills the viewport rather than floating
+                  on a canvas, so there is no gutter, radius or drop shadow. */}
+              <div className="h-full w-full flex flex-row overflow-hidden bg-[#F7F7F5] print:overflow-visible">
 
-                {/* â•â•â• SIDEBAR â€” desktop only; mobile navigates via the bottom tab bar â•â•â• */}
+                {/* ═══ SIDEBAR — desktop only; mobile navigates via the bottom tab bar ═══ */}
                 <div className="hidden md:block h-full shrink-0 print:hidden">
                     <AdminSidebar isCollapsed={sidebarCollapsed} onToggle={toggleSidebar} />
                 </div>
@@ -480,27 +452,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                     {/* â•â•â• NAVBAR (takes remaining width) â•â•â• */}
                     {isDashboardRoute && (
-                    <div className="hidden md:flex h-[66px] w-full flex-shrink-0 bg-white/90 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/70 dark:border-white/5 px-6 items-center justify-between gap-6 z-[50] shadow-[0_1px_0_rgba(15,23,42,0.03),0_6px_20px_-12px_rgba(15,23,42,0.15)] sticky top-0 transition-colors duration-300 print:hidden">
+                    <div className="hidden md:flex h-[68px] w-full flex-shrink-0 bg-[#F7F7F5]/90 backdrop-blur-xl border-b border-[#EAEAE6] px-6 items-center justify-between gap-6 z-[50] sticky top-0 transition-colors duration-300 print:hidden">
 
-                        <div className="flex items-center gap-4 flex-1">
-                            {/* The sidebar carries the brand lockup now, so the navbar just
-                                gets the collapse control in its place. */}
-                            <button
-                                onClick={toggleSidebar}
-                                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                                className="w-9 h-9 shrink-0 rounded-xl border border-slate-200/80 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-colors"
-                            >
-                                <PanelLeft size={17} className={cn('transition-transform duration-300', sidebarCollapsed && 'rotate-180')} />
-                            </button>
+                        {/* Left: the page name, set like every other page's title. */}
+                        <h1 className="text-[26px] leading-tight tracking-[-0.03em] font-semibold text-[#1A1A1A] shrink-0">Dashboard</h1>
 
-                            <span className="hidden lg:block h-7 w-px bg-slate-200/80 shrink-0" />
-
+                        {/* Right: search, notifications, profile — nothing else. */}
+                        <div className="flex items-center gap-3">
                             {/* Search Bar */}
-                            <div className="relative flex-1 max-w-2xl" ref={searchRef}>
+                            <div className="relative w-[280px] lg:w-[360px]" ref={searchRef}>
                                 <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
                                     className="group flex items-center gap-2.5 h-10 px-4 bg-slate-100/70 border border-slate-200/80 rounded-xl transition-all hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-[#F59E0B] focus-within:ring-4 focus-within:ring-[#F59E0B]/10 focus-within:shadow-sm">
-                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#92600A] shrink-0 transition-colors" />
+                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#0E7F98] shrink-0 transition-colors" />
                                     <input type="text" placeholder="Search pages, products, orders..."
                                         className="flex-1 h-full bg-transparent text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 font-medium"
                                         value={searchQuery}
@@ -535,7 +498,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                         className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left transition-colors group"
                                                     >
                                                         <div className="flex items-center gap-2.5 min-w-0">
-                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-[#F59E0B]/10 group-hover:text-[#92600A] flex items-center justify-center transition-colors shrink-0">
+                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-[#F59E0B]/10 group-hover:text-[#0E7F98] flex items-center justify-center transition-colors shrink-0">
                                                                 <FileText size={13} />
                                                             </div>
                                                             <div className="min-w-0">
@@ -548,7 +511,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                                 <CornerDownLeft size={10} /> Enter
                                                             </span>
                                                         ) : (
-                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-[#92600A] transition-colors shrink-0" />
+                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-[#0E7F98] transition-colors shrink-0" />
                                                         )}
                                                     </button>
                                                 ))}
@@ -561,24 +524,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     </div>
                                 )}
                             </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-3">
-                            <SessionTimer className="hidden lg:flex" onTimeout={handleSessionTimeout} />
-                            {/* Dues pill removed from the navbar for all admins â€” it lives on System Alerts. */}
-                            <button
-                                onClick={toggleFullscreen}
-                                title={isFullscreen ? 'Exit full screen (Esc)' : 'Full screen'}
-                                aria-label={isFullscreen ? 'Exit full screen' : 'Enter full screen'}
-                                aria-pressed={isFullscreen}
-                                className={`hidden md:flex p-2.5 rounded-xl transition-all border ${isFullscreen
-                                    ? 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#B4780B]'
-                                    : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white border-transparent'}`}
-                            >
-                                {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-                            </button>
-                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
+                            {/* Kept mounted but hidden: this component owns the 24-hour
+                                auto sign-out, which must keep running unseen. */}
+                            <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
                             <div className="relative" ref={notifRef}>
                                 <button onClick={() => setNotifOpen(!notifOpen)}
                                     className={`p-2.5 rounded-xl transition-all border ${notifOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20 text-slate-800 dark:text-white' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white border-transparent'}`}>
@@ -591,7 +539,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 </button>
                                 {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />}
                             </div>
-                            <div className="h-8 w-[1px] bg-slate-200 dark:bg-white/10 mx-1" />
                             <div className="relative" ref={profileRef}>
                                 <button onClick={() => setProfileOpen(!profileOpen)}
                                     className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all border ${profileOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'}`}>
@@ -605,7 +552,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <p className="text-slate-800 dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
                                             {adminName} <ChevronDown size={12} className="text-slate-400 dark:text-zinc-500" />
                                         </p>
-                                        <span className="inline-block text-[9px] font-extrabold text-[#B4780B] bg-[#F59E0B]/10 dark:text-[#FBBF24] dark:bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/20 dark:border-[#F59E0B]/10 mt-1 uppercase tracking-wider">
+                                        <span className="inline-block text-[9px] font-extrabold text-[#B4780B] bg-[#F59E0B]/10 dark:text-[#1A1A1A] dark:bg-[#1A1A1A]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/20 dark:border-[#1A1A1A]/10 mt-1 uppercase tracking-wider">
                                             {adminRole}
                                         </span>
                                     </div>
@@ -617,7 +564,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     )}
                     {/* â•â•â• MAIN CONTENT â•â•â• */}
                     <main className={cn(
-                        "flex-1 overflow-y-auto px-3 pt-2 pb-3 md:px-4 md:pt-3 md:pb-4 lg:px-8 lg:pt-4 lg:pb-8 relative bg-[#F8F9FA] dark:bg-[#111c31] print:p-0 print:m-0 print:bg-white",
+                        "flex-1 overflow-y-auto px-3 pt-2 pb-3 md:px-4 md:pt-3 md:pb-4 lg:px-8 lg:pt-4 lg:pb-8 relative bg-transparent print:p-0 print:m-0 print:bg-white",
                         isSuperAdminUser && "pb-24 lg:pb-8"
                     )}>
                         {isNavigating && <PageLoader />}
@@ -630,6 +577,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {isSuperAdminUser
                     ? <SuperAdminBottomNav pathname={pathname} />
                     : <BranchAdminBottomNav pathname={pathname} />}
+              </div>
             </div>
         </AuthGuard>
 

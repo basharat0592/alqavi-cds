@@ -109,7 +109,7 @@ export default function WebsiteSettingsPage() {
     if (loading) return (
         <div className="flex items-center justify-center min-h-[70vh]">
             <div className="text-center space-y-4">
-                <Loader2 className="w-12 h-12 text-[#B4780B] animate-spin mx-auto" strokeWidth={1} />
+                <Loader2 className="w-12 h-12 text-[#1A1A1A] animate-spin mx-auto" strokeWidth={1} />
                 <p className="text-slate-500 font-medium text-[13px] animate-pulse">Loading CMS Console...</p>
             </div>
         </div>
@@ -150,7 +150,7 @@ export default function WebsiteSettingsPage() {
                 <div className="flex gap-4 md:gap-8 overflow-x-auto scrollbar-hide border-b border-slate-200 mb-6 pb-0.5">
                     {TABS.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 pb-3.5 text-[14px] font-semibold transition-all relative whitespace-nowrap pt-2 ${activeTab === tab.id ? 'text-[#B4780B]' : 'text-slate-500 hover:text-slate-900'
+                            className={`flex items-center gap-2 pb-3.5 text-[14px] font-semibold transition-all relative whitespace-nowrap pt-2 ${activeTab === tab.id ? 'text-[#1A1A1A]' : 'text-slate-500 hover:text-slate-900'
                                 }`}>
                             <tab.icon size={16} />
                             <span>{tab.label}</span>

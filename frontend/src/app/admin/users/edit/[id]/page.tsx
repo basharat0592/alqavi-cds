@@ -18,7 +18,7 @@ import { authService } from '@/lib/auth';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
     <div className="flex items-center gap-2 mb-4">
-        <Icon className="h-4 w-4 text-[#B4780B]" />
+        <Icon className="h-4 w-4 text-[#1A1A1A]" />
         <span className="text-xs font-bold text-slate-900 uppercase tracking-tight">{title}</span>
     </div>
 );
@@ -454,7 +454,7 @@ export default function EditUserPage() {
                                     <div className="flex gap-2 pb-2.5">
                                         <button type="button"
                                             onClick={() => setSelectedWarehouses(prev => [...new Set([...prev, ...branchWarehouses.map(w => String(w.id))])])}
-                                            className="text-[11px] font-semibold text-[#B4780B] hover:underline">
+                                            className="text-[11px] font-semibold text-[#119AB8] hover:underline">
                                             Select all shown
                                         </button>
                                         <span className="text-slate-300">|</span>
@@ -497,7 +497,7 @@ export default function EditUserPage() {
                                 </p>
                             )}
                             {selectedWarehouses.length > 0 && (
-                                <p className="text-[11px] text-[#B4780B] font-medium">
+                                <p className="text-[11px] text-[#1A1A1A] font-medium">
                                     {selectedWarehouses.length} branch{selectedWarehouses.length !== 1 ? 'es' : ''} selected
                                 </p>
                             )}
@@ -519,8 +519,8 @@ export default function EditUserPage() {
 
                             {isFullAccess ? (
                                 <div className="flex items-center gap-2 px-4 py-3 bg-[#F59E0B]/10 rounded-lg border border-[#F59E0B]/15">
-                                    <ShieldCheck className="w-4 h-4 text-[#B4780B] flex-shrink-0" />
-                                    <p className="text-xs text-[#B4780B] font-medium">
+                                    <ShieldCheck className="w-4 h-4 text-[#1A1A1A] flex-shrink-0" />
+                                    <p className="text-xs text-[#1A1A1A] font-medium">
                                         This role has full access to all pages — no restrictions apply.
                                     </p>
                                 </div>
@@ -530,7 +530,7 @@ export default function EditUserPage() {
                                         <p className="text-xs text-slate-500">Select which pages this user can access after login.</p>
                                         <div className="flex gap-2">
                                             <button type="button" onClick={selectAll}
-                                                className="text-[11px] font-semibold text-[#B4780B] hover:underline">
+                                                className="text-[11px] font-semibold text-[#119AB8] hover:underline">
                                                 Select All
                                             </button>
                                             <span className="text-slate-300">|</span>
@@ -593,7 +593,7 @@ export default function EditUserPage() {
                                     </div>
 
                                     {selectedPages.length > 0 && (
-                                        <p className="text-[11px] text-[#B4780B] font-medium">
+                                        <p className="text-[11px] text-[#1A1A1A] font-medium">
                                             {selectedPages.length} page{selectedPages.length !== 1 ? 's' : ''} selected
                                         </p>
                                     )}
@@ -625,7 +625,7 @@ export default function EditUserPage() {
                                 </div>
                             )}
                             {selectedAreas.length > 0 && (
-                                <p className="text-[11px] text-[#B4780B] font-medium">
+                                <p className="text-[11px] text-[#1A1A1A] font-medium">
                                     {selectedAreas.length} area{selectedAreas.length !== 1 ? 's' : ''} selected
                                 </p>
                             )}
@@ -649,7 +649,7 @@ export default function EditUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#92600A]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
                                     >
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
@@ -668,7 +668,7 @@ export default function EditUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#92600A]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
                                     >
                                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="w-4 h-4" />}
                                     </button>

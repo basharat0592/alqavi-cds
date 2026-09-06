@@ -26,8 +26,8 @@ type Group = { label: string; items: Item[] };
 /** Standalone accent buttons shown outside the group dropdowns (right side of the
  *  desktop bar; separate pills on the mobile dashboard). */
 export const STANDALONE_ITEMS: { name: string; href: string; icon: any; color: string; accent: string; accentActive: string }[] = [
-    { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#6B46C1', accent: 'bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100', accentActive: 'bg-[#6B46C1] text-white border-[#6B46C1] shadow-sm shadow-violet-700/20' },
-    { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#553C9A', accent: 'bg-purple-50 text-purple-700 border-purple-100 hover:bg-purple-100', accentActive: 'bg-[#553C9A] text-white border-[#553C9A] shadow-sm shadow-purple-700/20' },
+    { name: 'Reports', href: '/admin/reports', icon: BarChart3, color: '#6B46C1', accent: 'bg-[#FAFAF8] text-[#3A3A38] border-[#F2F2F0] hover:bg-[#F2F2F0]', accentActive: 'bg-[#6B46C1] text-white border-[#6B46C1] shadow-sm shadow-[#3A3A38]/20' },
+    { name: 'Payments', href: '/admin/payments', icon: CreditCard, color: '#553C9A', accent: 'bg-[#FAFAF8] text-[#3A3A38] border-[#F2F2F0] hover:bg-[#F2F2F0]', accentActive: 'bg-[#553C9A] text-white border-[#553C9A] shadow-sm shadow-[#3A3A38]/20' },
 ];
 
 export const NAV_GROUPS: Group[] = [
@@ -148,7 +148,7 @@ export function DesktopNavMenu() {
             <Link
                 href="/admin/dashboard"
                 className={cn('flex items-center gap-1.5 h-9 px-3.5 rounded-lg text-[13px] font-bold transition-all',
-                    pathname === '/admin/dashboard' ? 'bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-inset ring-[#F59E0B]/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}
+                    pathname === '/admin/dashboard' ? 'bg-[#1A1A1A]/10 text-[#1A1A1A] ring-1 ring-inset ring-[#1A1A1A]/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}
             >
                 <LayoutDashboard size={15} /> Dashboard
             </Link>
@@ -161,7 +161,7 @@ export function DesktopNavMenu() {
                         type="button"
                         onClick={() => setOpen((o) => (o === g.label ? null : g.label))}
                         className={cn('flex items-center gap-1 h-9 px-3.5 rounded-lg text-[13px] font-bold transition-all',
-                            groupActive(g) || open === g.label ? 'bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-inset ring-[#F59E0B]/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}
+                            groupActive(g) || open === g.label ? 'bg-[#1A1A1A]/10 text-[#1A1A1A] ring-1 ring-inset ring-[#1A1A1A]/15' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}
                     >
                         {g.label}
                         <ChevronDown size={13} className={cn('transition-transform duration-200', open === g.label && 'rotate-180')} />
@@ -176,11 +176,11 @@ export function DesktopNavMenu() {
                                 const active = isActive(it.href);
                                 const cls = cn('flex w-full items-center gap-2.5 px-3.5 py-2 text-[13px] font-medium transition-colors text-left',
                                     it.action === 'logout' ? 'text-rose-600 hover:bg-rose-50'
-                                        : active ? 'bg-[#F59E0B]/10 text-[#B4780B]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900');
+                                        : active ? 'bg-[#1A1A1A]/10 text-[#1A1A1A]' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900');
                                 const iconBox = (
                                     <div className={cn('w-7 h-7 rounded-md flex items-center justify-center shrink-0',
                                         it.action === 'logout' ? 'bg-rose-50 text-rose-500'
-                                            : active ? 'bg-[#F59E0B]/15 text-[#B4780B]' : 'bg-slate-50 text-slate-400')}>
+                                            : active ? 'bg-[#1A1A1A]/15 text-[#1A1A1A]' : 'bg-slate-50 text-slate-400')}>
                                         <Icon size={14} />
                                     </div>
                                 );
@@ -236,14 +236,14 @@ export function MobileNavMenu({ open, onClose }: { open: boolean; onClose: () =>
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
             <div className="relative z-10 h-full w-[280px] max-w-[82vw] bg-white shadow-2xl overflow-y-auto animate-in slide-in-from-left duration-200">
                 <div className="flex items-center justify-between px-4 h-14 border-b border-slate-100 sticky top-0 bg-white">
-                    <span className="font-extrabold text-[15px] tracking-wide text-slate-800">AL-QAVI <span className="text-[#B4780B]">HUB</span></span>
+                    <span className="font-extrabold text-[15px] tracking-wide text-slate-800">AL-QAVI <span className="text-[#1A1A1A]">HUB</span></span>
                     <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500"><X size={18} /></button>
                 </div>
 
                 <div className="py-2">
                     <Link href="/admin/dashboard" onClick={onClose}
                         className={cn('flex items-center gap-2.5 px-4 py-2.5 text-[13.5px] font-bold',
-                            pathname === '/admin/dashboard' ? 'bg-[#F59E0B]/10 text-[#B4780B]' : 'text-slate-700')}>
+                            pathname === '/admin/dashboard' ? 'bg-[#1A1A1A]/10 text-[#1A1A1A]' : 'text-slate-700')}>
                         <LayoutDashboard size={16} /> Dashboard
                     </Link>
                     {groups.map((g) => (
@@ -272,8 +272,8 @@ export function MobileNavMenu({ open, onClose }: { open: boolean; onClose: () =>
                                         return (
                                             <Link key={it.href} href={it.href} onClick={onClose}
                                                 className={cn('flex items-center gap-2.5 pl-6 pr-4 py-2 text-[13px] font-medium',
-                                                    active ? 'bg-[#F59E0B]/10 text-[#B4780B]' : 'text-slate-600 hover:bg-slate-50')}>
-                                                <Icon size={15} className={active ? 'text-[#B4780B]' : 'text-slate-400'} />
+                                                    active ? 'bg-[#1A1A1A]/10 text-[#1A1A1A]' : 'text-slate-600 hover:bg-slate-50')}>
+                                                <Icon size={15} className={active ? 'text-[#1A1A1A]' : 'text-slate-400'} />
                                                 {it.name}
                                             </Link>
                                         );

@@ -112,9 +112,9 @@ export default function AlertsPage() {
                     message: `${u.first_name || u.username} verified as ${u.role_name || u.role || 'Member'}`,
                     time: new Date(u.date_joined || u.created_at || Date.now()),
                     icon: UserPlus,
-                    color: 'text-blue-600',
-                    bg: 'bg-blue-50',
-                    border: 'border-blue-200'
+                    color: 'text-[#5B5B58]',
+                    bg: 'bg-[#FAFAF8]',
+                    border: 'border-[#E9E9E6]'
                 });
             });
 
@@ -127,7 +127,7 @@ export default function AlertsPage() {
                     message: `Purchase Order #${p.purchase_number || p.id} created for RS ${parseFloat(p.total_amount || 0).toLocaleString()}`,
                     time: new Date(p.created_at || Date.now()),
                     icon: ShoppingBag,
-                    color: 'text-[#B4780B]',
+                    color: 'text-[#1A1A1A]',
                     bg: 'bg-[#F59E0B]/10',
                     border: 'border-[#F59E0B]/25'
                 });
@@ -192,7 +192,7 @@ export default function AlertsPage() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                             <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                <Wallet className="h-4 w-4 text-[#B4780B]" /> Payments Due
+                                <Wallet className="h-4 w-4 text-[#1A1A1A]" /> Payments Due
                             </h2>
                             <p className="text-[12px] text-slate-500 mt-0.5">Outstanding settlements across sales, purchases and refunds</p>
                         </div>
@@ -238,7 +238,7 @@ export default function AlertsPage() {
                                                 <p className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Remaining</p>
                                                 <p className={`text-[15px] font-bold tabular-nums ${tone.text}`}>{money(d.remaining)}</p>
                                             </div>
-                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] group-hover:gap-1.5 transition-all">
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1A1A1A] group-hover:gap-1.5 transition-all">
                                                 Settle <ArrowRight className="h-3 w-3" />
                                             </span>
                                         </div>
@@ -254,7 +254,7 @@ export default function AlertsPage() {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
                             <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                <Activity className="h-4 w-4 text-[#B4780B]" /> Low Stock Alerts
+                                <Activity className="h-4 w-4 text-[#1A1A1A]" /> Low Stock Alerts
                             </h2>
                             <p className="text-[12px] text-slate-500 mt-0.5">Products running low or out of stock</p>
                         </div>
@@ -290,7 +290,7 @@ export default function AlertsPage() {
                                         </div>
                                         <div>
                                             <Link href={a.href || '#'} className="block group">
-                                                <h3 className="text-[13px] font-bold text-[#B4780B] group-hover:text-[#92600A] group-hover:underline truncate">{a.product}</h3>
+                                                <h3 className="text-[13px] font-bold text-[#119AB8] group-hover:text-[#0E7F98] group-hover:underline truncate">{a.product}</h3>
                                             </Link>
                                             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1 ${a.color}`}>
                                                 <AlertTriangle className="h-3.5 w-3.5" /> {a.type.replace(/_/g, ' ')}
@@ -318,7 +318,7 @@ export default function AlertsPage() {
                 <section className="space-y-4">
                     <div>
                         <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                            <ClipboardList className="h-4 w-4 text-[#B4780B]" /> Recent Activity Log
+                            <ClipboardList className="h-4 w-4 text-[#1A1A1A]" /> Recent Activity Log
                         </h2>
                         <p className="text-[12px] text-slate-500 mt-0.5">Recent actions on orders, users, and purchases</p>
                     </div>
@@ -338,7 +338,7 @@ export default function AlertsPage() {
                                                 <h3 className="text-[13px] font-bold text-slate-900 tracking-tight">{act.title}</h3>
                                             </div>
                                             <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 tracking-wider tabular-nums whitespace-nowrap">
-                                                <Clock size={11} className="text-[#B4780B]" /> {formatDateTime(act.time.toISOString())}
+                                                <Clock size={11} className="text-[#1A1A1A]" /> {formatDateTime(act.time.toISOString())}
                                             </div>
                                         </div>
                                         <p className="text-[12px] text-slate-600 font-medium leading-relaxed">{act.message}</p>

@@ -237,7 +237,7 @@ export default function SaleDetailView({
                                             <td className="px-6 py-4">
                                                 <p className="font-semibold text-slate-900">{it.product_name || 'Unnamed Product'}</p>
                                                 {(it.weight || it.size) && (
-                                                    <p className="text-[10px] text-[#B4780B] font-bold uppercase mt-0.5 tracking-wide">
+                                                    <p className="text-[10px] text-[#1A1A1A] font-bold uppercase mt-0.5 tracking-wide">
                                                         {it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}
                                                     </p>
                                                 )}
@@ -287,7 +287,7 @@ export default function SaleDetailView({
                                     )}
                                     <div className="flex justify-between items-center text-[14.5px] pt-2 border-t border-slate-200/60 font-black text-slate-900">
                                         <span>Grand Total</span>
-                                        <span className="text-[#B4780B] tabular-nums">{formatCurrency(total)}</span>
+                                        <span className="text-[#1A1A1A] tabular-nums">{formatCurrency(total)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-emerald-600 font-semibold pt-1">
                                         <span>Amount Paid</span>
@@ -382,7 +382,7 @@ export default function SaleDetailView({
                                                 </td>
                                                 <td className="px-6 py-3.5 text-right space-x-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                                     {pm.slip_url && (
-                                                        <a href={pm.slip_url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-[#92600A] inline-block align-middle" title="View Slip">
+                                                        <a href={pm.slip_url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-[#0E7F98] inline-block align-middle" title="View Slip">
                                                             <Paperclip size={14} />
                                                         </a>
                                                     )}
@@ -447,7 +447,7 @@ export default function SaleDetailView({
                                             <div className="text-[12px] text-slate-600 space-y-1">
                                                 {order.proof_at && <p>Captured: {formatDate(order.proof_at)}</p>}
                                                 {order.proof_lat && order.proof_lng ? (
-                                                    <a href={`https://maps.google.com/?q=${order.proof_lat},${order.proof_lng}`} target="_blank" rel="noreferrer" className="text-sky-600 hover:underline font-semibold inline-flex items-center gap-1"><MapPin size={12} /> {order.proof_lat}, {order.proof_lng}</a>
+                                                    <a href={`https://maps.google.com/?q=${order.proof_lat},${order.proof_lng}`} target="_blank" rel="noreferrer" className="text-[#5B5B58] hover:underline font-semibold inline-flex items-center gap-1"><MapPin size={12} /> {order.proof_lat}, {order.proof_lng}</a>
                                                 ) : <p className="text-slate-400">Location unavailable</p>}
                                             </div>
                                         </div>
@@ -647,7 +647,7 @@ export default function SaleDetailView({
                                             onClick={() => window.open(selectedInstallment.slip_url, '_blank')}
                                         />
                                     )}
-                                    <a href={selectedInstallment.slip_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#B4780B] hover:text-[#92600A] hover:underline">
+                                    <a href={selectedInstallment.slip_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#119AB8] hover:text-[#0E7F98] hover:underline">
                                         <ExternalLink size={13} /> View full receipt document
                                     </a>
                                 </div>

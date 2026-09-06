@@ -179,7 +179,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                     }
                 }}
             />
-            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#B4780B]' : ''}`} />
+            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#1A1A1A]' : ''}`} />
 
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
@@ -281,7 +281,7 @@ const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => 
                     }
                 }}
             />
-            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#B4780B]' : ''}`} />
+            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#1A1A1A]' : ''}`} />
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
@@ -1142,7 +1142,7 @@ export default function AddPurchasePage() {
                         </Cell>
                         <Cell>
                             <input
-                                className={cellNum + ' text-[#B4780B]' + err(bad.quantity)}
+                                className={cellNum + ' text-[#1A1A1A]' + err(bad.quantity)}
                                 type="number" min="1"
                                 value={item.quantity || ''}
                                 onChange={e => updateItem(i, 'quantity', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
@@ -1252,7 +1252,7 @@ export default function AddPurchasePage() {
                                     </label>
                                 </>
                             )}
-                            <span className="ml-auto text-[12.5px] font-bold text-[#B4780B] tabular-nums">
+                            <span className="ml-auto text-[12.5px] font-bold text-[#1A1A1A] tabular-nums">
                                 {formatCurrency(calculateSubtotal(item))}
                             </span>
                         </div>
@@ -1288,7 +1288,7 @@ export default function AddPurchasePage() {
                     <div className="px-2 py-1.5 border-r border-slate-200/80">
                         <button
                             onClick={addItem}
-                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#B4780B] hover:text-[#92600A] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
+                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#B4780B] hover:text-[#0E7F98] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
                         >
                             <Plus size={13} /> Add row
                         </button>
@@ -1303,7 +1303,7 @@ export default function AddPurchasePage() {
                     <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonus || ''}</div>
                     <div className="border-r border-slate-200/80" />
                     <div className="border-r border-slate-200/80" />
-                    <div className="px-2 py-2 text-[12.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
+                    <div className="px-2 py-2 text-[12.5px] font-black text-[#1A1A1A] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
                 </div>
             </div>
         </>
@@ -1449,7 +1449,7 @@ export default function AddPurchasePage() {
                     <button
                         type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="text-[12px] font-bold text-[#B4780B] hover:text-[#F59E0B] flex items-center gap-1 transition-colors"
+                        className="text-[12px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] flex items-center gap-1 transition-colors"
                     >
                         {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Freight, Tax, Extra Discount, Balance Date)'}
                     </button>
@@ -1531,7 +1531,7 @@ export default function AddPurchasePage() {
                             onClick={() => router.push('/admin/purchases')}
                             title="Back to Purchases"
                             aria-label="Back to Purchases"
-                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#B4780B] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#0E7F98] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
                         >
                             <ArrowLeft size={15} />
                         </button>
@@ -1549,12 +1549,12 @@ export default function AddPurchasePage() {
 
                 {draftOffer && (
                     <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-4 py-3">
-                        <AlertTriangle size={16} className="text-[#B4780B] shrink-0" />
+                        <AlertTriangle size={16} className="text-[#1A1A1A] shrink-0" />
                         <span className="text-[12.5px] font-semibold text-slate-700">
                             An unsaved purchase from {draftOffer.savedAtLabel} was recovered.
                         </span>
                         <div className="ml-auto flex items-center gap-2">
-                            <button onClick={restoreDraft} className="px-3 py-1.5 rounded-lg bg-[#F59E0B] text-white text-[12px] font-bold hover:bg-[#B4780B] transition-colors">Restore</button>
+                            <button onClick={restoreDraft} className="px-3 py-1.5 rounded-lg bg-[#F59E0B] text-white text-[12px] font-bold hover:bg-[#D97706] transition-colors">Restore</button>
                             <button onClick={discardDraft} className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-colors">Discard</button>
                         </div>
                     </div>
@@ -1577,7 +1577,7 @@ export default function AddPurchasePage() {
                             <div className="flex-1 min-w-0 w-full">
                                 <Card className="overflow-hidden">
                                     <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent flex items-center justify-between gap-3 flex-wrap">
-                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-[#B4780B]" /> Previous Purchase History</h3>
+                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-[#1A1A1A]" /> Previous Purchase History</h3>
                                         <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5" loading={histLoading} onClick={loadPrevHistory}>Show Previous History</Btn>
                                     </div>
                                     <div className="p-4 sm:p-5">
@@ -1659,7 +1659,7 @@ export default function AddPurchasePage() {
                                     <div className="h-px bg-slate-100 my-1" />
                                     <div className="flex justify-between items-center rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/35 px-4 py-3">
                                         <span className="text-slate-700 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
-                                        <span className="text-[21px] font-black text-[#B4780B] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
+                                        <span className="text-[21px] font-black text-[#1A1A1A] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
                                     </div>
                                     {paidNow > 0 && (
                                         <div className="flex justify-between items-center">
@@ -1677,7 +1677,7 @@ export default function AddPurchasePage() {
                                     </div>
 
                                     <div className="pt-3 space-y-2 border-t border-slate-100 mt-2">
-                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#F59E0B] hover:!bg-[#B4780B] shadow-sm shadow-[#F59E0B]/30" loading={saving} onClick={() => handleSave()}>
+                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#F59E0B] hover:!bg-[#F59E0B] shadow-sm shadow-[#F59E0B]/30" loading={saving} onClick={() => handleSave()}>
                                             {editId ? 'Update Order' : 'Save Purchase'}
                                         </Btn>
                                         <div className="grid grid-cols-2 gap-2">
@@ -1704,7 +1704,7 @@ export default function AddPurchasePage() {
                         <p className="text-[13px] text-slate-500 mb-6">Your purchase order <b className="text-slate-900">{successOrder?.purchase_number}</b> has been recorded.</p>
                         <div className="flex flex-col gap-2">
                             <Btn className="w-full justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
-                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#B4780B] hover:text-[#92600A] hover:underline">Create Another Order</button>
+                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline">Create Another Order</button>
                         </div>
                     </div>
                 </Modal>

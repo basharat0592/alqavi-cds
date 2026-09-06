@@ -13,7 +13,7 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#B4780B] hover:bg-[#B4780B] text-[#0F172A]',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (

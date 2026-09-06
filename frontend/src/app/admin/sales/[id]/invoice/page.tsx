@@ -115,7 +115,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 value={(order.status || '').toLowerCase()}
                                 onChange={(e) => handleUpdateStatus(e.target.value)}
                                 disabled={updatingStatus || (order.status || '').toUpperCase() === 'DELIVERED'}
-                                className={`h-8 px-3 border border-slate-200 rounded-lg text-[12.5px] font-semibold outline-none cursor-pointer bg-white hover:border-slate-300 focus:ring-2 focus:ring-[#F59E0B]/10 focus:border-[#F59E0B] transition-all disabled:opacity-60
+                                className={`h-8 px-3 border border-slate-200 rounded-lg text-[12.5px] font-semibold outline-none cursor-pointer bg-white hover:border-slate-300 focus:ring-2 focus:ring-[#1A1A1A]/10 focus:border-[#1A1A1A] transition-all disabled:opacity-60
                                     ${(order.status || '').toUpperCase() === 'DELIVERED' ? 'text-emerald-700' : 'text-slate-700'}`}
                             >
                                 {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
@@ -240,7 +240,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                         )}
                         <div className="flex justify-between items-center pt-1 border-t border-slate-200">
                             <span className="text-slate-900 font-black uppercase text-[12px]">Total Amount</span>
-                            <span className="font-black text-[#B4780B] text-[16px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                            <span className="font-black text-[#1A1A1A] text-[16px] tabular-nums">{formatCurrency(totalAmount)}</span>
                         </div>
                         {paidAmount > 0 && (
                             <div className="flex justify-between pt-1">

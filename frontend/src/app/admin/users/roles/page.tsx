@@ -9,7 +9,7 @@ import { roleService, AppRole } from '@/lib/api';
 import { exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/ui/PageLoader';
-import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, TableShell, Pagination, RowActions } from '@/components/admin/ui';
 
 export default function UserRolesPage() {
     const [roles, setRoles] = useState<AppRole[]>([]);
@@ -52,6 +52,12 @@ export default function UserRolesPage() {
         r.name?.toLowerCase().includes(search.toLowerCase()) ||
         r.description?.toLowerCase().includes(search.toLowerCase())
     );
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(5);
+    const changePageSize = (n: number) => { setPageSize(n); setCurrentPage(1); };
+    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const safePage = Math.min(currentPage, totalPages);
+    const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
     const sel = useTableSelection(filtered);
 
@@ -86,9 +92,11 @@ export default function UserRolesPage() {
             />
 
             {/* Search */}
-            <Card className="p-4 mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            <TableShell
+                className="mb-6"
+                filters={
                 <div className="relative flex-1 w-full sm:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
@@ -96,22 +104,30 @@ export default function UserRolesPage() {
                         className={ui.inputBase + " pl-10"}
                     />
                 </div>
-            </Card>
-
-            {/* Table */}
-            <Card className="overflow-hidden text-left mb-6">
-                <div className="bg-slate-50/60 px-5 py-3 border-b border-slate-100 flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-[#B4780B]" />
-                    <span className="text-[13px] font-bold text-slate-900">Access Privileges Registry</span>
+                }
+                footer={
+                    <Pagination
+                        page={safePage}
+                        totalPages={totalPages}
+                        onPage={setCurrentPage}
+                        total={filtered.length}
+                        pageSize={pageSize}
+                        onPageSize={changePageSize}
+                    />
+                }
+            >
+                <div className="bg-[#FAFAF8] px-5 py-3 border-b border-[#F2F2F0] flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-[#1A1A1A]" />
+                    <span className="text-[13px] font-semibold text-[#1A1A1A]">Access Privileges Registry</span>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-[13px]">
+                    <table className={ui.table}>
                         <thead>
-                            <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            <tr>
                                 <SelectAllTh sel={sel} />
-                                <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Security Segment</th>
-                                <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Protocol Class</th>
-                                <th className="px-2.5 sm:px-6 py-3 text-right whitespace-nowrap">Actions</th>
+                                <th className={ui.th + ' whitespace-nowrap'}>Security Segment</th>
+                                <th className={ui.th + ' whitespace-nowrap'}>Protocol Class</th>
+                                <th className={ui.th + ' text-right whitespace-nowrap'}>Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -119,57 +135,48 @@ export default function UserRolesPage() {
                                 Array(3).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
                                         <td colSpan={4} className="px-2.5 sm:px-6 py-8">
-                                            <div className="h-4 bg-slate-100 rounded w-full" />
+                                            <div className="h-4 bg-[#F2F2F0] rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-10 py-24 text-center text-slate-600">
-                                        <Layers className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                                        <h3 className="text-[14px] font-bold text-slate-900">No Tiers Configured</h3>
-                                        <p className="text-[11px] text-slate-400 mt-1">Initialize a security role to begin.</p>
+                                    <td colSpan={4} className="px-10 py-24 text-center text-[#3A3A38]">
+                                        <Layers className="w-10 h-10 text-[#DCDCD8] mx-auto mb-3" />
+                                        <h3 className="text-[13px] font-semibold text-[#1A1A1A]">No Tiers Configured</h3>
+                                        <p className="text-[11.5px] text-[#9C9C98] mt-1">Initialize a security role to begin.</p>
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map(role => (
-                                    <tr key={role.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                paged.map(role => (
+                                    <tr key={role.id} className="hover:bg-[#FAFAF8] transition-colors group text-[13px]">
                                         <RowCheckboxTd sel={sel} id={role.id} />
-                                        <td className="px-2.5 sm:px-6 py-3.5">
+                                        <td className={ui.td}>
                                             <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 bg-slate-100 border border-slate-200 rounded-lg flex items-center justify-center font-bold text-slate-500 group-hover:bg-[#B4780B] group-hover:text-white group-hover:border-[#F59E0B] transition-all">
+                                                <div className="h-9 w-9 bg-[#F2F2F0] border border-[#EDEDEA] rounded-lg flex items-center justify-center font-semibold text-[#8A8A86] group-hover:bg-[#F59E0B] group-hover:text-white group-hover:border-[#F59E0B] transition-all">
                                                     {(role.name?.[0] || 'R').toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="font-bold text-[#B4780B] hover:text-[#92600A] hover:underline cursor-pointer truncate">
+                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="font-semibold text-[#119AB8] hover:text-[#0E7F98] hover:underline cursor-pointer truncate">
                                                         {role.name}
                                                     </Link>
-                                                    <p className="text-[11px] text-slate-400 truncate max-w-[200px] sm:max-w-md mt-0.5">{role.description || 'Global system permissions profile'}</p>
+                                                    <p className="text-[11.5px] text-[#9C9C98] truncate max-w-[200px] sm:max-w-md mt-0.5">{role.description || 'Global system permissions profile'}</p>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-2.5 sm:px-6 py-3.5 whitespace-nowrap">
+                                        <td className={ui.td + ' whitespace-nowrap'}>
                                             {role.is_default ? (
                                                 <Badge tone="blue">Core Default</Badge>
                                             ) : (
                                                 <Badge tone="neutral">Custom</Badge>
                                             )}
                                         </td>
-                                        <td className="px-2.5 sm:px-6 py-3.5 text-right whitespace-nowrap">
-                                            <div className="flex items-center justify-end gap-2.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                                <Link href={`/admin/users/roles/${role.id}/edit`} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</Link>
-                                                {!role.is_default && role.name?.toLowerCase() !== 'super admin' && (
-                                                    <>
-                                                        <span className="text-slate-300">|</span>
-                                                        <button
-                                                            onClick={() => setDeleteRole(role)}
-                                                            className="text-[12px] font-bold text-[#c40000] hover:underline"
-                                                        >
-                                                            Delete
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
+                                        <td className={ui.td + ' text-right whitespace-nowrap'}>
+                                            <RowActions items={[
+                                                { label: 'Edit', href: `/admin/users/roles/${role.id}/edit` },
+                                                !role.is_default && role.name?.toLowerCase() !== 'super admin'
+                                                    && { label: 'Delete', onClick: () => setDeleteRole(role), danger: true },
+                                            ]} />
                                         </td>
                                     </tr>
                                 ))
@@ -177,7 +184,7 @@ export default function UserRolesPage() {
                         </tbody>
                     </table>
                 </div>
-            </Card>
+            </TableShell>
 
             <BulkBar
                 sel={sel}
@@ -212,8 +219,8 @@ export default function UserRolesPage() {
                     <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
                         <Trash2 size={24} className="text-rose-600" />
                     </div>
-                    <h3 className="text-[17px] font-bold text-slate-900 mb-2">Delete Tier?</h3>
-                    <p className="text-[13px] text-slate-600">Confirm permanent removal of the security tier <span className="font-bold text-slate-900">"{deleteRole?.name}"</span>? This cannot be undone.</p>
+                    <h3 className="text-[17px] font-semibold text-[#1A1A1A] mb-2">Delete Tier?</h3>
+                    <p className="text-[13px] text-[#3A3A38]">Confirm permanent removal of the security tier <span className="font-semibold text-[#1A1A1A]">"{deleteRole?.name}"</span>? This cannot be undone.</p>
                 </div>
             </Modal>
         </div>

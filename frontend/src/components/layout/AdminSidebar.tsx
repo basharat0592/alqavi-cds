@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
     LayoutDashboard, Package, PackagePlus, TrendingUp, Globe, ScanLine,
     Boxes, Settings, UserCheck, ShoppingBag,
     ShoppingCart, History, RefreshCcw,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
-    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, ChevronDown
+    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
+import { getImageUrl } from '@/lib/utils';
 import { orderService } from '@/lib/api';
 import { authService, sidebarVisibilityKey } from '@/lib/auth';
 import { SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
@@ -36,6 +37,11 @@ const FULL_ACCESS_ROLES = ['admin', 'superadmin', 'super admin'];
 
 export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate }: { isCollapsed?: boolean; onToggle?: () => void; onNavigate?: () => void }) {
     const pathname = usePathname();
+    const router = useRouter();
+    // The signed-in account, shown in the footer. The top bar only renders on the
+    // dashboard now, so this is the one place logout is reachable from every page.
+    const [account, setAccount] = useState<{ name: string; role: string; avatar: string | null }>(
+        { name: '', role: '', avatar: null });
 
     useEffect(() => {
         cmsService.getFullState().catch(() => {});
@@ -52,6 +58,11 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
     useEffect(() => {
         const user = authService.getUser();
         setIsSuperAdmin(authService.isSuperAdmin());
+        setAccount({
+            name: user?.name || `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Administrator',
+            role: (typeof user?.role === 'string' ? user.role : (user as any)?.role_name) || 'Admin',
+            avatar: user?.avatar || null,
+        });
         if (user && !authService.isSuperAdmin()) {
             const whs = (user as any).warehouses;
             // More than one organization is possible; joining them keeps the
@@ -214,6 +225,32 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
     const orgInitials = (orgName || PLATFORM_NAME)
         .split(/[\s,]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || 'Z';
 
+    // Signing out from a nav rail is easy to hit by accident, so confirm first.
+    const handleLogout = () => {
+        if (!window.confirm('Sign out of the console?')) return;
+        authService.logout();
+        onNavigate?.();
+        router.push('/login');
+    };
+
+    const accountInitials = (account.name || 'A')
+        .split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+    /* One row treatment shared by the nav links and the Settings row. The active
+       state is a lifted white pill — that lift is the only "selected" signal in
+       this system, so it carries a real shadow rather than a tint. */
+    const rowCls = (active: boolean) =>
+        `group relative flex items-center gap-3 rounded-[10px] overflow-visible transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'pl-3 pr-2.5 py-[9px]'} ${active
+            ? 'bg-white/[0.10] ring-1 ring-inset ring-white/[0.08]'
+            : 'hover:bg-white/[0.06]'}`;
+    const rowIconCls = (active: boolean) =>
+        `shrink-0 transition-colors duration-150 ${active ? 'text-white' : 'text-[#8E8E88] group-hover:text-[#E6E6E1]'}`;
+    const rowTextCls = (active: boolean) =>
+        `text-[13.5px] tracking-[-0.01em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-white font-semibold' : 'text-[#A6A6A0] font-medium group-hover:text-white'}`;
+    const tooltipCls = `absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12.5px] font-medium whitespace-nowrap pointer-events-none
+        opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
+        bg-white text-[#1A1A1A] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)]`;
+
     return (
         <>
             <style>{`
@@ -223,129 +260,130 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                     -webkit-font-smoothing: antialiased;
                 }
 
-                .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+                /* The rail only shows its scrollbar while actually scrolling, so a
+                   short menu never carries a stray line down its edge. */
+                .sidebar-scroll { scrollbar-gutter: stable; }
+                .sidebar-scroll::-webkit-scrollbar { width: 3px; }
                 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
-                .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.10); border-radius: 99px; }
-                .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.20); }
+                .sidebar-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; }
+                .sidebar-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
 
-                /* Opening a group fades its rows in. Done with a keyframe rather
-                   than an animated height: a height transition needs overflow
-                   hidden on the wrapper, which would clip the tooltips that the
-                   collapsed rail renders outside the sidebar. */
                 .sb-reveal > * { animation: sbReveal .18s ease-out both; }
                 @keyframes sbReveal { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
                 @media (prefers-reduced-motion: reduce) { .sb-reveal > * { animation: none; } }
             `}</style>
 
-            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-[#111827] ${isCollapsed ? 'w-[76px]' : 'w-[268px]'}`}>
+            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-[#1A1A1A] ${isCollapsed ? 'w-[72px]' : 'w-[252px]'}`}>
 
-                <div className="px-4 py-4 flex-shrink-0 flex items-center gap-3 border-b border-white/[0.07] mb-3">
-                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-3 min-w-0 flex-1 group/brand">
-                        <div className="relative w-11 h-11 rounded-xl flex-shrink-0 flex items-center justify-center bg-[#F59E0B] transition-transform duration-200 group-hover/brand:scale-[1.05]">
-                            <span className="font-bold text-[15px] text-white tracking-tight">{orgInitials}</span>
+                {/* ── BRAND ── */}
+                <div className={`flex-shrink-0 flex items-center gap-2.5 border-b border-white/[0.08] ${isCollapsed ? 'px-4 py-4 justify-center' : 'pl-4 pr-3 py-4'}`}>
+                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 min-w-0 flex-1 group/brand">
+                        <div className="relative w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center bg-white transition-transform duration-200 group-hover/brand:scale-[1.04]">
+                            <span className="font-semibold text-[12.5px] text-[#1A1A1A] tracking-[-0.01em]">{orgInitials}</span>
                         </div>
                         {!isCollapsed && (
-                            <div className="flex flex-col min-w-0">
-                                <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] leading-[1.25] mb-1 text-slate-300">
-                                    {orgName ? 'Organization Console' : 'Platform Console'}
-                                </span>
-                                <span className="text-[16px] font-bold leading-tight tracking-[-0.01em] text-white truncate" title={orgName || PLATFORM_NAME}>
+                            <div className="flex flex-col min-w-0 leading-none">
+                                <span className="text-[14px] font-semibold tracking-[-0.02em] text-white truncate" title={orgName || PLATFORM_NAME}>
                                     {orgName || PLATFORM_NAME}
+                                </span>
+                                <span className="mt-1 text-[10.5px] font-medium text-[#7C7C76] truncate">
+                                    {orgName ? 'Organization' : 'Platform'}
                                 </span>
                             </div>
                         )}
                     </Link>
-                    {/* Close button — mobile only */}
+
+                    {/* Desktop rail collapse. Mobile gets a close button instead. */}
+                    {!isCollapsed && (
+                        <button
+                            onClick={onToggle}
+                            title="Collapse sidebar"
+                            aria-label="Collapse sidebar"
+                            className="hidden md:flex w-7 h-7 shrink-0 rounded-lg items-center justify-center text-[#7C7C76] hover:text-white hover:bg-white/[0.08] transition-colors"
+                        >
+                            <PanelLeftClose size={16} strokeWidth={1.7} />
+                        </button>
+                    )}
                     <button
                         onClick={onToggle}
-                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/10 text-slate-400 hover:text-white"
+                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/[0.08] text-[#8E8E88] hover:text-white"
                         aria-label="Close sidebar"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
+                {/* Expanding again needs its own affordance once the labels are gone. */}
+                {isCollapsed && (
+                    <button
+                        onClick={onToggle}
+                        title="Expand sidebar"
+                        aria-label="Expand sidebar"
+                        className="hidden md:flex mx-auto mt-3 w-9 h-9 rounded-[10px] items-center justify-center text-[#7C7C76] hover:text-white hover:bg-white/[0.08] transition-colors"
+                    >
+                        <PanelLeftOpen size={17} strokeWidth={1.7} />
+                    </button>
+                )}
+
                 {/* ── NAVIGATION ── */}
-                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll pt-5 pb-4">
-
-
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll px-3 pt-3 pb-4">
                     {filteredGroups.map((group, gIdx) => {
-                        // The section holding the current page is marked in the secondary
-                        // amber, so you can see where you are without hunting for the row.
                         const groupActive = group.items.some(it => isActive(it.href));
                         // Collapsed to an icon rail there is no room for headings, so
                         // the accordion does not apply and every icon stays reachable.
                         const groupOpen = isCollapsed || (openGroups[group.label] ?? groupActive);
                         return (
-                        <div key={group.label} className={gIdx !== 0 ? 'mt-4' : ''}>
+                        <div key={group.label} className={gIdx !== 0 ? 'mt-5' : ''}>
+                            {/* A quiet section label, deliberately unlike a nav row so the
+                                hierarchy reads at a glance. The chevron only appears on
+                                hover, keeping the resting state calm. */}
                             {!isCollapsed && (
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(group.label, groupOpen)}
                                     aria-expanded={groupOpen}
-                                    className="group/hdr w-full px-5 py-2 mb-1 flex items-center gap-2.5 hover:bg-white/[0.03] transition-colors" 
+                                    className="group/hdr w-full px-3 pb-1.5 pt-1 flex items-center gap-1.5 text-left"
                                 >
-                                    <span className={`text-[11.5px] font-semibold uppercase tracking-[0.12em] transition-colors ${groupActive ? 'text-slate-200' : 'text-slate-500 group-hover/hdr:text-slate-300'}`}>
+                                    <span className={`text-[10.5px] font-semibold uppercase tracking-[0.09em] transition-colors ${groupActive ? 'text-[#9A9A94]' : 'text-[#6E6E68] group-hover/hdr:text-[#9A9A94]'}`}>
                                         {group.label}
                                     </span>
-                                    {/* A closed group that holds the current page still says so. */}
                                     {groupActive && !groupOpen && (
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                                        <span className="w-1 h-1 rounded-full bg-white shrink-0" />
                                     )}
                                     <ChevronDown
-                                        size={16}
-                                        className={`ml-auto shrink-0 transition-all duration-200 ${groupOpen ? 'rotate-180' : ''} text-slate-400 group-hover/hdr:text-slate-200`}
+                                        size={13}
+                                        className={`ml-auto shrink-0 transition-all duration-200 text-[#7C7C76] opacity-0 group-hover/hdr:opacity-100 ${groupOpen ? '' : '-rotate-90'}`}
                                     />
                                 </button>
                             )}
                             {isCollapsed && gIdx !== 0 && (
-                                <div className="mx-3 mb-1 h-px bg-white/5" />
+                                <div className="mx-2 my-2 h-px bg-white/[0.08]" />
                             )}
 
-                            <div className={`space-y-1 ${isCollapsed ? 'px-3' : 'px-3'} ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
+                            <div className={`space-y-0.5 ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
                                 {group.items.map((item) => {
                                     const active = isActive(item.href);
                                     return (
                                         <Link key={item.href} href={item.href}
                                             onClick={() => onNavigate?.()}
-                                            className={`group relative flex items-center gap-3 rounded-lg overflow-visible transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px]'} ${active
-                                                ? 'bg-[#F59E0B]/[0.14] ring-1 ring-inset ring-[#F59E0B]/25'
-                                                : 'hover:bg-white/[0.05]'}`}>
+                                            className={rowCls(active)}>
 
-                                            {/* Active left rail, on the row's own edge. */}
-                                            {active && (
-                                                <span className="absolute left-0 inset-y-[5px] w-[3px] rounded-full bg-[#F59E0B]" />
-                                            )}
-
-                                            <item.icon
-                                                className={`shrink-0 transition-colors duration-150 ${active ? 'text-[#FBBF24]' : 'text-slate-300 group-hover:text-white'}`}
-                                                size={19}
-                                            />
+                                            <item.icon className={rowIconCls(active)} size={17} strokeWidth={1.7} />
 
                                             {!isCollapsed && (
-                                                <span className={`text-[15px] tracking-[-0.006em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-[#FBBF24] font-semibold' : 'text-slate-200 font-medium group-hover:text-white'}`}>
-                                                    {item.name}
-                                                </span>
+                                                <span className={rowTextCls(active)}>{item.name}</span>
                                             )}
 
-                                            {/* Live active-orders badge (blinks) on the Order List link */}
+                                            {/* Live active-orders count */}
                                             {item.href === '/admin/orders' && activeOrders > 0 && (
-                                                <span className={`inline-flex items-center justify-center shrink-0 ${isCollapsed ? 'absolute top-1 right-1.5' : 'relative ml-auto'}`}>
-                                                    <span className="absolute inline-flex h-full w-full rounded-full bg-[#F59E0B] opacity-60 motion-safe:animate-ping" />
-                                                    <span className="relative inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-[#F59E0B] text-slate-900 text-[10px] font-black tabular-nums shadow-sm shadow-[#F59E0B]/40">
+                                                <span className={`inline-flex items-center justify-center shrink-0 ${isCollapsed ? 'absolute top-0.5 right-1' : 'relative ml-auto'}`}>
+                                                    <span className="relative inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full bg-[#F9C9A7] text-[#7C3A10] text-[11px] font-semibold tabular-nums">
                                                         {activeOrders}
                                                     </span>
                                                 </span>
                                             )}
 
-                                            {/* Tooltip when collapsed */}
-                                            {isCollapsed && (
-                                                <div className="absolute left-full ml-3 px-3 py-2 rounded-lg text-[13px] font-semibold whitespace-nowrap pointer-events-none
-                                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
-                                                    bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
-                                                    {item.name}
-                                                </div>
-                                            )}
+                                            {isCollapsed && <div className={tooltipCls}>{item.name}</div>}
                                         </Link>
                                     );
                                 })}
@@ -355,40 +393,49 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                     })}
                 </nav>
 
-                {/* ── FOOTER / SETTINGS ── */}
-                {isPageAllowed('/admin/settings') && (
-                    <div className="flex-shrink-0 mx-5 px-0 pb-4 pt-4 mt-2 border-t border-white/[0.08]">
+                {/* ── FOOTER: settings + the signed-in account ── */}
+                <div className="flex-shrink-0 px-3 pt-2 pb-3 border-t border-white/[0.08]">
+                    {isPageAllowed('/admin/settings') && (
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
-                            className={`group relative flex items-center gap-3 rounded-lg transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-[11px]'} ${isActive('/admin/settings')
-                                ? 'bg-[#F59E0B]/[0.14] ring-1 ring-inset ring-[#F59E0B]/25'
-                                : 'hover:bg-white/[0.05]'}`}>
-
-                            {isActive('/admin/settings') && (
-                                <span className="absolute left-0 inset-y-[5px] w-[3px] rounded-full bg-[#F59E0B]" />
-                            )}
-
-                            <Settings
-                                size={19}
-                                className={`shrink-0 transition-colors duration-150 ${isActive('/admin/settings') ? 'text-[#FBBF24]' : 'text-slate-300 group-hover:text-white'}`}
-                            />
-
-                            {!isCollapsed && (
-                                <span className={`text-[15px] tracking-[-0.006em] transition-colors duration-150 ${isActive('/admin/settings') ? 'text-[#FBBF24] font-semibold' : 'text-slate-200 font-medium group-hover:text-white'}`}>
-                                    Settings
-                                </span>
-                            )}
-
-                            {isCollapsed && (
-                                <div className="absolute left-full ml-3 px-3 py-2 rounded-lg text-[13px] font-semibold whitespace-nowrap pointer-events-none
-                                    opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
-                                    bg-slate-800 text-slate-100 border border-white/10 shadow-lg">
-                                    System Settings
-                                </div>
-                            )}
+                            className={rowCls(isActive('/admin/settings'))}>
+                            <Settings size={17} strokeWidth={1.7} className={rowIconCls(isActive('/admin/settings'))} />
+                            {!isCollapsed && <span className={rowTextCls(isActive('/admin/settings'))}>Settings</span>}
+                            {isCollapsed && <div className={tooltipCls}>System Settings</div>}
                         </Link>
+                    )}
+
+                    {/* The account block. Logout lives here because the top bar is
+                        dashboard-only — this is the one exit reachable everywhere. */}
+                    <div className={`mt-1.5 pt-2 border-t border-white/[0.07] ${isCollapsed ? 'flex flex-col items-center gap-1.5' : 'group/acct flex items-center gap-2.5 pl-1.5 pr-1 py-1 rounded-[10px] transition-colors hover:bg-white/[0.06]'}`}>
+                        <div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden bg-white/[0.10] flex items-center justify-center ring-1 ring-white/[0.08]">
+                            {account.avatar
+                                ? <img src={getImageUrl(account.avatar) || ''} alt="" className="w-full h-full object-cover" />
+                                : <span className="text-[11.5px] font-semibold text-[#D8D8D2]">{accountInitials}</span>}
+                        </div>
+
+                        {!isCollapsed && (
+                            <div className="min-w-0 flex-1 leading-none">
+                                <p className="text-[12.5px] font-semibold tracking-[-0.01em] text-white truncate" title={account.name}>
+                                    {account.name}
+                                </p>
+                                <span className="block mt-1 text-[10.5px] font-medium text-[#7C7C76] capitalize truncate">
+                                    {account.role}
+                                </span>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleLogout}
+                            title="Sign out"
+                            aria-label="Sign out"
+                            className="group relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[#7C7C76] hover:text-[#FCA5A5] hover:bg-white/[0.08] transition-colors"
+                        >
+                            <LogOut size={15} strokeWidth={1.8} />
+                            {isCollapsed && <div className={tooltipCls}>Sign out</div>}
+                        </button>
                     </div>
-                )}
+                </div>
             </div>
         </>
     );

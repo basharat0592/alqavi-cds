@@ -19,14 +19,14 @@ import type { RevenueDataPoint } from '@/types';
    profit vs expenses and delivered sales by category. Both are scoped to the
    requesting admin's own branch server-side. */
 
-const AMBER = '#F59E0B';
+const AMBER = '#1A1A1A';
 const TEAL = '#0F766E';
 const RED = '#DC2626';
 const GRID = '#eef2f7';
 const AXIS = '#94a3b8';
 
 // Donut slices, in the order categories are ranked.
-const SLICE = ['#0F766E', '#F59E0B', '#0EA5E9', '#DC2626', '#7C3AED', '#DB2777', '#65A30D', '#64748B'];
+const SLICE = ['#0F766E', '#1A1A1A', '#0EA5E9', '#DC2626', '#7C3AED', '#DB2777', '#65A30D', '#64748B'];
 
 const dayFmt = (d: string) => {
     try { return new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }); }
@@ -84,19 +84,19 @@ export function StockRiskCard({ lowStock = [] }: { lowStock?: any[] }) {
                     <h3 className="text-[15px] font-bold text-slate-900 leading-tight">Stock Risk</h3>
                     <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">At or below the reorder point</p>
                 </div>
-                <span className="text-[20px] font-bold text-[#B4780B] tabular-nums leading-none">{rows.length}</span>
+                <span className="text-[20px] font-bold text-[#1A1A1A] tabular-nums leading-none">{rows.length}</span>
             </div>
             <div className="divide-y divide-slate-100">
                 {rows.slice(0, 5).map((p: any, i: number) => {
                     const qty = Number(p.qty ?? p.total_quantity ?? 0);
                     return (
                         <div key={i} className="flex items-center gap-2 py-2">
-                            <AlertTriangle size={13} className={qty <= 0 ? 'text-rose-500 shrink-0' : 'text-[#F59E0B] shrink-0'} />
+                            <AlertTriangle size={13} className={qty <= 0 ? 'text-rose-500 shrink-0' : 'text-[#1A1A1A] shrink-0'} />
                             <span className="min-w-0 flex-1 text-[12.5px] text-slate-700 truncate">
                                 {p.product_name || p.name || 'Unnamed'}
                             </span>
                             <span className="shrink-0 text-[11px] text-slate-400 tabular-nums">min {Number(p.min ?? 0)}</span>
-                            <span className={`shrink-0 w-6 text-right text-[13px] font-bold tabular-nums ${qty <= 0 ? 'text-rose-600' : 'text-[#B4780B]'}`}>
+                            <span className={`shrink-0 w-6 text-right text-[13px] font-bold tabular-nums ${qty <= 0 ? 'text-rose-600' : 'text-[#1A1A1A]'}`}>
                                 {qty}
                             </span>
                         </div>
@@ -169,7 +169,7 @@ export default function BranchAdminOverview({
     const statusTone = (st: string) =>
         st === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700'
             : st === 'CANCELLED' ? 'bg-rose-50 text-rose-600'
-                : 'bg-[#F59E0B]/12 text-[#B4780B]';
+                : 'bg-[#1A1A1A]/12 text-[#1A1A1A]';
 
     return (
         <div className="space-y-4">
@@ -311,7 +311,7 @@ export default function BranchAdminOverview({
                             <div key={row.label}>
                                 <div className="flex items-baseline justify-between gap-2 mb-2">
                                     <span className="text-[14px] font-semibold text-slate-800">{row.label}</span>
-                                    <span className="text-[14px] font-bold tabular-nums text-[#F59E0B]">{row.value}</span>
+                                    <span className="text-[14px] font-bold tabular-nums text-[#1A1A1A]">{row.value}</span>
                                 </div>
                                 <div className="h-[3px] rounded-full bg-slate-100 overflow-hidden">
                                     <div className="h-full rounded-full bg-[#0F766E] transition-[width] duration-500"
@@ -341,7 +341,7 @@ export default function BranchAdminOverview({
                 title="Recent Orders"
                 subtitle="Latest sales from this organization"
                 action={
-                    <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-800 hover:text-[#B4780B] transition-colors">
+                    <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-800 hover:text-[#0E7F98] transition-colors">
                         View all <ArrowRight size={14} />
                     </Link>
                 }

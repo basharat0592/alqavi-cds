@@ -9,7 +9,7 @@ import {
 import { purchaseService } from '@/services/purchase.service';
 import { formatCurrency, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, TableShell, Pagination } from '@/components/admin/ui';
 import { PaymentModal } from '@/components/admin/PaymentPanel';
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -51,7 +51,8 @@ export default function PurchaseReturnsPage() {
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [currentPage, setCurrentPage] = useState(1);
-    const pageSize = 10;
+    const [pageSize, setPageSize] = useState(5);
+    const changePageSize = (n: number) => { setPageSize(n); setCurrentPage(1); };
 
     const [viewRow, setViewRow] = useState<any | null>(null);
     const [deleteRow, setDeleteRow] = useState<any | null>(null);
@@ -149,10 +150,12 @@ export default function PurchaseReturnsPage() {
                     }
                 />
 
-                {/* Filters & Search */}
-                <Card className="p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-4">
+                <TableShell
+                    className="mb-6"
+                    filters={
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="relative w-full sm:w-[300px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C98]" size={14} />
                         <input
                             className={ui.inputBase + " pl-9"}
                             placeholder="Search by Return # or Supplier..."
@@ -172,94 +175,93 @@ export default function PurchaseReturnsPage() {
                         <option value="CANCELLED">Cancelled</option>
                     </select>
                     <div className="h-5 w-px bg-slate-200 hidden sm:block" />
-                    <span className="text-[13px] text-slate-600 text-center sm:text-left">
+                    <span className="text-[13px] text-[#3A3A38] text-center sm:text-left">
                         Showing {filtered.length} record{filtered.length === 1 ? '' : 's'}
                     </span>
-                </Card>
-
-                {/* Main Table */}
-                <Card className="overflow-hidden">
+                    </div>
+                    }
+                >
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className={ui.table}>
                             <thead>
-                                <tr className="bg-slate-50/60 border-b border-slate-200">
+                                <tr>
                                     <SelectAllTh sel={sel} />
-                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider whitespace-nowrap">Return #</th>
-                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Details</th>
-                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider whitespace-nowrap">Date</th>
-                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider whitespace-nowrap">Refund Amount</th>
-                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider whitespace-nowrap">Status</th>
-                                    <th className="px-2.5 sm:px-4 py-2.5 sm:py-3 text-[11px] font-bold uppercase text-slate-400 tracking-wider text-right whitespace-nowrap">Actions</th>
+                                    <th className={ui.th + ' whitespace-nowrap'}>Return #</th>
+                                    <th className={ui.th}>Details</th>
+                                    <th className={ui.th + ' whitespace-nowrap'}>Date</th>
+                                    <th className={ui.th + ' whitespace-nowrap'}>Refund Amount</th>
+                                    <th className={ui.th + ' whitespace-nowrap'}>Status</th>
+                                    <th className={ui.th + ' text-right whitespace-nowrap'}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading && filtered.length === 0 ? (
                                     Array(5).fill(0).map((_, i) => (
-                                        <tr key={i} className="animate-pulse border-b border-slate-100">
-                                            <td colSpan={7} className="px-2.5 sm:px-4 py-4 h-14 bg-slate-50/50" />
+                                        <tr key={i} className="animate-pulse border-b border-[#F2F2F0]">
+                                            <td colSpan={7} className="px-2.5 sm:px-4 py-4 h-14 bg-[#FAFAF8]/50" />
                                         </tr>
                                     ))
                                 ) : paginated.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="px-2.5 sm:px-4 py-20 text-center">
-                                            <div className="flex flex-col items-center text-slate-400">
-                                                <RotateCcw size={40} className="mb-2 text-slate-300" />
-                                                <p className="text-[14px]">No return records found</p>
+                                            <div className="flex flex-col items-center text-[#9C9C98]">
+                                                <RotateCcw size={40} className="mb-2 text-[#C4C4C0]" />
+                                                <p className="text-[13px]">No return records found</p>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : (
                                     paginated.map(row => (
-                                        <tr key={row.id} className="border-b border-slate-100 hover:bg-slate-50 transition-all group">
+                                        <tr key={row.id} className="border-b border-[#F2F2F0] hover:bg-[#FAFAF8] transition-all group">
                                             <RowCheckboxTd sel={sel} id={row.id} />
-                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
-                                                <span className="text-[13px] font-bold text-[#B4780B] group-hover:text-[#92600A] hover:underline cursor-pointer">
+                                            <td className={ui.td + ' whitespace-nowrap'}>
+                                                <span className="text-[13px] font-semibold text-[#119AB8] group-hover:text-[#0E7F98] hover:underline cursor-pointer">
                                                     #{row.return_number}
                                                 </span>
                                             </td>
-                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4">
+                                            <td className={ui.td}>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[13px] font-bold text-slate-900">{row.supplier_name || 'Generic Supplier'}</span>
-                                                    <span className="text-[11px] text-slate-400 italic hidden sm:inline">Ref: {row.purchase_number || 'Standalone'}</span>
+                                                    <span className="text-[13px] font-semibold text-[#1A1A1A]">{row.supplier_name || 'Generic Supplier'}</span>
+                                                    <span className="text-[11.5px] text-[#9C9C98] italic hidden sm:inline">Ref: {row.purchase_number || 'Standalone'}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
-                                                <span className="text-[13px] text-slate-600">{row.return_date}</span>
+                                            <td className={ui.td + ' whitespace-nowrap'}>
+                                                <span className="text-[13px] text-[#3A3A38]">{row.return_date}</span>
                                             </td>
-                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
-                                                <span className="text-[14px] font-bold text-slate-900 tabular-nums">{formatCurrency(row.total_refund_amount || 0)}</span>
+                                            <td className={ui.td + ' whitespace-nowrap'}>
+                                                <span className="text-[13px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(row.total_refund_amount || 0)}</span>
                                             </td>
-                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 whitespace-nowrap">
+                                            <td className={ui.td + ' whitespace-nowrap'}>
                                                 <StatusPill status={row.status} />
                                                 {row.status?.toUpperCase() === 'ACCEPTED' && (
-                                                    <div className={`text-[9px] font-black uppercase tracking-tighter mt-1 ${row.refund_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                    <div className={`text-[10.5px] font-semibold uppercase tracking-tighter mt-1 ${row.refund_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>
                                                         {row.refund_status === 'PAID' ? 'Refund received' : 'Awaiting refund'}
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="px-2.5 sm:px-4 py-3 sm:py-4 text-right whitespace-nowrap">
+                                            <td className={ui.td + ' text-right whitespace-nowrap'}>
                                                 <div className="flex items-center justify-end gap-2.5">
                                                     {row.status?.toUpperCase() === 'ACCEPTED' && row.refund_status !== 'PAID' && Number(row.total_refund_amount || 0) > 0 && (
                                                         <>
                                                             <button
                                                                 onClick={() => setPayRow(row)}
-                                                                className="text-[12px] font-bold text-[#B4780B] hover:underline"
+                                                                className="text-[11.5px] font-semibold text-[#119AB8] hover:underline"
                                                             >
                                                                 Settle
                                                             </button>
-                                                            <span className="text-slate-300">|</span>
+                                                            <span className="text-[#C4C4C0]">|</span>
                                                         </>
                                                     )}
                                                     <button
                                                         onClick={() => setViewRow(row)}
-                                                        className="text-[12px] font-bold text-slate-600 hover:underline"
+                                                        className="text-[11.5px] font-semibold text-[#3A3A38] hover:underline"
                                                     >
                                                         View
                                                     </button>
-                                                    <span className="text-slate-300">|</span>
+                                                    <span className="text-[#C4C4C0]">|</span>
                                                     <button
                                                         onClick={() => setDeleteRow(row)}
-                                                        className="text-[12px] font-bold text-[#c40000] hover:underline"
+                                                        className="text-[11.5px] font-semibold text-[#c40000] hover:underline"
                                                     >
                                                         Delete
                                                     </button>
@@ -271,21 +273,16 @@ export default function PurchaseReturnsPage() {
                             </tbody>
                         </table>
                     </div>
-                    {totalPages > 1 && (
-                        <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-[12px]">
-                            <span className="text-slate-500">
-                                Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Prev</button>
-                                <span className="text-slate-500 font-semibold">Page {currentPage} / {totalPages}</span>
-                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                                    className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Next</button>
-                            </div>
-                        </div>
-                    )}
-                </Card>
+                    {/* Paging + rows-per-page, from the shared control. */}
+                    <Pagination
+                        page={currentPage}
+                        totalPages={totalPages}
+                        onPage={setCurrentPage}
+                        total={filtered.length}
+                        pageSize={pageSize}
+                        onPageSize={changePageSize}
+                    />
+                </TableShell>
             </div>
 
             <BulkBar
@@ -334,48 +331,48 @@ export default function PurchaseReturnsPage() {
                 {viewRow && (
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-[13px]">
-                            <div><p className="text-slate-400 mb-1">Return #</p><p className="font-bold text-slate-900">#{viewRow.return_number}</p></div>
-                            <div><p className="text-slate-400 mb-1">Date</p><p className="font-bold text-slate-900">{viewRow.return_date}</p></div>
-                            <div><p className="text-slate-400 mb-1">Supplier</p><p className="font-bold text-slate-900">{viewRow.supplier_name}</p></div>
-                            <div><p className="text-slate-400 mb-1">Status</p><StatusPill status={viewRow.status} /></div>
+                            <div><p className="text-[#9C9C98] mb-1">Return #</p><p className="font-semibold text-[#1A1A1A]">#{viewRow.return_number}</p></div>
+                            <div><p className="text-[#9C9C98] mb-1">Date</p><p className="font-semibold text-[#1A1A1A]">{viewRow.return_date}</p></div>
+                            <div><p className="text-[#9C9C98] mb-1">Supplier</p><p className="font-semibold text-[#1A1A1A]">{viewRow.supplier_name}</p></div>
+                            <div><p className="text-[#9C9C98] mb-1">Status</p><StatusPill status={viewRow.status} /></div>
                         </div>
 
                         {/* Products Table */}
-                        <div className="border border-slate-200/70 rounded-xl overflow-hidden">
-                            <table className="w-full text-left text-[12px]">
-                                <thead className="bg-slate-50/60 border-b border-slate-200">
+                        <div className="border border-[#EDEDEA] rounded-xl overflow-hidden">
+                            <table className={ui.table}>
+                                <thead className="bg-[#FAFAF8] border-b border-[#EDEDEA]">
                                     <tr>
-                                        <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Product</th>
-                                        <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">Qty</th>
-                                        <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Price</th>
-                                        <th className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Subtotal</th>
+                                        <th className={ui.th}>Product</th>
+                                        <th className={ui.th + ' text-center'}>Qty</th>
+                                        <th className={ui.th + ' text-right'}>Price</th>
+                                        <th className={ui.th + ' text-right'}>Subtotal</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {(viewRow.items || []).map((item: any, idx: number) => (
-                                        <tr key={idx} className="border-b border-slate-100 last:border-0">
-                                            <td className="px-3 py-2 font-medium text-slate-700">{item.product_name}</td>
-                                            <td className="px-3 py-2 text-center text-slate-600 tabular-nums">{item.quantity}</td>
-                                            <td className="px-3 py-2 text-right text-slate-600 tabular-nums">{formatCurrency(item.refund_price)}</td>
-                                            <td className="px-3 py-2 text-right font-bold text-slate-900 tabular-nums">{formatCurrency(item.total_refund)}</td>
+                                        <tr key={idx} className="border-b border-[#F2F2F0] last:border-0">
+                                            <td className={ui.td}>{item.product_name}</td>
+                                            <td className={ui.td + ' text-center tabular-nums'}>{item.quantity}</td>
+                                            <td className={ui.td + ' text-right tabular-nums'}>{formatCurrency(item.refund_price)}</td>
+                                            <td className={ui.td + ' text-right tabular-nums'}>{formatCurrency(item.total_refund)}</td>
                                         </tr>
                                     ))}
                                     {(!viewRow.items || viewRow.items.length === 0) && (
-                                        <tr><td colSpan={4} className="px-3 py-8 text-center text-slate-400 italic">No products found for this return</td></tr>
+                                        <tr><td colSpan={4} className="px-3 py-8 text-center text-[#9C9C98] italic">No products found for this return</td></tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
 
                         {viewRow.reason && (
-                            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg">
-                                <p className="text-[11px] font-bold uppercase tracking-wider mb-1 text-slate-400">Reason</p>
-                                <p className="text-[13px] italic text-slate-600">"{viewRow.reason}"</p>
+                            <div className="p-3 bg-[#FAFAF8] border border-[#EDEDEA] rounded-lg">
+                                <p className="text-[11.5px] font-semibold uppercase tracking-wider mb-1 text-[#9C9C98]">Reason</p>
+                                <p className="text-[13px] italic text-[#3A3A38]">"{viewRow.reason}"</p>
                             </div>
                         )}
-                        <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-                            <span className="text-[13px] font-bold text-slate-900">Total Refund Amount:</span>
-                            <span className="text-[22px] font-bold text-slate-900 tabular-nums">{formatCurrency(viewRow.total_refund_amount || 0)}</span>
+                        <div className="pt-4 border-t border-[#F2F2F0] flex justify-between items-center">
+                            <span className="text-[13px] font-semibold text-[#1A1A1A]">Total Refund Amount:</span>
+                            <span className="text-[22px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(viewRow.total_refund_amount || 0)}</span>
                         </div>
                     </div>
                 )}
@@ -392,9 +389,9 @@ export default function PurchaseReturnsPage() {
                         <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <AlertTriangle size={24} className="text-rose-600" />
                         </div>
-                        <h3 className="text-[16px] font-bold text-slate-900 mb-2">Delete Return?</h3>
-                        <p className="text-[13px] text-slate-600 mb-6">
-                            Are you sure you want to delete <span className="font-bold text-slate-900">#{deleteRow.return_number}</span>? This action cannot be undone.
+                        <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-2">Delete Return?</h3>
+                        <p className="text-[13px] text-[#3A3A38] mb-6">
+                            Are you sure you want to delete <span className="font-semibold text-[#1A1A1A]">#{deleteRow.return_number}</span>? This action cannot be undone.
                         </p>
                         <div className="grid grid-cols-2 gap-3">
                             <Button variant="outline" size="md" onClick={() => setDeleteRow(null)}>Cancel</Button>

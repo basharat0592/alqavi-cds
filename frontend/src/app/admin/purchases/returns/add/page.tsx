@@ -112,7 +112,7 @@ const ProductSelector = ({ value, products, onSelect, disabled }: {
                             <div
                                 key={p.id}
                                 onClick={() => { onSelect(p); setOpen(false); }}
-                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#B4780B]/50 cursor-pointer border-b last:border-0 border-slate-100"
+                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#F59E0B]/50 cursor-pointer border-b last:border-0 border-slate-100"
                             >
                                 <div className="w-9 h-9 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
                                     {p.product_image ? (
@@ -343,7 +343,7 @@ export default function AddPurchaseReturnPage() {
                                         <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Return Items</h2>
                                         <p className="text-[12px] text-slate-500">Specify the products being returned and their refund prices.</p>
                                     </div>
-                                    <button onClick={addItem} className="text-[12px] text-[#B4780B] hover:text-[#92600A] font-bold flex items-center gap-1">
+                                    <button onClick={addItem} className="text-[12px] text-[#1A1A1A] hover:text-[#0E7F98] font-bold flex items-center gap-1">
                                         <Plus size={14} /> ADD ITEM
                                     </button>
                                 </div>

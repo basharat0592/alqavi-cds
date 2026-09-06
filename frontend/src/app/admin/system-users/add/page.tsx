@@ -230,7 +230,7 @@ export default function AddSystemUserPage() {
                             </div>
                             {!isFullAccess && (
                                 <div className="flex gap-2 text-[11px] font-semibold">
-                                    <button type="button" onClick={selectAll} className="text-[#B4780B] hover:underline">Select all</button>
+                                    <button type="button" onClick={selectAll} className="text-[#119AB8] hover:underline">Select all</button>
                                     <span className="text-slate-300">|</span>
                                     <button type="button" onClick={clearAll} className="text-slate-500 hover:underline">Clear</button>
                                 </div>

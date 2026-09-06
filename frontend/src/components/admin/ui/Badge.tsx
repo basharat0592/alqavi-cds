@@ -3,13 +3,16 @@ import { cn } from '@/lib/utils';
 
 type Tone = 'neutral' | 'indigo' | 'green' | 'amber' | 'red' | 'blue';
 
+/* Soft, fully-rounded pills in the reference's muted palette. `indigo` is kept
+   as a tone name only so existing call sites keep compiling — it resolves to the
+   neutral ink chip, since the system has no brand hue. */
 const tones: Record<Tone, string> = {
-    neutral: 'bg-slate-100 text-slate-600 border-slate-200',
-    indigo: 'bg-[#F59E0B]/10 text-[#B4780B] border-[#F59E0B]/15',
-    green: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    amber: 'bg-amber-50 text-amber-700 border-amber-100',
-    red: 'bg-rose-50 text-rose-700 border-rose-100',
-    blue: 'bg-sky-50 text-sky-700 border-sky-100',
+    neutral: 'bg-[#F0F0EE] text-[#5B5B58]',
+    indigo: 'bg-[#EAEAE6] text-[#1A1A1A]',
+    green: 'bg-[#A9E7C5] text-[#14532D]',
+    amber: 'bg-[#F9C9A7] text-[#7C3A10]',
+    red: 'bg-[#FBD5D5] text-[#991B1B]',
+    blue: 'bg-[#D6E4F7] text-[#1E3A8A]',
 };
 
 export function Badge({
@@ -24,7 +27,7 @@ export function Badge({
     return (
         <span
             className={cn(
-                'inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border',
+                'inline-flex items-center gap-1 text-[11.5px] font-medium tracking-[-0.01em] px-2 py-0.5 rounded-full',
                 tones[tone],
                 className,
             )}

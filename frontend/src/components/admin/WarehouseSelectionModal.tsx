@@ -100,7 +100,7 @@ export const WarehouseSelectionModal = ({
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-[#fcfcfc] custom-scrollbar">
                     {fetching ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-3">
-                            <Loader2 className="h-8 w-8 text-[#F59E0B] animate-spin" />
+                            <Loader2 className="h-8 w-8 text-[#1A1A1A] animate-spin" />
                             <p className="text-[13px] text-slate-500 font-medium">Fetching available organizations...</p>
                         </div>
                     ) : filtered.length === 0 ? (
@@ -176,7 +176,7 @@ export const WarehouseSelectionModal = ({
                             h-[31px] px-8 text-[13px] font-bold rounded-lg shadow-sm flex items-center gap-2 transition-all
                             ${!selectedId || loading
                                 ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                                : 'bg-[#F59E0B] border border-[#F59E0B] text-white hover:bg-[#B4780B] hover:border-[#B4780B] active:shadow-inner'}
+                                : 'bg-[#F59E0B] border border-[#F59E0B] text-white hover:bg-[#D97706] hover:border-[#F59E0B] active:shadow-inner'}
                         `}
                     >
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check size={16} />}

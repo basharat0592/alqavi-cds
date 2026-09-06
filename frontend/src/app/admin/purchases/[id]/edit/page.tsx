@@ -118,7 +118,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                         {/* Status Section */}
                         <Card className="p-8 text-left">
                             <h2 className="text-[16px] font-bold text-slate-900 tracking-tight mb-6 flex items-center gap-2">
-                                <Package size={18} className="text-[#B4780B]" />
+                                <Package size={18} className="text-[#1A1A1A]" />
                                 Order Status
                             </h2>
                             <div className="space-y-4">
@@ -152,7 +152,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                         {/* Payment Section */}
                         <Card className="p-8 text-left">
                             <h2 className="text-[16px] font-bold text-slate-900 tracking-tight mb-6 flex items-center gap-2">
-                                <CheckCircle2 size={18} className="text-[#B4780B]" />
+                                <CheckCircle2 size={18} className="text-[#1A1A1A]" />
                                 Payment Verification
                             </h2>
 
@@ -181,7 +181,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
 
                             {(purchase.payment_status?.toUpperCase() === 'PAID' || purchase.payment_status?.toUpperCase() === 'PARTIAL') && (
                                 <div className="bg-slate-50/60 border border-slate-200/70 rounded-xl p-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
-                                    <div className="flex items-center gap-2 px-3 py-2.5 bg-sky-50 border border-sky-100 rounded-lg text-[12px] text-sky-700 font-medium">
+                                    <div className="flex items-center gap-2 px-3 py-2.5 bg-[#FAFAF8] border border-[#F2F2F0] rounded-lg text-[12px] text-[#3A3A38] font-medium">
                                         <Info size={16} />
                                         Important: Upload the bank transfer slip or receipt below for supplier confirmation.
                                     </div>
@@ -208,9 +208,9 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                                 ) : (
                                                     <div className="flex flex-col items-center gap-2">
                                                         <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-[#F59E0B]/10 group-hover:border-[#F59E0B]/15 transition-colors">
-                                                            <Upload size={20} className="text-slate-400 group-hover:text-[#92600A]" />
+                                                            <Upload size={20} className="text-slate-400 group-hover:text-[#0E7F98]" />
                                                         </div>
-                                                        <span className="text-[12px] font-medium text-slate-500">Drag & drop or <span className="text-[#B4780B] hover:underline">browse files</span></span>
+                                                        <span className="text-[12px] font-medium text-slate-500">Drag & drop or <span className="text-[#119AB8] hover:underline">browse files</span></span>
                                                         <span className="text-[10px] text-slate-400">Supported: JPG, PNG, PDF (Max 5MB)</span>
                                                     </div>
                                                 )}
@@ -300,7 +300,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                 <div className="space-y-2 pt-2">
                                     <div className="flex justify-between text-[15px] font-bold text-slate-900">
                                         <span>Order Total:</span>
-                                        <span className="text-[#B4780B] font-black tabular-nums">{formatCurrency(purchase.total_amount)}</span>
+                                        <span className="text-[#1A1A1A] font-black tabular-nums">{formatCurrency(purchase.total_amount)}</span>
                                     </div>
                                     {purchase.payment_confirmed && (
                                         <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-[11px] font-bold uppercase tracking-widest border border-emerald-100">

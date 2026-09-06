@@ -23,7 +23,7 @@ import {
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#B4780B] hover:border-[#F59E0B] text-white shadow-sm shadow-[#F59E0B]/20',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] hover:border-[#F59E0B] text-white shadow-sm shadow-[#F59E0B]/20',
         secondary: 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 shadow-sm',
     };
     return (
@@ -102,7 +102,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#92600A] transition-colors" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0E7F98] transition-colors" />
                 <input
                     className={inputCls + " h-[42px] pl-10 pr-24 bg-white font-bold group-hover:bg-slate-50 transition-all"}
                     placeholder="Type product name or scan..."
@@ -142,7 +142,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                 <div
                                     key={p.id}
                                     onClick={() => { onSelect(p); setOpen(false); }}
-                                    className="flex items-center gap-4 p-3 hover:bg-[#B4780B]/50 cursor-pointer transition-colors border-b last:border-0 border-slate-100 group"
+                                    className="flex items-center gap-4 p-3 hover:bg-[#F59E0B]/50 cursor-pointer transition-colors border-b last:border-0 border-slate-100 group"
                                 >
                                     <div className="w-10 h-10 bg-white flex items-center justify-center rounded border border-slate-200 shrink-0 overflow-hidden group-hover:border-[#F59E0B]/40 transition-colors">
                                         {(p.image || p.catalog_image) ? (
@@ -154,7 +154,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-4">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-bold text-slate-900 truncate group-hover:text-[#92600A] transition-colors">
+                                                <p className="text-[13px] font-bold text-slate-900 truncate group-hover:text-[#0E7F98] transition-colors">
                                                     {(p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
                                                     {(p.weight || p.size) && (
                                                         <span className="ml-1.5 text-[10px] text-slate-500 font-normal">
@@ -178,7 +178,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                     </div>
                     <div className="p-2 bg-slate-50 border-t border-slate-100 flex justify-between items-center px-4">
                          <span className="text-[10px] font-bold text-slate-400 uppercase italic">Found {filtered.length} items</span>
-                         <button onClick={() => setOpen(false)} className="text-[11px] font-black text-[#B4780B] hover:text-[#92600A] hover:underline">Close List</button>
+                         <button onClick={() => setOpen(false)} className="text-[11px] font-black text-[#119AB8] hover:text-[#0E7F98] hover:underline">Close List</button>
                     </div>
                 </div>
             )}
@@ -215,7 +215,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) =>
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#92600A]" />
+                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0E7F98]" />
                 <input
                     className={inputCls + " pl-10 pr-10 cursor-pointer"}
                     placeholder="Search customer account..."
@@ -241,7 +241,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) =>
                             <div
                                 key={c.id}
                                 onClick={() => { onSelect(c); setOpen(false); }}
-                                className="flex items-center gap-3 p-3 hover:bg-[#B4780B]/50 cursor-pointer border-b last:border-0 border-slate-100"
+                                className="flex items-center gap-3 p-3 hover:bg-[#F59E0B]/50 cursor-pointer border-b last:border-0 border-slate-100"
                             >
                                 <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
                                     {c.avatar ? (
@@ -263,8 +263,24 @@ const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) =>
     );
 };
 
-export default function SaleEntryPage() {
+export type SaleEntryProps = {
+    /** Rendered inside the Sales-History popup instead of as its own page. */
+    embedded?: boolean;
+    /** Dismiss the popup (embedded only); falls back to navigating to Sales. */
+    onClose?: () => void;
+    /** Fired once a sale is billed so the host list can refresh behind the popup. */
+    onSaved?: (order: any) => void;
+    /** Reports whether the cart holds unsaved lines, so the host can guard its close. */
+    onDirtyChange?: (dirty: boolean) => void;
+};
+
+export default function SaleEntry({ embedded = false, onClose, onSaved, onDirtyChange }: SaleEntryProps = {}) {
     const router = useRouter();
+    // "Back to Sales" closes the popup when embedded, and navigates otherwise.
+    const leaveToSales = useCallback(() => {
+        if (embedded) { onClose?.(); return; }
+        router.push('/admin/sales');
+    }, [embedded, onClose, router]);
     const [products, setProducts] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
     const [warehouses, setWarehouses] = useState<any[]>([]);
@@ -619,6 +635,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
 
 
+    // Same signal the beforeunload guard uses, surfaced to a popup host.
+    useEffect(() => {
+        onDirtyChange?.(cartHasContent && !successOrder);
+    }, [cartHasContent, successOrder, onDirtyChange]);
+
     // Don't let a reload silently bin a cart that has lines on it.
     useEffect(() => {
         if (!cartHasContent || successOrder) return;
@@ -893,6 +914,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 }
             }
             setSuccessOrder(data);
+            onSaved?.(data);
             if (payMode === 'partial' && !installmentOk) {
                 // Don't pretend it fully succeeded — the admin must collect it from
                 // Sales History so the payment history stays accurate.
@@ -924,7 +946,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
     if (successOrder) {
         return (
-            <div className="min-h-[70vh] flex items-center justify-center p-4 text-left">
+            <div className={(embedded ? 'min-h-[50vh]' : 'min-h-[70vh]') + ' flex items-center justify-center p-4 text-left'}>
                 <Card className="p-12 max-w-lg w-full text-center animate-in zoom-in-95 duration-300">
                     <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8 text-emerald-600 border border-emerald-100 shadow-sm"><CheckCircle size={40} /></div>
                     <h2 className="text-[28px] font-bold tracking-tight text-slate-900">Order Billed!</h2>
@@ -944,7 +966,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     </Btn>
                     <div className="flex gap-4">
                         <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}>View Invoice</Btn>
-                        <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push('/admin/sales')}><History size={18} /> View Sales</Btn>
+                        <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={leaveToSales}><History size={18} /> View Sales</Btn>
                     </div>
                     <button
                         onClick={() => {
@@ -955,7 +977,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`);
                             setShowErrors(false);
                         }}
-                        className="mt-4 text-[13px] font-bold text-[#B4780B] hover:text-[#92600A] hover:underline"
+                        className="mt-4 text-[13px] font-bold text-[#119AB8] hover:text-[#0E7F98] hover:underline"
                     >
                         + Start next sale
                     </button>
@@ -965,26 +987,24 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     }
 
     return (
-        <div className="pb-20 text-left text-slate-800">
-            <div className="max-w-[1400px] mx-auto px-0 sm:px-5 pt-1 sm:pt-4">
+        <div className={embedded ? 'text-left text-slate-800' : 'pb-20 text-left text-slate-800'}>
+            <div className={embedded ? '' : 'max-w-[1400px] mx-auto px-0 sm:px-5 pt-1 sm:pt-4'}>
 
                 {/* Breadcrumb + record actions */}
                 <div className="flex items-center justify-between gap-4 mb-3">
+                    {embedded ? <span /> : (
                     <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 min-w-0">
                         <button
-                            onClick={() => router.push('/admin/sales')}
+                            onClick={leaveToSales}
                             title="Back to Sales"
                             aria-label="Back to Sales"
-                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#B4780B] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#0E7F98] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
                         >
                             <ArrowLeft size={15} />
                         </button>
-                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
-                        <span className="text-slate-300">/</span>
-                        <button onClick={() => router.push('/admin/sales')} className="hover:text-slate-600 transition-colors">Sales History</button>
-                        <span className="text-slate-300">/</span>
-                        <span className="text-slate-600 truncate">Sale Invoice</span>
+                        <span className="text-[15px] font-medium tracking-[-0.01em] text-[#1A1A1A] truncate">Sale Invoice</span>
                     </nav>
+                    )}
                     <div className="flex items-center gap-2 shrink-0">
                         <Btn variant="secondary" onClick={holdSale} disabled={!cartHasContent} className="font-bold">Hold</Btn>
                         <Btn variant="secondary" onClick={() => { setRecFrom(orderDate); setRecTo(orderDate); setShowRecords(true); }} className="font-bold">
@@ -995,7 +1015,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                 {loading ? (
                     <div className="text-center py-20 text-[13px] text-slate-500 font-medium animate-pulse flex flex-col items-center gap-4">
-                        <Loader2 size={32} className="animate-spin text-[#B4780B]" />
+                        <Loader2 size={32} className="animate-spin text-[#1A1A1A]" />
                         Syncing Terminal Catalog...
                     </div>
                 ) : (
@@ -1071,7 +1091,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Total Units</label>
-                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#B4780B]'} value={entryTotalUnits || ''} />
+                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#1A1A1A]'} value={entryTotalUnits || ''} />
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Packing</label>
@@ -1104,7 +1124,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     </div>
                                     <div>
                                         <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Sub Total</label>
-                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#B4780B]'} value={entrySubTotal ? entrySubTotal.toFixed(2) : ''} />
+                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#1A1A1A]'} value={entrySubTotal ? entrySubTotal.toFixed(2) : ''} />
                                     </div>
                                 </div>
                             </div>
@@ -1148,14 +1168,14 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{r.pid}</span></Cell>
                                                 <Cell><span className="px-1 text-[12.5px] font-semibold text-slate-800 truncate">{r.name}</span></Cell>
                                                 <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500">{r.expiry || '—'}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-bold tabular-nums text-[#B4780B]">{r.qty}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-bold tabular-nums text-[#1A1A1A]">{r.qty}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-emerald-700">{r.bonus || ''}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-700">{r.tp.toFixed(2)}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-500">{r.retail ? r.retail.toFixed(2) : '—'}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-700">{r.subTotal.toFixed(2)}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-500">{r.discPct || ''}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-rose-600">{r.discAmt ? r.discAmt.toFixed(2) : ''}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-black tabular-nums text-[#B4780B]">{r.netAmt.toFixed(2)}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-black tabular-nums text-[#1A1A1A]">{r.netAmt.toFixed(2)}</span></Cell>
                                                 <Cell className="justify-center">
                                                     <button
                                                         onClick={(ev) => { ev.stopPropagation(); removeLine(i); }}
@@ -1177,7 +1197,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                             <div className="border-r border-slate-200/80 col-span-3" />
                                             <div className="border-r border-slate-200/80" />
                                             <div className="px-2 py-2 text-[12px] font-black text-rose-600 tabular-nums text-right border-r border-slate-200/80">{lineDiscTotal ? lineDiscTotal.toFixed(2) : ''}</div>
-                                            <div className="px-2 py-2 text-[12.5px] font-black text-[#B4780B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalBill)}</div>
+                                            <div className="px-2 py-2 text-[12.5px] font-black text-[#1A1A1A] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalBill)}</div>
                                         </div>
                                     )}
                                 </div>
@@ -1188,7 +1208,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                 <div className="p-3.5 space-y-2.5">
                                     <div className="flex items-center justify-between gap-2">
                                         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Net Amount</span>
-                                        <span className="text-[15px] font-black tabular-nums text-[#B4780B]">{formatCurrency(entrySubTotal)}</span>
+                                        <span className="text-[15px] font-black tabular-nums text-[#1A1A1A]">{formatCurrency(entrySubTotal)}</span>
                                     </div>
                                     <div>
                                         <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Expiry Date</label>
@@ -1256,7 +1276,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                 {[
                                     { label: 'Amount Billed', value: totalBill, tone: 'text-slate-900' },
                                     { label: 'Total Disc By%', value: discountAmount, tone: 'text-rose-600' },
-                                    { label: 'Net Amount', value: grandTotal, tone: 'text-[#B4780B]' },
+                                    { label: 'Net Amount', value: grandTotal, tone: 'text-[#1A1A1A]' },
                                     { label: 'Prev. Bal', value: prevBalance, tone: 'text-slate-700' },
                                     { label: 'Net Balance', value: grandTotal + prevBalance - paidNow, tone: 'text-emerald-700' },
                                 ].map(c => (
@@ -1282,7 +1302,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <button
                                             onClick={() => setDiscountType(discountType === 'flat' ? 'percent' : 'flat')}
                                             title="Toggle flat / percent"
-                                            className="shrink-0 w-9 h-9 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-black text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors"
+                                            className="shrink-0 w-9 h-9 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-black text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#0E7F98] transition-colors"
                                         >
                                             {discountType === 'percent' ? '%' : 'Rs'}
                                         </button>
@@ -1316,7 +1336,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <CheckCircle size={15} /> Save
                                     </Btn>
                                     <Btn variant="secondary" onClick={() => { setRecFrom(orderDate); setRecTo(orderDate); setShowRecords(true); }} className="font-bold">View</Btn>
-                                    <Btn variant="secondary" onClick={() => router.push('/admin/sales')} className="font-bold">Close</Btn>
+                                    <Btn variant="secondary" onClick={leaveToSales} className="font-bold">Close</Btn>
                                 </div>
                             </div>
 
@@ -1358,10 +1378,10 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     </div>
                                     <div className="flex gap-1.5 pb-0.5">
                                         <button type="button" onClick={() => setAmountTendered(String(amountCollectable))}
-                                            className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors">Exact</button>
+                                            className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#0E7F98] transition-colors">Exact</button>
                                         {[500, 1000, 5000].map(d => (
                                             <button key={d} type="button" onClick={() => setAmountTendered(String(d))}
-                                                className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#B4780B] transition-colors tabular-nums">{d}</button>
+                                                className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#0E7F98] transition-colors tabular-nums">{d}</button>
                                         ))}
                                     </div>
                                     {tendered > 0 && (
@@ -1524,7 +1544,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                             <Cell><span className="px-1 text-[12px] font-semibold text-slate-800 truncate">{r.customer_name || 'Walk-in'}</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-700">{amount.toFixed(2)}</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-rose-600">{disc ? disc.toFixed(2) : ''}</span></Cell>
-                                            <Cell className="justify-end"><span className="px-1 text-[12px] font-bold tabular-nums text-[#B4780B]">{amount.toFixed(2)}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] font-bold tabular-nums text-[#1A1A1A]">{amount.toFixed(2)}</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-400">—</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-700">{amount.toFixed(2)}</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-emerald-700">{paid.toFixed(2)}</span></Cell>
@@ -1551,7 +1571,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         </Button>
                         <button
                             onClick={() => setShowConfirm(false)}
-                            className="w-full text-[13px] text-[#B4780B] hover:text-[#92600A] hover:underline font-bold"
+                            className="w-full text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline font-bold"
                         >
                             Cancel & Review
                         </button>
@@ -1585,7 +1605,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         {wh?.location && <p className="text-[11px] text-slate-500">{wh.location}</p>}
                                     </div>
                                     <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-sky-600 uppercase tracking-widest"><MapPin size={12} /> Delivery</div>
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#5B5B58] uppercase tracking-widest"><MapPin size={12} /> Delivery</div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <input value={deliveryCustomerName} onChange={e => setDeliveryCustomerName(e.target.value)} placeholder="Customer name"
                                                 className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] bg-white" />
@@ -1617,7 +1637,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     ))}
                                 </select>
                             ) : (
-                                <p className="text-[11px] text-slate-500 bg-sky-50 border border-sky-100 rounded-lg px-3 py-2 leading-snug">Offered to every organization rider — the first to accept gets the delivery.</p>
+                                <p className="text-[11px] text-slate-500 bg-[#FAFAF8] border border-[#F2F2F0] rounded-lg px-3 py-2 leading-snug">Offered to every organization rider — the first to accept gets the delivery.</p>
                             )}
 
                             {/* Delivery price offered — hidden for a System (salaried) rider */}

@@ -254,7 +254,7 @@ export function PaymentPanel({
                                     </p>
                                 </div>
                                 {it.slip_url && (
-                                    <a href={it.slip_url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-[#92600A]" title="View slip">
+                                    <a href={it.slip_url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-[#0E7F98]" title="View slip">
                                         <Paperclip className="w-3.5 h-3.5" />
                                     </a>
                                 )}
@@ -276,12 +276,12 @@ export function PaymentPanel({
             {!readOnly && remaining > 0 && (
                 <div className="rounded-xl border border-[#F59E0B]/15 bg-[#F59E0B]/30 p-3 space-y-2.5">
                     <div className="flex items-center gap-2">
-                        <Plus className="w-3.5 h-3.5 text-[#B4780B]" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#B4780B]">Record a Payment</span>
+                        <Plus className="w-3.5 h-3.5 text-[#1A1A1A]" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#1A1A1A]">Record a Payment</span>
                         <button
                             type="button"
                             onClick={() => setAmount(String(remaining))}
-                            className="ml-auto text-[10.5px] font-bold text-[#B4780B] hover:underline"
+                            className="ml-auto text-[10.5px] font-bold text-[#119AB8] hover:underline"
                         >
                             Pay full ({fmt(remaining, currency)})
                         </button>
@@ -329,7 +329,7 @@ export function PaymentPanel({
                         )}
                         <button
                             onClick={addPayment} disabled={saving || !amount}
-                            className="ml-auto inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#F59E0B] hover:bg-[#B4780B] text-white text-[12.5px] font-bold disabled:opacity-50 transition-colors"
+                            className="ml-auto inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-[12.5px] font-bold disabled:opacity-50 transition-colors"
                         >
                             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                             Add Payment

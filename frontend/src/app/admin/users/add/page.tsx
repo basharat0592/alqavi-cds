@@ -363,7 +363,7 @@ export default function AddUserPage() {
                             {showBranches && (
                                 <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 bg-slate-50/40 p-5">
                                     <div className="flex items-center gap-2">
-                                        <Store className="w-4 h-4 text-[#B4780B] shrink-0" />
+                                        <Store className="w-4 h-4 text-[#1A1A1A] shrink-0" />
                                         <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">Assigned Organizations</span>
                                     </div>
                                     <p className="text-xs text-slate-500">
@@ -394,7 +394,7 @@ export default function AddUserPage() {
                                             <div className="flex gap-2 pb-0.5">
                                                 <button type="button"
                                                     onClick={() => setSelectedWarehouses(prev => [...new Set([...prev, ...branchWarehouses.map(w => String(w.id))])])}
-                                                    className="text-[11px] font-semibold text-[#B4780B] hover:underline">
+                                                    className="text-[11px] font-semibold text-[#119AB8] hover:underline">
                                                     Select all shown
                                                 </button>
                                                 <span className="text-slate-300">|</span>
@@ -437,7 +437,7 @@ export default function AddUserPage() {
                                         </p>
                                     )}
                                     {selectedWarehouses.length > 0 && (
-                                        <p className="text-[11px] text-[#B4780B] font-medium">
+                                        <p className="text-[11px] text-[#1A1A1A] font-medium">
                                             {selectedWarehouses.length} branch{selectedWarehouses.length !== 1 ? 'es' : ''} selected
                                         </p>
                                     )}
@@ -461,7 +461,7 @@ export default function AddUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#92600A]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
                                     >
                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -480,7 +480,7 @@ export default function AddUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#92600A]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
                                     >
                                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -498,7 +498,7 @@ export default function AddUserPage() {
                                     <p className="text-xs text-slate-500">Select which pages this user can access after login.</p>
                                     <div className="flex gap-2">
                                         <button type="button" onClick={selectAll}
-                                            className="text-[11px] font-semibold text-[#B4780B] hover:underline">
+                                            className="text-[11px] font-semibold text-[#119AB8] hover:underline">
                                             Select All
                                         </button>
                                         <span className="text-slate-300">|</span>
@@ -563,7 +563,7 @@ export default function AddUserPage() {
                                 </div>
 
                                 {selectedPages.length > 0 && (
-                                    <p className="text-[11px] text-[#B4780B] font-medium">
+                                    <p className="text-[11px] text-[#1A1A1A] font-medium">
                                         {selectedPages.length} page{selectedPages.length !== 1 ? 's' : ''} selected
                                     </p>
                                 )}
@@ -574,8 +574,8 @@ export default function AddUserPage() {
                     {form.role && isFullAccess && (
                         <div className="px-6 pb-4">
                             <div className="flex items-center gap-2 px-4 py-3 bg-[#F59E0B]/10 rounded-lg border border-[#F59E0B]/15">
-                                <ShieldCheck className="w-4 h-4 text-[#B4780B]" />
-                                <p className="text-xs text-[#B4780B] font-medium">
+                                <ShieldCheck className="w-4 h-4 text-[#1A1A1A]" />
+                                <p className="text-xs text-[#1A1A1A] font-medium">
                                     This role has full access to all pages — no restrictions apply.
                                 </p>
                             </div>
@@ -606,7 +606,7 @@ export default function AddUserPage() {
                                     </div>
                                 )}
                                 {selectedAreas.length > 0 && (
-                                    <p className="text-[11px] text-[#B4780B] font-medium">
+                                    <p className="text-[11px] text-[#1A1A1A] font-medium">
                                         {selectedAreas.length} area{selectedAreas.length !== 1 ? 's' : ''} selected
                                     </p>
                                 )}
@@ -664,7 +664,7 @@ export default function AddUserPage() {
                                         onFocus={e => e.currentTarget.select()}
                                         className="flex-1 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[12px] text-slate-700 outline-none focus:border-[#F59E0B]"
                                     />
-                                    <button type="button" onClick={() => copy('link', created.loginUrl)} className="h-9 px-3 rounded-lg bg-[#F59E0B] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#B4780B] transition-colors shrink-0">
+                                    <button type="button" onClick={() => copy('link', created.loginUrl)} className="h-9 px-3 rounded-lg bg-[#F59E0B] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#D97706] transition-colors shrink-0">
                                         {copied === 'link' ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                                     </button>
                                 </div>

@@ -13,7 +13,7 @@ const LABEL = 'block text-[10px] font-bold text-slate-500 mb-1.5 uppercase track
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: any }) => (
     <div className="bg-slate-50/60 px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-        {Icon && <Icon className="w-5 h-5 text-[#B4780B]" />}
+        {Icon && <Icon className="w-5 h-5 text-[#1A1A1A]" />}
         <span className="text-sm font-bold text-slate-900 tracking-tight">{title}</span>
     </div>
 );
@@ -110,8 +110,8 @@ export default function AddCustomerPage() {
                                     </>
                                 ) : (
                                     <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
-                                        <Camera className="text-slate-300 group-hover:text-[#FBBF24]" size={18} />
-                                        <span className="text-[8px] font-bold uppercase text-slate-400 mt-1">Photo</span>
+                                        <Camera className="text-slate-300 group-hover:text-[#0E7F98]" size={18} />
+                                        <span className="text-[10.5px] font-bold uppercase text-slate-400 mt-1">Photo</span>
                                         <input type="file" className="hidden" accept="image/*" onChange={e => handle('avatar', e.target.files?.[0] || null)} />
                                     </label>
                                 )}

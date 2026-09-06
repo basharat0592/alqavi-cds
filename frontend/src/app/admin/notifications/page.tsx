@@ -67,10 +67,10 @@ export default function NotificationsPage() {
         const action = (log.action_type || '').toLowerCase();
         const desc = (log.description || '').toLowerCase();
         if (action.includes('error') || action.includes('fail')) return 'text-rose-500 bg-rose-50';
-        if (action.includes('order')) return 'text-sky-500 bg-sky-50';
+        if (action.includes('order')) return 'text-[#8A8A86] bg-[#FAFAF8]';
         if (action.includes('user')) return 'text-emerald-500 bg-emerald-50';
         if (action.includes('login')) return 'text-amber-500 bg-amber-50';
-        if (desc.includes('newsletter')) return 'text-sky-600 bg-sky-50';
+        if (desc.includes('newsletter')) return 'text-[#5B5B58] bg-[#FAFAF8]';
         return 'text-[#B4780B] bg-[#F59E0B]/10';
     };
 
@@ -120,7 +120,7 @@ export default function NotificationsPage() {
                         onClick={() => setFilter(tab.id)}
                         className={cn(
                             'flex items-center gap-2 pb-3 text-[14px] font-medium transition-all relative whitespace-nowrap',
-                            filter === tab.id ? 'text-[#B4780B]' : 'text-slate-600 hover:text-slate-900'
+                            filter === tab.id ? 'text-[#1A1A1A]' : 'text-slate-600 hover:text-slate-900'
                         )}
                     >
                         <tab.icon size={16} />
@@ -136,7 +136,7 @@ export default function NotificationsPage() {
             <Card className="overflow-hidden">
                 {loading ? (
                     <div className="py-20 flex flex-col items-center justify-center gap-4">
-                        <RefreshCw className="h-6 w-6 text-[#B4780B] animate-spin" />
+                        <RefreshCw className="h-6 w-6 text-[#1A1A1A] animate-spin" />
                         <p className="text-[13px] text-slate-600">Updating activity feed...</p>
                     </div>
                 ) : filteredNotifications.length === 0 ? (
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-4">
-                                            <p className="text-[14px] font-bold text-slate-900 leading-tight group-hover:text-[#92600A] transition-colors">
+                                            <p className="text-[14px] font-bold text-slate-900 leading-tight group-hover:text-[#0E7F98] transition-colors">
                                                 {notif.action_type || 'System Event'}
                                             </p>
                                             <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-tighter tabular-nums">

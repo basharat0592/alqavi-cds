@@ -49,7 +49,7 @@ export default function NotificationPanel({
                     <div>
                         <p className="text-[14px] font-bold text-slate-900 dark:text-white">Activity Dashboard</p>
                         {unread > 0 && (
-                            <p className="text-[9px] font-extrabold text-sky-500 dark:text-sky-400 uppercase tracking-widest animate-pulse mt-0.5">
+                            <p className="text-[9px] font-extrabold text-[#8A8A86] dark:text-[#B4B4B0] uppercase tracking-widest animate-pulse mt-0.5">
                                 {unread} UNREAD EVENTS
                             </p>
                         )}
@@ -87,13 +87,13 @@ export default function NotificationPanel({
                             return (
                                 <Link key={item.id} href={item.href}
                                     onClick={() => onClose()}
-                                    className={`flex items-start gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-all group border-l-2 ${!item.read ? 'border-sky-500 bg-sky-500/5 dark:bg-sky-500/10' : 'border-transparent'}`}>
-                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 shadow-sm group-hover:border-sky-500/20 transition-colors">
+                                    className={`flex items-start gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-white/5 transition-all group border-l-2 ${!item.read ? 'border-[#8A8A86] bg-[#8A8A86]/5 dark:bg-[#8A8A86]/10' : 'border-transparent'}`}>
+                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800 shadow-sm group-hover:border-[#8A8A86]/20 transition-colors">
                                         <Icon className={`h-4 w-4 ${item.color}`} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between gap-2">
-                                            <p className={`text-[13px] font-bold leading-tight group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors ${!item.read ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400'}`}>
+                                            <p className={`text-[13px] font-bold leading-tight group-hover:text-[#8A8A86] dark:group-hover:text-[#B4B4B0] transition-colors ${!item.read ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400'}`}>
                                                 {item.title}
                                             </p>
                                             <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-medium shrink-0 flex items-center gap-1">
@@ -111,7 +111,7 @@ export default function NotificationPanel({
                                                     e.stopPropagation();
                                                     onMarkRead(item.id);
                                                 }}
-                                                className="text-[11px] text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 font-bold hover:underline flex items-center gap-1 transition-colors"
+                                                className="text-[11px] text-[#8A8A86] hover:text-[#5B5B58] dark:text-[#B4B4B0] dark:hover:text-[#DCDCD8] font-bold hover:underline flex items-center gap-1 transition-colors"
                                             >
                                                 Mark as read
                                             </button>
@@ -127,10 +127,10 @@ export default function NotificationPanel({
             {/* Footer */}
             <div className="border-t border-slate-100 dark:border-white/5 bg-slate-50/55 dark:bg-white/5 px-5 py-3.5 flex flex-col gap-2.5">
                 <div className="flex items-center justify-between">
-                    <button onClick={onMarkAllRead} className="text-[11px] font-bold text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 hover:underline transition-colors">
+                    <button onClick={onMarkAllRead} className="text-[11px] font-bold text-[#8A8A86] hover:text-[#5B5B58] dark:text-[#B4B4B0] dark:hover:text-[#DCDCD8] hover:underline transition-colors">
                         Mark All as Noted
                     </button>
-                    <Link href="/admin/notifications" onClick={onClose} className="text-[11px] font-bold text-sky-500 hover:text-sky-600 dark:text-sky-400 dark:hover:text-sky-300 hover:underline transition-colors">
+                    <Link href="/admin/notifications" onClick={onClose} className="text-[11px] font-bold text-[#8A8A86] hover:text-[#5B5B58] dark:text-[#B4B4B0] dark:hover:text-[#DCDCD8] hover:underline transition-colors">
                         View All Activity
                     </Link>
                 </div>

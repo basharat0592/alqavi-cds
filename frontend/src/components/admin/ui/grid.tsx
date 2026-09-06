@@ -16,34 +16,34 @@ import { ui } from './tokens';
    "nothing here" on a white card, which is what made these grids look unfinished.
    The grid lines frame the columns; the field outline says "you can type here". */
 export const cellCls =
-    'w-full h-9 px-2 bg-slate-50 text-[12.5px] font-semibold text-slate-900 outline-none rounded-md ' +
-    'border border-slate-200 transition-colors placeholder:text-slate-400 placeholder:font-normal ' +
-    'hover:border-slate-300 hover:bg-white focus:bg-white focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/30';
+    'w-full h-9 px-2 bg-[#F2F2F0] text-[12.5px] font-medium text-[#1A1A1A] outline-none rounded-lg ' +
+    'border border-transparent transition-colors placeholder:text-[#9C9C98] placeholder:font-normal ' +
+    'hover:bg-[#EDEDEA] focus:bg-white focus:border-[#E0E0DC] focus:ring-2 focus:ring-black/[0.06]';
 
 export const cellNum = cellCls + ' text-right tabular-nums no-spinner';
 
 export const cellDisabled =
-    'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed hover:border-slate-200 hover:bg-slate-100';
+    'bg-[#EFEFEC] border-transparent text-[#9C9C98] cursor-not-allowed hover:bg-[#EFEFEC]';
 
 /** Marks a cell that failed validation. Applied only after a save attempt. */
 export const cellError =
-    ' !border-rose-400 !bg-rose-50/60 focus:!border-rose-500 focus:!ring-rose-500/25';
+    ' !border-[#F0A9A9] !bg-[#FCE9E9] focus:!border-[#DC2626] focus:!ring-[#DC2626]/20';
 
 /** The horizontal scroller that keeps header, rows and totals locked together. */
-export const gridScroller = 'overflow-x-auto custom-scrollbar border-b border-slate-200';
+export const gridScroller = 'overflow-x-auto custom-scrollbar border-b border-[#EDEDEA]';
 
 /** Header band. */
-export const gridHead = 'bg-slate-100 border-b border-slate-300';
+export const gridHead = 'bg-[#F5F5F3] border-b border-[#EDEDEA]';
 
 /** Totals band, which also hosts the "add row" control. */
-export const gridFoot = 'bg-slate-50 border-t-2 border-slate-300 items-center';
+export const gridFoot = 'bg-[#FAFAF8] border-t border-[#EDEDEA] items-center';
 
 /** A row: zebra striped, with a rail that lights up on the row being edited. */
 export const gridRow = (index: number) =>
-    'relative border-b border-slate-200 last:border-b-0 transition-colors ' +
-    'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#F59E0B] ' +
-    (index % 2 ? 'bg-slate-50/40 ' : 'bg-white ') +
-    'hover:bg-slate-50 focus-within:bg-[#F59E0B]/[0.06]';
+    'relative border-b border-[#F2F2F0] last:border-b-0 transition-colors ' +
+    'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-transparent focus-within:before:bg-[#1A1A1A] ' +
+    (index % 2 ? 'bg-[#FAFAF8] ' : 'bg-white ') +
+    'hover:bg-[#F5F5F3] focus-within:bg-black/[0.03]';
 
 // Written out rather than interpolated — Tailwind only ships classes it can see as literals.
 const TH_ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center' } as const;
@@ -51,13 +51,13 @@ const TH_ALIGN = { left: 'text-left', right: 'text-right', center: 'text-center'
 export const Th = ({ children, align = 'left', required = false }: {
     children: React.ReactNode; align?: keyof typeof TH_ALIGN; required?: boolean;
 }) => (
-    <div className={`px-2 py-2 text-[11px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80 last:border-r-0 whitespace-nowrap ${TH_ALIGN[align]}`}>
-        {children}{required && <span className="text-rose-500 ml-0.5">*</span>}
+    <div className={`px-2 py-2.5 text-[11.5px] font-medium tracking-[-0.01em] text-[#9C9C98] whitespace-nowrap ${TH_ALIGN[align]}`}>
+        {children}{required && <span className="text-[#DC2626] ml-0.5">*</span>}
     </div>
 );
 
 export const Cell = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-    <div className={`px-1 py-1 border-r border-slate-100 last:border-r-0 flex items-center ${className}`}>{children}</div>
+    <div className={`px-1 py-1 flex items-center ${className}`}>{children}</div>
 );
 
 /* Compact field for the bottom settlement strip — smaller than the shared admin
@@ -69,7 +69,7 @@ export const SField = ({ label, hint, children }: {
     label: string; hint?: string; children: React.ReactNode;
 }) => (
     <div className="w-full min-w-0">
-        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1 truncate" title={hint || label}>{label}</label>
+        <label className="block text-[11.5px] font-medium tracking-[-0.01em] text-[#9C9C98] mb-1 truncate" title={hint || label}>{label}</label>
         {children}
     </div>
 );
@@ -78,11 +78,11 @@ export const SField = ({ label, hint, children }: {
 export const SectionHead = ({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) => (
     <div className="flex items-center gap-2.5 mb-4 select-none">
         {icon && (
-            <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/12 text-[#B4780B] flex items-center justify-center ring-1 ring-inset ring-[#F59E0B]/30 shrink-0">
+            <div className="w-7 h-7 rounded-full bg-[#F0F0EE] text-[#1A1A1A] flex items-center justify-center shrink-0">
                 {icon}
             </div>
         )}
-        <span className="text-[12px] font-bold text-slate-800 tracking-tight">{children}</span>
-        <div className="h-px flex-1 bg-slate-200/70" />
+        <span className="text-[13px] font-semibold text-[#1A1A1A] tracking-[-0.01em]">{children}</span>
+        <div className="h-px flex-1 bg-[#EDEDEA]" />
     </div>
 );

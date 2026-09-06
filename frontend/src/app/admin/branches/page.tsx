@@ -313,7 +313,7 @@ export default function BranchesPage() {
     const [areaFilter, setAreaFilter] = useState('');
     const [adminFilter, setAdminFilter] = useState<'' | 'with' | 'without'>('');
     const [page, setPage] = useState(1);
-    const PAGE_SIZE = 10;
+    const [PAGE_SIZE, setPageSize] = useState(5);
 
     // Areas actually present on an organization — a filter listing empty areas
     // would offer choices that can only ever return nothing.
@@ -364,8 +364,8 @@ export default function BranchesPage() {
                 <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                     <ShieldCheck size={26} />
                 </div>
-                <h2 className="text-[18px] font-bold text-slate-900">Super Admin only</h2>
-                <p className="text-[13px] text-slate-500 mt-2">Organization ↔ admin assignments can only be managed by a Super Admin.</p>
+                <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Super Admin only</h2>
+                <p className="text-[13px] text-[#8A8A86] mt-2">Organization ↔ admin assignments can only be managed by a Super Admin.</p>
             </div>
         );
     }
@@ -373,7 +373,7 @@ export default function BranchesPage() {
     if (loading && warehouses.length === 0) return <PageLoader />;
 
     return (
-        <div className="pb-16 text-left text-slate-800">
+        <div className="pb-16 text-left text-[#1A1A1A]">
             <div className="max-w-[1200px] mx-auto">
                 <PageHeader
                     title="Organizations"
@@ -397,11 +397,11 @@ export default function BranchesPage() {
                         <div className="flex items-start gap-3">
                             <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
                             <div>
-                                <p className="text-[13px] font-bold text-amber-800">{unassigned.length} admin(s) have no branch — they currently see no data.</p>
+                                <p className="text-[13px] font-semibold text-amber-800">{unassigned.length} admin(s) have no branch — they currently see no data.</p>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     {unassigned.map(u => (
                                         <button key={u.id} onClick={() => router.push(`/admin/users/edit/${u.id}`)}
-                                            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-amber-800 bg-white hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-full transition-colors">
+                                            className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-amber-800 bg-white hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded-full transition-colors">
                                             {name(u)} <ChevronRight size={12} />
                                         </button>
                                     ))}
@@ -414,24 +414,24 @@ export default function BranchesPage() {
                 {/* Organizations as one table — area is a column rather than a heading,
                     so every organization is comparable in a single scan. */}
                 {warehouses.length === 0 ? (
-                    <Card className="py-20 text-center text-[13px] text-slate-500">No organizations yet. Click “New Organization” to create one.</Card>
+                    <Card className="py-20 text-center text-[13px] text-[#8A8A86]">No organizations yet. Click “New Organization” to create one.</Card>
                 ) : (
                     <Card className="overflow-hidden">
                         {/* Filters */}
-                        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50/70 flex items-center gap-2.5 overflow-x-auto custom-scrollbar">
+                        <div className="px-4 sm:px-5 py-3.5 border-b border-[#F2F2F0] flex items-center gap-2.5 overflow-x-auto custom-scrollbar">
                             <div className="relative flex-1 min-w-[180px]">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C98] pointer-events-none" />
                                 <input
                                     value={q}
                                     onChange={e => setQ(e.target.value)}
                                     placeholder="Search organization, area or admin…"
-                                    className={ui.inputBase + ' h-9 pl-9 pr-8 text-[12.5px]'}
+                                    className={ui.inputBase + ' h-9 pl-9 pr-8 text-[13px]'}
                                 />
                                 {q && (
                                     <button
                                         onClick={() => setQ('')}
                                         aria-label="Clear search"
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9C9C98] hover:text-[#3A3A38]"
                                     >
                                         <XIcon size={14} />
                                     </button>
@@ -441,7 +441,7 @@ export default function BranchesPage() {
                             <select
                                 value={areaFilter}
                                 onChange={e => setAreaFilter(e.target.value)}
-                                className={ui.inputBase + ' h-9 w-[150px] shrink-0 text-[12.5px] cursor-pointer'}
+                                className={ui.inputBase + ' h-9 w-[150px] shrink-0 text-[13px] cursor-pointer'}
                             >
                                 <option value="">All areas</option>
                                 {areaOptions.map(a => <option key={a} value={a}>{a}</option>)}
@@ -450,7 +450,7 @@ export default function BranchesPage() {
                             <select
                                 value={adminFilter}
                                 onChange={e => setAdminFilter(e.target.value as '' | 'with' | 'without')}
-                                className={ui.inputBase + ' h-9 w-[168px] shrink-0 text-[12.5px] cursor-pointer'}
+                                className={ui.inputBase + ' h-9 w-[168px] shrink-0 text-[13px] cursor-pointer'}
                             >
                                 <option value="">Any admin status</option>
                                 <option value="with">Has an admin</option>
@@ -460,7 +460,7 @@ export default function BranchesPage() {
                             {filtersOn && (
                                 <button
                                     onClick={clearFilters}
-                                    className="inline-flex items-center gap-1 h-9 px-3 shrink-0 rounded-lg border border-slate-200 bg-white text-[12px] font-bold text-slate-600 hover:border-[#F59E0B]/40 hover:text-[#B4780B] transition-colors"
+                                    className="inline-flex items-center gap-1 h-9 px-3 shrink-0 rounded-lg border border-[#EDEDEA] bg-white text-[11.5px] font-semibold text-[#3A3A38] hover:border-[#F59E0B]/40 hover:text-[#0E7F98] transition-colors"
                                 >
                                     <XIcon size={13} /> Clear
                                 </button>
@@ -488,7 +488,7 @@ export default function BranchesPage() {
                                             <tr
                                                 key={wh.id}
                                                 onClick={() => setDetailFor(wh)}
-                                                className={`${idx % 2 ? 'bg-slate-50/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group cursor-pointer ${active ? '' : 'opacity-60'}`}
+                                                className={`${idx % 2 ? 'bg-[#FAFAF8]/40' : 'bg-white'} hover:bg-[#1A1A1A]/[0.06] transition-colors group cursor-pointer ${active ? '' : 'opacity-60'}`}
                                             >
                                                 <td className={ui.td + ' relative'}>
                                                     <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-transparent group-hover:bg-[#F59E0B] transition-colors" />
@@ -497,18 +497,18 @@ export default function BranchesPage() {
                                                             <Building2 size={16} />
                                                         </span>
                                                         <div className="min-w-0">
-                                                            <p className="font-bold text-[13px] text-slate-900 truncate leading-tight">{wh.name}</p>
-                                                            {wh.location && <p className="text-[11px] text-slate-400 truncate">{wh.location}</p>}
+                                                            <p className="font-semibold text-[13px] text-[#1A1A1A] truncate leading-tight">{wh.name}</p>
+                                                            {wh.location && <p className="text-[11.5px] text-[#9C9C98] truncate">{wh.location}</p>}
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className={ui.td}>
                                                     {wh.area_name ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-100 text-[11.5px] font-semibold text-slate-600">
-                                                            <MapPin size={11} className="text-slate-400 shrink-0" /> {wh.area_name}
+                                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F2F2F0] text-[11.5px] font-semibold text-[#3A3A38]">
+                                                            <MapPin size={11} className="text-[#9C9C98] shrink-0" /> {wh.area_name}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[11.5px] text-slate-400 italic">No city</span>
+                                                        <span className="text-[11.5px] text-[#9C9C98] italic">No city</span>
                                                     )}
                                                 </td>
                                                 <td className={ui.td}>
@@ -524,18 +524,18 @@ export default function BranchesPage() {
                                                         <span className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${active ? 'bg-emerald-500' : 'bg-slate-300'}`}>
                                                             <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${active ? 'left-[18px]' : 'left-0.5'}`} />
                                                         </span>
-                                                        <span className={`text-[11px] font-bold uppercase tracking-wider ${active ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                                        <span className={`text-[11.5px] font-semibold uppercase tracking-wider ${active ? 'text-emerald-700' : 'text-[#9C9C98]'}`}>
                                                             {active ? 'Active' : 'Off'}
                                                         </span>
                                                     </button>
                                                 </td>
                                                 <td className={ui.td + ' text-right'}>
                                                     {Number(wh.stock_count || 0) > 0 ? (
-                                                        <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold tabular-nums text-slate-800">
-                                                            <Boxes size={12} className="text-slate-400" /> {wh.stock_count}
+                                                        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-[#1A1A1A]">
+                                                            <Boxes size={12} className="text-[#9C9C98]" /> {wh.stock_count}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[12.5px] text-slate-300 tabular-nums">—</span>
+                                                        <span className="text-[13px] text-[#C4C4C0] tabular-nums">—</span>
                                                     )}
                                                 </td>
                                                 <td className={ui.td}>
@@ -543,20 +543,20 @@ export default function BranchesPage() {
                                                         /* Invited but not yet accepted: the account does not exist yet,
                                                            so the row offers the link rather than an admin chip. */
                                                         <div className="flex flex-wrap items-center gap-1.5">
-                                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-black uppercase tracking-wider ${
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-semibold uppercase tracking-wider ${
                                                                 invite.state === 'pending' ? 'bg-[#F59E0B]/12 text-[#B4780B]'
-                                                                    : invite.state === 'expired' ? 'bg-slate-100 text-slate-500'
+                                                                    : invite.state === 'expired' ? 'bg-[#F2F2F0] text-[#8A8A86]'
                                                                         : 'bg-rose-50 text-rose-600'}`}>
                                                                 <Clock size={10} /> {invite.state}
                                                             </span>
-                                                            <span className="text-[11.5px] text-slate-500 truncate max-w-[160px]" title={invite.email}>
+                                                            <span className="text-[11.5px] text-[#8A8A86] truncate max-w-[160px]" title={invite.email}>
                                                                 {invite.admin_name || invite.email}
                                                             </span>
                                                             {invite.state === 'pending' ? (
                                                                 <button
                                                                     type="button"
                                                                     onClick={e => { e.stopPropagation(); setLinkFor(invite); setCopied(false); }}
-                                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                                                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                                                 >
                                                                     <Link2 size={11} /> Link
                                                                 </button>
@@ -565,7 +565,7 @@ export default function BranchesPage() {
                                                                     type="button"
                                                                     disabled={busyInvite === invite.id}
                                                                     onClick={e => { e.stopPropagation(); regenerate(invite); }}
-                                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-md px-2 py-1 transition-colors disabled:opacity-50"
+                                                                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#3A3A38] hover:bg-[#F2F2F0] border border-[#EDEDEA] rounded-md px-2 py-1 transition-colors disabled:opacity-50"
                                                                 >
                                                                     <RotateCcw size={11} /> New link
                                                                 </button>
@@ -573,18 +573,18 @@ export default function BranchesPage() {
                                                         </div>
                                                     ) : admins.length === 0 ? (
                                                         <div className="flex flex-wrap items-center gap-1.5">
-                                                            <span className="text-[11.5px] text-slate-400 italic mr-1">None assigned</span>
+                                                            <span className="text-[11.5px] text-[#9C9C98] italic mr-1">None assigned</span>
                                                             <button
                                                                 type="button"
                                                                 onClick={e => { e.stopPropagation(); setSelectFor(wh); }}
-                                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-md px-2 py-1 transition-colors"
+                                                                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#3A3A38] hover:bg-[#F2F2F0] border border-[#EDEDEA] rounded-md px-2 py-1 transition-colors"
                                                             >
-                                                                <Users size={11} className="text-slate-400" /> Select
+                                                                <Users size={11} className="text-[#9C9C98]" /> Select
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={e => { e.stopPropagation(); openInvite(wh); }}
-                                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                                                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                                             >
                                                                 <Mail size={11} /> Invite
                                                             </button>
@@ -596,16 +596,16 @@ export default function BranchesPage() {
                                                                     key={u.id}
                                                                     onClick={e => { e.stopPropagation(); router.push(`/admin/users/edit/${u.id}`); }}
                                                                     title={`${u.email || ''}${u.phone ? ' · ' + u.phone : ''} — view / edit`}
-                                                                    className="inline-flex items-center gap-1.5 max-w-[220px] text-[11.5px] font-semibold text-slate-700 bg-white hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/30 rounded-full pl-1 pr-2.5 py-1 transition-colors group"
+                                                                    className="inline-flex items-center gap-1.5 max-w-[220px] text-[11.5px] font-semibold text-[#3A3A38] bg-white hover:bg-[#F59E0B]/10 border border-[#EDEDEA] hover:border-[#F59E0B]/30 rounded-full pl-1 pr-2.5 py-1 transition-colors group"
                                                                 >
-                                                                    <span className="w-5 h-5 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[9px] font-bold text-slate-500">
+                                                                    <span className="w-5 h-5 rounded-full bg-[#F2F2F0] border border-[#EDEDEA] flex items-center justify-center overflow-hidden shrink-0 text-[10.5px] font-semibold text-[#8A8A86]">
                                                                         {u.avatar
                                                                             ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                                                             : (u.full_name || u.username || 'A').split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()}
                                                                     </span>
                                                                     <span className="truncate">{u.full_name?.trim() || u.username || 'Admin'}</span>
                                                                     {u.status && String(u.status).toLowerCase() !== 'active' && (
-                                                                        <span className="text-[9px] font-black uppercase text-slate-400">{u.status}</span>
+                                                                        <span className="text-[10.5px] font-semibold uppercase text-[#9C9C98]">{u.status}</span>
                                                                     )}
                                                                 </button>
                                                             ))}
@@ -615,11 +615,11 @@ export default function BranchesPage() {
                                                 <td className={ui.td + ' text-right whitespace-nowrap'}>
                                                     <div className="inline-flex items-center gap-1.5 opacity-100 xl:opacity-60 xl:group-hover:opacity-100 transition-opacity">
                                                     <button onClick={e => { e.stopPropagation(); openEdit(wh); }} title="Edit organization"
-                                                        className="inline-flex items-center gap-1 text-[11.5px] font-bold text-slate-500 hover:text-[#92600A] hover:bg-[#F59E0B]/10 border border-slate-200 hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#8A8A86] hover:text-[#0E7F98] hover:bg-[#F59E0B]/10 border border-[#EDEDEA] hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Pencil size={12} /> Edit
                                                     </button>
                                                     <button onClick={e => { e.stopPropagation(); setDeleteTarget(wh); }} title="Delete organization"
-                                                        className="inline-flex items-center gap-1 text-[11.5px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-[#EDEDEA] hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Trash2 size={12} /> Delete
                                                     </button>
                                                     </div>
@@ -630,18 +630,18 @@ export default function BranchesPage() {
                                 </tbody>
                             </table>
                             {rows.length === 0 && (
-                                <div className="py-14 text-center text-[12.5px] text-slate-400">
+                                <div className="py-14 text-center text-[13px] text-[#9C9C98]">
                                     No organizations match these filters.
                                 </div>
                             )}
                         </div>
-                        <div className="px-4 py-2.5 border-t border-slate-200 bg-slate-50/70 text-[11.5px] text-slate-500">
-                            <b className="text-slate-700 tabular-nums">{rows.length}</b> {rows.length === 1 ? 'organization' : 'organizations'}
-                            {filtersOn && <> of <b className="text-slate-700 tabular-nums">{warehouses.length}</b></>}
+                        <div className="px-4 py-2.5 border-t border-[#EDEDEA] bg-[#FAFAF8] text-[11.5px] text-[#8A8A86]">
+                            <b className="text-[#3A3A38] tabular-nums">{rows.length}</b> {rows.length === 1 ? 'organization' : 'organizations'}
+                            {filtersOn && <> of <b className="text-[#3A3A38] tabular-nums">{warehouses.length}</b></>}
                             {' · '}
-                            <b className="text-slate-700 tabular-nums">{rows.filter(w => adminsFor(w.id).length === 0).length}</b> without an admin
+                            <b className="text-[#3A3A38] tabular-nums">{rows.filter(w => adminsFor(w.id).length === 0).length}</b> without an admin
                             {rows.some(w => !(w.is_active ?? true)) && (
-                                <> · <b className="text-slate-700 tabular-nums">{rows.filter(w => !(w.is_active ?? true)).length}</b> deactivated</>
+                                <> · <b className="text-[#3A3A38] tabular-nums">{rows.filter(w => !(w.is_active ?? true)).length}</b> deactivated</>
                             )}
                         </div>
                         <Pagination
@@ -650,6 +650,7 @@ export default function BranchesPage() {
                             onPage={setPage}
                             total={rows.length}
                             pageSize={PAGE_SIZE}
+                            onPageSize={(n) => { setPageSize(n); setPage(1); }}
                         />
                     </Card>
                 )}
@@ -672,7 +673,7 @@ export default function BranchesPage() {
             >
                 <form onSubmit={saveBranch} className="space-y-4">
                     <div>
-                        <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
+                        <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
                         <input
                             autoFocus
                             value={nb.name}
@@ -687,7 +688,7 @@ export default function BranchesPage() {
                     {editing && (
                         <>
                             <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">City</label>
+                                <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">City</label>
                                 <select
                                     value={nb.area}
                                     onChange={e => setNb(p => ({ ...p, area: e.target.value }))}
@@ -700,7 +701,7 @@ export default function BranchesPage() {
                             </div>
                             {nb.area === '__new__' && (
                                 <div>
-                                    <label className="block text-[12px] font-bold text-slate-700 mb-1.5">New City Name <span className="text-rose-600">*</span></label>
+                                    <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">New City Name <span className="text-rose-600">*</span></label>
                                     <input
                                         value={nb.newCity}
                                         onChange={e => setNb(p => ({ ...p, newCity: e.target.value }))}
@@ -710,7 +711,7 @@ export default function BranchesPage() {
                                 </div>
                             )}
                             <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Address <span className="text-slate-400 font-medium">(optional)</span></label>
+                                <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Address <span className="text-[#9C9C98] font-medium">(optional)</span></label>
                                 <input
                                     value={nb.address}
                                     onChange={e => setNb(p => ({ ...p, address: e.target.value }))}
@@ -721,17 +722,17 @@ export default function BranchesPage() {
                         </>
                     )}
                     {!editing && (
-                        <div className="pt-4 mt-1 border-t border-slate-200 space-y-4">
+                        <div className="pt-4 mt-1 border-t border-[#EDEDEA] space-y-4">
                             <div className="flex items-center gap-2">
                                 <span className="w-7 h-7 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
                                     <UserPlus size={14} />
                                 </span>
-                                <p className="text-[12.5px] font-bold text-slate-800 leading-none">Who will run it</p>
+                                <p className="text-[13px] font-semibold text-[#1A1A1A] leading-none">Who will run it</p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Name</label>
+                                    <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Name</label>
                                     <input
                                         value={nb.adminName}
                                         onChange={e => setNb(p => ({ ...p, adminName: e.target.value }))}
@@ -740,7 +741,7 @@ export default function BranchesPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Phone <span className="text-slate-400 font-medium">(optional)</span></label>
+                                    <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Phone <span className="text-[#9C9C98] font-medium">(optional)</span></label>
                                     <input
                                         value={nb.phone}
                                         onChange={e => setNb(p => ({ ...p, phone: e.target.value }))}
@@ -751,7 +752,7 @@ export default function BranchesPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
+                                <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
                                 <input
                                     type="email"
                                     value={nb.email}
@@ -794,29 +795,29 @@ export default function BranchesPage() {
                                     <Building2 size={22} />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[17px] font-black text-slate-900 tracking-tight truncate">{detailFor.name}</p>
-                                    <p className="text-[12px] text-slate-500 truncate">{detailFor.location || 'No address on file'}</p>
+                                    <p className="text-[17px] font-semibold text-[#1A1A1A] tracking-tight truncate">{detailFor.name}</p>
+                                    <p className="text-[11.5px] text-[#8A8A86] truncate">{detailFor.location || 'No address on file'}</p>
                                 </div>
-                                <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${dActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-wider ${dActive ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F2F2F0] text-[#8A8A86]'}`}>
                                     {dActive ? 'Active' : 'Deactivated'}
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">City</p>
-                                    <p className="text-[13px] font-bold text-slate-800 mt-1 truncate">
-                                        {detailFor.area_name || <span className="text-slate-400 font-medium italic">Not set</span>}
+                                <div className="rounded-xl border border-[#EDEDEA] bg-[#FAFAF8] p-3">
+                                    <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#9C9C98]">City</p>
+                                    <p className="text-[13px] font-semibold text-[#1A1A1A] mt-1 truncate">
+                                        {detailFor.area_name || <span className="text-[#9C9C98] font-medium italic">Not set</span>}
                                     </p>
                                 </div>
-                                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Products</p>
-                                    <p className="text-[13px] font-bold text-slate-800 mt-1 tabular-nums">{detailFor.stock_count || 0}</p>
+                                <div className="rounded-xl border border-[#EDEDEA] bg-[#FAFAF8] p-3">
+                                    <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#9C9C98]">Products</p>
+                                    <p className="text-[13px] font-semibold text-[#1A1A1A] mt-1 tabular-nums">{detailFor.stock_count || 0}</p>
                                 </div>
                             </div>
 
                             <div>
-                                <p className="text-[11px] font-black uppercase tracking-[0.08em] text-slate-400 pb-2 mb-2.5 border-b border-slate-100">
+                                <p className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#9C9C98] pb-2 mb-2.5 border-b border-[#F2F2F0]">
                                     Who runs it
                                 </p>
                                 {dAdmins.length > 0 ? (
@@ -825,29 +826,29 @@ export default function BranchesPage() {
                                             <button
                                                 key={u.id}
                                                 onClick={() => router.push(`/admin/users/edit/${u.id}`)}
-                                                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-slate-200 hover:border-[#F59E0B]/40 hover:bg-[#F59E0B]/[0.05] transition-colors text-left"
+                                                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-[#EDEDEA] hover:border-[#F59E0B]/40 hover:bg-[#F59E0B]/[0.05] transition-colors text-left"
                                             >
-                                                <span className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[10px] font-bold text-slate-500">
+                                                <span className="w-8 h-8 rounded-full bg-[#F2F2F0] border border-[#EDEDEA] flex items-center justify-center overflow-hidden shrink-0 text-[10.5px] font-semibold text-[#8A8A86]">
                                                     {u.avatar
                                                         ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                                         : (u.full_name || u.username || 'A').split(' ').map((x: string) => x[0]).join('').slice(0, 2).toUpperCase()}
                                                 </span>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-[12.5px] font-bold text-slate-800 truncate">{u.full_name?.trim() || u.username}</p>
-                                                    <p className="text-[11px] text-slate-400 truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
+                                                    <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">{u.full_name?.trim() || u.username}</p>
+                                                    <p className="text-[11.5px] text-[#9C9C98] truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
                                                 </div>
-                                                <ChevronRight size={14} className="text-slate-300 shrink-0" />
+                                                <ChevronRight size={14} className="text-[#C4C4C0] shrink-0" />
                                             </button>
                                         ))}
                                     </div>
                                 ) : dInvite ? (
                                     <div className="flex items-center gap-2.5 p-3 rounded-xl border border-dashed border-[#F59E0B]/40 bg-[#F59E0B]/[0.05]">
-                                        <Clock size={15} className="text-[#B4780B] shrink-0" />
+                                        <Clock size={15} className="text-[#1A1A1A] shrink-0" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-[12.5px] font-bold text-slate-800 truncate">
+                                            <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">
                                                 {dInvite.admin_name || dInvite.email}
                                             </p>
-                                            <p className="text-[11px] text-slate-500">
+                                            <p className="text-[11.5px] text-[#8A8A86]">
                                                 Invite {dInvite.state}
                                                 {dInvite.expires_at && dInvite.state === 'pending'
                                                     ? ` · expires ${new Date(dInvite.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
@@ -857,18 +858,18 @@ export default function BranchesPage() {
                                         {dInvite.state === 'pending' && (
                                             <button
                                                 onClick={() => { setLinkFor(dInvite); setCopied(false); setDetailFor(null); }}
-                                                className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/15 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                                className="shrink-0 inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/15 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                             >
                                                 <Link2 size={11} /> Link
                                             </button>
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/60">
-                                        <p className="text-[12px] text-slate-400 italic">Nobody runs this organization yet.</p>
+                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-[#EDEDEA] bg-[#FAFAF8]">
+                                        <p className="text-[11.5px] text-[#9C9C98] italic">Nobody runs this organization yet.</p>
                                         <button
                                             onClick={() => { const wh = detailFor; setDetailFor(null); openInvite(wh); }}
-                                            className="shrink-0 inline-flex items-center gap-1 text-[11px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                            className="shrink-0 inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
                                         >
                                             <Mail size={11} /> Invite
                                         </button>
@@ -900,12 +901,12 @@ export default function BranchesPage() {
                         <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
                             <Building2 size={15} />
                         </span>
-                        <p className="text-[13px] font-bold text-slate-900 truncate">{inviteFor2?.name}</p>
+                        <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">{inviteFor2?.name}</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Name</label>
+                            <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Name</label>
                             <input
                                 autoFocus
                                 value={inviteForm.adminName}
@@ -915,7 +916,7 @@ export default function BranchesPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Phone <span className="text-slate-400 font-medium">(optional)</span></label>
+                            <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Phone <span className="text-[#9C9C98] font-medium">(optional)</span></label>
                             <input
                                 value={inviteForm.phone}
                                 onChange={e => setInviteForm(p => ({ ...p, phone: e.target.value }))}
@@ -926,7 +927,7 @@ export default function BranchesPage() {
                     </div>
 
                     <div>
-                        <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
+                        <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
                         <input
                             type="email"
                             value={inviteForm.email}
@@ -964,8 +965,8 @@ export default function BranchesPage() {
                                 <Building2 size={18} />
                             </span>
                             <div className="min-w-0">
-                                <p className="text-[14px] font-black text-slate-900 truncate">{linkFor.organization_name}</p>
-                                <p className="text-[11.5px] text-slate-500 truncate">
+                                <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">{linkFor.organization_name}</p>
+                                <p className="text-[11.5px] text-[#8A8A86] truncate">
                                     {linkFor.admin_name ? `${linkFor.admin_name} · ` : ''}{linkFor.email}
                                     {linkFor.phone ? ` · ${linkFor.phone}` : ''}
                                 </p>
@@ -973,22 +974,22 @@ export default function BranchesPage() {
                         </div>
 
                         <div>
-                            <label className="block text-[12px] font-bold text-slate-700 mb-1.5">Send them this link</label>
+                            <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Send them this link</label>
                             {/* Selectable input rather than plain text: if the clipboard
                                 API is unavailable the link can still be copied by hand. */}
                             <input
                                 readOnly
                                 value={inviteUrl(linkFor.path)}
                                 onFocus={e => e.currentTarget.select()}
-                                className={ui.inputBase + ' font-mono text-[12px]'}
+                                className={ui.inputBase + ' font-mono text-[11.5px]'}
                             />
                         </div>
 
-                        <div className="flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11.5px] text-slate-600 leading-relaxed">
-                            <Clock size={14} className="shrink-0 mt-px text-slate-400" />
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-[#FAFAF8] border border-[#EDEDEA] text-[11.5px] text-[#3A3A38] leading-relaxed">
+                            <Clock size={14} className="shrink-0 mt-px text-[#9C9C98]" />
                             <span>
                                 Works once, and expires{' '}
-                                <b className="text-slate-800">
+                                <b className="text-[#1A1A1A]">
                                     {linkFor.expires_at ? new Date(linkFor.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'in 7 days'}
                                 </b>.
                                 Anyone holding it can claim this organization, so send it to {linkFor.email} directly.
@@ -1000,7 +1001,7 @@ export default function BranchesPage() {
                             type="button"
                             onClick={() => regenerate(linkFor)}
                             disabled={busyInvite === linkFor.id}
-                            className="inline-flex items-center gap-1.5 text-[12px] font-bold text-slate-600 hover:text-[#B4780B] transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[#3A3A38] hover:text-[#0E7F98] transition-colors disabled:opacity-50"
                         >
                             <RotateCcw size={13} className={busyInvite === linkFor.id ? 'animate-spin' : ''} /> Generate a new link
                         </button>
@@ -1027,8 +1028,8 @@ export default function BranchesPage() {
                     <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
                         <AlertTriangle size={20} />
                     </div>
-                    <div className="text-[13px] text-slate-600">
-                        <p className="font-bold text-slate-900 mb-1">Delete “{deleteTarget?.name}”?</p>
+                    <div className="text-[13px] text-[#3A3A38]">
+                        <p className="font-semibold text-[#1A1A1A] mb-1">Delete “{deleteTarget?.name}”?</p>
                         <p>This permanently removes the organization and any inventory (products &amp; stock) in it, and unassigns its admin. This cannot be undone.</p>
                     </div>
                 </div>
@@ -1049,7 +1050,7 @@ export default function BranchesPage() {
                     if (eligible.length === 0) {
                         return (
                             <div className="py-8 text-center">
-                                <p className="text-[13px] text-slate-500">No other internal users available to assign.</p>
+                                <p className="text-[13px] text-[#8A8A86]">No other internal users available to assign.</p>
                                 <Button
                                     className="mt-4"
                                     onClick={() => { const wh = selectFor; setSelectFor(null); router.push(`/admin/users/add?warehouse=${wh.id}`); }}
@@ -1061,29 +1062,29 @@ export default function BranchesPage() {
                     }
                     return (
                         <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-                            <p className="text-[12px] text-slate-500 mb-1">Pick an existing internal user to also manage this organization.</p>
+                            <p className="text-[11.5px] text-[#8A8A86] mb-1">Pick an existing internal user to also manage this organization.</p>
                             {eligible.map(u => (
                                 <button
                                     key={u.id}
                                     onClick={() => assignExisting(u, selectFor)}
                                     disabled={!!assigningId}
-                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-[#B4780B]/50 hover:border-[#F59E0B]/25 transition-colors text-left disabled:opacity-50"
+                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-[#EDEDEA] bg-white hover:bg-[#F59E0B]/50 hover:border-[#F59E0B]/25 transition-colors text-left disabled:opacity-50"
                                 >
-                                    <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 text-[11px] font-bold text-slate-500">
+                                    <div className="w-9 h-9 rounded-full bg-[#F2F2F0] border border-[#EDEDEA] flex items-center justify-center overflow-hidden shrink-0 text-[11.5px] font-semibold text-[#8A8A86]">
                                         {u.avatar ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                             : name(u).split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <p className="font-bold text-[13px] text-slate-900 truncate">{name(u)}</p>
-                                        <p className="text-[11px] text-slate-500 truncate flex items-center gap-1"><Mail size={10} className="shrink-0" /> {u.email}</p>
+                                        <p className="font-semibold text-[13px] text-[#1A1A1A] truncate">{name(u)}</p>
+                                        <p className="text-[11.5px] text-[#8A8A86] truncate flex items-center gap-1"><Mail size={10} className="shrink-0" /> {u.email}</p>
                                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                             {u.role_name && <Badge tone="blue">{u.role_name}</Badge>}
-                                            {(u.warehouses || []).length > 0 && <span className="text-[10px] text-slate-400">Also manages {(u.warehouses || []).length} branch(es)</span>}
+                                            {(u.warehouses || []).length > 0 && <span className="text-[10.5px] text-[#9C9C98]">Also manages {(u.warehouses || []).length} branch(es)</span>}
                                         </div>
                                     </div>
                                     {assigningId === u.id
-                                        ? <RefreshCw size={15} className="animate-spin text-[#B4780B] shrink-0" />
-                                        : <Plus size={15} className="text-slate-300 shrink-0" />}
+                                        ? <RefreshCw size={15} className="animate-spin text-[#1A1A1A] shrink-0" />
+                                        : <Plus size={15} className="text-[#C4C4C0] shrink-0" />}
                                 </button>
                             ))}
                         </div>

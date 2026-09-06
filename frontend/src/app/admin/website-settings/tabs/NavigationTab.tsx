@@ -19,7 +19,7 @@ const LOCATIONS = [
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#B4780B] hover:bg-[#B4780B] text-[#0F172A]',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -164,7 +164,7 @@ export default function NavigationTab({ menus, setMenus }: Props) {
                                                         <p className="text-[12px] text-[#007185] hover:underline cursor-pointer">{item.url}</p>
                                                     </div>
                                                     <div className="flex items-center justify-end gap-2.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">
-                                                        <button onClick={() => setEditingItem(item)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
+                                                        <button onClick={() => setEditingItem(item)} className="text-[12px] font-bold text-[#119AB8] hover:underline">Edit</button>
                                                         <span className="text-slate-300">|</span>
                                                         <button onClick={() => deleteItem(item.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                                     </div>

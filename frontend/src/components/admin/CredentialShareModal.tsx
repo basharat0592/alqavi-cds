@@ -55,7 +55,7 @@ export default function CredentialShareModal({ created, subtitle, onDone }: { cr
                             <input readOnly value={created.loginUrl} onFocus={e => e.currentTarget.select()}
                                 className="flex-1 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[12px] text-slate-700 outline-none focus:border-[#F59E0B]" />
                             <button type="button" onClick={() => copy('link', created.loginUrl)}
-                                className="h-9 px-3 rounded-lg bg-[#F59E0B] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#B4780B] transition-colors shrink-0">
+                                className="h-9 px-3 rounded-lg bg-[#F59E0B] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#D97706] transition-colors shrink-0">
                                 {copied === 'link' ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                             </button>
                         </div>

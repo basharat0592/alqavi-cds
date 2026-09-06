@@ -103,7 +103,7 @@ function InvoicePaper({ purchase }: { purchase: any }) {
                     )}
                     <div className="flex justify-between items-center pt-2 mt-1 border-t-2 border-slate-300">
                         <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
-                        <span className="font-black text-[#B4780B] text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        <span className="font-black text-[#1A1A1A] text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
                     </div>
                     <div className="flex justify-between pt-1"><span className="text-emerald-600 font-bold uppercase text-[11px]">Total Paid</span><span className="font-bold text-emerald-600 tabular-nums">{formatCurrency(paidAmount)}</span></div>
                     {balance > 0 && (
@@ -116,7 +116,7 @@ function InvoicePaper({ purchase }: { purchase: any }) {
             <div className="mt-auto pt-6 print-exact">
                 <div className="flex items-stretch mb-2 overflow-hidden print-exact" style={{ height: '46px' }}>
                     <div className="text-white flex items-center justify-center px-6 print-exact" style={{ backgroundColor: '#0f172a', clipPath: 'polygon(16% 0, 100% 0, 100% 100%, 16% 100%, 0 50%)' }}>
-                        <span className="text-[8px] font-bold urdu-text whitespace-nowrap">قاضی مارکیٹ CMH روڈ خومر گلگت</span>
+                        <span className="text-[10.5px] font-bold urdu-text whitespace-nowrap">قاضی مارکیٹ CMH روڈ خومر گلگت</span>
                     </div>
                     <div className="text-white flex-1 flex items-center justify-center gap-3 print-exact" style={{ backgroundColor: '#1e293b' }}>
                         <span className="inline-block w-2 h-2 rotate-45 print-exact" style={{ backgroundColor: '#1d4ed8' }}></span>
@@ -124,7 +124,7 @@ function InvoicePaper({ purchase }: { purchase: any }) {
                         <span className="inline-block w-2 h-2 rotate-45 print-exact" style={{ backgroundColor: '#1d4ed8' }}></span>
                     </div>
                     <div className="text-white flex items-center justify-center px-6 print-exact" style={{ backgroundColor: '#0f172a', clipPath: 'polygon(0 0, 84% 0, 100% 50%, 84% 100%, 0 100%)' }}>
-                        <span className="text-[8px] font-bold urdu-text whitespace-nowrap">ابراہیم مارکیٹ کنفکشن بل سکردو</span>
+                        <span className="text-[10.5px] font-bold urdu-text whitespace-nowrap">ابراہیم مارکیٹ کنفکشن بل سکردو</span>
                     </div>
                 </div>
 
@@ -148,7 +148,7 @@ function InvoicePaper({ purchase }: { purchase: any }) {
                 </div>
 
                 <div className="mt-3 text-center">
-                    <p className="text-[8px] text-slate-400 font-medium tracking-wide">
+                    <p className="text-[10.5px] text-slate-400 font-medium tracking-wide">
                         Organization 1: Qazi Market, CMH Road, Khomer Gilgit&nbsp;&nbsp;•&nbsp;&nbsp;Organization 2: Ibrahim Market, Confection Bil, Skardu
                     </p>
                 </div>

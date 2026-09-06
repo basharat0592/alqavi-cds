@@ -132,7 +132,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
                         <div className="relative">
                             <input type={showPw ? 'text' : 'password'} className={inputCls + ' pr-10'} value={form.password}
                                 onChange={e => handle('password', e.target.value)} placeholder={isEdit ? 'Leave blank to keep' : 'Set a password'} />
-                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#92600A]">
+                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]">
                                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                             </button>
                         </div>

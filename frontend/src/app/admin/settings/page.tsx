@@ -213,10 +213,10 @@ export default function SettingsPage() {
                                 <Card className="p-5 hover:border-[#F59E0B]/35 transition-all">
                                     <div className="flex items-start gap-3">
                                         <div className="mt-0.5 p-2 bg-slate-100 rounded-xl group-hover:bg-[#F59E0B]/10 transition-colors">
-                                            <tab.icon size={20} className="text-slate-500 group-hover:text-[#92600A] transition-colors" />
+                                            <tab.icon size={20} className="text-slate-500 group-hover:text-[#0E7F98] transition-colors" />
                                         </div>
                                         <div>
-                                            <h3 className="text-[14px] font-bold text-slate-900 group-hover:text-[#92600A] transition-colors">{tab.label}</h3>
+                                            <h3 className="text-[14px] font-bold text-slate-900 group-hover:text-[#0E7F98] transition-colors">{tab.label}</h3>
                                             <p className="text-[12px] text-slate-600 mt-0.5 leading-snug">{tab.desc}</p>
                                         </div>
                                     </div>
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                                         const f = e.target.files?.[0];
                                         if (f) { setSelectedAvatar(f); setAvatarPreview(URL.createObjectURL(f)); }
                                     }} />
-                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-[#B4780B] hover:text-[#92600A] hover:underline font-medium">Change photo</button>
+                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-[#119AB8] hover:text-[#0E7F98] hover:underline font-medium">Change photo</button>
                                 </div>
 
                                 {/* Fields */}
@@ -346,7 +346,7 @@ export default function SettingsPage() {
                                     </Field>
                                 </div>
                                 <div className="w-full sm:w-[220px] bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-xl p-5 text-[12px] text-slate-600 leading-relaxed self-start">
-                                    <p className="font-bold text-[#B4780B] mb-2 text-[12px]">Security Tips</p>
+                                    <p className="font-bold text-[#1A1A1A] mb-2 text-[12px]">Security Tips</p>
                                     Use at least 8 characters with a mix of letters, numbers, and symbols. Never share your password with anyone.
                                 </div>
                             </div>
@@ -419,7 +419,7 @@ export default function SettingsPage() {
                                         onClick={() => { setTheme(t.id as any); handleSaveAppearance({ theme: t.id }); }}
                                         className={`flex items-center gap-3 px-5 py-3 border rounded-xl text-[13px] font-bold transition-all ${theme === t.id ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
                                     >
-                                        <t.icon size={16} className={theme === t.id ? 'text-[#B4780B]' : 'text-slate-400'} />
+                                        <t.icon size={16} className={theme === t.id ? 'text-[#1A1A1A]' : 'text-slate-400'} />
                                         {t.label}
                                         {theme === t.id && <Badge tone="indigo">Active</Badge>}
                                     </button>

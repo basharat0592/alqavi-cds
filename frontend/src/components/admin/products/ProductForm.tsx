@@ -20,7 +20,7 @@ import { ui } from '@/components/admin/ui';
 
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#B4780B] hover:border-[#F59E0B] text-white shadow-sm hover:shadow',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] hover:border-[#F59E0B] text-white shadow-sm hover:shadow',
         secondary: 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700',
     };
     return (
@@ -687,8 +687,8 @@ export default function ProductForm({ id }: ProductFormProps) {
                             </div>
                             <div className="p-6 space-y-6">
                                 <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-[2px] w-[180px]">
-                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'percent' ? 'bg-white text-[#B4780B] shadow-sm' : 'text-[#64748b]'}`}>Profit %</button>
-                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'manual' ? 'bg-white text-[#B4780B] shadow-sm' : 'text-[#64748b]'}`}>Manual Price</button>
+                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'percent' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#64748b]'}`}>Profit %</button>
+                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'manual' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#64748b]'}`}>Manual Price</button>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -849,7 +849,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                             </div>
                         </div>
                         <div className="bg-[#F59E0B]/60 border border-[#F59E0B]/15 rounded-xl p-4 flex gap-3">
-                            <ShieldCheck className="text-[#B4780B] shrink-0" size={20} />
+                            <ShieldCheck className="text-[#1A1A1A] shrink-0" size={20} />
                             <p className="text-[12px] text-[#64748b] leading-relaxed italic">Products are linked to their source stock signatures for data integrity.</p>
                         </div>
                     </aside>

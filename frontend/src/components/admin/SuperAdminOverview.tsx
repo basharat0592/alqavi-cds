@@ -17,7 +17,7 @@ import type { RevenueDataPoint } from '@/types';
    and transaction counts alongside the net that used to be the only field read,
    and revenueData30 was being passed in and computed but never rendered. */
 
-const AMBER = '#F59E0B';
+const AMBER = '#1A1A1A';
 const GRID = '#eef2f7';
 const AXIS = '#94a3b8';
 
@@ -157,10 +157,10 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
     }, [pipelineOrg, orgStats, stats]);
 
     const pipeline = [
-        { label: 'Pending', value: Number(pipeSrc?.pendingOrders || 0), bar: 'bg-[#F59E0B]', tone: 'text-[#B4780B]' },
-        { label: 'Active', value: Number(pipeSrc?.totalActive || 0), bar: 'bg-sky-500', tone: 'text-sky-700' },
+        { label: 'Pending', value: Number(pipeSrc?.pendingOrders || 0), bar: 'bg-[#F59E0B]', tone: 'text-[#1A1A1A]' },
+        { label: 'Active', value: Number(pipeSrc?.totalActive || 0), bar: 'bg-[#8A8A86]', tone: 'text-[#3A3A38]' },
         { label: 'Delivered', value: Number(pipeSrc?.deliveredOrders || 0), bar: 'bg-emerald-500', tone: 'text-emerald-700' },
-        { label: 'Today', value: Number(pipeSrc?.ordersToday || 0), bar: 'bg-violet-500', tone: 'text-violet-700' },
+        { label: 'Today', value: Number(pipeSrc?.ordersToday || 0), bar: 'bg-[#8A8A86]', tone: 'text-[#3A3A38]' },
     ];
     const pipelineMax = Math.max(1, ...pipeline.map((r) => r.value));
     const pipelineOrgName = orgs.find((o) => o.id === pipelineOrg)?.name || '';
@@ -322,7 +322,7 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                                         <span className="shrink-0 text-[11px] text-slate-400 font-medium tabular-nums">
                                             min {Number(p.min ?? p.reorder_level ?? 0)}
                                         </span>
-                                        <span className={`shrink-0 w-[58px] text-right text-[12.5px] font-black tabular-nums ${Number(p.qty ?? p.total_quantity ?? 0) <= 0 ? 'text-rose-600' : 'text-[#B4780B]'}`}>
+                                        <span className={`shrink-0 w-[58px] text-right text-[12.5px] font-black tabular-nums ${Number(p.qty ?? p.total_quantity ?? 0) <= 0 ? 'text-rose-600' : 'text-[#1A1A1A]'}`}>
                                             {Number(p.qty ?? p.total_quantity ?? 0)}
                                         </span>
                                     </div>

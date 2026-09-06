@@ -11,7 +11,7 @@ import {
 import { productService, categoryService, supplierService, inventoryService } from '@/lib/api';
 import { formatCurrency, getImageUrl, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
+import { PageHeader, Card, Button, Badge, Modal, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, TableShell, Pagination, RowActions } from '@/components/admin/ui';
 
 export default function ProductsPage() {
     const router = useRouter();
@@ -31,7 +31,8 @@ export default function ProductsPage() {
     const [ordering, setOrdering] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
-    const itemsPerPage = 10;
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+    const changePageSize = (n: number) => { setItemsPerPage(n); setCurrentPage(1); };
 
     const fetchFilters = async () => {
         try {
@@ -49,6 +50,7 @@ export default function ProductsPage() {
         try {
             const params = {
                 page: currentPage,
+                page_size: itemsPerPage,
                 search: search || undefined,
                 category: category || undefined,
                 supplier: supplier || undefined,
@@ -74,7 +76,7 @@ export default function ProductsPage() {
             setSyncing(false);
             setLoading(false);
         }
-    }, [currentPage, search, category, supplier, ordering]);
+    }, [currentPage, itemsPerPage, search, category, supplier, ordering]);
 
     useEffect(() => { fetchFilters(); }, []);
     useEffect(() => {
@@ -177,9 +179,12 @@ export default function ProductsPage() {
                 />
 
                 {/* Filters */}
-                <Card className="p-4 sm:p-5 mb-6 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                <TableShell
+                    className="mb-6"
+                    filters={
+                    <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                     <div className="relative flex-1 min-w-0 sm:min-w-[250px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
                         <input
                             value={search}
                             onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
@@ -197,60 +202,69 @@ export default function ProductsPage() {
                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
-                </Card>
-
-                {/* Table */}
-                <Card className="overflow-hidden mb-6">
+                    </div>
+                    }
+                    footer={
+                        <Pagination
+                            page={currentPage}
+                            totalPages={totalPages}
+                            onPage={setCurrentPage}
+                            total={totalCount}
+                            pageSize={itemsPerPage}
+                            onPageSize={changePageSize}
+                        />
+                    }
+                >
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className={ui.table}>
                             <thead>
-                                <tr className="bg-slate-50/60 border-b border-slate-200/70">
+                                <tr>
                                     <SelectAllTh sel={sel} />
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400">Product</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Cost Price</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Sale Price</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Net Profit</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-center">Status</th>
-                                    <th className="px-2.5 sm:px-6 py-3 sm:py-4 text-[11px] font-bold uppercase tracking-wider text-slate-400 text-right">Actions</th>
+                                    <th className={ui.th}>Product</th>
+                                    <th className={ui.th + ' text-right'}>Cost Price</th>
+                                    <th className={ui.th + ' text-right'}>Sale Price</th>
+                                    <th className={ui.th + ' text-right'}>Net Profit</th>
+                                    <th className={ui.th + ' text-center'}>Status</th>
+                                    <th className={ui.th + ' text-right'}>Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && products.length === 0 ? (
-                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">Loading...</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-[#8A8A86]">Loading...</td></tr>
                                 ) : products.length === 0 ? (
-                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-500">No products found.</td></tr>
+                                    <tr><td colSpan={7} className="py-20 text-center text-[13px] text-[#8A8A86]">No products found.</td></tr>
                                 ) : (
                                     groupedProducts.map(prod => {
                                         return (
-                                            <tr key={prod.id} className="hover:bg-slate-50 transition-colors group">
+                                            <tr key={prod.id} className="hover:bg-[#FAFAF8] transition-colors group">
                                                 <RowCheckboxTd sel={sel} id={prod.id} />
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5">
+                                                <td className={ui.td}>
                                                     <div className="flex items-center gap-2 sm:gap-4">
-                                                        <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white border border-slate-200 rounded-lg flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
+                                                        <div className="w-9 h-9 sm:w-12 sm:h-12 bg-white border border-[#EDEDEA] rounded-lg flex-shrink-0 flex items-center justify-center p-1 overflow-hidden">
                                                             {(() => {
                                                                 const finalImg = prod.image || prod.catalog_image;
                                                                 return finalImg ? (
                                                                     <img src={getImageUrl(finalImg)} alt="" className="w-full h-full object-contain" />
                                                                 ) : (
-                                                                    <Package className="h-6 w-6 text-slate-200" />
+                                                                    <Package className="h-6 w-6 text-[#DCDCD8]" />
                                                                 );
                                                             })()}
                                                         </div>
                                                         <div>
                                                             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                                                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                                                                    <div className="text-[14px] font-bold text-[#B4780B] hover:text-[#92600A] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
+                                                                    <div className="text-[13px] font-semibold text-[#119AB8] hover:text-[#0E7F98] cursor-pointer hover:underline" onClick={() => router.push(`/admin/products/edit/${prod.id}`)}>
                                                                         {prod.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                                     </div>
                                                                     {(prod.weight || prod.size) && (
-                                                                        <span className="text-[10px] text-[#B4780B] font-black uppercase tracking-tight shrink-0">
+                                                                        <span className="text-[10.5px] text-[#1A1A1A] font-semibold uppercase tracking-tight shrink-0">
                                                                             â€” {prod.weight}{prod.weight && prod.size ? ' â€¢ ' : ''}{prod.size}
                                                                         </span>
                                                                     )}
                                                                 </div>
                                                                 {prod.badge && <Badge tone="indigo">{prod.badge}</Badge>}
                                                             </div>
-                                                            <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                                            <div className="text-[11.5px] text-[#8A8A86] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                                                 <span className="flex items-center gap-1"><Truck size={12} className="opacity-40" /> {prod.supplier_name}</span>
                                                                 <span className="opacity-20 hidden sm:inline">|</span>
                                                                 <span className="flex items-center gap-1"><MapPin size={11} className="opacity-40" /> {prod.warehouse_name}</span>
@@ -258,43 +272,42 @@ export default function ProductsPage() {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className="text-[13px] sm:text-[14px] font-bold text-slate-600 tabular-nums">{formatCurrency(prod.cost_price)}</div>
+                                                <td className={ui.td + ' text-right'}>
+                                                    <div className="text-[13px] sm:text-[13px] font-semibold text-[#3A3A38] tabular-nums">{formatCurrency(prod.cost_price)}</div>
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className="text-[13px] sm:text-[15px] font-bold text-slate-900 tabular-nums">{formatCurrency(prod.selling_price)}</div>
+                                                <td className={ui.td + ' text-right'}>
+                                                    <div className="text-[13px] sm:text-[15px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(prod.selling_price)}</div>
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
+                                                <td className={ui.td + ' text-right'}>
                                                     {(() => {
                                                         const np = Number(prod.selling_price || 0) - Number(prod.cost_price || 0);
                                                         return (
                                                             <>
-                                                                <div className={`text-[13px] sm:text-[14px] font-black tabular-nums ${np >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(np)}</div>
+                                                                <div className={`text-[13px] sm:text-[13px] font-semibold tabular-nums ${np >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{formatCurrency(np)}</div>
                                                                 <div className="flex items-center justify-end gap-1 mt-0.5">
                                                                     <TrendingUp className="h-3 w-3 text-emerald-600 shrink-0" />
-                                                                    <span className="text-[10px] font-bold text-emerald-700 leading-none tabular-nums">{Number(prod.profit_margin).toFixed(1)}%</span>
+                                                                    <span className="text-[10.5px] font-semibold text-emerald-700 leading-none tabular-nums">{Number(prod.profit_margin).toFixed(1)}%</span>
                                                                 </div>
                                                             </>
                                                         );
                                                     })()}
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-center">
-                                                    <span className={`inline-flex items-center justify-center rounded-full text-[10px] font-bold uppercase border ${
+                                                <td className={ui.td + ' text-center'}>
+                                                    <span className={`inline-flex items-center justify-center rounded-full text-[10.5px] font-semibold uppercase border ${
                                                         prod.status === 'ACTIVE'
                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-100 px-2 py-0.5'
-                                                            : 'bg-slate-100 text-slate-400 border-slate-200 px-2 py-0.5'
+                                                            : 'bg-[#F2F2F0] text-[#9C9C98] border-[#EDEDEA] px-2 py-0.5'
                                                     } max-sm:w-2.5 max-sm:h-2.5 max-sm:rounded-full max-sm:p-0 max-sm:border-0 ${
                                                         prod.status === 'ACTIVE' ? 'max-sm:bg-emerald-500' : 'max-sm:bg-slate-400'
                                                     }`} title={prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}>
                                                         <span className="max-sm:hidden">{prod.status === 'ACTIVE' ? 'Visible' : 'Hidden'}</span>
                                                     </span>
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3.5 sm:py-5 text-right">
-                                                    <div className="flex items-center justify-end gap-2.5 transition-opacity">
-                                                        <button onClick={() => router.push(`/admin/products/edit/${prod.id}`)} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
-                                                        <span className="text-slate-300">|</span>
-                                                        <button onClick={() => setDeleteProd(prod)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
-                                                    </div>
+                                                <td className={ui.td + ' text-right'}>
+                                                    <RowActions items={[
+                                                        { label: 'Edit', onClick: () => router.push(`/admin/products/edit/${prod.id}`) },
+                                                        { label: 'Delete', onClick: () => setDeleteProd(prod), danger: true },
+                                                    ]} />
                                                 </td>
                                             </tr>
                                         );
@@ -304,18 +317,7 @@ export default function ProductsPage() {
                         </table>
                     </div>
 
-                    {/* Pagination */}
-                    {totalPages > 1 && (
-                        <div className="px-6 py-4 bg-slate-50/60 border-t border-slate-200/70 flex items-center justify-between">
-                            <p className="text-[11px] text-slate-500 italic">Showing {products.length} of {totalCount} products</p>
-                            <div className="flex items-center gap-1">
-                                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1 disabled:opacity-30 text-[#B4780B] hover:bg-white rounded-lg transition-colors"><ChevronLeft size={20} /></button>
-                                <span className="text-[13px] font-bold px-4 text-slate-700 tabular-nums">Page {currentPage} of {totalPages}</span>
-                                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1 disabled:opacity-30 text-[#B4780B] hover:bg-white rounded-lg transition-colors"><ChevronRight size={20} /></button>
-                            </div>
-                        </div>
-                    )}
-                </Card>
+                </TableShell>
             </div>
 
             <BulkBar
@@ -347,15 +349,15 @@ export default function ProductsPage() {
                     <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
                         <AlertTriangle size={24} className="text-rose-600" />
                     </div>
-                    <h3 className="text-[17px] font-bold text-slate-900 tracking-tight mb-2">Delete Product?</h3>
-                    <p className="text-[13px] text-slate-600">
-                        Delete <span className="font-bold text-slate-900">"{deleteProd?.product_name}"</span>?
+                    <h3 className="text-[17px] font-semibold text-[#1A1A1A] tracking-tight mb-2">Delete Product?</h3>
+                    <p className="text-[13px] text-[#3A3A38]">
+                        Delete <span className="font-semibold text-[#1A1A1A]">"{deleteProd?.product_name}"</span>?
                     </p>
                     <div className="mt-6 space-y-2">
                         <Button variant="danger" onClick={handleDelete} disabled={deleting} className="w-full">
                             {deleting ? 'Deleting...' : 'Confirm Delete'}
                         </Button>
-                        <button onClick={() => setDeleteProd(null)} className="w-full text-[13px] text-[#B4780B] hover:text-[#92600A] hover:underline">
+                        <button onClick={() => setDeleteProd(null)} className="w-full text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline">
                             Cancel
                         </button>
                     </div>

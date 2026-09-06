@@ -23,7 +23,7 @@ const EMPTY_PAGE: NavbarPage = { name: '', slug: '', link: '', description: '', 
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, size = 'md' }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#B4780B] hover:bg-[#B4780B] text-[#0F172A]',
+        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
         danger: 'bg-gradient-to-b from-[#f7b5b0] to-[#f08080] border-[#d32f2f] hover:from-[#f5a0a0] hover:to-[#ee6f6f] text-[#0F172A]',
     };
@@ -284,7 +284,7 @@ export default function NavbarPagesTab() {
                                             <code className="bg-[#f1f3f5] text-[#d63031] px-2 py-1 rounded text-[11px] font-mono">{page.slug}</code>
                                         </td>
                                         <td className="px-6 py-3">
-                                            <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-[12px] font-medium">
+                                            <span className="bg-[#FAFAF8] text-[#3A3A38] px-3 py-1 rounded-full text-[12px] font-medium">
                                                 {categoriesCounts[page.id || 0] || 0} categories
                                             </span>
                                         </td>
@@ -300,7 +300,7 @@ export default function NavbarPagesTab() {
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center justify-end gap-2.5">
-                                                <button onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} className="text-[12px] font-bold text-[#B4780B] hover:underline">Edit</button>
+                                                <button onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} className="text-[12px] font-bold text-[#119AB8] hover:underline">Edit</button>
                                                 <span className="text-slate-300">|</span>
                                                 <button onClick={() => handleDeletePage(page.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
                                             </div>
@@ -336,8 +336,8 @@ export default function NavbarPagesTab() {
             />
 
             {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-[13px] text-blue-800 flex items-start gap-2">
+            <div className="bg-[#FAFAF8] border border-[#E9E9E6] rounded-lg p-4">
+                <p className="text-[13px] text-[#262624] flex items-start gap-2">
                     <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
                     <span><strong>Tip:</strong> Create navbar pages first, then assign categories to them. Categories will appear as dropdown items in the navbar under their parent page.</span>
                 </p>
