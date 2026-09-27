@@ -9,7 +9,7 @@ import { Building2 } from 'lucide-react';
 import { paymentService, inventoryService } from '@/lib/api';
 import { formatCurrency } from '@/lib/utils';
 
-const TEAL = '#119AB8';
+const TEAL = '#1877C2';
 const GRID = '#eef2f7';
 const AXIS = '#94a3b8';
 
@@ -28,8 +28,8 @@ const dayFmt = (d: string) => {
 function ChartTip({ active, payload, label, isDate }: any) {
     if (!active || !payload?.length) return null;
     return (
-        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg text-left">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{isDate ? dayFmt(label) : label}</p>
+        <div className="rounded-lg border border-[#E7ECF2] bg-white px-3 py-2 shadow-lg text-left">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">{isDate ? dayFmt(label) : label}</p>
             {payload.map((p: any) => (
                 <p key={p.dataKey} className="text-[12px] font-bold tabular-nums" style={{ color: p.color || p.fill }}>
                     {formatCurrency(Number(p.value || 0))}
@@ -41,12 +41,12 @@ function ChartTip({ active, payload, label, isDate }: any) {
 
 function Panel({ icon: Icon, title, subtitle, children }: any) {
     return (
-        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-4 sm:p-5">
+        <div className="bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-4 sm:p-5">
             <div className="flex items-center gap-2.5 mb-3">
-                <span className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 text-slate-500 flex items-center justify-center shrink-0"><Icon size={16} /></span>
+                <span className="w-8 h-8 rounded-lg bg-[#F8FAFC] border border-[#F1F5F9] text-[#64748B] flex items-center justify-center shrink-0"><Icon size={16} /></span>
                 <div className="min-w-0">
-                    <h3 className="text-[13px] font-bold text-slate-800 tracking-tight leading-none">{title}</h3>
-                    <p className="text-[10.5px] text-slate-400 font-medium mt-1">{subtitle}</p>
+                    <h3 className="text-[13px] font-bold text-[#0F1A2B] tracking-tight leading-none">{title}</h3>
+                    <p className="text-[10.5px] text-[#94A3B8] font-medium mt-1">{subtitle}</p>
                 </div>
             </div>
             {children}
@@ -100,7 +100,7 @@ export default function SuperAdminCharts() {
                         </BarChart>
                     </ResponsiveContainer>
                 ) : (
-                    <div className="h-[200px] flex items-center justify-center text-[12px] text-slate-400">No organization data yet.</div>
+                    <div className="h-[200px] flex items-center justify-center text-[12px] text-[#94A3B8]">No organization data yet.</div>
                 )}
             </Panel>
         </div>

@@ -155,7 +155,7 @@ export default function PurchaseReturnsPage() {
                     filters={
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="relative w-full sm:w-[300px]">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C98]" size={14} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" size={14} />
                         <input
                             className={ui.inputBase + " pl-9"}
                             placeholder="Search by Return # or Supplier..."
@@ -175,7 +175,7 @@ export default function PurchaseReturnsPage() {
                         <option value="CANCELLED">Cancelled</option>
                     </select>
                     <div className="h-5 w-px bg-slate-200 hidden sm:block" />
-                    <span className="text-[13px] text-[#3A3A38] text-center sm:text-left">
+                    <span className="text-[13px] text-[#334155] text-center sm:text-left">
                         Showing {filtered.length} record{filtered.length === 1 ? '' : 's'}
                     </span>
                     </div>
@@ -197,39 +197,39 @@ export default function PurchaseReturnsPage() {
                             <tbody>
                                 {loading && filtered.length === 0 ? (
                                     Array(5).fill(0).map((_, i) => (
-                                        <tr key={i} className="animate-pulse border-b border-[#F2F2F0]">
-                                            <td colSpan={7} className="px-2.5 sm:px-4 py-4 h-14 bg-[#FAFAF8]/50" />
+                                        <tr key={i} className="animate-pulse border-b border-[#F4F6F9]">
+                                            <td colSpan={7} className="px-2.5 sm:px-4 py-4 h-14 bg-[#F8FAFC]/50" />
                                         </tr>
                                     ))
                                 ) : paginated.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className="px-2.5 sm:px-4 py-20 text-center">
-                                            <div className="flex flex-col items-center text-[#9C9C98]">
-                                                <RotateCcw size={40} className="mb-2 text-[#C4C4C0]" />
+                                            <div className="flex flex-col items-center text-[#94A3B8]">
+                                                <RotateCcw size={40} className="mb-2 text-[#CBD5E1]" />
                                                 <p className="text-[13px]">No return records found</p>
                                             </div>
                                         </td>
                                     </tr>
                                 ) : (
                                     paginated.map(row => (
-                                        <tr key={row.id} className="border-b border-[#F2F2F0] hover:bg-[#FAFAF8] transition-all group">
+                                        <tr key={row.id} className="border-b border-[#F4F6F9] hover:bg-[#F8FAFC] transition-all group">
                                             <RowCheckboxTd sel={sel} id={row.id} />
                                             <td className={ui.td + ' whitespace-nowrap'}>
-                                                <span className="text-[13px] font-semibold text-[#119AB8] group-hover:text-[#0E7F98] hover:underline cursor-pointer">
+                                                <span className="text-[13px] font-semibold text-[#1877C2] group-hover:text-[#1567AB] hover:underline cursor-pointer">
                                                     #{row.return_number}
                                                 </span>
                                             </td>
                                             <td className={ui.td}>
                                                 <div className="flex flex-col">
-                                                    <span className="text-[13px] font-semibold text-[#1A1A1A]">{row.supplier_name || 'Generic Supplier'}</span>
-                                                    <span className="text-[11.5px] text-[#9C9C98] italic hidden sm:inline">Ref: {row.purchase_number || 'Standalone'}</span>
+                                                    <span className="text-[13px] font-semibold text-[#0F1A2B]">{row.supplier_name || 'Generic Supplier'}</span>
+                                                    <span className="text-[11.5px] text-[#94A3B8] italic hidden sm:inline">Ref: {row.purchase_number || 'Standalone'}</span>
                                                 </div>
                                             </td>
                                             <td className={ui.td + ' whitespace-nowrap'}>
-                                                <span className="text-[13px] text-[#3A3A38]">{row.return_date}</span>
+                                                <span className="text-[13px] text-[#334155]">{row.return_date}</span>
                                             </td>
                                             <td className={ui.td + ' whitespace-nowrap'}>
-                                                <span className="text-[13px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(row.total_refund_amount || 0)}</span>
+                                                <span className="text-[13px] font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(row.total_refund_amount || 0)}</span>
                                             </td>
                                             <td className={ui.td + ' whitespace-nowrap'}>
                                                 <StatusPill status={row.status} />
@@ -245,23 +245,23 @@ export default function PurchaseReturnsPage() {
                                                         <>
                                                             <button
                                                                 onClick={() => setPayRow(row)}
-                                                                className="text-[11.5px] font-semibold text-[#119AB8] hover:underline"
+                                                                className="text-[11.5px] font-semibold text-[#1877C2] hover:underline"
                                                             >
                                                                 Settle
                                                             </button>
-                                                            <span className="text-[#C4C4C0]">|</span>
+                                                            <span className="text-[#CBD5E1]">|</span>
                                                         </>
                                                     )}
                                                     <button
                                                         onClick={() => setViewRow(row)}
-                                                        className="text-[11.5px] font-semibold text-[#3A3A38] hover:underline"
+                                                        className="text-[11.5px] font-semibold text-[#334155] hover:underline"
                                                     >
                                                         View
                                                     </button>
-                                                    <span className="text-[#C4C4C0]">|</span>
+                                                    <span className="text-[#CBD5E1]">|</span>
                                                     <button
                                                         onClick={() => setDeleteRow(row)}
-                                                        className="text-[11.5px] font-semibold text-[#c40000] hover:underline"
+                                                        className="text-[11.5px] font-semibold text-[#DC2626] hover:underline"
                                                     >
                                                         Delete
                                                     </button>
@@ -331,16 +331,16 @@ export default function PurchaseReturnsPage() {
                 {viewRow && (
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-[13px]">
-                            <div><p className="text-[#9C9C98] mb-1">Return #</p><p className="font-semibold text-[#1A1A1A]">#{viewRow.return_number}</p></div>
-                            <div><p className="text-[#9C9C98] mb-1">Date</p><p className="font-semibold text-[#1A1A1A]">{viewRow.return_date}</p></div>
-                            <div><p className="text-[#9C9C98] mb-1">Supplier</p><p className="font-semibold text-[#1A1A1A]">{viewRow.supplier_name}</p></div>
-                            <div><p className="text-[#9C9C98] mb-1">Status</p><StatusPill status={viewRow.status} /></div>
+                            <div><p className="text-[#94A3B8] mb-1">Return #</p><p className="font-semibold text-[#0F1A2B]">#{viewRow.return_number}</p></div>
+                            <div><p className="text-[#94A3B8] mb-1">Date</p><p className="font-semibold text-[#0F1A2B]">{viewRow.return_date}</p></div>
+                            <div><p className="text-[#94A3B8] mb-1">Supplier</p><p className="font-semibold text-[#0F1A2B]">{viewRow.supplier_name}</p></div>
+                            <div><p className="text-[#94A3B8] mb-1">Status</p><StatusPill status={viewRow.status} /></div>
                         </div>
 
                         {/* Products Table */}
-                        <div className="border border-[#EDEDEA] rounded-xl overflow-hidden">
+                        <div className="border border-[#E7ECF2] rounded-xl overflow-hidden">
                             <table className={ui.table}>
-                                <thead className="bg-[#FAFAF8] border-b border-[#EDEDEA]">
+                                <thead className="bg-[#F8FAFC] border-b border-[#E7ECF2]">
                                     <tr>
                                         <th className={ui.th}>Product</th>
                                         <th className={ui.th + ' text-center'}>Qty</th>
@@ -350,7 +350,7 @@ export default function PurchaseReturnsPage() {
                                 </thead>
                                 <tbody>
                                     {(viewRow.items || []).map((item: any, idx: number) => (
-                                        <tr key={idx} className="border-b border-[#F2F2F0] last:border-0">
+                                        <tr key={idx} className="border-b border-[#F4F6F9] last:border-0">
                                             <td className={ui.td}>{item.product_name}</td>
                                             <td className={ui.td + ' text-center tabular-nums'}>{item.quantity}</td>
                                             <td className={ui.td + ' text-right tabular-nums'}>{formatCurrency(item.refund_price)}</td>
@@ -358,21 +358,21 @@ export default function PurchaseReturnsPage() {
                                         </tr>
                                     ))}
                                     {(!viewRow.items || viewRow.items.length === 0) && (
-                                        <tr><td colSpan={4} className="px-3 py-8 text-center text-[#9C9C98] italic">No products found for this return</td></tr>
+                                        <tr><td colSpan={4} className="px-3 py-8 text-center text-[#94A3B8] italic">No products found for this return</td></tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
 
                         {viewRow.reason && (
-                            <div className="p-3 bg-[#FAFAF8] border border-[#EDEDEA] rounded-lg">
-                                <p className="text-[11.5px] font-semibold uppercase tracking-wider mb-1 text-[#9C9C98]">Reason</p>
-                                <p className="text-[13px] italic text-[#3A3A38]">"{viewRow.reason}"</p>
+                            <div className="p-3 bg-[#F8FAFC] border border-[#E7ECF2] rounded-lg">
+                                <p className="text-[11.5px] font-semibold uppercase tracking-wider mb-1 text-[#94A3B8]">Reason</p>
+                                <p className="text-[13px] italic text-[#334155]">"{viewRow.reason}"</p>
                             </div>
                         )}
-                        <div className="pt-4 border-t border-[#F2F2F0] flex justify-between items-center">
-                            <span className="text-[13px] font-semibold text-[#1A1A1A]">Total Refund Amount:</span>
-                            <span className="text-[22px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(viewRow.total_refund_amount || 0)}</span>
+                        <div className="pt-4 border-t border-[#F4F6F9] flex justify-between items-center">
+                            <span className="text-[13px] font-semibold text-[#0F1A2B]">Total Refund Amount:</span>
+                            <span className="text-[22px] font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(viewRow.total_refund_amount || 0)}</span>
                         </div>
                     </div>
                 )}
@@ -389,9 +389,9 @@ export default function PurchaseReturnsPage() {
                         <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
                             <AlertTriangle size={24} className="text-rose-600" />
                         </div>
-                        <h3 className="text-[16px] font-semibold text-[#1A1A1A] mb-2">Delete Return?</h3>
-                        <p className="text-[13px] text-[#3A3A38] mb-6">
-                            Are you sure you want to delete <span className="font-semibold text-[#1A1A1A]">#{deleteRow.return_number}</span>? This action cannot be undone.
+                        <h3 className="text-[16px] font-semibold text-[#0F1A2B] mb-2">Delete Return?</h3>
+                        <p className="text-[13px] text-[#334155] mb-6">
+                            Are you sure you want to delete <span className="font-semibold text-[#0F1A2B]">#{deleteRow.return_number}</span>? This action cannot be undone.
                         </p>
                         <div className="grid grid-cols-2 gap-3">
                             <Button variant="outline" size="md" onClick={() => setDeleteRow(null)}>Cancel</Button>

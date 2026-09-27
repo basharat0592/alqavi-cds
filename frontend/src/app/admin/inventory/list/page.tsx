@@ -23,8 +23,8 @@ import { PageHeader, Card, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBa
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] hover:bg-[#D97706] text-white border-transparent shadow-sm shadow-[#F59E0B]/20',
-        secondary: 'bg-white border-[#EDEDEA] hover:border-slate-300 hover:bg-[#FAFAF8] text-[#3A3A38] shadow-sm',
+        primary: 'bg-[#1877C2] hover:bg-[#1567AB] text-white border-transparent shadow-sm shadow-[#1877C2]/20',
+        secondary: 'bg-white border-[#E7ECF2] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#334155] shadow-sm',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -37,7 +37,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[13px] font-semibold text-[#3A3A38] mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
+        <label className="block text-[13px] font-semibold text-[#334155] mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
@@ -74,30 +74,30 @@ const ProductCombobox = ({ products, value, inputCls, onType, onPick }: {
                 placeholder="Start typing product name..."
                 autoComplete="off"
             />
-            <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-[#9C9C98] pointer-events-none transition-transform ${open ? 'rotate-180' : ''}`} />
+            <ChevronDown size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none transition-transform ${open ? 'rotate-180' : ''}`} />
             {open && list.length > 0 && (
-                <div className="absolute z-50 mt-1.5 w-full max-h-72 overflow-y-auto rounded-xl border border-[#EDEDEA] bg-white shadow-xl shadow-slate-900/10 py-1 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute z-50 mt-1.5 w-full max-h-72 overflow-y-auto rounded-xl border border-[#E7ECF2] bg-white shadow-xl shadow-slate-900/10 py-1 animate-in fade-in zoom-in-95 duration-150">
                     {list.map(p => (
                         <button
                             key={p.id}
                             type="button"
                             onClick={() => { onPick(p); setOpen(false); }}
-                            className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-[#FAFAF8] transition-colors"
+                            className="w-full flex items-center gap-3 px-3.5 py-2 text-left hover:bg-[#F8FAFC] transition-colors"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-[#FAFAF8] border border-[#EDEDEA] flex items-center justify-center text-[#9C9C98] shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-[#F8FAFC] border border-[#E7ECF2] flex items-center justify-center text-[#94A3B8] shrink-0">
                                 <Package size={14} />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">{clean(p.name)}</p>
-                                <p className="text-[11.5px] text-[#9C9C98] font-medium truncate">{p.sku || clean(p.name)}</p>
+                                <p className="text-[13px] font-semibold text-[#0F1A2B] truncate">{clean(p.name)}</p>
+                                <p className="text-[11.5px] text-[#94A3B8] font-medium truncate">{p.sku || clean(p.name)}</p>
                             </div>
                         </button>
                     ))}
                 </div>
             )}
             {open && list.length === 0 && q && (
-                <div className="absolute z-50 mt-1.5 w-full rounded-xl border border-[#EDEDEA] bg-white shadow-xl shadow-slate-900/10 px-3.5 py-3 text-[11.5px] text-[#8A8A86]">
-                    No match — <span className="font-semibold text-[#3A3A38]">&ldquo;{value}&rdquo;</span> will be saved as a new product.
+                <div className="absolute z-50 mt-1.5 w-full rounded-xl border border-[#E7ECF2] bg-white shadow-xl shadow-slate-900/10 px-3.5 py-3 text-[11.5px] text-[#94A3B8]">
+                    No match — <span className="font-semibold text-[#334155]">&ldquo;{value}&rdquo;</span> will be saved as a new product.
                 </div>
             )}
         </div>
@@ -108,18 +108,18 @@ const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message, loading }: a
     if (!isOpen) return null;
     return (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 text-left animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl border border-[#EDEDEA] max-w-[400px] w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-2xl border border-[#E7ECF2] max-w-[400px] w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
                 <div className="p-6">
                     <div className="flex items-center gap-3 text-rose-600 mb-4">
                         <AlertTriangle size={24} />
-                        <h3 className="text-[17px] font-semibold text-[#1A1A1A] tracking-tight">{title}</h3>
+                        <h3 className="text-[17px] font-semibold text-[#0F1A2B] tracking-tight">{title}</h3>
                     </div>
-                    <p className="text-[13px] text-[#3A3A38] leading-relaxed mb-8">{message}</p>
+                    <p className="text-[13px] text-[#334155] leading-relaxed mb-8">{message}</p>
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
                             disabled={loading}
-                            className="flex-1 h-10 text-[13px] font-semibold text-[#3A3A38] bg-white border border-[#EDEDEA] rounded-lg hover:bg-[#FAFAF8] hover:border-slate-300 transition-all"
+                            className="flex-1 h-10 text-[13px] font-semibold text-[#334155] bg-white border border-[#E7ECF2] rounded-lg hover:bg-[#F8FAFC] hover:border-[#CBD5E1] transition-all"
                         >
                             Cancel
                         </button>
@@ -148,19 +148,19 @@ const AssignLocationModal = ({ isOpen, onClose, onConfirm, warehouses, loading }
 
     return (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 text-left animate-in fade-in duration-200">
-            <div className="bg-white rounded-2xl border border-[#EDEDEA] max-w-[450px] w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-                <div className="px-6 py-5 border-b border-[#F2F2F0] bg-[#FAFAF8] flex items-center justify-between">
+            <div className="bg-white rounded-2xl border border-[#E7ECF2] max-w-[450px] w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="px-6 py-5 border-b border-[#F4F6F9] bg-[#F8FAFC] flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-lg flex items-center justify-center text-[#B4780B]">
+                        <div className="w-9 h-9 bg-[#1877C2]/10 border border-[#1877C2]/15 rounded-lg flex items-center justify-center text-[#1877C2]">
                             <MapPin size={18} />
                         </div>
-                        <h3 className="text-[15px] font-semibold text-[#1A1A1A] tracking-tight">Assign Organization</h3>
+                        <h3 className="text-[15px] font-semibold text-[#0F1A2B] tracking-tight">Assign Organization</h3>
                     </div>
-                    <button onClick={onClose} className="p-1.5 rounded-lg text-[#9C9C98] hover:text-[#3A3A38] hover:bg-[#F2F2F0] transition-colors"><X size={18} /></button>
+                    <button onClick={onClose} className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#334155] hover:bg-[#F4F6F9] transition-colors"><X size={18} /></button>
                 </div>
                 <div className="p-8 space-y-6">
                     <div className="space-y-2">
-                        <label className="text-[11.5px] font-semibold text-[#8A8A86] uppercase tracking-wider">Select Organization</label>
+                        <label className="text-[11.5px] font-semibold text-[#94A3B8] uppercase tracking-wider">Select Organization</label>
                         <select
                             className={selectCls + " text-[13px]"}
                             value={selected}
@@ -172,15 +172,15 @@ const AssignLocationModal = ({ isOpen, onClose, onConfirm, warehouses, loading }
                                 <option key={w.id} value={w.id}>{w.name}</option>
                             ))}
                         </select>
-                        <p className="text-[11.5px] text-[#9C9C98] italic mt-2">This will assign the selected batch signature to the organization chosen above.</p>
+                        <p className="text-[11.5px] text-[#94A3B8] italic mt-2">This will assign the selected batch signature to the organization chosen above.</p>
                     </div>
                 </div>
-                <div className="px-8 py-5 bg-[#FAFAF8] border-t border-[#F2F2F0] flex justify-end gap-3">
-                    <button onClick={onClose} disabled={loading} className="px-6 py-1.5 text-[11.5px] font-semibold text-[#8A8A86] hover:text-[#0E7F98] transition-all">Cancel</button>
+                <div className="px-8 py-5 bg-[#F8FAFC] border-t border-[#F4F6F9] flex justify-end gap-3">
+                    <button onClick={onClose} disabled={loading} className="px-6 py-1.5 text-[11.5px] font-semibold text-[#94A3B8] hover:text-[#1567AB] transition-all">Cancel</button>
                     <button
                         onClick={() => onConfirm(selected)}
                         disabled={!selected || loading}
-                        className="h-10 px-8 bg-[#F59E0B] border border-transparent rounded-lg text-[13px] font-semibold text-white hover:bg-[#D97706] transition-all shadow-sm shadow-[#F59E0B]/20 disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="h-10 px-8 bg-[#1877C2] border border-transparent rounded-lg text-[13px] font-semibold text-white hover:bg-[#1567AB] transition-all shadow-sm shadow-[#1877C2]/20 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {loading ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
                         Confirm Assignment
@@ -479,7 +479,7 @@ export default function InventoryListPage() {
     };
 
     return (
-        <div className="pb-20 text-left text-[#1A1A1A]">
+        <div className="pb-20 text-left text-[#0F1A2B]">
             <div className="max-w-[1440px] mx-auto">
 
                 <PageHeader
@@ -499,7 +499,7 @@ export default function InventoryListPage() {
                             }} className="whitespace-nowrap"><Plus size={14} /> Add Stock</Btn>
                         </>
                     ) : (
-                        <button onClick={() => setView('list')} className="text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline flex items-center gap-1 font-semibold whitespace-nowrap">
+                        <button onClick={() => setView('list')} className="text-[13px] text-[#1877C2] hover:text-[#1567AB] hover:underline flex items-center gap-1 font-semibold whitespace-nowrap">
                             <ChevronLeft size={14} /> Back to Current Stock
                         </button>
                     )}
@@ -512,7 +512,7 @@ export default function InventoryListPage() {
                             filters={
                             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                                 <input
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
@@ -520,7 +520,7 @@ export default function InventoryListPage() {
                                     className={`${inputCls} pl-10`}
                                 />
                             </div>
-                            <div className="h-8 w-px bg-[#F2F2F0] mx-2 hidden md:block" />
+                            <div className="h-8 w-px bg-[#F4F6F9] mx-2 hidden md:block" />
                             {/* Stock-level filter */}
                             <div className="relative flex-1 md:flex-initial md:min-w-[180px]">
                                 <select
@@ -545,7 +545,7 @@ export default function InventoryListPage() {
                                         placeholder="e.g. 100"
                                         className={`${inputCls} text-center font-semibold`}
                                     />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10.5px] text-[#9C9C98] font-semibold pointer-events-none">units</span>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10.5px] text-[#94A3B8] font-semibold pointer-events-none">units</span>
                                 </div>
                             )}
                             {warehouses.length > 1 && (
@@ -578,20 +578,20 @@ export default function InventoryListPage() {
                         <div className="md:hidden p-3 space-y-3">
                             {loading && stocks.length === 0 ? (
                                 <Card className="py-16 text-center">
-                                    <Loader2 size={32} className="animate-spin text-[#1A1A1A] mx-auto mb-3" />
-                                    <p className="text-[13px] text-[#8A8A86] font-medium italic">Syncing Current Stock...</p>
+                                    <Loader2 size={32} className="animate-spin text-[#0F1A2B] mx-auto mb-3" />
+                                    <p className="text-[13px] text-[#94A3B8] font-medium italic">Syncing Current Stock...</p>
                                 </Card>
                             ) : paginatedData.length === 0 ? (
                                 <Card className="py-16 text-center">
-                                    <div className="mb-3 text-[#DCDCD8]"><Box size={40} className="mx-auto" /></div>
-                                    <p className="text-[13px] text-[#8A8A86] font-medium">No stock records match search.</p>
+                                    <div className="mb-3 text-[#E2E8F0]"><Box size={40} className="mx-auto" /></div>
+                                    <p className="text-[13px] text-[#94A3B8] font-medium">No stock records match search.</p>
                                 </Card>
                             ) : (
                                 paginatedData.map(s => (
                                     <Card key={s.id} className="p-4 space-y-3 text-left">
                                         {/* Row 1: Image + Item Title & Info */}
                                         <div className="flex gap-3">
-                                            <div className="w-14 h-14 bg-white rounded-lg border border-[#EDEDEA] overflow-hidden flex items-center justify-center shrink-0">
+                                            <div className="w-14 h-14 bg-white rounded-lg border border-[#E7ECF2] overflow-hidden flex items-center justify-center shrink-0">
                                                 {s.product_image ? (
                                                     <img
                                                         src={getImageUrl(s.product_image)}
@@ -599,68 +599,68 @@ export default function InventoryListPage() {
                                                         alt=""
                                                     />
                                                 ) : (
-                                                    <Package size={24} className="text-[#DCDCD8]" />
+                                                    <Package size={24} className="text-[#E2E8F0]" />
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-baseline gap-1.5 flex-wrap" onClick={() => router.push(`/admin/inventory/${s.id}`)}>
-                                                    <h3 className="text-[13px] font-semibold text-[#119AB8] hover:text-[#0E7F98] hover:underline cursor-pointer">
+                                                    <h3 className="text-[13px] font-semibold text-[#1877C2] hover:text-[#1567AB] hover:underline cursor-pointer">
                                                         {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                     </h3>
                                                     {(s.weight || s.size) && (
-                                                        <span className="text-[10.5px] text-[#1A1A1A] font-semibold uppercase tracking-tight shrink-0">
+                                                        <span className="text-[10.5px] text-[#0F1A2B] font-semibold uppercase tracking-tight shrink-0">
                                                             — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="text-[10.5px] text-[#9C9C98] uppercase font-semibold mt-0.5 tracking-tighter">{s.category_name || 'Category not set'}</div>
+                                                <div className="text-[10.5px] text-[#94A3B8] uppercase font-semibold mt-0.5 tracking-tighter">{s.category_name || 'Category not set'}</div>
                                             </div>
                                         </div>
 
                                         {/* Row 2: Stock Level & Price */}
-                                        <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-[#F2F2F0] text-[11.5px]">
+                                        <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-[#F4F6F9] text-[11.5px]">
                                             <div>
-                                                <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase">Stock Level</div>
-                                                <div className="text-[15px] font-semibold text-[#1A1A1A] mt-0.5 tabular-nums">
-                                                    {s.total_quantity.toLocaleString()} <span className="text-[10.5px] text-[#9C9C98] font-normal ml-0.5">Units</span>
+                                                <div className="text-[10.5px] text-[#94A3B8] font-semibold uppercase">Stock Level</div>
+                                                <div className="text-[15px] font-semibold text-[#0F1A2B] mt-0.5 tabular-nums">
+                                                    {s.total_quantity.toLocaleString()} <span className="text-[10.5px] text-[#94A3B8] font-normal ml-0.5">Units</span>
                                                 </div>
                                                 <div className="text-[10.5px] text-emerald-600 font-semibold uppercase tracking-wider mt-0.5">
                                                     {s.purchase_type === 'carton' ? `${s.cartons} Boxes` : 'Loose Units'}
                                                 </div>
                                             </div>
                                             <div className="text-right space-y-0.5">
-                                                <div className="flex items-center justify-end gap-2 text-[11.5px]"><span className="text-[10.5px] font-semibold uppercase text-[#9C9C98]">Purchase</span><span className="font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(s.price_per_item)}</span></div>
-                                                <div className="flex items-center justify-end gap-2 text-[11.5px]"><span className="text-[10.5px] font-semibold uppercase text-[#9C9C98]">Cost</span><span className="font-semibold text-[#3A3A38] tabular-nums">{formatCurrency(s.cost_price ?? s.price_per_item)}</span></div>
-                                                <div className="flex items-center justify-end gap-2 text-[11.5px]"><span className="text-[10.5px] font-semibold uppercase text-[#9C9C98]">Sale</span><span className="font-semibold text-emerald-700 tabular-nums">{s.sale_price ? formatCurrency(s.sale_price) : '—'}</span></div>
+                                                <div className="flex items-center justify-end gap-2 text-[11.5px]"><span className="text-[10.5px] font-semibold uppercase text-[#94A3B8]">Purchase</span><span className="font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(s.price_per_item)}</span></div>
+                                                <div className="flex items-center justify-end gap-2 text-[11.5px]"><span className="text-[10.5px] font-semibold uppercase text-[#94A3B8]">Cost</span><span className="font-semibold text-[#334155] tabular-nums">{formatCurrency(s.cost_price ?? s.price_per_item)}</span></div>
+                                                <div className="flex items-center justify-end gap-2 text-[11.5px]"><span className="text-[10.5px] font-semibold uppercase text-[#94A3B8]">Sale</span><span className="font-semibold text-emerald-700 tabular-nums">{s.sale_price ? formatCurrency(s.sale_price) : '—'}</span></div>
                                             </div>
                                         </div>
 
                                         {/* Row 3: Supplier, Warehouse & Last Updated */}
-                                        <div className="space-y-1.5 text-[11.5px] text-[#3A3A38]">
+                                        <div className="space-y-1.5 text-[11.5px] text-[#334155]">
                                             <div className="flex items-center gap-1.5">
-                                                <Truck size={13} className="text-[#9C9C98] shrink-0" />
-                                                <span className="font-semibold text-[#1A1A1A]">{getSupplierName(s.supplier, s.supplier_name)}</span>
+                                                <Truck size={13} className="text-[#94A3B8] shrink-0" />
+                                                <span className="font-semibold text-[#0F1A2B]">{getSupplierName(s.supplier, s.supplier_name)}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
-                                                <MapPin size={13} className="text-[#9C9C98] shrink-0" />
+                                                <MapPin size={13} className="text-[#94A3B8] shrink-0" />
                                                 {s.warehouse_name ? (
-                                                    <span className="font-semibold text-[#1A1A1A]">{s.warehouse_name}</span>
+                                                    <span className="font-semibold text-[#0F1A2B]">{s.warehouse_name}</span>
                                                 ) : (
                                                     <button
                                                         onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
-                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] hover:bg-[#F59E0B]/15 rounded text-[10.5px] font-semibold transition-all"
+                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 border border-dashed border-[#1877C2] bg-[#1877C2]/10 text-[#1877C2] hover:bg-[#1877C2]/15 rounded text-[10.5px] font-semibold transition-all"
                                                     >
                                                         <Plus size={8} strokeWidth={3} /> Assign Organization
                                                     </button>
                                                 )}
                                             </div>
-                                            <div className="flex items-center gap-1.5 pt-0.5 border-t border-[#F2F2F0]">
+                                            <div className="flex items-center gap-1.5 pt-0.5 border-t border-[#F4F6F9]">
                                                 <span className="font-medium">Updated:</span>
-                                                <span className="text-[#1A1A1A] font-semibold">
+                                                <span className="text-[#0F1A2B] font-semibold">
                                                     {new Date(s.updated_at || s.created_at || s.date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                 </span>
-                                                <span className="text-[#9C9C98]">•</span>
-                                                <span className="text-[#1A1A1A] font-semibold">
+                                                <span className="text-[#94A3B8]">•</span>
+                                                <span className="text-[#0F1A2B] font-semibold">
                                                     {new Date(s.updated_at || s.created_at || s.date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                                 </span>
                                             </div>
@@ -696,20 +696,20 @@ export default function InventoryListPage() {
                                 <tbody className="divide-y divide-slate-100">
                                     {loading && stocks.length === 0 ? (
                                         <tr><td colSpan={8} className="py-24 text-center">
-                                            <Loader2 size={32} className="animate-spin text-[#1A1A1A] mx-auto mb-3" />
-                                            <p className="text-[13px] text-[#8A8A86] font-medium italic">Syncing Current Stock...</p>
+                                            <Loader2 size={32} className="animate-spin text-[#0F1A2B] mx-auto mb-3" />
+                                            <p className="text-[13px] text-[#94A3B8] font-medium italic">Syncing Current Stock...</p>
                                         </td></tr>
                                     ) : paginatedData.length === 0 ? (
                                         <tr><td colSpan={8} className="py-24 text-center">
-                                            <div className="mb-4 text-[#DCDCD8]"><Box size={60} className="mx-auto" /></div>
-                                            <p className="text-[13px] text-[#8A8A86] font-medium">No stock records match your search.</p>
+                                            <div className="mb-4 text-[#E2E8F0]"><Box size={60} className="mx-auto" /></div>
+                                            <p className="text-[13px] text-[#94A3B8] font-medium">No stock records match your search.</p>
                                         </td></tr>
                                     ) : (
                                         paginatedData.map(s => (
-                                            <tr key={s.id} className="hover:bg-[#FAFAF8] transition-colors group text-[11.5px]">
+                                            <tr key={s.id} className="hover:bg-[#F8FAFC] transition-colors group text-[11.5px]">
                                                 <RowCheckboxTd sel={sel} id={s.id} />
                                                 <td className={ui.td}>
-                                                    <div className="w-10 h-10 bg-white rounded-lg border border-[#EDEDEA] overflow-hidden flex items-center justify-center group-hover:border-[#F59E0B] transition-colors">
+                                                    <div className="w-10 h-10 bg-white rounded-lg border border-[#E7ECF2] overflow-hidden flex items-center justify-center group-hover:border-[#1877C2] transition-colors">
                                                         {s.product_image ? (
                                                             <img
                                                                 src={getImageUrl(s.product_image)}
@@ -717,46 +717,46 @@ export default function InventoryListPage() {
                                                                 alt=""
                                                             />
                                                         ) : (
-                                                            <Package size={18} className="text-[#DCDCD8]" />
+                                                            <Package size={18} className="text-[#E2E8F0]" />
                                                         )}
                                                     </div>
                                                 </td>
                                                 <td className={ui.td}>
                                                     <div className="flex items-baseline gap-1.5 cursor-pointer" onClick={() => router.push(`/admin/inventory/${s.id}`)}>
-                                                        <div className="text-[13px] font-semibold text-[#119AB8] group-hover:text-[#0E7F98] group-hover:underline">
+                                                        <div className="text-[13px] font-semibold text-[#1877C2] group-hover:text-[#1567AB] group-hover:underline">
                                                             {s.product_name.replace(/\s*\(.*?\)\s*$/, '')}
                                                         </div>
                                                         {(s.weight || s.size) && (
-                                                            <div className="text-[10.5px] text-[#1A1A1A] font-semibold uppercase tracking-tight shrink-0">
+                                                            <div className="text-[10.5px] text-[#0F1A2B] font-semibold uppercase tracking-tight shrink-0">
                                                                 — {s.weight}{s.weight && s.size ? ' • ' : ''}{s.size}
                                                             </div>
                                                         )}
                                                     </div>
-                                                    <div className="text-[11.5px] text-[#9C9C98] uppercase font-semibold mt-1 tracking-tighter">{s.category_name || 'Category not set'}</div>
+                                                    <div className="text-[11.5px] text-[#94A3B8] uppercase font-semibold mt-1 tracking-tighter">{s.category_name || 'Category not set'}</div>
                                                 </td>
                                                 <td className={ui.td + ' text-right'}>
-                                                    <div className="text-[13px] font-semibold text-[#1A1A1A] tabular-nums">{s.total_quantity.toLocaleString()} <span className="text-[10.5px] text-[#9C9C98] font-normal ml-0.5">Units</span></div>
+                                                    <div className="text-[13px] font-semibold text-[#0F1A2B] tabular-nums">{s.total_quantity.toLocaleString()} <span className="text-[10.5px] text-[#94A3B8] font-normal ml-0.5">Units</span></div>
                                                     {(() => { const st = stockStatus(Number(s.total_quantity || 0)); return (
                                                         <span className={`inline-block mt-1.5 text-[10.5px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
                                                     ); })()}
                                                 </td>
                                                 <td className={ui.td + ' text-right'}>
                                                     <div className="space-y-1 text-[11.5px]">
-                                                        <div className="flex items-center justify-end gap-2"><span className="text-[10.5px] font-semibold uppercase text-[#9C9C98] tracking-wider">Purchase</span><span className="font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(s.price_per_item)}</span></div>
-                                                        <div className="flex items-center justify-end gap-2"><span className="text-[10.5px] font-semibold uppercase text-[#9C9C98] tracking-wider">Cost</span><span className="font-semibold text-[#3A3A38] tabular-nums">{formatCurrency(s.cost_price ?? s.price_per_item)}</span></div>
-                                                        <div className="flex items-center justify-end gap-2"><span className="text-[10.5px] font-semibold uppercase text-[#9C9C98] tracking-wider">Sale</span><span className="font-semibold text-emerald-700 tabular-nums">{s.sale_price ? formatCurrency(s.sale_price) : '—'}</span></div>
+                                                        <div className="flex items-center justify-end gap-2"><span className="text-[10.5px] font-semibold uppercase text-[#94A3B8] tracking-wider">Purchase</span><span className="font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(s.price_per_item)}</span></div>
+                                                        <div className="flex items-center justify-end gap-2"><span className="text-[10.5px] font-semibold uppercase text-[#94A3B8] tracking-wider">Cost</span><span className="font-semibold text-[#334155] tabular-nums">{formatCurrency(s.cost_price ?? s.price_per_item)}</span></div>
+                                                        <div className="flex items-center justify-end gap-2"><span className="text-[10.5px] font-semibold uppercase text-[#94A3B8] tracking-wider">Sale</span><span className="font-semibold text-emerald-700 tabular-nums">{s.sale_price ? formatCurrency(s.sale_price) : '—'}</span></div>
                                                     </div>
                                                 </td>
                                                 <td className={ui.td}>
-                                                    <div className="text-[#1A1A1A] font-semibold flex items-center gap-1.5"><Truck size={13} className="text-[#9C9C98]" /> {getSupplierName(s.supplier, s.supplier_name)}</div>
-                                                    <div className="text-[#3A3A38] flex items-center gap-1.5 mt-1.5">
-                                                        <MapPin size={12} className="text-[#9C9C98]" />
+                                                    <div className="text-[#0F1A2B] font-semibold flex items-center gap-1.5"><Truck size={13} className="text-[#94A3B8]" /> {getSupplierName(s.supplier, s.supplier_name)}</div>
+                                                    <div className="text-[#334155] flex items-center gap-1.5 mt-1.5">
+                                                        <MapPin size={12} className="text-[#94A3B8]" />
                                                         {s.warehouse_name ? (
                                                             s.warehouse_name
                                                         ) : (
                                                             <button
                                                                 onClick={() => setWarehouseModal({ open: true, stockId: s.id })}
-                                                                className="inline-flex items-center gap-1.5 mt-1 px-2 py-1 border border-dashed border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] hover:bg-[#F59E0B]/15 hover:border-solid rounded-lg text-[10.5px] font-semibold transition-all animate-pulse shadow-sm"
+                                                                className="inline-flex items-center gap-1.5 mt-1 px-2 py-1 border border-dashed border-[#1877C2] bg-[#1877C2]/10 text-[#1877C2] hover:bg-[#1877C2]/15 hover:border-solid rounded-lg text-[10.5px] font-semibold transition-all animate-pulse shadow-sm"
                                                             >
                                                                 <Plus size={10} strokeWidth={3} /> Assign Organization
                                                             </button>
@@ -764,10 +764,10 @@ export default function InventoryListPage() {
                                                     </div>
                                                 </td>
                                                 <td className={ui.td}>
-                                                    <div className="text-[11.5px] text-[#1A1A1A] font-semibold">
+                                                    <div className="text-[11.5px] text-[#0F1A2B] font-semibold">
                                                         {new Date(s.updated_at || s.created_at || s.date).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                     </div>
-                                                    <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase mt-0.5 tracking-tighter">
+                                                    <div className="text-[10.5px] text-[#94A3B8] font-semibold uppercase mt-0.5 tracking-tighter">
                                                         {new Date(s.updated_at || s.created_at || s.date).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                                     </div>
                                                 </td>
@@ -826,8 +826,8 @@ export default function InventoryListPage() {
                         <div className="flex-1 space-y-8">
                             {/* Product Info */}
                             <Card className="overflow-hidden text-left">
-                                <div className="px-6 py-4 border-b border-[#F2F2F0] bg-[#FAFAF8]">
-                                    <h2 className="text-[13px] font-semibold text-[#1A1A1A] tracking-tight">1. Choose Product</h2>
+                                <div className="px-6 py-4 border-b border-[#F4F6F9] bg-[#F8FAFC]">
+                                    <h2 className="text-[13px] font-semibold text-[#0F1A2B] tracking-tight">1. Choose Product</h2>
                                 </div>
                                 <div className="p-6 space-y-6">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -888,13 +888,13 @@ export default function InventoryListPage() {
 
                             {/* Quantity & Price */}
                             <Card className="overflow-hidden text-left">
-                                <div className="px-6 py-4 border-b border-[#F2F2F0] bg-[#FAFAF8]">
-                                    <h2 className="text-[13px] font-semibold text-[#1A1A1A] tracking-tight">2. Quantity & Pricing</h2>
+                                <div className="px-6 py-4 border-b border-[#F4F6F9] bg-[#F8FAFC]">
+                                    <h2 className="text-[13px] font-semibold text-[#0F1A2B] tracking-tight">2. Quantity & Pricing</h2>
                                 </div>
                                 <div className="p-6 space-y-8">
-                                    <div className="flex bg-[#F2F2F0] border border-[#EDEDEA] rounded-lg p-[2px] w-[220px]">
-                                        <button type="button" onClick={() => setForm((f: any) => ({ ...f, purchase_type: 'single' }))} className={`flex-1 h-7 text-[11.5px] font-semibold uppercase rounded-md transition-all ${form.purchase_type === 'single' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#8A8A86]'}`}>One Unit</button>
-                                        <button type="button" onClick={() => setForm((f: any) => ({ ...f, purchase_type: 'carton' }))} className={`flex-1 h-7 text-[11.5px] font-semibold uppercase rounded-md transition-all ${form.purchase_type === 'carton' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#8A8A86]'}`}>By Box</button>
+                                    <div className="flex bg-[#F4F6F9] border border-[#E7ECF2] rounded-lg p-[2px] w-[220px]">
+                                        <button type="button" onClick={() => setForm((f: any) => ({ ...f, purchase_type: 'single' }))} className={`flex-1 h-7 text-[11.5px] font-semibold uppercase rounded-md transition-all ${form.purchase_type === 'single' ? 'bg-white text-[#0F1A2B] shadow-sm' : 'text-[#94A3B8]'}`}>One Unit</button>
+                                        <button type="button" onClick={() => setForm((f: any) => ({ ...f, purchase_type: 'carton' }))} className={`flex-1 h-7 text-[11.5px] font-semibold uppercase rounded-md transition-all ${form.purchase_type === 'carton' ? 'bg-white text-[#0F1A2B] shadow-sm' : 'text-[#94A3B8]'}`}>By Box</button>
                                     </div>
 
                                     {form.purchase_type === 'carton' ? (
@@ -908,9 +908,9 @@ export default function InventoryListPage() {
                                             <Field label="Price per Box">
                                                 <input type="number" step="0.01" className={inputCls} value={form.price_per_carton} onChange={(e) => setForm((f: any) => ({ ...f, price_per_carton: e.target.value }))} placeholder="0" />
                                             </Field>
-                                            <div className="sm:col-span-3 grid grid-cols-2 gap-4 bg-[#FAFAF8] p-6 rounded-xl border border-[#F2F2F0]">
-                                                <div><p className="text-[11.5px] font-semibold text-[#8A8A86] uppercase tracking-[0.1em]">Total Units</p><p className="text-[20px] font-semibold text-[#1A1A1A] tabular-nums">{form.total_quantity || 0} <span className="text-[13px] font-medium text-[#8A8A86]">Units</span></p></div>
-                                                <div><p className="text-[11.5px] font-semibold text-[#8A8A86] uppercase tracking-[0.1em]">Cost per Unit</p><p className="text-[20px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(form.price_per_item || 0)}</p></div>
+                                            <div className="sm:col-span-3 grid grid-cols-2 gap-4 bg-[#F8FAFC] p-6 rounded-xl border border-[#F4F6F9]">
+                                                <div><p className="text-[11.5px] font-semibold text-[#94A3B8] uppercase tracking-[0.1em]">Total Units</p><p className="text-[20px] font-semibold text-[#0F1A2B] tabular-nums">{form.total_quantity || 0} <span className="text-[13px] font-medium text-[#94A3B8]">Units</span></p></div>
+                                                <div><p className="text-[11.5px] font-semibold text-[#94A3B8] uppercase tracking-[0.1em]">Cost per Unit</p><p className="text-[20px] font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(form.price_per_item || 0)}</p></div>
                                             </div>
                                         </div>
                                     ) : (
@@ -930,20 +930,20 @@ export default function InventoryListPage() {
                         {/* Sidebar */}
                         <div className="w-full lg:w-[300px] shrink-0 space-y-6">
                             <Card className="overflow-hidden">
-                                <div className="px-5 py-4 border-b border-[#F2F2F0] bg-[#FAFAF8]">
-                                    <h3 className="text-[13px] font-semibold text-[#1A1A1A] tracking-tight">Actions</h3>
+                                <div className="px-5 py-4 border-b border-[#F4F6F9] bg-[#F8FAFC]">
+                                    <h3 className="text-[13px] font-semibold text-[#0F1A2B] tracking-tight">Actions</h3>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <Btn className="w-full h-10 text-[13px] justify-center font-semibold" onClick={handleSave} loading={isSubmitting}>
                                         <Save size={14} /> {isEditing ? 'Update Stock' : 'Save Stock'}
                                     </Btn>
-                                    <button onClick={() => setView('list')} className="w-full text-[11.5px] text-[#119AB8] hover:text-[#0E7F98] hover:underline font-semibold text-center">
+                                    <button onClick={() => setView('list')} className="w-full text-[11.5px] text-[#1877C2] hover:text-[#1567AB] hover:underline font-semibold text-center">
                                         Cancel
                                     </button>
                                 </div>
                             </Card>
 
-                            <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-2xl p-5 text-[11.5px] text-[#B4780B] leading-relaxed shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                            <div className="bg-[#1877C2]/10 border border-[#1877C2]/15 rounded-2xl p-5 text-[11.5px] text-[#1877C2] leading-relaxed shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                                 <p className="font-semibold mb-2 uppercase tracking-wide">Stock Policy</p>
                                 Adding stock arrival will automatically increase the recorded units in the specific organization chosen.
                             </div>

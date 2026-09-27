@@ -26,7 +26,7 @@ const getAvatarUrl = (path: string | null): string | undefined => {
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[13px] font-semibold text-[#3A3A38] mb-1.5">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
+        <label className="block text-[13px] font-semibold text-[#334155] mb-1.5">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
@@ -196,7 +196,7 @@ export default function CustomersPage() {
     };
 
     return (
-        <div className="pb-12 text-left text-[#1A1A1A]">
+        <div className="pb-12 text-left text-[#0F1A2B]">
             <div className="max-w-[1200px] mx-auto">
 
                 <PageHeader
@@ -215,7 +215,7 @@ export default function CustomersPage() {
                     filters={
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
@@ -244,12 +244,12 @@ export default function CustomersPage() {
                 <div className="md:hidden space-y-3 mb-6">
                     {loading && customers.length === 0 ? (
                         <Card className="py-16 text-center">
-                            <Loader2 size={32} className="animate-spin text-[#1A1A1A] mx-auto mb-3" />
-                            <p className="text-[13px] text-[#8A8A86] font-medium">Loading customer directory...</p>
+                            <Loader2 size={32} className="animate-spin text-[#0F1A2B] mx-auto mb-3" />
+                            <p className="text-[13px] text-[#94A3B8] font-medium">Loading customer directory...</p>
                         </Card>
                     ) : filteredCustomers.length === 0 ? (
                         <Card className="py-16 text-center">
-                            <p className="text-[13px] text-[#8A8A86]">No customer accounts found.</p>
+                            <p className="text-[13px] text-[#94A3B8]">No customer accounts found.</p>
                         </Card>
                     ) : (
                         paginatedItems.map(cust => (
@@ -257,7 +257,7 @@ export default function CustomersPage() {
                                 {/* Row 1: Avatar + Name / Staff status + Verified status */}
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-[#F2F2F0] rounded-xl flex items-center justify-center text-[#8A8A86] border border-[#EDEDEA] font-semibold text-[15px] overflow-hidden shrink-0">
+                                        <div className="w-10 h-10 bg-[#F4F6F9] rounded-xl flex items-center justify-center text-[#94A3B8] border border-[#E7ECF2] font-semibold text-[15px] overflow-hidden shrink-0">
                                             {cust.avatar ? (
                                                 <img src={getAvatarUrl(cust.avatar)} alt="" className="w-full h-full object-cover" />
                                             ) : (
@@ -265,11 +265,11 @@ export default function CustomersPage() {
                                             )}
                                         </div>
                                         <div>
-                                            <h3 className="text-[13px] font-semibold text-[#119AB8] hover:text-[#0E7F98] hover:underline cursor-pointer flex items-center gap-1" onClick={() => setViewingCustomer(cust)}>
+                                            <h3 className="text-[13px] font-semibold text-[#1877C2] hover:text-[#1567AB] hover:underline cursor-pointer flex items-center gap-1" onClick={() => setViewingCustomer(cust)}>
                                                 {cust.first_name} {cust.last_name}
-                                                {cust.is_staff && <Shield size={11} className="text-[#1A1A1A] shrink-0" />}
+                                                {cust.is_staff && <Shield size={11} className="text-[#0F1A2B] shrink-0" />}
                                             </h3>
-                                            <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase tracking-widest mt-0.5">ID: #{String(cust.id).slice(-6).toUpperCase()}</div>
+                                            <div className="text-[10.5px] text-[#94A3B8] font-semibold uppercase tracking-widest mt-0.5">ID: #{String(cust.id).slice(-6).toUpperCase()}</div>
                                         </div>
                                     </div>
                                     <Badge tone={cust.is_active !== false ? 'green' : 'red'}>
@@ -278,23 +278,23 @@ export default function CustomersPage() {
                                 </div>
 
                                 {/* Row 2: Email & Phone */}
-                                <div className="border-t border-[#F2F2F0] pt-2.5 space-y-1.5 text-[11.5px] text-[#8A8A86]">
+                                <div className="border-t border-[#F4F6F9] pt-2.5 space-y-1.5 text-[11.5px] text-[#94A3B8]">
                                     <div className="flex items-center gap-2">
-                                        <Mail size={12} className="text-[#9C9C98]" />
-                                        <span className="text-[#3A3A38] truncate">{cust.email}</span>
+                                        <Mail size={12} className="text-[#94A3B8]" />
+                                        <span className="text-[#334155] truncate">{cust.email}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Phone size={12} className="text-[#9C9C98]" />
-                                        <span className="text-[#3A3A38]">{cust.phone || '—'}</span>
+                                        <Phone size={12} className="text-[#94A3B8]" />
+                                        <span className="text-[#334155]">{cust.phone || '—'}</span>
                                     </div>
                                 </div>
 
                                 {/* Row 3: Location */}
-                                <div className="flex items-start gap-2 text-[11.5px] text-[#8A8A86] bg-[#FAFAF8] border border-[#F2F2F0] rounded-lg p-2">
-                                    <MapPin size={13} className="text-[#9C9C98] mt-0.5 shrink-0" />
+                                <div className="flex items-start gap-2 text-[11.5px] text-[#94A3B8] bg-[#F8FAFC] border border-[#F4F6F9] rounded-lg p-2">
+                                    <MapPin size={13} className="text-[#94A3B8] mt-0.5 shrink-0" />
                                     <div>
                                         <div className="line-clamp-1">{cust.address || 'No address registered'}</div>
-                                        {cust.city && <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase mt-0.5">{cust.city} {cust.country}</div>}
+                                        {cust.city && <div className="text-[10.5px] text-[#94A3B8] font-semibold uppercase mt-0.5">{cust.city} {cust.country}</div>}
                                     </div>
                                 </div>
 
@@ -324,16 +324,16 @@ export default function CustomersPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && customers.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#8A8A86] font-medium">Loading master customer directory...</td></tr>
+                                    <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#94A3B8] font-medium">Loading master customer directory...</td></tr>
                                 ) : filteredCustomers.length === 0 ? (
-                                    <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#8A8A86] font-medium">No customer accounts found.</td></tr>
+                                    <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#94A3B8] font-medium">No customer accounts found.</td></tr>
                                 ) : (
                                     paginatedItems.map(cust => (
-                                        <tr key={cust.id} className="hover:bg-[#FAFAF8] transition-colors group">
+                                        <tr key={cust.id} className="hover:bg-[#F8FAFC] transition-colors group">
                                             <RowCheckboxTd sel={sel} id={cust.id} />
                                             <td className={ui.td}>
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 bg-[#F2F2F0] rounded-xl flex items-center justify-center text-[#8A8A86] border border-[#EDEDEA] font-semibold text-lg overflow-hidden">
+                                                    <div className="w-12 h-12 bg-[#F4F6F9] rounded-xl flex items-center justify-center text-[#94A3B8] border border-[#E7ECF2] font-semibold text-lg overflow-hidden">
                                                         {cust.avatar ? (
                                                             <img src={getAvatarUrl(cust.avatar)} alt="" className="w-full h-full object-cover" />
                                                         ) : (
@@ -341,30 +341,30 @@ export default function CustomersPage() {
                                                         )}
                                                     </div>
                                                     <div>
-                                                        <div className="text-[15px] font-semibold text-[#119AB8] hover:text-[#0E7F98] hover:underline cursor-pointer flex items-center gap-1.5" onClick={() => setViewingCustomer(cust)}>
+                                                        <div className="text-[15px] font-semibold text-[#1877C2] hover:text-[#1567AB] hover:underline cursor-pointer flex items-center gap-1.5" onClick={() => setViewingCustomer(cust)}>
                                                             {cust.first_name} {cust.last_name}
-                                                            {cust.is_staff && <Shield size={12} className="text-[#1A1A1A]" />}
+                                                            {cust.is_staff && <Shield size={12} className="text-[#0F1A2B]" />}
                                                         </div>
-                                                        <div className="text-[11.5px] text-[#9C9C98] font-semibold uppercase tracking-widest mt-1">ID: #{String(cust.id).slice(-6).toUpperCase()}</div>
+                                                        <div className="text-[11.5px] text-[#94A3B8] font-semibold uppercase tracking-widest mt-1">ID: #{String(cust.id).slice(-6).toUpperCase()}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className={ui.td}>
                                                 <div className="flex flex-col gap-1.5">
-                                                    <div className="flex items-center gap-2 text-[13px] text-[#3A3A38] font-medium">
-                                                        <Mail size={12} className="text-[#9C9C98]" /> {cust.email}
+                                                    <div className="flex items-center gap-2 text-[13px] text-[#334155] font-medium">
+                                                        <Mail size={12} className="text-[#94A3B8]" /> {cust.email}
                                                     </div>
-                                                    <div className="flex items-center gap-2 text-[13px] text-[#3A3A38] font-medium">
-                                                        <Phone size={12} className="text-[#9C9C98]" /> {cust.phone || '—'}
+                                                    <div className="flex items-center gap-2 text-[13px] text-[#334155] font-medium">
+                                                        <Phone size={12} className="text-[#94A3B8]" /> {cust.phone || '—'}
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className={ui.td}>
-                                                <div className="flex items-start gap-2 text-[13px] text-[#3A3A38] font-medium">
-                                                    <MapPin size={14} className="text-[#9C9C98] shrink-0 mt-0.5" />
+                                                <div className="flex items-start gap-2 text-[13px] text-[#334155] font-medium">
+                                                    <MapPin size={14} className="text-[#94A3B8] shrink-0 mt-0.5" />
                                                     <div className="flex flex-col">
                                                         <span className="line-clamp-1">{cust.address || 'No address registered'}</span>
-                                                        <span className="text-[11.5px] text-[#9C9C98] font-semibold uppercase">{cust.city} {cust.country}</span>
+                                                        <span className="text-[11.5px] text-[#94A3B8] font-semibold uppercase">{cust.city} {cust.country}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -442,12 +442,12 @@ export default function CustomersPage() {
                         </Field>
                         <Field label="Profile Picture">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-[#F2F2F0] rounded-lg border border-[#EDEDEA] flex items-center justify-center overflow-hidden">
+                                <div className="w-10 h-10 bg-[#F4F6F9] rounded-lg border border-[#E7ECF2] flex items-center justify-center overflow-hidden">
                                     {formData.avatar ? (
                                         <img src={typeof formData.avatar === 'string' ? getAvatarUrl(formData.avatar) : URL.createObjectURL(formData.avatar)} alt="" className="w-full h-full object-cover" />
-                                    ) : <User size={14} className="text-[#9C9C98]" />}
+                                    ) : <User size={14} className="text-[#94A3B8]" />}
                                 </div>
-                                <input type="file" accept="image/*" className="text-[11.5px] file:h-[26px] file:bg-[#F2F2F0] file:border file:border-[#EDEDEA] file:rounded-lg file:px-2 file:mr-2 file:cursor-pointer file:text-[#3A3A38] file:font-semibold"
+                                <input type="file" accept="image/*" className="text-[11.5px] file:h-[26px] file:bg-[#F4F6F9] file:border file:border-[#E7ECF2] file:rounded-lg file:px-2 file:mr-2 file:cursor-pointer file:text-[#334155] file:font-semibold"
                                     onChange={e => {
                                         const file = e.target.files?.[0];
                                         if (file) setFormData({...formData, avatar: file});
@@ -497,7 +497,7 @@ export default function CustomersPage() {
             {/* CUSTOMER DETAIL MODAL (QUICK VIEW) */}
             {viewingCustomer && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 py-12 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
-                    <div className="bg-white rounded-2xl w-full max-w-4xl my-auto shadow-2xl animate-in zoom-in-95 duration-500 overflow-hidden border border-[#EDEDEA] max-h-none flex flex-col">
+                    <div className="bg-white rounded-2xl w-full max-w-4xl my-auto shadow-2xl animate-in zoom-in-95 duration-500 overflow-hidden border border-[#E7ECF2] max-h-none flex flex-col">
                         {/* Header */}
                         <div className="bg-slate-900 px-8 py-5 flex items-center justify-between shrink-0">
                             <div className="flex items-center gap-3">
@@ -505,15 +505,15 @@ export default function CustomersPage() {
                                     {viewingCustomer.avatar ? (
                                         <img src={getAvatarUrl(viewingCustomer.avatar)} className="w-full h-full object-cover rounded-full" alt="" />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-[#1A1A1A] font-semibold text-xl uppercase bg-[#F2F2F0] rounded-full">{viewingCustomer.first_name?.[0]}</div>
+                                        <div className="w-full h-full flex items-center justify-center text-[#0F1A2B] font-semibold text-xl uppercase bg-[#F4F6F9] rounded-full">{viewingCustomer.first_name?.[0]}</div>
                                     )}
                                 </div>
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2">
                                         <h2 className="text-white text-[18px] font-semibold leading-none truncate">{viewingCustomer.first_name} {viewingCustomer.last_name}</h2>
-                                        <div className="w-4 h-4 bg-[#F59E0B] rounded-sm flex items-center justify-center text-white text-[10.5px] font-semibold shadow-sm shrink-0">A</div>
+                                        <div className="w-4 h-4 bg-[#1877C2] rounded-sm flex items-center justify-center text-white text-[10.5px] font-semibold shadow-sm shrink-0">A</div>
                                     </div>
-                                    <p className="text-[#9C9C98] text-[11.5px] font-medium mt-1">Customer Registry Console • Member Management</p>
+                                    <p className="text-[#94A3B8] text-[11.5px] font-medium mt-1">Customer Registry Console • Member Management</p>
                                 </div>
                             </div>
                             <button onClick={() => setViewingCustomer(null)} className="text-white/60 hover:text-white transition-colors p-1"><X size={22} /></button>
@@ -523,26 +523,26 @@ export default function CustomersPage() {
                             {/* Identity Column */}
                             <div className="w-[320px] p-8 space-y-6">
                                 <div className="space-y-4">
-                                    <div className="aspect-square w-full bg-[#F2F2F0] rounded-2xl border border-[#EDEDEA] flex items-center justify-center overflow-hidden group">
+                                    <div className="aspect-square w-full bg-[#F4F6F9] rounded-2xl border border-[#E7ECF2] flex items-center justify-center overflow-hidden group">
                                         {viewingCustomer.avatar ? (
                                             <img src={getAvatarUrl(viewingCustomer.avatar)} className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" alt="" />
                                         ) : (
-                                            <User size={64} className="text-[#C4C4C0]" />
+                                            <User size={64} className="text-[#CBD5E1]" />
                                         )}
                                     </div>
                                     <div>
-                                        <h3 className="text-[24px] font-semibold text-[#1A1A1A] tracking-tight leading-tight mb-1">{viewingCustomer.first_name} {viewingCustomer.last_name}</h3>
-                                        <p className="text-[11.5px] text-[#1A1A1A] font-semibold uppercase tracking-[0.2em] mt-1">ID: #{String(viewingCustomer.id).slice(0, 8).toUpperCase()}</p>
+                                        <h3 className="text-[24px] font-semibold text-[#0F1A2B] tracking-tight leading-tight mb-1">{viewingCustomer.first_name} {viewingCustomer.last_name}</h3>
+                                        <p className="text-[11.5px] text-[#0F1A2B] font-semibold uppercase tracking-[0.2em] mt-1">ID: #{String(viewingCustomer.id).slice(0, 8).toUpperCase()}</p>
                                     </div>
                                     <div className="flex items-center gap-2 pt-2">
                                         <Badge tone={viewingCustomer.is_active !== false ? 'green' : 'red'}>
                                             {viewingCustomer.is_active !== false ? 'Verified Member' : 'Suspended'}
                                         </Badge>
-                                        <span className="text-[11.5px] text-[#8A8A86] font-semibold border-l pl-2 border-[#EDEDEA]">Retail Registry</span>
+                                        <span className="text-[11.5px] text-[#94A3B8] font-semibold border-l pl-2 border-[#E7ECF2]">Retail Registry</span>
                                     </div>
                                 </div>
 
-                                <div className="pt-6 border-t border-[#F2F2F0]">
+                                <div className="pt-6 border-t border-[#F4F6F9]">
                                     <Button
                                         onClick={() => { setViewingCustomer(null); openEdit(viewingCustomer); }}
                                         className="w-full"
@@ -557,59 +557,59 @@ export default function CustomersPage() {
                                 <div className="grid grid-cols-1 gap-10">
                                     {/* Contact Section */}
                                     <div className="space-y-4">
-                                        <h4 className="text-[13px] font-semibold text-[#1A1A1A] uppercase tracking-wider border-b border-[#F2F2F0] pb-2">Customer Communication Details</h4>
+                                        <h4 className="text-[13px] font-semibold text-[#0F1A2B] uppercase tracking-wider border-b border-[#F4F6F9] pb-2">Customer Communication Details</h4>
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-1">
-                                                <p className="text-[11.5px] font-semibold text-[#9C9C98]">Email Address</p>
-                                                <p className="text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline cursor-pointer truncate font-semibold">{viewingCustomer.email}</p>
+                                                <p className="text-[11.5px] font-semibold text-[#94A3B8]">Email Address</p>
+                                                <p className="text-[13px] text-[#1877C2] hover:text-[#1567AB] hover:underline cursor-pointer truncate font-semibold">{viewingCustomer.email}</p>
                                             </div>
                                             <div className="space-y-1">
-                                                <p className="text-[11.5px] font-semibold text-[#9C9C98]">Mobile Connection</p>
-                                                <p className="text-[13px] text-[#1A1A1A] font-semibold">{viewingCustomer.phone || 'Not Registered'}</p>
+                                                <p className="text-[11.5px] font-semibold text-[#94A3B8]">Mobile Connection</p>
+                                                <p className="text-[13px] text-[#0F1A2B] font-semibold">{viewingCustomer.phone || 'Not Registered'}</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Address Section */}
                                     <div className="space-y-4">
-                                        <h4 className="text-[13px] font-semibold text-[#1A1A1A] uppercase tracking-wider border-b border-[#F2F2F0] pb-2">Shipping & Residence Address</h4>
-                                        <div className="flex gap-4 p-5 bg-[#FAFAF8] border border-[#EDEDEA] rounded-2xl relative overflow-hidden group">
-                                            <div className="absolute top-0 left-0 w-1 h-full bg-[#F59E0B]/25 group-hover:bg-[#F59E0B] transition-colors" />
-                                            <MapPin size={24} className="text-[#9C9C98] shrink-0 mt-0.5" />
+                                        <h4 className="text-[13px] font-semibold text-[#0F1A2B] uppercase tracking-wider border-b border-[#F4F6F9] pb-2">Shipping & Residence Address</h4>
+                                        <div className="flex gap-4 p-5 bg-[#F8FAFC] border border-[#E7ECF2] rounded-2xl relative overflow-hidden group">
+                                            <div className="absolute top-0 left-0 w-1 h-full bg-[#1877C2]/25 group-hover:bg-[#1877C2] transition-colors" />
+                                            <MapPin size={24} className="text-[#94A3B8] shrink-0 mt-0.5" />
                                             <div className="space-y-1">
-                                                <p className="text-[13px] text-[#1A1A1A] leading-relaxed font-semibold">
+                                                <p className="text-[13px] text-[#0F1A2B] leading-relaxed font-semibold">
                                                     {viewingCustomer.address || 'No physical delivery address provided for this member.'}
                                                 </p>
-                                                {viewingCustomer.city && <p className="text-[10.5px] text-[#8A8A86] font-semibold uppercase tracking-[0.2em]">{viewingCustomer.city}, {viewingCustomer.country}</p>}
+                                                {viewingCustomer.city && <p className="text-[10.5px] text-[#94A3B8] font-semibold uppercase tracking-[0.2em]">{viewingCustomer.city}, {viewingCustomer.country}</p>}
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Account Intelligence */}
                                     <div className="space-y-4">
-                                        <h4 className="text-[13px] font-semibold text-[#1A1A1A] uppercase tracking-wider border-b border-[#F2F2F0] pb-2">Account Intelligence</h4>
+                                        <h4 className="text-[13px] font-semibold text-[#0F1A2B] uppercase tracking-wider border-b border-[#F4F6F9] pb-2">Account Intelligence</h4>
                                         <div className="grid grid-cols-3 gap-6">
-                                            <div className="bg-white p-4 border border-[#EDEDEA] rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300 transition-colors">
-                                                <p className="text-[10.5px] font-semibold text-[#9C9C98] uppercase tracking-wider mb-1">Member Since</p>
-                                                <p className="text-[13px] font-semibold text-[#1A1A1A]">{new Date(viewingCustomer.created_at || Date.now()).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                            <div className="bg-white p-4 border border-[#E7ECF2] rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-[#CBD5E1] transition-colors">
+                                                <p className="text-[10.5px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Member Since</p>
+                                                <p className="text-[13px] font-semibold text-[#0F1A2B]">{new Date(viewingCustomer.created_at || Date.now()).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                                             </div>
-                                            <div className="bg-white p-4 border border-[#EDEDEA] rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300 transition-colors">
-                                                <p className="text-[10.5px] font-semibold text-[#9C9C98] uppercase tracking-wider mb-1">Account Standing</p>
+                                            <div className="bg-white p-4 border border-[#E7ECF2] rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-[#CBD5E1] transition-colors">
+                                                <p className="text-[10.5px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Account Standing</p>
                                                 <div className="flex items-center gap-1.5 text-[13px] font-semibold text-emerald-600">
                                                     <CheckCircle size={16} /> Excellent
                                                 </div>
                                             </div>
-                                            <div className="bg-white p-4 border border-[#EDEDEA] rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300 transition-colors">
-                                                <p className="text-[10.5px] font-semibold text-[#9C9C98] uppercase tracking-wider mb-1">Security</p>
-                                                <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1A1A1A]">
-                                                    <Shield size={16} className="text-[#1A1A1A]" /> Protected
+                                            <div className="bg-white p-4 border border-[#E7ECF2] rounded-xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-[#CBD5E1] transition-colors">
+                                                <p className="text-[10.5px] font-semibold text-[#94A3B8] uppercase tracking-wider mb-1">Security</p>
+                                                <div className="flex items-center gap-1.5 text-[13px] font-semibold text-[#0F1A2B]">
+                                                    <Shield size={16} className="text-[#0F1A2B]" /> Protected
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="mt-12 pt-8 border-t border-[#F2F2F0] flex justify-end">
+                                <div className="mt-12 pt-8 border-t border-[#F4F6F9] flex justify-end">
                                     <Button variant="outline" onClick={() => setViewingCustomer(null)} className="px-12">
                                         Close Details
                                     </Button>
@@ -627,9 +627,9 @@ export default function CustomersPage() {
                         <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center text-rose-600 mx-auto mb-6">
                             <Trash2 size={32} />
                         </div>
-                        <h3 className="text-[18px] font-semibold text-[#1A1A1A] tracking-tight mb-2">Confirm Deletion</h3>
-                        <p className="text-[13px] text-[#3A3A38] leading-relaxed mb-8">
-                            Are you sure you want to remove <span className="font-semibold text-[#1A1A1A]">{deleteTarget.first_name} {deleteTarget.last_name}</span>? This action cannot be undone.
+                        <h3 className="text-[18px] font-semibold text-[#0F1A2B] tracking-tight mb-2">Confirm Deletion</h3>
+                        <p className="text-[13px] text-[#334155] leading-relaxed mb-8">
+                            Are you sure you want to remove <span className="font-semibold text-[#0F1A2B]">{deleteTarget.first_name} {deleteTarget.last_name}</span>? This action cannot be undone.
                         </p>
                         <div className="flex gap-3">
                             <Button variant="danger" onClick={handleDelete} disabled={saving} className="flex-1">

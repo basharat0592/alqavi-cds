@@ -47,7 +47,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     const sel = useTableSelection(products);
 
     if (loading) return <PageLoader />;
-    if (!supplier) return <div className="text-center p-20 text-slate-500">Supplier not found.</div>;
+    if (!supplier) return <div className="text-center p-20 text-[#64748B]">Supplier not found.</div>;
 
     const initials = `${supplier.first_name?.[0] || ''}${supplier.last_name?.[0] || ''}`.toUpperCase();
 
@@ -66,43 +66,43 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                 {/* ── LEFT: PROFILE CARD ── */}
                 <div className="lg:col-span-1 space-y-6">
                     <Card className="overflow-hidden">
-                        <div className="bg-slate-50/60 px-6 py-4 flex items-center justify-between border-b border-slate-100">
-                            <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Supplier Identity</h2>
+                        <div className="bg-[#F8FAFC] px-6 py-4 flex items-center justify-between border-b border-[#F1F5F9]">
+                            <h2 className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Supplier Identity</h2>
                             <Badge tone={supplier.is_active ? 'green' : 'red'}>
                                 {supplier.is_active ? 'Active' : 'Inactive'}
                             </Badge>
                         </div>
 
-                        <div className="p-8 flex flex-col items-center border-b border-slate-100">
-                            <div className="h-24 w-24 bg-[#F59E0B]/10 border-4 border-[#F59E0B]/15 text-[#B4780B] rounded-3xl flex items-center justify-center font-bold text-3xl shadow-sm mb-4">
+                        <div className="p-8 flex flex-col items-center border-b border-[#F1F5F9]">
+                            <div className="h-24 w-24 bg-[#1877C2]/10 border-4 border-[#1877C2]/15 text-[#1877C2] rounded-2xl flex items-center justify-center font-bold text-3xl shadow-sm mb-4">
                                 {initials}
                             </div>
-                            <h1 className="text-xl font-bold text-slate-900 tracking-tight leading-tight">{supplier.first_name} {supplier.last_name}</h1>
-                            <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-1">{supplier.business_name || 'Individual Entity'}</p>
+                            <h1 className="text-xl font-bold text-[#0F1A2B] tracking-tight leading-tight">{supplier.first_name} {supplier.last_name}</h1>
+                            <p className="text-sm font-semibold text-[#94A3B8] uppercase tracking-wider mt-1">{supplier.business_name || 'Individual Entity'}</p>
                         </div>
 
                         <div className="p-6 space-y-4">
-                            <div className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl">
-                                <Mail className="h-5 w-5 text-slate-400 mt-0.5" />
+                            <div className="flex items-start gap-4 p-3 bg-[#F8FAFC] rounded-xl">
+                                <Mail className="h-5 w-5 text-[#94A3B8] mt-0.5" />
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p>
-                                    <p className="text-sm font-semibold text-slate-700">{supplier.email}</p>
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Email</p>
+                                    <p className="text-sm font-semibold text-[#334155]">{supplier.email}</p>
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl">
-                                <Phone className="h-5 w-5 text-slate-400 mt-0.5" />
+                            <div className="flex items-start gap-4 p-3 bg-[#F8FAFC] rounded-xl">
+                                <Phone className="h-5 w-5 text-[#94A3B8] mt-0.5" />
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone</p>
-                                    <p className="text-sm font-semibold text-slate-700">{supplier.phone_number || supplier.phone || 'Not provided'}</p>
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Phone</p>
+                                    <p className="text-sm font-semibold text-[#334155]">{supplier.phone_number || supplier.phone || 'Not provided'}</p>
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-4 p-3 bg-slate-50 rounded-xl">
-                                <MapPin className="h-5 w-5 text-slate-400 mt-0.5" />
+                            <div className="flex items-start gap-4 p-3 bg-[#F8FAFC] rounded-xl">
+                                <MapPin className="h-5 w-5 text-[#94A3B8] mt-0.5" />
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Address</p>
-                                    <p className="text-sm font-semibold text-slate-700">{supplier.address || 'Not provided'}</p>
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Address</p>
+                                    <p className="text-sm font-semibold text-[#334155]">{supplier.address || 'Not provided'}</p>
                                 </div>
                             </div>
                         </div>
@@ -112,10 +112,10 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                 {/* ── RIGHT: PRODUCTS SUPPLIED ── */}
                 <div className="lg:col-span-2 space-y-6">
                     <Card className="overflow-hidden">
-                        <div className="bg-slate-50/60 px-6 py-4 flex items-center justify-between border-b border-slate-100">
+                        <div className="bg-[#F8FAFC] px-6 py-4 flex items-center justify-between border-b border-[#F1F5F9]">
                             <div className="flex items-center gap-3">
-                                <Building2 className="h-5 w-5 text-[#1A1A1A]" />
-                                <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Catalogs Managed</h2>
+                                <Building2 className="h-5 w-5 text-[#0F1A2B]" />
+                                <h2 className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Catalogs Managed</h2>
                             </div>
                             <Badge tone="indigo">{products.length} Assets</Badge>
                         </div>
@@ -123,39 +123,39 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50/60 border-b border-slate-200">
+                                    <tr className="bg-[#F8FAFC] border-b border-[#E7ECF2]">
                                         <SelectAllTh sel={sel} />
-                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider">Asset Details</th>
-                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-center">Acquisition Price</th>
-                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-center">Availability</th>
-                                        <th className="px-6 py-3 text-[11px] font-bold text-slate-400 whitespace-nowrap uppercase tracking-wider text-right">Visibility</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-[#94A3B8] whitespace-nowrap uppercase tracking-wider">Asset Details</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-[#94A3B8] whitespace-nowrap uppercase tracking-wider text-center">Acquisition Price</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-[#94A3B8] whitespace-nowrap uppercase tracking-wider text-center">Availability</th>
+                                        <th className="px-6 py-3 text-[11px] font-bold text-[#94A3B8] whitespace-nowrap uppercase tracking-wider text-right">Visibility</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {products.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-16 text-center text-slate-400">
+                                            <td colSpan={5} className="px-6 py-16 text-center text-[#94A3B8]">
                                                 <Archive className="h-12 w-12 mx-auto opacity-20 mb-3" />
                                                 <p className="text-xs font-semibold uppercase tracking-wider">No assets associated</p>
                                             </td>
                                         </tr>
                                     ) : (
                                         products.map(p => (
-                                            <tr key={p.id} className="hover:bg-slate-50">
+                                            <tr key={p.id} className="hover:bg-[#F8FAFC]">
                                                 <RowCheckboxTd sel={sel} id={p.id} />
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden shrink-0">
+                                                        <div className="w-10 h-10 bg-[#F4F6F9] rounded-lg overflow-hidden shrink-0">
                                                             <img src={getImageUrl((p.image_url || p.image || '') as string) || "https://images.unsplash.com/photo-1596462502278-27bfdd403cc2?w=800"} className="w-full h-full object-cover" alt="" />
                                                         </div>
                                                         <div>
-                                                            <p className="text-sm font-semibold text-slate-800 leading-tight">{p.name}</p>
-                                                            <p className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mt-0.5">{p.sku || 'N/A'}</p>
+                                                            <p className="text-sm font-semibold text-[#0F1A2B] leading-tight">{p.name}</p>
+                                                            <p className="text-[11px] font-medium text-[#94A3B8] uppercase tracking-wider mt-0.5">{p.sku || 'N/A'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <span className="text-sm font-bold text-slate-900 tabular-nums">Rs. {Number(p.cost_price || p.cost || 0).toLocaleString()}</span>
+                                                    <span className="text-sm font-bold text-[#0F1A2B] tabular-nums">Rs. {Number(p.cost_price || p.cost || 0).toLocaleString()}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <Badge tone={p.quantity_in_stock && p.quantity_in_stock > 0 ? 'green' : 'red'}>

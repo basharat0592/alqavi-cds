@@ -112,9 +112,9 @@ export default function AlertsPage() {
                     message: `${u.first_name || u.username} verified as ${u.role_name || u.role || 'Member'}`,
                     time: new Date(u.date_joined || u.created_at || Date.now()),
                     icon: UserPlus,
-                    color: 'text-[#5B5B58]',
-                    bg: 'bg-[#FAFAF8]',
-                    border: 'border-[#E9E9E6]'
+                    color: 'text-[#64748B]',
+                    bg: 'bg-[#F8FAFC]',
+                    border: 'border-[#E7ECF2]'
                 });
             });
 
@@ -127,9 +127,9 @@ export default function AlertsPage() {
                     message: `Purchase Order #${p.purchase_number || p.id} created for RS ${parseFloat(p.total_amount || 0).toLocaleString()}`,
                     time: new Date(p.created_at || Date.now()),
                     icon: ShoppingBag,
-                    color: 'text-[#1A1A1A]',
-                    bg: 'bg-[#F59E0B]/10',
-                    border: 'border-[#F59E0B]/25'
+                    color: 'text-[#0F1A2B]',
+                    bg: 'bg-[#1877C2]/10',
+                    border: 'border-[#1877C2]/25'
                 });
             });
 
@@ -191,10 +191,10 @@ export default function AlertsPage() {
                 <section className="space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                <Wallet className="h-4 w-4 text-[#1A1A1A]" /> Payments Due
+                            <h2 className="text-[15px] font-bold text-[#0F1A2B] tracking-tight flex items-center gap-2">
+                                <Wallet className="h-4 w-4 text-[#0F1A2B]" /> Payments Due
                             </h2>
-                            <p className="text-[12px] text-slate-500 mt-0.5">Outstanding settlements across sales, purchases and refunds</p>
+                            <p className="text-[12px] text-[#64748B] mt-0.5">Outstanding settlements across sales, purchases and refunds</p>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             {dueSummary.overdue > 0 && <Badge tone="red">{dueSummary.overdue} Overdue · {money(dueSummary.overdue_amount)}</Badge>}
@@ -208,7 +208,7 @@ export default function AlertsPage() {
                             <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-3 border border-emerald-100">
                                 <CheckCircle2 className="h-7 w-7 text-emerald-600" />
                             </div>
-                            <p className="text-[13px] font-semibold text-slate-500">No outstanding payments. Everything is settled.</p>
+                            <p className="text-[13px] font-semibold text-[#64748B]">No outstanding payments. Everything is settled.</p>
                         </Card>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -217,7 +217,7 @@ export default function AlertsPage() {
                                 const soon = d.bucket === 'due_soon';
                                 const tone = overdue ? { bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200' }
                                     : soon ? { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' }
-                                        : { bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-200' };
+                                        : { bg: 'bg-[#F8FAFC]', text: 'text-[#64748B]', border: 'border-[#E7ECF2]' };
                                 return (
                                     <Link key={`${d.type}-${d.ref}-${i}`} href={DUE_LINK[d.type] || '/admin/payments'}
                                         className={`group block rounded-xl border bg-white p-3.5 hover:shadow-md transition-all ${tone.border}`}>
@@ -231,14 +231,14 @@ export default function AlertsPage() {
                                                         : d.due_date ? <><CalendarClock className="h-3 w-3" /> {formatDate(d.due_date)}</> : 'No due date'}
                                             </span>
                                         </div>
-                                        <p className="text-[13px] font-bold text-slate-900 truncate">{d.party}</p>
-                                        <p className="text-[10.5px] text-slate-400 font-medium mb-2">#{d.ref}</p>
+                                        <p className="text-[13px] font-bold text-[#0F1A2B] truncate">{d.party}</p>
+                                        <p className="text-[10.5px] text-[#94A3B8] font-medium mb-2">#{d.ref}</p>
                                         <div className="flex items-end justify-between">
                                             <div>
-                                                <p className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">Remaining</p>
+                                                <p className="text-[9.5px] font-bold uppercase tracking-wider text-[#94A3B8]">Remaining</p>
                                                 <p className={`text-[15px] font-bold tabular-nums ${tone.text}`}>{money(d.remaining)}</p>
                                             </div>
-                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#1A1A1A] group-hover:gap-1.5 transition-all">
+                                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0F1A2B] group-hover:gap-1.5 transition-all">
                                                 Settle <ArrowRight className="h-3 w-3" />
                                             </span>
                                         </div>
@@ -253,10 +253,10 @@ export default function AlertsPage() {
                 <section className="space-y-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div>
-                            <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                                <Activity className="h-4 w-4 text-[#1A1A1A]" /> Low Stock Alerts
+                            <h2 className="text-[15px] font-bold text-[#0F1A2B] tracking-tight flex items-center gap-2">
+                                <Activity className="h-4 w-4 text-[#0F1A2B]" /> Low Stock Alerts
                             </h2>
-                            <p className="text-[12px] text-slate-500 mt-0.5">Products running low or out of stock</p>
+                            <p className="text-[12px] text-[#64748B] mt-0.5">Products running low or out of stock</p>
                         </div>
                         <Badge
                             tone={outOfStockCount > 0 ? 'red' : lowStockCount > 0 ? 'amber' : 'green'}
@@ -273,7 +273,7 @@ export default function AlertsPage() {
                             <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-100">
                                 <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                             </div>
-                            <p className="text-[13px] font-semibold text-slate-500 leading-relaxed">All products have sufficient stock levels.</p>
+                            <p className="text-[13px] font-semibold text-[#64748B] leading-relaxed">All products have sufficient stock levels.</p>
                         </Card>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -290,7 +290,7 @@ export default function AlertsPage() {
                                         </div>
                                         <div>
                                             <Link href={a.href || '#'} className="block group">
-                                                <h3 className="text-[13px] font-bold text-[#119AB8] group-hover:text-[#0E7F98] group-hover:underline truncate">{a.product}</h3>
+                                                <h3 className="text-[13px] font-bold text-[#1877C2] group-hover:text-[#1567AB] group-hover:underline truncate">{a.product}</h3>
                                             </Link>
                                             <p className={`text-[10px] font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1 ${a.color}`}>
                                                 <AlertTriangle className="h-3.5 w-3.5" /> {a.type.replace(/_/g, ' ')}
@@ -317,36 +317,36 @@ export default function AlertsPage() {
                 {/* RECENT ACTIVITY LOG */}
                 <section className="space-y-4">
                     <div>
-                        <h2 className="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                            <ClipboardList className="h-4 w-4 text-[#1A1A1A]" /> Recent Activity Log
+                        <h2 className="text-[15px] font-bold text-[#0F1A2B] tracking-tight flex items-center gap-2">
+                            <ClipboardList className="h-4 w-4 text-[#0F1A2B]" /> Recent Activity Log
                         </h2>
-                        <p className="text-[12px] text-slate-500 mt-0.5">Recent actions on orders, users, and purchases</p>
+                        <p className="text-[12px] text-[#64748B] mt-0.5">Recent actions on orders, users, and purchases</p>
                     </div>
 
                     <div className="relative">
-                        <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-slate-100" />
+                        <div className="absolute left-6 top-8 bottom-8 w-0.5 bg-[#F4F6F9]" />
                         <div className="space-y-4">
                             {activities.map((act) => (
                                 <div key={act.id} className="relative pl-14 group">
                                     <div className={`absolute left-0 top-1.5 w-9 h-9 ${act.bg} ${act.color} rounded-lg z-10 flex items-center justify-center shadow-sm border ${act.border} transform group-hover:scale-105 transition-all`}>
                                         <act.icon size={16} />
                                     </div>
-                                    <Card className="p-4 hover:bg-slate-50 transition-all">
+                                    <Card className="p-4 hover:bg-[#F8FAFC] transition-all">
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <Badge tone="neutral">{act.type}</Badge>
-                                                <h3 className="text-[13px] font-bold text-slate-900 tracking-tight">{act.title}</h3>
+                                                <h3 className="text-[13px] font-bold text-[#0F1A2B] tracking-tight">{act.title}</h3>
                                             </div>
-                                            <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1.5 tracking-wider tabular-nums whitespace-nowrap">
-                                                <Clock size={11} className="text-[#1A1A1A]" /> {formatDateTime(act.time.toISOString())}
+                                            <div className="text-[10px] font-bold text-[#94A3B8] flex items-center gap-1.5 tracking-wider tabular-nums whitespace-nowrap">
+                                                <Clock size={11} className="text-[#0F1A2B]" /> {formatDateTime(act.time.toISOString())}
                                             </div>
                                         </div>
-                                        <p className="text-[12px] text-slate-600 font-medium leading-relaxed">{act.message}</p>
+                                        <p className="text-[12px] text-[#64748B] font-medium leading-relaxed">{act.message}</p>
                                     </Card>
                                 </div>
                             ))}
                             {activities.length === 0 && !loading && (
-                                <p className="text-[13px] text-slate-400 font-semibold text-center py-20">No recent activity recorded.</p>
+                                <p className="text-[13px] text-[#94A3B8] font-semibold text-center py-20">No recent activity recorded.</p>
                             )}
                         </div>
                     </div>

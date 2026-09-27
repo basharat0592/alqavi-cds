@@ -55,8 +55,8 @@ export default function DeleteRolePage() {
     if (fetching) {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-[#1A1A1A]" />
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Loading Role</p>
+                <Loader2 className="h-8 w-8 animate-spin text-[#0F1A2B]" />
+                <p className="text-sm font-bold text-[#94A3B8] uppercase tracking-widest">Loading Role</p>
             </div>
         );
     }
@@ -91,9 +91,9 @@ export default function DeleteRolePage() {
                             <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-4">
                                 <Trash2 className="h-8 w-8 text-rose-500" strokeWidth={1.5} />
                             </div>
-                            <h2 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">Are you sure?</h2>
-                            <p className="text-slate-600 text-sm max-w-md mx-auto mb-6">
-                                You are about to permanently delete the role <strong className="text-slate-900">"{role?.name}"</strong>. This action cannot be undone and may affect users currently assigned to this role.
+                            <h2 className="text-2xl font-bold text-[#0F1A2B] tracking-tight mb-2">Are you sure?</h2>
+                            <p className="text-[#64748B] text-sm max-w-md mx-auto mb-6">
+                                You are about to permanently delete the role <strong className="text-[#0F1A2B]">"{role?.name}"</strong>. This action cannot be undone and may affect users currently assigned to this role.
                             </p>
 
                             <div className="flex items-center gap-3 w-full max-w-sm">

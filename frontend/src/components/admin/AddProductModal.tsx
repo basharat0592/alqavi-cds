@@ -19,7 +19,7 @@ const selectCls = ui.inputBase + ' cursor-pointer';
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
     return (
         <div>
-            <label className="block text-[12px] font-bold text-slate-700 mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
+            <label className="block text-[12px] font-bold text-[#334155] mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
             {children}
         </div>
     );
@@ -123,7 +123,7 @@ export default function AddProductModal({
                             </select>
                         </Field>
                     </div>
-                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <div className="flex justify-end gap-2 pt-3 border-t border-[#F1F5F9]">
                         <Button variant="outline" onClick={onClose}>Cancel</Button>
                         <Button variant="primary" onClick={createProduct} disabled={savingP}>
                             <Plus size={14} /> {savingP ? 'Saving…' : 'Add Product'}
@@ -141,7 +141,7 @@ export default function AddProductModal({
                     <Field label="Company Category">
                         <input className={ui.inputBase} value={cForm.category} onChange={e => setCForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Local / Imported / Pakistani" />
                     </Field>
-                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <div className="flex justify-end gap-2 pt-3 border-t border-[#F1F5F9]">
                         <Button variant="outline" onClick={() => setShowCompany(false)}>Cancel</Button>
                         <Button variant="primary" onClick={createCompany} disabled={savingC}>
                             <Plus size={14} /> {savingC ? 'Saving…' : 'Add Company'}

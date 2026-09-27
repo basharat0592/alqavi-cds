@@ -117,12 +117,12 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                     <div className="lg:col-span-2 space-y-6">
                         {/* Status Section */}
                         <Card className="p-8 text-left">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight mb-6 flex items-center gap-2">
-                                <Package size={18} className="text-[#1A1A1A]" />
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight mb-6 flex items-center gap-2">
+                                <Package size={18} className="text-[#0F1A2B]" />
                                 Order Status
                             </h2>
                             <div className="space-y-4">
-                                <label className="block text-[13px] font-bold text-slate-900">Update Progress</label>
+                                <label className="block text-[13px] font-bold text-[#0F1A2B]">Update Progress</label>
                                 <select
                                     disabled={purchase.status === 'RECEIVED' && purchase.is_inventory_synced}
                                     value={purchase.status}
@@ -137,7 +137,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                     <option value="CANCELLED">Cancelled</option>
                                 </select>
                                 {purchase.status === 'RECEIVED' && (
-                                    <div className={`flex items-start gap-2 p-3 rounded-lg text-[12px] ${purchase.is_inventory_synced ? 'bg-slate-50 text-slate-600 border border-slate-200' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                                    <div className={`flex items-start gap-2 p-3 rounded-lg text-[12px] ${purchase.is_inventory_synced ? 'bg-[#F8FAFC] text-[#64748B] border border-[#E7ECF2]' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
                                         <Info size={16} className="mt-0.5 shrink-0" />
                                         <p>
                                             {purchase.is_inventory_synced
@@ -151,8 +151,8 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
 
                         {/* Payment Section */}
                         <Card className="p-8 text-left">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight mb-6 flex items-center gap-2">
-                                <CheckCircle2 size={18} className="text-[#1A1A1A]" />
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight mb-6 flex items-center gap-2">
+                                <CheckCircle2 size={18} className="text-[#0F1A2B]" />
                                 Payment Verification
                             </h2>
 
@@ -160,34 +160,34 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                 <button
                                     type="button"
                                     onClick={() => setPurchase({ ...purchase, payment_status: 'PAID' })}
-                                    className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PAID' ? 'bg-[#F59E0B]/10 border-[#F59E0B] ring-1 ring-[#F59E0B]/25' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                                    className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PAID' ? 'bg-[#1877C2]/10 border-[#1877C2] ring-1 ring-[#1877C2]/25' : 'bg-white border-[#E7ECF2] hover:bg-[#F8FAFC]'}`}
                                 >
-                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${purchase.payment_status?.toUpperCase() === 'PAID' ? 'bg-[#F59E0B] border-[#F59E0B]' : 'border-slate-400'}`}>
+                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${purchase.payment_status?.toUpperCase() === 'PAID' ? 'bg-[#1877C2] border-[#1877C2]' : 'border-slate-400'}`}>
                                         {purchase.payment_status?.toUpperCase() === 'PAID' && <div className="w-2 h-2 bg-white rounded-full" />}
                                     </div>
-                                    <span className="text-[13px] font-bold text-slate-900">Fully Paid</span>
+                                    <span className="text-[13px] font-bold text-[#0F1A2B]">Fully Paid</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setPurchase({ ...purchase, payment_status: 'PARTIAL' })}
-                                    className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'bg-[#F59E0B]/10 border-[#F59E0B] ring-1 ring-[#F59E0B]/25' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
+                                    className={`flex flex-col items-center justify-center p-4 border rounded-xl transition-all gap-2 ${purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'bg-[#1877C2]/10 border-[#1877C2] ring-1 ring-[#1877C2]/25' : 'bg-white border-[#E7ECF2] hover:bg-[#F8FAFC]'}`}
                                 >
-                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'bg-[#F59E0B] border-[#F59E0B]' : 'border-slate-400'}`}>
+                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${purchase.payment_status?.toUpperCase() === 'PARTIAL' ? 'bg-[#1877C2] border-[#1877C2]' : 'border-slate-400'}`}>
                                         {purchase.payment_status?.toUpperCase() === 'PARTIAL' && <div className="w-2 h-2 bg-white rounded-full" />}
                                     </div>
-                                    <span className="text-[13px] font-bold text-slate-900">Partial Payment</span>
+                                    <span className="text-[13px] font-bold text-[#0F1A2B]">Partial Payment</span>
                                 </button>
                             </div>
 
                             {(purchase.payment_status?.toUpperCase() === 'PAID' || purchase.payment_status?.toUpperCase() === 'PARTIAL') && (
-                                <div className="bg-slate-50/60 border border-slate-200/70 rounded-xl p-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
-                                    <div className="flex items-center gap-2 px-3 py-2.5 bg-[#FAFAF8] border border-[#F2F2F0] rounded-lg text-[12px] text-[#3A3A38] font-medium">
+                                <div className="bg-[#F8FAFC] border border-[#E7ECF2] rounded-xl p-6 space-y-6 animate-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-2 px-3 py-2.5 bg-[#F8FAFC] border border-[#F4F6F9] rounded-lg text-[12px] text-[#334155] font-medium">
                                         <Info size={16} />
                                         Important: Upload the bank transfer slip or receipt below for supplier confirmation.
                                     </div>
 
                                     <div className="space-y-4">
-                                        <label className="block text-[12px] font-bold text-slate-600">Payment Receipt / Screenshot</label>
+                                        <label className="block text-[12px] font-bold text-[#64748B]">Payment Receipt / Screenshot</label>
                                         <div className="relative group">
                                             <input
                                                 type="file"
@@ -198,7 +198,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                             />
                                             <label
                                                 htmlFor="payment-slip"
-                                                className="flex flex-col items-center justify-center w-full h-[120px] border-2 border-dashed border-slate-300 rounded-xl cursor-pointer bg-white hover:bg-slate-50 hover:border-[#F59E0B] transition-all group"
+                                                className="flex flex-col items-center justify-center w-full h-[120px] border-2 border-dashed border-[#CBD5E1] rounded-xl cursor-pointer bg-white hover:bg-[#F8FAFC] hover:border-[#1877C2] transition-all group"
                                             >
                                                 {paymentSlip ? (
                                                     <div className="flex items-center gap-3 text-emerald-600 font-bold text-[14px] bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100">
@@ -207,11 +207,11 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                                     </div>
                                                 ) : (
                                                     <div className="flex flex-col items-center gap-2">
-                                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 group-hover:bg-[#F59E0B]/10 group-hover:border-[#F59E0B]/15 transition-colors">
-                                                            <Upload size={20} className="text-slate-400 group-hover:text-[#0E7F98]" />
+                                                        <div className="w-10 h-10 rounded-full bg-[#F8FAFC] flex items-center justify-center border border-[#F1F5F9] group-hover:bg-[#1877C2]/10 group-hover:border-[#1877C2]/15 transition-colors">
+                                                            <Upload size={20} className="text-[#94A3B8] group-hover:text-[#1567AB]" />
                                                         </div>
-                                                        <span className="text-[12px] font-medium text-slate-500">Drag & drop or <span className="text-[#119AB8] hover:underline">browse files</span></span>
-                                                        <span className="text-[10px] text-slate-400">Supported: JPG, PNG, PDF (Max 5MB)</span>
+                                                        <span className="text-[12px] font-medium text-[#64748B]">Drag & drop or <span className="text-[#1877C2] hover:underline">browse files</span></span>
+                                                        <span className="text-[10px] text-[#94A3B8]">Supported: JPG, PNG, PDF (Max 5MB)</span>
                                                     </div>
                                                 )}
                                             </label>
@@ -220,7 +220,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
 
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Payment Date</label>
+                                            <label className="block text-[12px] font-bold text-[#64748B] mb-1.5">Payment Date</label>
                                             <input
                                                 type="date"
                                                 className={inputCls}
@@ -229,7 +229,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Transaction reference</label>
+                                            <label className="block text-[12px] font-bold text-[#64748B] mb-1.5">Transaction reference</label>
                                             <input
                                                 type="text"
                                                 className={inputCls}
@@ -242,9 +242,9 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                         {purchase.payment_status?.toUpperCase() === 'PARTIAL' && (
                                             <>
                                                 <div>
-                                                    <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Amount Paid Now</label>
+                                                    <label className="block text-[12px] font-bold text-[#64748B] mb-1.5">Amount Paid Now</label>
                                                     <div className="relative">
-                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">$</span>
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] text-[13px]">$</span>
                                                         <input
                                                             type="number"
                                                             className={inputCls + " pl-7"}
@@ -254,8 +254,8 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Remaining Balance</label>
-                                                    <div className="h-10 px-3.5 border border-slate-200 bg-slate-50 rounded-lg text-[14px] font-bold text-rose-600 flex items-center tabular-nums">
+                                                    <label className="block text-[12px] font-bold text-[#64748B] mb-1.5">Remaining Balance</label>
+                                                    <div className="h-10 px-3.5 border border-[#E7ECF2] bg-[#F8FAFC] rounded-lg text-[14px] font-bold text-rose-600 flex items-center tabular-nums">
                                                         {formatCurrency((purchase.total_amount || 0) - (purchase.paid_amount || 0))}
                                                     </div>
                                                 </div>
@@ -263,7 +263,7 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                                         )}
 
                                         <div className="col-span-2">
-                                            <label className="block text-[12px] font-bold text-slate-600 mb-1.5">Internal Notes</label>
+                                            <label className="block text-[12px] font-bold text-[#64748B] mb-1.5">Internal Notes</label>
                                             <textarea
                                                 className={inputCls + " h-[80px] py-3 resize-none"}
                                                 placeholder="Enter any additional payment details for records..."
@@ -281,26 +281,26 @@ export default function EditPurchasePage({ params }: { params: Promise<{ id: str
                     <aside className="space-y-6">
                         {/* Order Summary Card */}
                         <Card className="p-6 text-left sticky top-8">
-                            <h2 className="text-[14px] font-bold text-slate-900 border-b border-slate-100 pb-3 mb-4 uppercase tracking-wider">Purchase Summary</h2>
+                            <h2 className="text-[14px] font-bold text-[#0F1A2B] border-b border-[#F1F5F9] pb-3 mb-4 uppercase tracking-wider">Purchase Summary</h2>
                             <div className="space-y-4">
-                                <div className="space-y-2 pb-4 border-b border-slate-100">
-                                    <div className="flex justify-between text-[13px] text-slate-600">
+                                <div className="space-y-2 pb-4 border-b border-[#F1F5F9]">
+                                    <div className="flex justify-between text-[13px] text-[#64748B]">
                                         <span>Order Date:</span>
-                                        <span className="font-medium text-slate-900">{formatDate(purchase.created_at)}</span>
+                                        <span className="font-medium text-[#0F1A2B]">{formatDate(purchase.created_at)}</span>
                                     </div>
-                                    <div className="flex justify-between text-[13px] text-slate-600">
+                                    <div className="flex justify-between text-[13px] text-[#64748B]">
                                         <span>Items:</span>
-                                        <span className="font-medium text-slate-900">{purchase.items?.length || 0} Product(s)</span>
+                                        <span className="font-medium text-[#0F1A2B]">{purchase.items?.length || 0} Product(s)</span>
                                     </div>
-                                    <div className="flex justify-between text-[13px] text-slate-600">
+                                    <div className="flex justify-between text-[13px] text-[#64748B]">
                                         <span>Supplier:</span>
-                                        <span className="font-medium text-slate-900 truncate max-w-[120px]" title={purchase.supplier_name}>{purchase.supplier_name}</span>
+                                        <span className="font-medium text-[#0F1A2B] truncate max-w-[120px]" title={purchase.supplier_name}>{purchase.supplier_name}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-2 pt-2">
-                                    <div className="flex justify-between text-[15px] font-bold text-slate-900">
+                                    <div className="flex justify-between text-[15px] font-bold text-[#0F1A2B]">
                                         <span>Order Total:</span>
-                                        <span className="text-[#1A1A1A] font-black tabular-nums">{formatCurrency(purchase.total_amount)}</span>
+                                        <span className="text-[#0F1A2B] font-black tabular-nums">{formatCurrency(purchase.total_amount)}</span>
                                     </div>
                                     {purchase.payment_confirmed && (
                                         <div className="flex items-center gap-2 mt-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-[11px] font-bold uppercase tracking-widest border border-emerald-100">

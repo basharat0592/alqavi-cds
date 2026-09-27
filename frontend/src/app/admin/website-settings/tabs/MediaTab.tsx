@@ -14,7 +14,7 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -107,7 +107,7 @@ export default function MediaTab({ media, setMedia }: Props) {
             </div>
 
             {/* Drop Zone */}
-            <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-8 text-center border-dashed hover:border-[#F59E0B] transition-all cursor-pointer group"
+            <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-lg p-8 text-center border-dashed hover:border-[#1877C2] transition-all cursor-pointer group"
                 onClick={() => fileRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); e.dataTransfer.files && upload(e.dataTransfer.files); }}>
@@ -148,10 +148,10 @@ export default function MediaTab({ media, setMedia }: Props) {
                                 {/* Hover Actions */}
                                 <div className="absolute inset-x-0 bottom-0 bg-white/95 border-t border-[#e2e8f0] p-1.5 flex items-center justify-end gap-2.5 translate-y-full group-hover:translate-y-0 transition-transform">
                                     <button onClick={e => { e.stopPropagation(); copyUrl(asset.file); }}
-                                        className="text-[12px] font-bold text-slate-600 hover:underline">Copy link</button>
-                                    <span className="text-slate-300">|</span>
+                                        className="text-[12px] font-bold text-[#64748B] hover:underline">Copy link</button>
+                                    <span className="text-[#CBD5E1]">|</span>
                                     <button onClick={e => { e.stopPropagation(); setDeleteId(asset.id!); }}
-                                        className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                        className="text-[12px] font-bold text-[#DC2626] hover:underline">Delete</button>
                                 </div>
                             </div>
                             <div className="p-2 border-t border-[#eee]">

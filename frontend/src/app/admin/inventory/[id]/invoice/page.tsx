@@ -77,7 +77,7 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
     if (!stock) {
         return (
             <div className="max-w-lg mx-auto py-24 text-center">
-                <p className="text-[14px] text-slate-500">Stock item not found.</p>
+                <p className="text-[14px] text-[#64748B]">Stock item not found.</p>
                 <Button variant="outline" className="mt-4" onClick={() => router.push('/admin/inventory/list')}>Back</Button>
             </div>
         );
@@ -93,7 +93,7 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
         : null;
 
     return (
-        <div className="pb-20 font-sans text-slate-900 text-left">
+        <div className="pb-20 font-sans text-[#0F1A2B] text-left">
             {/* Action bar (hidden on print) */}
             <div className="max-w-[850px] mx-auto pt-2 px-4 print:hidden">
                 <PageHeader
@@ -125,23 +125,23 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
                 {/* Product + stock summary */}
                 <div className="grid grid-cols-3 gap-6 mb-4 px-1 items-start">
                     <div className="col-span-2">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Product</p>
-                        <p className="text-[16px] font-black text-slate-900 leading-tight">{name}</p>
-                        <p className="text-[11px] font-medium text-slate-600 mt-0.5">
+                        <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Product</p>
+                        <p className="text-[16px] font-black text-[#0F1A2B] leading-tight">{name}</p>
+                        <p className="text-[11px] font-medium text-[#64748B] mt-0.5">
                             {[stock.weight, stock.size].filter(Boolean).join(' · ') || stock.category_name || 'General Inventory'}
                         </p>
                     </div>
                     <div className="text-right">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">In Stock</p>
-                        <p className="text-[16px] font-black text-slate-900">{qty.toLocaleString()} Units</p>
-                        <p className="text-[11px] text-slate-500">@ {formatCurrency(cost)} = {formatCurrency(qty * cost)}</p>
+                        <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">In Stock</p>
+                        <p className="text-[16px] font-black text-[#0F1A2B]">{qty.toLocaleString()} Units</p>
+                        <p className="text-[11px] text-[#64748B]">@ {formatCurrency(cost)} = {formatCurrency(qty * cost)}</p>
                     </div>
                 </div>
 
                 {/* Purchase history table */}
-                <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200 text-[11px]">
+                <table className="w-full text-left border-collapse border border-[#CBD5E1] [&_th]:border [&_th]:border-[#CBD5E1] [&_td]:border [&_td]:border-[#E7ECF2] text-[11px]">
                     <thead>
-                        <tr className="bg-slate-100 text-slate-600 uppercase text-[9px] tracking-wider print-exact">
+                        <tr className="bg-[#F4F6F9] text-[#64748B] uppercase text-[9px] tracking-wider print-exact">
                             <th className="px-3 py-2">Date</th>
                             <th className="px-3 py-2">Reference</th>
                             <th className="px-3 py-2">Supplier</th>
@@ -153,7 +153,7 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
                     </thead>
                     <tbody>
                         {rows.length === 0 ? (
-                            <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-400 italic">No purchases recorded.</td></tr>
+                            <tr><td colSpan={7} className="px-3 py-6 text-center text-[#94A3B8] italic">No purchases recorded.</td></tr>
                         ) : rows.map((m: any) => {
                             const when = m.created_at || m.date;
                             return (
@@ -174,9 +174,9 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
                 {/* Totals */}
                 <div className="flex justify-end mt-4">
                     <div className="w-full max-w-[300px] text-[12px]">
-                        <div className="flex justify-between py-1 text-slate-600"><span>Total Purchased ({totals.count} order{totals.count === 1 ? '' : 's'})</span><span className="font-bold text-slate-900 tabular-nums">{formatCurrency(totals.total)}</span></div>
-                        <div className="flex justify-between py-1 text-slate-600"><span>Paid</span><span className="font-bold text-emerald-700 tabular-nums">{formatCurrency(totals.paid)}</span></div>
-                        <div className="flex justify-between py-2 border-t border-slate-300 mt-1 text-[14px] font-black"><span>Remaining / Due</span><span className={`tabular-nums ${totals.remaining > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(totals.remaining)}</span></div>
+                        <div className="flex justify-between py-1 text-[#64748B]"><span>Total Purchased ({totals.count} order{totals.count === 1 ? '' : 's'})</span><span className="font-bold text-[#0F1A2B] tabular-nums">{formatCurrency(totals.total)}</span></div>
+                        <div className="flex justify-between py-1 text-[#64748B]"><span>Paid</span><span className="font-bold text-emerald-700 tabular-nums">{formatCurrency(totals.paid)}</span></div>
+                        <div className="flex justify-between py-2 border-t border-[#CBD5E1] mt-1 text-[14px] font-black"><span>Remaining / Due</span><span className={`tabular-nums ${totals.remaining > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(totals.remaining)}</span></div>
                     </div>
                 </div>
 

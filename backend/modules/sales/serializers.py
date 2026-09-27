@@ -272,62 +272,34 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         released_statuses = ["CANCELLED", "REJECTED"]
                         if status_val == 'DELIVERED':
                             warehouse_id = validated_data.get('warehouse_id')
-                            if warehouse_id and warehouse_id.strip():
-                                from modules.inventory.models import Stock
-                                import uuid
-                                
-                                # Validate UUID format to avoid DB errors
-                                try:
-                                    uuid.UUID(str(warehouse_id))
-                                except ValueError:
-                                    raise serializers.ValidationError(f"Invalid warehouse ID format: {warehouse_id}")
-
-                                # Deduct from the SELECTED branch's stock line for this
-                                # product. Identity is NAME + warehouse only (NOT weight/
-                                # size) — the same identity the storefront quantity and the
-                                # sync signal use. Matching on weight/size here made valid
-                                # orders fail with "not registered" whenever a Stock row's
-                                # weight/size drifted from the Product's. Pick the line with
-                                # the most stock so the deduction lands where the units are.
-                                stock = Stock.objects.filter(
-                                    product_name__iexact=product.product_name,
-                                    warehouse_id=warehouse_id
-                                ).order_by('-total_quantity').first()
-
-                                if not stock:
-                                    raise drf_serializers.ValidationError(f"Product '{product.product_name}' is not registered in the selected warehouse.")
-                                
-                                if stock.total_quantity < deduct_units:
-                                    raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}' in selected warehouse. (Available: {stock.total_quantity}, Required: {deduct_units})")
-
-                                stock.total_quantity = F('total_quantity') - deduct_units
-                                stock.save()
-
-                                # Deduct from Supplier Product
-                                if hasattr(stock, 'product') and stock.product:
-                                    sp_prod = stock.product
-                                    sp_prod.quantity = F('quantity') - deduct_units
-                                    sp_prod.save()
-
-                                # Trigger Product re-aggregation
-                                product.save()
-                            else:
-                                # Fallback to default stock if no warehouse provided (though UI should prevent this)
-                                if product.stock:
-                                    stock = product.stock
-                                    if stock.total_quantity < deduct_units:
-                                        raise drf_serializers.ValidationError(f"Insufficient stock for '{product.product_name}'. (Available: {stock.total_quantity}, Required: {deduct_units})")
-
-                                    stock.total_quantity = F('total_quantity') - deduct_units
-                                    stock.save()
-
-                                    if hasattr(stock, 'product') and stock.product:
-                                        sp_prod = stock.product
-                                        sp_prod.quantity = F('quantity') - deduct_units
-                                        sp_prod.save()
-
-                                product.total_quantity = F('total_quantity') - deduct_units
-                                product.save()
+                            # One service owns stock. It checks the whole product
+                            # line (not just the fullest batch), spreads the
+                            # deduction across its rows, and leaves
+                            # Product.total_quantity to the signal that derives it.
+                            from modules.inventory import services as inventory_services
+                            wh_id = (warehouse_id or '').strip() or getattr(product, 'warehouse_id', None)
+                            if not wh_id:
+                                raise drf_serializers.ValidationError(
+                                    f"No branch selected for '{product.product_name}'.")
+                            on_hand = inventory_services.available(
+                                tenant_id=getattr(order, 'tenant_id', None),
+                                warehouse_id=wh_id,
+                                product_name=product.product_name,
+                            )
+                            if on_hand <= 0:
+                                raise drf_serializers.ValidationError(
+                                    f"Product '{product.product_name}' is not registered in the selected warehouse.")
+                            if on_hand < deduct_units:
+                                raise drf_serializers.ValidationError(
+                                    f"Insufficient stock for '{product.product_name}' in selected warehouse. "
+                                    f"(Available: {on_hand}, Required: {deduct_units})")
+                            inventory_services.consume(
+                                tenant_id=getattr(order, 'tenant_id', None),
+                                warehouse_id=wh_id,
+                                product_name=product.product_name,
+                                units=deduct_units,
+                                reason=f'POS sale {order.order_number}',
+                            )
 
                             # 4. Sync to CustomerBoughtProduct Table
                             from .models import CustomerBoughtProduct

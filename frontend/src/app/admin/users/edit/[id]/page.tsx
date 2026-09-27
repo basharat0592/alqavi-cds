@@ -18,8 +18,8 @@ import { authService } from '@/lib/auth';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon: any }) => (
     <div className="flex items-center gap-2 mb-4">
-        <Icon className="h-4 w-4 text-[#1A1A1A]" />
-        <span className="text-xs font-bold text-slate-900 uppercase tracking-tight">{title}</span>
+        <Icon className="h-4 w-4 text-[#0F1A2B]" />
+        <span className="text-xs font-bold text-[#0F1A2B] uppercase tracking-tight">{title}</span>
     </div>
 );
 
@@ -343,23 +343,23 @@ export default function EditUserPage() {
     if (loading) return <PageLoader />;
 
     const inputCls = (field: string) =>
-        `w-full px-4 py-2 bg-white border rounded-lg text-sm font-medium text-slate-900 outline-none transition-all focus:ring-4 ${errors[field]
+        `w-full px-4 py-2 bg-white border rounded-lg text-sm font-medium text-[#0F1A2B] outline-none transition-all focus:ring-4 ${errors[field]
             ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-500/10'
-            : 'border-slate-200 focus:border-[#F59E0B] focus:ring-[#F59E0B]/10'
+            : 'border-[#E7ECF2] focus:border-[#1877C2] focus:ring-[#1877C2]/10'
         }`;
 
-    const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1.5";
+    const labelCls = "block text-[10px] font-bold uppercase tracking-widest text-[#64748B] mb-1.5";
 
     return (
         <div className="max-w-[800px] mx-auto pb-12 font-sans px-4 mt-8">
 
             {toast && (
                 <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
-                    <div className="bg-white border border-slate-200/70 px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[300px]">
+                    <div className="bg-white border border-[#E7ECF2] px-5 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[300px]">
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${toast.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
                             {toast.type === 'success' ? <CheckCircle className="h-5 w-5 text-white" /> : <XCircle className="h-5 w-5 text-white" />}
                         </div>
-                        <p className="text-slate-900 text-sm font-bold">{toast.msg}</p>
+                        <p className="text-[#0F1A2B] text-sm font-bold">{toast.msg}</p>
                     </div>
                 </div>
             )}
@@ -370,7 +370,7 @@ export default function EditUserPage() {
                 breadcrumbs={[{ label: 'Console', href: '/admin/dashboard' }, { label: 'Users', href: '/admin/users' }, { label: 'Edit User' }]}
             />
 
-            <form onSubmit={handleSubmit} className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
+            <form onSubmit={handleSubmit} className="bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
                 <div className="p-8 space-y-8">
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -413,10 +413,10 @@ export default function EditUserPage() {
                             {errors.role && <p className="text-rose-500 text-[10px] font-bold mt-1">{errors.role}</p>}
                         </div>
                         <div className="flex flex-col justify-end">
-                            <div className="flex items-center justify-between p-2 bg-slate-50 border border-slate-200/70 rounded-lg">
-                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-2">Account State</span>
+                            <div className="flex items-center justify-between p-2 bg-[#F8FAFC] border border-[#E7ECF2] rounded-lg">
+                                <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-widest pl-2">Account State</span>
                                 <button type="button" onClick={() => handle('is_active', !form.is_active)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${form.is_active ? 'bg-[#1877C2]' : 'bg-slate-300'}`}>
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition duration-200 ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                                 </button>
                             </div>
@@ -427,9 +427,9 @@ export default function EditUserPage() {
                         Admin is selected. A branch admin only sees data for the
                         warehouse(s) chosen here. */}
                     {showBranches && (
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className="space-y-4 pt-4 border-t border-[#F1F5F9]">
                             <SectionHeader title="Assigned Organizations" icon={Building2} />
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-[#64748B]">
                                 This admin has their own fully independent workspace — their own products,
                                 stock, customers, sales and payments. Optionally tag the organization warehouse(s)
                                 they work in (organizational only); it can be left empty.
@@ -454,13 +454,13 @@ export default function EditUserPage() {
                                     <div className="flex gap-2 pb-2.5">
                                         <button type="button"
                                             onClick={() => setSelectedWarehouses(prev => [...new Set([...prev, ...branchWarehouses.map(w => String(w.id))])])}
-                                            className="text-[11px] font-semibold text-[#119AB8] hover:underline">
+                                            className="text-[11px] font-semibold text-[#1877C2] hover:underline">
                                             Select all shown
                                         </button>
-                                        <span className="text-slate-300">|</span>
+                                        <span className="text-[#CBD5E1]">|</span>
                                         <button type="button"
                                             onClick={() => setSelectedWarehouses(prev => prev.filter(id => !branchWarehouses.some(w => String(w.id) === id)))}
-                                            className="text-[11px] font-semibold text-slate-500 hover:underline">
+                                            className="text-[11px] font-semibold text-[#64748B] hover:underline">
                                             Clear shown
                                         </button>
                                     </div>
@@ -469,20 +469,20 @@ export default function EditUserPage() {
 
                             {/* Step 2 — pick warehouses (multi-select). */}
                             {warehouses.length === 0 ? (
-                                <p className="text-[12px] text-slate-400 italic">No warehouses available. Create a warehouse first.</p>
+                                <p className="text-[12px] text-[#94A3B8] italic">No warehouses available. Create a warehouse first.</p>
                             ) : branchWarehouses.length === 0 ? (
-                                <p className="text-[12px] text-slate-400 italic">No warehouses in this area yet. Tag a warehouse to this area first, or pick "All areas".</p>
+                                <p className="text-[12px] text-[#94A3B8] italic">No warehouses in this area yet. Tag a warehouse to this area first, or pick "All areas".</p>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                     {branchWarehouses.map(w => (
-                                        <label key={w.id} className="flex items-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                        <label key={w.id} className="flex items-center gap-3 px-4 py-2.5 border border-[#E7ECF2] rounded-xl cursor-pointer hover:bg-[#F8FAFC] transition-colors">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedWarehouses.includes(String(w.id))}
                                                 onChange={() => toggleWarehouse(String(w.id))}
-                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
+                                                className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2]"
                                             />
-                                            <span className="text-[12px] font-medium text-slate-700 truncate">
+                                            <span className="text-[12px] font-medium text-[#334155] truncate">
                                                 {w.name}{w.area_name ? ` · ${w.area_name}` : (w.location ? ` · ${w.location}` : '')}
                                             </span>
                                         </label>
@@ -490,14 +490,14 @@ export default function EditUserPage() {
                                 </div>
                             )}
                             {selectedWarehouses.length === 0 && warehouses.length > 0 && (
-                                <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                                <p className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-medium bg-[#F8FAFC] border border-[#F1F5F9] rounded-lg px-2.5 py-1.5">
                                     <Info className="w-3.5 h-3.5 shrink-0" />
                                     Optional — leaving this empty is fine. This admin has their own independent
                                     workspace regardless of organization tagging.
                                 </p>
                             )}
                             {selectedWarehouses.length > 0 && (
-                                <p className="text-[11px] text-[#1A1A1A] font-medium">
+                                <p className="text-[11px] text-[#0F1A2B] font-medium">
                                     {selectedWarehouses.length} branch{selectedWarehouses.length !== 1 ? 'es' : ''} selected
                                 </p>
                             )}
@@ -514,28 +514,28 @@ export default function EditUserPage() {
 
                     {/* Page Access Section */}
                     {form.role && (
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className="space-y-4 pt-4 border-t border-[#F1F5F9]">
                             <SectionHeader title="Page Access" icon={ShieldCheck} />
 
                             {isFullAccess ? (
-                                <div className="flex items-center gap-2 px-4 py-3 bg-[#F59E0B]/10 rounded-lg border border-[#F59E0B]/15">
-                                    <ShieldCheck className="w-4 h-4 text-[#1A1A1A] flex-shrink-0" />
-                                    <p className="text-xs text-[#1A1A1A] font-medium">
+                                <div className="flex items-center gap-2 px-4 py-3 bg-[#1877C2]/10 rounded-lg border border-[#1877C2]/15">
+                                    <ShieldCheck className="w-4 h-4 text-[#0F1A2B] flex-shrink-0" />
+                                    <p className="text-xs text-[#0F1A2B] font-medium">
                                         This role has full access to all pages — no restrictions apply.
                                     </p>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-xs text-slate-500">Select which pages this user can access after login.</p>
+                                        <p className="text-xs text-[#64748B]">Select which pages this user can access after login.</p>
                                         <div className="flex gap-2">
                                             <button type="button" onClick={selectAll}
-                                                className="text-[11px] font-semibold text-[#119AB8] hover:underline">
+                                                className="text-[11px] font-semibold text-[#1877C2] hover:underline">
                                                 Select All
                                             </button>
-                                            <span className="text-slate-300">|</span>
+                                            <span className="text-[#CBD5E1]">|</span>
                                             <button type="button" onClick={clearAll}
-                                                className="text-[11px] font-semibold text-slate-500 hover:underline">
+                                                className="text-[11px] font-semibold text-[#64748B] hover:underline">
                                                 Clear All
                                             </button>
                                         </div>
@@ -547,31 +547,31 @@ export default function EditUserPage() {
                                             const allChecked = groupHrefs.every(h => selectedPages.includes(h));
                                             const someChecked = groupHrefs.some(h => selectedPages.includes(h));
                                             return (
-                                                <div key={group.label} className="border border-slate-200 rounded-xl overflow-hidden">
+                                                <div key={group.label} className="border border-[#E7ECF2] rounded-xl overflow-hidden">
                                                     <div
-                                                        className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 cursor-pointer select-none"
+                                                        className="flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border-b border-[#E7ECF2] cursor-pointer select-none"
                                                         onClick={() => toggleGroup(groupHrefs)}
                                                     >
-                                                        <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-[#F59E0B] border-[#F59E0B]' : someChecked ? 'bg-[#F59E0B]/25 border-[#F59E0B]' : 'border-slate-300 bg-white'}`}>
+                                                        <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-[#1877C2] border-[#1877C2]' : someChecked ? 'bg-[#1877C2]/25 border-[#1877C2]' : 'border-[#CBD5E1] bg-white'}`}>
                                                             {allChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                                            {someChecked && !allChecked && <div className="w-2 h-0.5 bg-[#F59E0B] rounded" />}
+                                                            {someChecked && !allChecked && <div className="w-2 h-0.5 bg-[#1877C2] rounded" />}
                                                         </div>
-                                                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{group.label}</span>
-                                                        <span className="ml-auto text-[10px] text-slate-400">{groupHrefs.filter(h => selectedPages.includes(h)).length}/{groupHrefs.length}</span>
+                                                        <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wide">{group.label}</span>
+                                                        <span className="ml-auto text-[10px] text-[#94A3B8]">{groupHrefs.filter(h => selectedPages.includes(h)).length}/{groupHrefs.length}</span>
                                                     </div>
                                                     <div className="divide-y divide-slate-100">
                                                         {group.items.map(item => (
-                                                            <div key={item.href} className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-slate-50 transition-colors">
-                                                                <span className="text-[12px] text-slate-700">{item.name}</span>
+                                                            <div key={item.href} className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-[#F8FAFC] transition-colors">
+                                                                <span className="text-[12px] text-[#334155]">{item.name}</span>
                                                                 <div className="flex items-center gap-4">
                                                                     <label className="flex items-center gap-1 cursor-pointer select-none">
                                                                         <input
                                                                             type="checkbox"
                                                                             checked={selectedPages.includes(item.href)}
                                                                             onChange={() => toggleView(item.href)}
-                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
+                                                                            className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2]"
                                                                         />
-                                                                        <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">View</span>
+                                                                        <span className="text-[9px] font-bold uppercase tracking-wide text-[#94A3B8]">View</span>
                                                                     </label>
                                                                     <label className={`flex items-center gap-1 select-none ${selectedPages.includes(item.href) ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}>
                                                                         <input
@@ -579,9 +579,9 @@ export default function EditUserPage() {
                                                                             checked={selectedEditPages.includes(item.href)}
                                                                             disabled={!selectedPages.includes(item.href)}
                                                                             onChange={() => toggleEdit(item.href)}
-                                                                            className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B] disabled:cursor-not-allowed"
+                                                                            className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2] disabled:cursor-not-allowed"
                                                                         />
-                                                                        <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Edit</span>
+                                                                        <span className="text-[9px] font-bold uppercase tracking-wide text-[#94A3B8]">Edit</span>
                                                                     </label>
                                                                 </div>
                                                             </div>
@@ -593,7 +593,7 @@ export default function EditUserPage() {
                                     </div>
 
                                     {selectedPages.length > 0 && (
-                                        <p className="text-[11px] text-[#1A1A1A] font-medium">
+                                        <p className="text-[11px] text-[#0F1A2B] font-medium">
                                             {selectedPages.length} page{selectedPages.length !== 1 ? 's' : ''} selected
                                         </p>
                                     )}
@@ -604,28 +604,28 @@ export default function EditUserPage() {
 
                     {/* Area Assignment — only for Area Manager role */}
                     {isAreaManager && (
-                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                        <div className="space-y-4 pt-4 border-t border-[#F1F5F9]">
                             <SectionHeader title="Assigned Areas" icon={MapPin} />
-                            <p className="text-xs text-slate-500">Select the territories this area manager is responsible for.</p>
+                            <p className="text-xs text-[#64748B]">Select the territories this area manager is responsible for.</p>
                             {areas.length === 0 ? (
-                                <p className="text-[12px] text-slate-400 italic">No active areas available. Create areas first.</p>
+                                <p className="text-[12px] text-[#94A3B8] italic">No active areas available. Create areas first.</p>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                     {areas.map(area => (
-                                        <label key={area.id} className="flex items-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                        <label key={area.id} className="flex items-center gap-3 px-4 py-2.5 border border-[#E7ECF2] rounded-xl cursor-pointer hover:bg-[#F8FAFC] transition-colors">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedAreas.includes(area.id)}
                                                 onChange={() => toggleArea(area.id)}
-                                                className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
+                                                className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2]"
                                             />
-                                            <span className="text-[12px] font-medium text-slate-700">{area.name}{area.code ? ` (${area.code})` : ''}</span>
+                                            <span className="text-[12px] font-medium text-[#334155]">{area.name}{area.code ? ` (${area.code})` : ''}</span>
                                         </label>
                                     ))}
                                 </div>
                             )}
                             {selectedAreas.length > 0 && (
-                                <p className="text-[11px] text-[#1A1A1A] font-medium">
+                                <p className="text-[11px] text-[#0F1A2B] font-medium">
                                     {selectedAreas.length} area{selectedAreas.length !== 1 ? 's' : ''} selected
                                 </p>
                             )}
@@ -633,9 +633,9 @@ export default function EditUserPage() {
                     )}
 
                     {/* Password Reset */}
-                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                    <div className="space-y-4 pt-4 border-t border-[#F1F5F9]">
                         <SectionHeader title="Account Security" icon={Shield} />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-slate-50 p-6 rounded-xl border border-slate-200/70">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#F8FAFC] p-6 rounded-xl border border-[#E7ECF2]">
                             <div>
                                 <label className={labelCls}>Update Master Password</label>
                                 <div className="relative">
@@ -649,7 +649,7 @@ export default function EditUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#1567AB]"
                                     >
                                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
@@ -668,7 +668,7 @@ export default function EditUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#1567AB]"
                                     >
                                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -690,9 +690,9 @@ export default function EditUserPage() {
                         </div>
                     </div>
 
-                    <hr className="border-slate-100" />
-                    <div className="p-4 bg-slate-50 rounded-lg border border-slate-200/70">
-                        <div className="flex items-center gap-3 text-slate-400">
+                    <hr className="border-[#F1F5F9]" />
+                    <div className="p-4 bg-[#F8FAFC] rounded-lg border border-[#E7ECF2]">
+                        <div className="flex items-center gap-3 text-[#94A3B8]">
                             <Lock className="h-4 w-4" />
                             <p className="text-[9px] font-bold uppercase tracking-widest leading-relaxed font-mono">
                                 SECURITY_PROTOCOL_ALPHA: Identity credentials and master access tokens must be handled over secure encrypted channels only.
@@ -701,7 +701,7 @@ export default function EditUserPage() {
                     </div>
                 </div>
 
-                <div className="bg-slate-50 border-t border-slate-200/70 p-6 flex items-center justify-end gap-3">
+                <div className="bg-[#F8FAFC] border-t border-[#E7ECF2] p-6 flex items-center justify-end gap-3">
                     <Link href="/admin/users">
                         <Button type="button" variant="outline" size="sm" className="font-bold text-[10px] uppercase tracking-widest">
                             Abort

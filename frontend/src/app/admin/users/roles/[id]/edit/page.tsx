@@ -58,8 +58,8 @@ export default function EditRolePage() {
     if (fetching) {
         return (
             <div className="flex flex-col items-center justify-center p-20 gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-[#1A1A1A]" />
-                <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Loading Role</p>
+                <Loader2 className="h-8 w-8 animate-spin text-[#0F1A2B]" />
+                <p className="text-sm font-bold text-[#94A3B8] uppercase tracking-widest">Loading Role</p>
             </div>
         );
     }
@@ -87,7 +87,7 @@ export default function EditRolePage() {
                     )}
 
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Role Name <span className="text-rose-500">*</span></label>
+                        <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-widest mb-2">Role Name <span className="text-rose-500">*</span></label>
                         <input
                             type="text"
                             value={formData.name}
@@ -99,21 +99,21 @@ export default function EditRolePage() {
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Description</label>
+                        <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-widest mb-2">Description</label>
                         <textarea
                             value={formData.description}
                             onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                             placeholder="Provide a brief description of what this role entails..."
                             rows={4}
-                            className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 resize-none"
+                            className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-[#0F1A2B] outline-none border border-[#E7ECF2] placeholder:text-[#94A3B8] transition-all focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 resize-none"
                         />
                     </div>
                 </div>
 
-                <div className="bg-slate-50/60 p-6 flex items-center justify-end gap-3 border-t border-slate-100">
+                <div className="bg-[#F8FAFC] p-6 flex items-center justify-end gap-3 border-t border-[#F1F5F9]">
                     <Link
                         href="/admin/users/roles"
-                        className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-[13.5px] font-semibold text-slate-700 transition-all hover:border-slate-300 hover:bg-slate-50"
+                        className="inline-flex h-10 items-center rounded-lg border border-[#E7ECF2] bg-white px-4 text-[13.5px] font-semibold text-[#334155] transition-all hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
                     >
                         Cancel
                     </Link>

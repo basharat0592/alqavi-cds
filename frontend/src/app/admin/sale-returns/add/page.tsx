@@ -125,20 +125,20 @@ export default function AddSaleReturnPage() {
                 {/* ── 1. SELECT A RECENT SALE ── */}
                 <Card className="p-5 mb-5">
                     <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center"><RotateCcw size={16} /></div>
+                        <div className="w-8 h-8 rounded-lg bg-[#1877C2]/10 text-[#1877C2] flex items-center justify-center"><RotateCcw size={16} /></div>
                         <div>
-                            <h3 className="text-[14px] font-bold text-slate-900">Recent Sale</h3>
-                            <p className="text-[11px] text-slate-400">Delivered sales from the last 7 days</p>
+                            <h3 className="text-[14px] font-bold text-[#0F1A2B]">Recent Sale</h3>
+                            <p className="text-[11px] text-[#94A3B8]">Delivered sales from the last 7 days</p>
                         </div>
                     </div>
 
                     <div className="relative mb-3">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                         <input
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="Search by order #, customer or phone…"
-                            className="w-full h-11 pl-10 pr-3 rounded-xl border border-slate-200 bg-slate-50/60 text-[13px] outline-none focus:bg-white focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all"
+                            className="w-full h-11 pl-10 pr-3 rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] text-[13px] outline-none focus:bg-white focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 transition-all"
                         />
                     </div>
 
@@ -148,31 +148,31 @@ export default function AddSaleReturnPage() {
                             type="button"
                             disabled={loading}
                             onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="w-full h-11 px-4 flex items-center justify-between rounded-xl border border-slate-200 bg-white text-[13px] font-bold text-slate-800 outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 cursor-pointer disabled:opacity-50 select-none text-left"
+                            className="w-full h-11 px-4 flex items-center justify-between rounded-xl border border-[#E7ECF2] bg-white text-[13px] font-bold text-[#0F1A2B] outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 cursor-pointer disabled:opacity-50 select-none text-left"
                         >
                             <span>
                                 {loading ? 'Loading recent sales...' : order ? (
                                     <span className="flex items-center gap-2">
-                                        <span className="text-[#1A1A1A] font-extrabold">#{order.order_number}</span>
-                                        <span className="text-slate-300">|</span>
-                                        <span className="text-slate-600 font-semibold">{order.customer_display_name || order.customer_name || 'Walk-in'}</span>
-                                        <span className="text-slate-300">|</span>
+                                        <span className="text-[#0F1A2B] font-extrabold">#{order.order_number}</span>
+                                        <span className="text-[#CBD5E1]">|</span>
+                                        <span className="text-[#64748B] font-semibold">{order.customer_display_name || order.customer_name || 'Walk-in'}</span>
+                                        <span className="text-[#CBD5E1]">|</span>
                                         <span className="text-emerald-600 font-extrabold">Paid {money(paid)}</span>
                                     </span>
                                 ) : (
-                                    <span className="text-slate-400 font-medium">Choose a sale to return...</span>
+                                    <span className="text-[#94A3B8] font-medium">Choose a sale to return...</span>
                                 )}
                             </span>
-                            <ChevronDown size={15} className={`text-slate-400 transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={15} className={`text-[#94A3B8] transition-transform duration-200 ${dropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
 
                         {/* Custom Dropdown Options */}
                         {dropdownOpen && (
                             <>
                                 <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
-                                <div className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-20 divide-y divide-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-1.5 duration-200">
+                                <div className="absolute left-0 right-0 mt-1.5 max-h-72 overflow-y-auto bg-white border border-[#E7ECF2] rounded-xl shadow-xl z-20 divide-y divide-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-1.5 duration-200">
                                     {visibleOrders.length === 0 ? (
-                                        <div className="p-4 text-center text-slate-400 text-xs font-semibold">
+                                        <div className="p-4 text-center text-[#94A3B8] text-xs font-semibold">
                                             {loading ? 'Loading recent sales...' : 'No recent sales found.'}
                                         </div>
                                     ) : (
@@ -186,21 +186,21 @@ export default function AddSaleReturnPage() {
                                                         selectOrder(o.id);
                                                         setDropdownOpen(false);
                                                     }}
-                                                    className={`p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isSelected ? 'bg-[#F59E0B]/50 hover:bg-[#F59E0B]/10' : ''}`}
+                                                    className={`p-3.5 flex items-center justify-between cursor-pointer hover:bg-[#F8FAFC] transition-colors ${isSelected ? 'bg-[#1877C2]/50 hover:bg-[#1877C2]/10' : ''}`}
                                                 >
                                                     <div className="space-y-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-[13px] font-black text-slate-900">#{o.order_number}</span>
+                                                            <span className="text-[13px] font-black text-[#0F1A2B]">#{o.order_number}</span>
                                                             <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase tracking-wide border ${
-                                                                channelOf(o) === 'Online' ? 'bg-[#FAFAF8] text-[#3A3A38] border-[#E9E9E6]' : 'bg-[#FAFAF8] text-[#3A3A38] border-[#E9E9E6]'
+                                                                channelOf(o) === 'Online' ? 'bg-[#F8FAFC] text-[#334155] border-[#E7ECF2]' : 'bg-[#F8FAFC] text-[#334155] border-[#E7ECF2]'
                                                             }`}>
                                                                 {channelOf(o)}
                                                             </span>
                                                         </div>
-                                                        <div className="flex items-center gap-2.5 text-slate-500 text-[11px] font-semibold">
-                                                            <span className="flex items-center gap-1"><User size={12} className="text-slate-400" /> {o.customer_display_name || o.customer_name || 'Walk-in'}</span>
-                                                            <span className="text-slate-300">•</span>
-                                                            <span className="flex items-center gap-1"><Calendar size={12} className="text-slate-400" /> {new Date(o.created_at).toLocaleDateString()}</span>
+                                                        <div className="flex items-center gap-2.5 text-[#64748B] text-[11px] font-semibold">
+                                                            <span className="flex items-center gap-1"><User size={12} className="text-[#94A3B8]" /> {o.customer_display_name || o.customer_name || 'Walk-in'}</span>
+                                                            <span className="text-[#CBD5E1]">•</span>
+                                                            <span className="flex items-center gap-1"><Calendar size={12} className="text-[#94A3B8]" /> {new Date(o.created_at).toLocaleDateString()}</span>
                                                         </div>
                                                     </div>
                                                     <div className="text-right">
@@ -218,17 +218,17 @@ export default function AddSaleReturnPage() {
                     {/* Selected sale summary */}
                     {order && (
                         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-                                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1">{channelOf(order) === 'Online' ? <Globe size={11} /> : <Store size={11} />} Type</p>
-                                <p className="text-[12.5px] font-bold text-slate-800">{channelOf(order)}</p>
+                            <div className="rounded-xl border border-[#F1F5F9] bg-[#F8FAFC] p-3">
+                                <p className="text-[10px] font-bold uppercase text-[#94A3B8] mb-1 flex items-center gap-1">{channelOf(order) === 'Online' ? <Globe size={11} /> : <Store size={11} />} Type</p>
+                                <p className="text-[12.5px] font-bold text-[#0F1A2B]">{channelOf(order)}</p>
                             </div>
-                            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-                                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1"><User size={11} /> Customer</p>
-                                <p className="text-[12.5px] font-bold text-slate-800 truncate">{order.customer_display_name || order.customer_name || 'Walk-in'}</p>
+                            <div className="rounded-xl border border-[#F1F5F9] bg-[#F8FAFC] p-3">
+                                <p className="text-[10px] font-bold uppercase text-[#94A3B8] mb-1 flex items-center gap-1"><User size={11} /> Customer</p>
+                                <p className="text-[12.5px] font-bold text-[#0F1A2B] truncate">{order.customer_display_name || order.customer_name || 'Walk-in'}</p>
                             </div>
-                            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-                                <p className="text-[10px] font-bold uppercase text-slate-400 mb-1 flex items-center gap-1"><Calendar size={11} /> Date</p>
-                                <p className="text-[12.5px] font-bold text-slate-800">{formatDateTime(order.created_at)}</p>
+                            <div className="rounded-xl border border-[#F1F5F9] bg-[#F8FAFC] p-3">
+                                <p className="text-[10px] font-bold uppercase text-[#94A3B8] mb-1 flex items-center gap-1"><Calendar size={11} /> Date</p>
+                                <p className="text-[12.5px] font-bold text-[#0F1A2B]">{formatDateTime(order.created_at)}</p>
                             </div>
                             <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
                                 <p className="text-[10px] font-bold uppercase text-emerald-600/70 mb-1 flex items-center gap-1"><Wallet size={11} /> Paid</p>
@@ -243,11 +243,11 @@ export default function AddSaleReturnPage() {
                     <Card className="p-5 mb-5">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"><Package size={16} /></div>
-                            <h3 className="text-[14px] font-bold text-slate-900">Items to return</h3>
+                            <h3 className="text-[14px] font-bold text-[#0F1A2B]">Items to return</h3>
                         </div>
-                        <div className="border border-slate-100 rounded-xl overflow-hidden">
+                        <div className="border border-[#F1F5F9] rounded-xl overflow-hidden">
                             <table className="w-full text-[12.5px]">
-                                <thead className="bg-slate-50/60 text-[10px] font-bold uppercase text-slate-400">
+                                <thead className="bg-[#F8FAFC] text-[10px] font-bold uppercase text-[#94A3B8]">
                                     <tr>
                                         <th className="px-4 py-2.5 text-left">Product</th>
                                         <th className="px-3 py-2.5 text-center">Sold</th>
@@ -262,11 +262,11 @@ export default function AddSaleReturnPage() {
                                         return (
                                             <tr key={it.id}>
                                                 <td className="px-4 py-2.5">
-                                                    <p className="font-semibold text-slate-800">{it.product_name}</p>
-                                                    {(it.weight || it.size) && <p className="text-[10px] text-[#1A1A1A] font-bold uppercase">{it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}</p>}
+                                                    <p className="font-semibold text-[#0F1A2B]">{it.product_name}</p>
+                                                    {(it.weight || it.size) && <p className="text-[10px] text-[#0F1A2B] font-bold uppercase">{it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}</p>}
                                                 </td>
-                                                <td className="px-3 py-2.5 text-center font-bold text-slate-500">{it.quantity}</td>
-                                                <td className="px-3 py-2.5 text-right text-slate-600 tabular-nums">{money(it.price)}</td>
+                                                <td className="px-3 py-2.5 text-center font-bold text-[#64748B]">{it.quantity}</td>
+                                                <td className="px-3 py-2.5 text-right text-[#64748B] tabular-nums">{money(it.price)}</td>
                                                 <td className="px-3 py-2.5 text-center">
                                                     <input
                                                         type="number" min={0} max={it.quantity} value={rq || ''}
@@ -275,7 +275,7 @@ export default function AddSaleReturnPage() {
                                                             setQty(p => ({ ...p, [it.id]: v }));
                                                         }}
                                                         placeholder="0"
-                                                        className="w-20 h-8 px-2 text-center rounded-lg border border-slate-200 text-[12.5px] tabular-nums outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10"
+                                                        className="w-20 h-8 px-2 text-center rounded-lg border border-[#E7ECF2] text-[12.5px] tabular-nums outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-2.5 text-right font-bold text-rose-600 tabular-nums">{rq > 0 ? money(Number(it.price) * rq) : '—'}</td>
@@ -288,11 +288,11 @@ export default function AddSaleReturnPage() {
 
                         {/* Reason */}
                         <div className="mt-4">
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Reason for return</label>
+                            <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Reason for return</label>
                             <textarea
                                 rows={2} value={reason} onChange={e => setReason(e.target.value)}
                                 placeholder="e.g. Damaged item, wrong product, customer changed mind…"
-                                className="w-full rounded-xl border border-slate-200 p-3 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 resize-none"
+                                className="w-full rounded-xl border border-[#E7ECF2] p-3 text-[13px] outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 resize-none"
                             />
                         </div>
                     </Card>
@@ -309,8 +309,8 @@ export default function AddSaleReturnPage() {
                         )}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>
-                                <p className="text-[11px] font-bold uppercase text-slate-400">Total refund (deducted from payments)</p>
-                                <p className={`text-[24px] font-black tabular-nums ${exceedsPaid ? 'text-rose-600' : 'text-slate-900'}`}>{money(totalRefund)}</p>
+                                <p className="text-[11px] font-bold uppercase text-[#94A3B8]">Total refund (deducted from payments)</p>
+                                <p className={`text-[24px] font-black tabular-nums ${exceedsPaid ? 'text-rose-600' : 'text-[#0F1A2B]'}`}>{money(totalRefund)}</p>
                             </div>
                             <Button variant="primary" onClick={submit} disabled={submitting || !anyQty || exceedsPaid} className="h-11 px-6">
                                 {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}

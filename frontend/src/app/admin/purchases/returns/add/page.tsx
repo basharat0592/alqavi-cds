@@ -82,53 +82,53 @@ const ProductSelector = ({ value, products, onSelect, disabled }: {
                 onClick={() => { if (!disabled) { setSearch(''); setOpen(o => !o); } }}
                 className={selectCls + ' flex items-center justify-between gap-2 text-left disabled:opacity-60 disabled:cursor-not-allowed'}
             >
-                <span className={`truncate ${selected ? 'text-slate-800' : 'text-slate-400'}`}>
+                <span className={`truncate ${selected ? 'text-[#0F1A2B]' : 'text-[#94A3B8]'}`}>
                     {selected ? `${selected.product_name} (${selected.total_quantity} in stock)` : (disabled ? 'Select supplier first...' : 'Select product...')}
                 </span>
-                <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`text-[#94A3B8] shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
             </button>
             {open && coords && createPortal(
                 <div
                     ref={popRef}
                     style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }}
-                    className="bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden"
+                    className="bg-white border border-[#E7ECF2] rounded-xl shadow-2xl overflow-hidden"
                 >
-                    <div className="p-2 border-b border-slate-100">
+                    <div className="p-2 border-b border-[#F1F5F9]">
                         <div className="relative">
-                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                             <input
                                 autoFocus
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
                                 placeholder="Search products..."
-                                className="w-full h-9 pl-8 pr-3 text-[13px] bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10"
+                                className="w-full h-9 pl-8 pr-3 text-[13px] bg-[#F8FAFC] border border-[#E7ECF2] rounded-lg outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10"
                             />
                         </div>
                     </div>
                     <div className="max-h-[300px] overflow-y-auto">
                         {filtered.length === 0 ? (
-                            <div className="px-4 py-6 text-center text-[13px] text-slate-400 italic">No matching products</div>
+                            <div className="px-4 py-6 text-center text-[13px] text-[#94A3B8] italic">No matching products</div>
                         ) : filtered.map(p => (
                             <div
                                 key={p.id}
                                 onClick={() => { onSelect(p); setOpen(false); }}
-                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#F59E0B]/50 cursor-pointer border-b last:border-0 border-slate-100"
+                                className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#1877C2]/50 cursor-pointer border-b last:border-0 border-[#F1F5F9]"
                             >
-                                <div className="w-9 h-9 bg-white rounded-lg border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
+                                <div className="w-9 h-9 bg-white rounded-lg border border-[#E7ECF2] flex items-center justify-center overflow-hidden shrink-0">
                                     {p.product_image ? (
                                         <img src={getImageUrl(p.product_image)} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <Package size={16} className="text-slate-300" />
+                                        <Package size={16} className="text-[#CBD5E1]" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-bold text-slate-900 truncate">{p.product_name}</p>
-                                    <p className="text-[10px] text-slate-500 font-medium">
+                                    <p className="text-[13px] font-bold text-[#0F1A2B] truncate">{p.product_name}</p>
+                                    <p className="text-[10px] text-[#64748B] font-medium">
                                         <span className={`font-bold ${Number(p.total_quantity) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>{p.total_quantity}</span> in stock
                                         {p.sku ? ` · SKU: ${p.sku}` : ''}
                                     </p>
                                 </div>
-                                <span className="text-[13px] font-black text-slate-900 tabular-nums shrink-0">{formatCurrency(p.price_per_item || 0)}</span>
+                                <span className="text-[13px] font-black text-[#0F1A2B] tabular-nums shrink-0">{formatCurrency(p.price_per_item || 0)}</span>
                             </div>
                         ))}
                     </div>
@@ -262,7 +262,7 @@ export default function AddPurchaseReturnPage() {
                 />
 
                 {loading ? (
-                    <div className="py-20 text-center text-slate-500 text-[14px]">Loading return form...</div>
+                    <div className="py-20 text-center text-[#64748B] text-[14px]">Loading return form...</div>
                 ) : (
                     <div className="flex flex-col lg:flex-row gap-6 items-start">
 
@@ -271,17 +271,17 @@ export default function AddPurchaseReturnPage() {
 
                             {/* Return Info */}
                             <Card className="overflow-hidden">
-                                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
-                                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Return Information</h2>
-                                    <p className="text-[12px] text-slate-500">Basic details for identifying this return record.</p>
+                                <div className="px-6 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                                    <h2 className="text-[14px] font-bold text-[#0F1A2B] tracking-tight">Return Information</h2>
+                                    <p className="text-[12px] text-[#64748B]">Basic details for identifying this return record.</p>
                                 </div>
                                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div className="space-y-1.5">
-                                        <label className="text-[13px] font-semibold text-slate-700">Return ID</label>
+                                        <label className="text-[13px] font-semibold text-[#334155]">Return ID</label>
                                         <input className={inputCls + " " + ui.inputDisabled} value={form.return_number} disabled />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[13px] font-semibold text-slate-700">Supplier *</label>
+                                        <label className="text-[13px] font-semibold text-[#334155]">Supplier *</label>
                                         <select
                                             className={selectCls}
                                             value={form.supplier_name}
@@ -295,7 +295,7 @@ export default function AddPurchaseReturnPage() {
                                         </select>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[13px] font-semibold text-slate-700">Return Date *</label>
+                                        <label className="text-[13px] font-semibold text-[#334155]">Return Date *</label>
                                         <input type="date" className={inputCls} value={form.return_date} onChange={e => setForm(f => ({ ...f, return_date: e.target.value }))} />
                                     </div>
                                 </div>
@@ -303,8 +303,8 @@ export default function AddPurchaseReturnPage() {
 
                             {/* Reason */}
                             <Card>
-                                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
-                                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Reason for Return</h2>
+                                <div className="px-6 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                                    <h2 className="text-[14px] font-bold text-[#0F1A2B] tracking-tight">Reason for Return</h2>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <select 
@@ -328,7 +328,7 @@ export default function AddPurchaseReturnPage() {
                                     </select>
                                     
                                     <textarea
-                                        className="w-full h-24 px-3.5 py-2.5 bg-white border border-slate-200 rounded-lg text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 resize-none"
+                                        className="w-full h-24 px-3.5 py-2.5 bg-white border border-[#E7ECF2] rounded-lg text-[13.5px] text-[#0F1A2B] outline-none placeholder:text-[#94A3B8] transition-all focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 resize-none"
                                         value={form.reason}
                                         onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                                         placeholder="Write detailed manual reason here..."
@@ -338,19 +338,19 @@ export default function AddPurchaseReturnPage() {
 
                             {/* Table of Items */}
                             <Card className="overflow-hidden">
-                                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+                                <div className="px-6 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC] flex items-center justify-between">
                                     <div>
-                                        <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Return Items</h2>
-                                        <p className="text-[12px] text-slate-500">Specify the products being returned and their refund prices.</p>
+                                        <h2 className="text-[14px] font-bold text-[#0F1A2B] tracking-tight">Return Items</h2>
+                                        <p className="text-[12px] text-[#64748B]">Specify the products being returned and their refund prices.</p>
                                     </div>
-                                    <button onClick={addItem} className="text-[12px] text-[#1A1A1A] hover:text-[#0E7F98] font-bold flex items-center gap-1">
+                                    <button onClick={addItem} className="text-[12px] text-[#0F1A2B] hover:text-[#1567AB] font-bold flex items-center gap-1">
                                         <Plus size={14} /> ADD ITEM
                                     </button>
                                 </div>
                                 <div className="p-0 table-fixed w-full overflow-x-auto">
                                     <table className="w-full text-left border-collapse">
-                                        <thead className="bg-slate-50/60 border-b border-slate-100">
-                                            <tr className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                        <thead className="bg-[#F8FAFC] border-b border-[#F1F5F9]">
+                                            <tr className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">
                                                 <th className="px-6 py-2.5">Product Selector (In Stock)</th>
                                                 <th className="px-4 py-2.5 text-center w-24">Qty</th>
                                                 <th className="px-4 py-2.5 text-right w-32">Refund/Item</th>
@@ -360,7 +360,7 @@ export default function AddPurchaseReturnPage() {
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {items.map((item, i) => (
-                                                <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                                <tr key={i} className="hover:bg-[#F8FAFC] transition-colors">
                                                     <td className="px-6 py-3">
                                                         <ProductSelector
                                                             value={item.product}
@@ -381,21 +381,21 @@ export default function AddPurchaseReturnPage() {
                                                         />
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <input type="number" className={inputCls + " text-right font-bold text-slate-900 tabular-nums"} value={item.refund_price} onChange={e => updateItem(i, 'refund_price', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
+                                                        <input type="number" className={inputCls + " text-right font-bold text-[#0F1A2B] tabular-nums"} value={item.refund_price} onChange={e => updateItem(i, 'refund_price', parseFloat(e.target.value) || 0)} min="0" step="0.01" />
                                                     </td>
                                                     <td className="px-4 py-3 text-right">
-                                                        <span className="text-[14px] font-bold text-slate-900 tabular-nums">{formatCurrency((item.quantity || 0) * (item.refund_price || 0))}</span>
+                                                        <span className="text-[14px] font-bold text-[#0F1A2B] tabular-nums">{formatCurrency((item.quantity || 0) * (item.refund_price || 0))}</span>
                                                     </td>
                                                     <td className="px-6 py-3 text-center">
-                                                        <button onClick={() => removeItem(i)} className="text-slate-400 hover:text-rose-600 transition-colors"><X size={16} /></button>
+                                                        <button onClick={() => removeItem(i)} className="text-[#94A3B8] hover:text-rose-600 transition-colors"><X size={16} /></button>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
-                                        <tfoot className="bg-slate-50/60 border-t border-slate-200">
+                                        <tfoot className="bg-[#F8FAFC] border-t border-[#E7ECF2]">
                                             <tr>
-                                                <td colSpan={3} className="px-6 py-3 text-right text-[13px] font-bold text-slate-700">Total Refund Amount:</td>
-                                                <td className="px-4 py-3 text-right text-[18px] font-black text-slate-900 tabular-nums">{formatCurrency(refundTotal)}</td>
+                                                <td colSpan={3} className="px-6 py-3 text-right text-[13px] font-bold text-[#334155]">Total Refund Amount:</td>
+                                                <td className="px-4 py-3 text-right text-[18px] font-black text-[#0F1A2B] tabular-nums">{formatCurrency(refundTotal)}</td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>
@@ -407,14 +407,14 @@ export default function AddPurchaseReturnPage() {
                         {/* RIGHT: Actions Summary */}
                         <div className="w-full lg:w-[280px] shrink-0 space-y-4 sticky top-6">
                             <Card className="p-5 space-y-4">
-                                <h3 className="text-[16px] font-bold text-slate-900 tracking-tight border-b border-slate-100 pb-2">Finalize Record</h3>
-                                <p className="text-[11px] text-slate-500">Please ensure all return quantities and refund values are verified with the supplier.</p>
+                                <h3 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight border-b border-[#F1F5F9] pb-2">Finalize Record</h3>
+                                <p className="text-[11px] text-[#64748B]">Please ensure all return quantities and refund values are verified with the supplier.</p>
 
                                 <Button className="w-full" size="md" onClick={handleSave} disabled={saving}>
                                     <Save size={16} /> {saving ? 'Saving...' : 'Save Record'}
                                 </Button>
 
-                                <button onClick={() => router.back()} className="w-full text-[13px] text-slate-500 hover:text-slate-700 text-center">
+                                <button onClick={() => router.back()} className="w-full text-[13px] text-[#64748B] hover:text-[#334155] text-center">
                                     Cancel & Discard
                                 </button>
                             </Card>

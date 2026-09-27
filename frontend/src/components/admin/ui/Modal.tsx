@@ -52,18 +52,18 @@ export function Modal({
             />
             <div
                 className={cn(
-                    'relative w-full bg-white rounded-3xl shadow-[0_2px_4px_rgba(0,0,0,0.04),0_24px_60px_-20px_rgba(0,0,0,0.30)] animate-in fade-in zoom-in-95 duration-200',
+                    'relative w-full bg-white rounded-2xl border border-[#E7ECF2] shadow-[0_24px_60px_-24px_rgba(15,26,43,0.35)] animate-in fade-in zoom-in-95 duration-200',
                     'max-h-[90vh] flex flex-col overflow-hidden',
                     sizes[size],
                     panelClassName,
                 )}
             >
                 {title && (
-                    <div className="flex items-center justify-between px-6 py-5 border-b border-[#F2F2F0] shrink-0">
-                        <h3 className="text-[17px] font-semibold text-[#1A1A1A] tracking-[-0.02em]">{title}</h3>
+                    <div className="flex items-center justify-between px-6 py-5 border-b border-[#F4F6F9] shrink-0">
+                        <h3 className="text-[17px] font-semibold text-[#0F1A2B] tracking-[-0.02em]">{title}</h3>
                         <button
                             onClick={onClose}
-                            className="p-1.5 rounded-lg text-[#9C9C98] hover:text-[#0E7F98] hover:bg-black/[0.04] transition-colors"
+                            className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#1567AB] hover:bg-black/[0.04] transition-colors"
                             aria-label="Close"
                         >
                             <X size={16} />
@@ -72,7 +72,7 @@ export function Modal({
                 )}
                 <div className={cn('p-5 overflow-y-auto', bodyClassName)}>{children}</div>
                 {footer && (
-                    <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#F2F2F0] bg-[#FAFAF8] rounded-b-3xl shrink-0">
+                    <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#F4F6F9] bg-[#F8FAFC] rounded-b-3xl shrink-0">
                         {footer}
                     </div>
                 )}

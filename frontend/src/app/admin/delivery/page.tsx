@@ -75,10 +75,10 @@ export default function DeliveryPersonsPage() {
                 {STATS.map((s, i) => (
                     <Card key={i} className="p-5">
                         <div className="flex items-center gap-2 mb-2">
-                            <s.icon size={15} className="text-[#9C9C98]" />
-                            <p className="text-[11.5px] font-semibold text-[#9C9C98] uppercase tracking-wider">{s.label}</p>
+                            <s.icon size={15} className="text-[#94A3B8]" />
+                            <p className="text-[11.5px] font-semibold text-[#94A3B8] uppercase tracking-wider">{s.label}</p>
                         </div>
-                        <p className={`text-[22px] font-semibold tracking-tight tabular-nums ${s.color || 'text-[#1A1A1A]'}`}>{s.value}</p>
+                        <p className={`text-[22px] font-semibold tracking-tight tabular-nums ${s.color || 'text-[#0F1A2B]'}`}>{s.value}</p>
                     </Card>
                 ))}
             </div>
@@ -88,7 +88,7 @@ export default function DeliveryPersonsPage() {
                 className="mb-6"
                 filters={
                 <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search rider by name, email or phone..." className={inputCls + ' pl-10'} />
                 </div>
                 }
@@ -117,29 +117,29 @@ export default function DeliveryPersonsPage() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {filtered.length === 0 ? (
-                            <tr><td colSpan={7} className="py-16 text-center text-[13px] text-[#9C9C98]">No delivery persons yet. Click “Add Rider” to create one.</td></tr>
+                            <tr><td colSpan={7} className="py-16 text-center text-[13px] text-[#94A3B8]">No delivery persons yet. Click “Add Rider” to create one.</td></tr>
                         ) : paged.map(r => (
-                            <tr key={r.id} className="hover:bg-[#FAFAF8] transition-colors text-[13px]">
+                            <tr key={r.id} className="hover:bg-[#F8FAFC] transition-colors text-[13px]">
                                 <td className={ui.td}>
-                                    <div className="font-semibold text-[#1A1A1A] flex items-center gap-2">
-                                        <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center"><User size={15} /></span>
+                                    <div className="font-semibold text-[#0F1A2B] flex items-center gap-2">
+                                        <span className="w-8 h-8 rounded-lg bg-[#1877C2]/10 text-[#1877C2] flex items-center justify-center"><User size={15} /></span>
                                         {r.name}
                                     </div>
-                                    <div className="text-[11.5px] text-[#9C9C98] ml-10">{r.email}</div>
+                                    <div className="text-[11.5px] text-[#94A3B8] ml-10">{r.email}</div>
                                 </td>
                                 <td className={ui.td}>
-                                    <span className="flex items-center gap-1.5"><Phone size={12} className="text-[#9C9C98]" /> {r.phone || '—'}</span>
+                                    <span className="flex items-center gap-1.5"><Phone size={12} className="text-[#94A3B8]" /> {r.phone || '—'}</span>
                                 </td>
                                 <td className={ui.td}>
-                                    <span className="flex items-center gap-1.5 text-[#3A3A38] capitalize"><Bike size={13} className="text-[#9C9C98]" /> {r.vehicle_type}</span>
-                                    {r.vehicle_number && <div className="text-[10.5px] text-[#9C9C98] uppercase tracking-wider ml-5">{r.vehicle_number}</div>}
+                                    <span className="flex items-center gap-1.5 text-[#334155] capitalize"><Bike size={13} className="text-[#94A3B8]" /> {r.vehicle_type}</span>
+                                    {r.vehicle_number && <div className="text-[10.5px] text-[#94A3B8] uppercase tracking-wider ml-5">{r.vehicle_number}</div>}
                                 </td>
                                 <td className={ui.td}>{r.warehouse_name || r.area_name || '—'}</td>
                                 <td className={ui.td + ' text-center'}>
                                     <span className="text-amber-600 font-semibold tabular-nums">{r.active_deliveries || 0}</span>
-                                    <span className="text-[#C4C4C0] mx-1">/</span>
+                                    <span className="text-[#CBD5E1] mx-1">/</span>
                                     <span className="text-emerald-600 font-semibold tabular-nums">{r.completed_deliveries || 0}</span>
-                                    <div className="text-[10.5px] text-[#9C9C98] uppercase tracking-wider">active / done</div>
+                                    <div className="text-[10.5px] text-[#94A3B8] uppercase tracking-wider">active / done</div>
                                 </td>
                                 <td className={ui.td + ' text-center'}>
                                     <Badge tone={r.is_active ? 'green' : 'neutral'}>{r.is_active ? 'Active' : 'Inactive'}</Badge>
@@ -169,8 +169,8 @@ export default function DeliveryPersonsPage() {
                 {toDelete && (
                     <div className="text-center space-y-3">
                         <div className="w-12 h-12 bg-rose-50 border border-rose-100 rounded-full flex items-center justify-center mx-auto"><Trash2 size={22} className="text-rose-600" /></div>
-                        <h3 className="text-[15px] font-semibold text-[#1A1A1A]">Remove this rider?</h3>
-                        <p className="text-[11.5px] text-[#3A3A38]">Delete <strong>{toDelete.name}</strong>? Their login will be revoked. Assigned orders are kept.</p>
+                        <h3 className="text-[15px] font-semibold text-[#0F1A2B]">Remove this rider?</h3>
+                        <p className="text-[11.5px] text-[#334155]">Delete <strong>{toDelete.name}</strong>? Their login will be revoked. Assigned orders are kept.</p>
                     </div>
                 )}
             </Modal>

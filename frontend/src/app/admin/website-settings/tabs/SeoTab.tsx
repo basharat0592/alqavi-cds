@@ -13,7 +13,7 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -97,7 +97,7 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
                         </div>
                         <textarea rows={3} value={form.meta_description || ''} onChange={e => setForm(f => ({ ...f, meta_description: e.target.value }))}
                             placeholder="Briefly describe what your store sells..."
-                            className="w-full min-h-[80px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
+                            className="w-full min-h-[80px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
                         <p className="text-[11px] text-[#64748B]">A short summary of your page. Keep it between 120-160 characters.</p>
                     </div>
 
@@ -137,7 +137,7 @@ export default function SeoTab({ settings, onSave, saving }: Props) {
 
             {/* Footer Aligned Action */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#e2e8f0] rounded-lg p-4 md:p-6 shadow-sm">
-                <div className="flex items-center gap-3 text-slate-400">
+                <div className="flex items-center gap-3 text-[#94A3B8]">
                     <RotateCcw size={18} />
                     <p className="text-[13px] font-medium italic">SEO changes may take a few days to reflect in search engines.</p>
                 </div>

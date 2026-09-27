@@ -58,26 +58,26 @@ export function Pagination({
         'inline-flex items-center justify-center h-9 min-w-9 px-2.5 rounded-xl text-[13px] font-medium tracking-[-0.01em] transition-colors disabled:opacity-40 disabled:pointer-events-none';
 
     return (
-        <div className={cn('flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#F2F2F0]', className)}>
+        <div className={cn('flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-[#E7ECF2]', className)}>
           <div className="flex items-center gap-3 order-2 sm:order-1">
             {onPageSize && (
-                <label className="flex items-center gap-2 text-[12.5px] text-[#9C9C98] font-medium shrink-0">
+                <label className="flex items-center gap-2 text-[12.5px] text-[#94A3B8] font-medium shrink-0">
                     <span className="hidden sm:inline">Rows</span>
                     <select
                         value={pageSize ?? pageSizeOptions[0]}
                         onChange={e => onPageSize(Number(e.target.value))}
                         aria-label="Rows per page"
-                        className="h-8 pl-2.5 pr-7 rounded-lg bg-[#F2F2F0] border border-transparent text-[12.5px] font-medium text-[#1A1A1A] outline-none cursor-pointer transition-colors hover:bg-[#EDEDEA] focus:bg-white focus:border-[#F59E0B]/40 focus:ring-4 focus:ring-[#F59E0B]/15"
+                        className="h-8 pl-2.5 pr-7 rounded-lg bg-[#F4F6F9] border border-transparent text-[12.5px] font-medium text-[#0F1A2B] outline-none cursor-pointer transition-colors hover:bg-[#EEF2F6] focus:bg-white focus:border-[#1877C2]/40 focus:ring-4 focus:ring-[#1877C2]/10"
                     >
                         {pageSizeOptions.map(n => <option key={n} value={n}>{n}</option>)}
                     </select>
                 </label>
             )}
             {total != null && pageSize != null ? (
-                <p className="text-[12.5px] text-[#9C9C98] font-medium">
-                    Showing <span className="font-semibold text-[#3A3A38] tabular-nums">{total === 0 ? 0 : from}</span>–
-                    <span className="font-semibold text-[#3A3A38] tabular-nums">{to}</span> of{' '}
-                    <span className="font-semibold text-[#3A3A38] tabular-nums">{total}</span>
+                <p className="text-[12.5px] text-[#94A3B8] font-medium">
+                    Showing <span className="font-semibold text-[#334155] tabular-nums">{total === 0 ? 0 : from}</span>–
+                    <span className="font-semibold text-[#334155] tabular-nums">{to}</span> of{' '}
+                    <span className="font-semibold text-[#334155] tabular-nums">{total}</span>
                 </p>
             ) : null}
           </div>
@@ -85,7 +85,7 @@ export function Pagination({
             {totalPages > 1 && (
                 <div className="flex items-center gap-1 order-1 sm:order-2">
                     <button
-                        className={cn(btn, 'text-[#5B5B58] hover:bg-[#F2F2F0]')}
+                        className={cn(btn, 'text-[#64748B] hover:bg-[#F4F6F9]')}
                         onClick={() => onPage(Math.max(1, page - 1))}
                         disabled={page <= 1}
                         aria-label="Previous page"
@@ -95,7 +95,7 @@ export function Pagination({
 
                     {pages.map((p, i) =>
                         p === '…' ? (
-                            <span key={`e${i}`} className="px-1.5 text-[#B4B4B0] text-[12.5px] select-none">…</span>
+                            <span key={`e${i}`} className="px-1.5 text-[#CBD5E1] text-[12.5px] select-none">…</span>
                         ) : (
                             <button
                                 key={p}
@@ -103,8 +103,8 @@ export function Pagination({
                                 className={cn(
                                     btn,
                                     p === page
-                                        ? 'bg-[#F59E0B] text-white'
-                                        : 'text-slate-600 hover:bg-slate-100',
+                                        ? 'bg-[#1877C2] text-white'
+                                        : 'text-[#64748B] hover:bg-[#F4F6F9]',
                                 )}
                                 aria-current={p === page ? 'page' : undefined}
                             >
@@ -114,7 +114,7 @@ export function Pagination({
                     )}
 
                     <button
-                        className={cn(btn, 'text-[#5B5B58] hover:bg-[#F2F2F0]')}
+                        className={cn(btn, 'text-[#64748B] hover:bg-[#F4F6F9]')}
                         onClick={() => onPage(Math.min(totalPages, page + 1))}
                         disabled={page >= totalPages}
                         aria-label="Next page"

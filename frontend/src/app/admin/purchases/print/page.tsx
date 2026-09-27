@@ -21,7 +21,7 @@ function InvoicePaper({ purchase }: { purchase: any }) {
     const balance = totalAmount - paidAmount;
 
     return (
-        <div className="invoice-paper bg-white max-w-[850px] mx-auto p-6 pt-3 flex flex-col text-slate-900">
+        <div className="invoice-paper bg-white max-w-[850px] mx-auto p-6 pt-3 flex flex-col text-[#0F1A2B]">
             {/* Header */}
             <div className="flex justify-between items-center mb-3">
                 <div className="w-1/3">
@@ -30,25 +30,25 @@ function InvoicePaper({ purchase }: { purchase: any }) {
                     <p className="text-[12px] font-black text-emerald-700 tracking-wide mt-1">Alqavi Traders</p>
                 </div>
                 <div className="w-1/3 text-center">
-                    <h1 className="text-[19px] font-bold text-slate-900 urdu-text mb-1.5" style={{ lineHeight: 2 }}>القوی ٹریڈرز</h1>
-                    <p className="text-[9px] font-bold text-slate-500 tracking-widest urdu-text" style={{ lineHeight: 1.6 }}>کاسمیٹکس ڈیلر گلگت بلتستان</p>
+                    <h1 className="text-[19px] font-bold text-[#0F1A2B] urdu-text mb-1.5" style={{ lineHeight: 2 }}>القوی ٹریڈرز</h1>
+                    <p className="text-[9px] font-bold text-[#64748B] tracking-widest urdu-text" style={{ lineHeight: 1.6 }}>کاسمیٹکس ڈیلر گلگت بلتستان</p>
                 </div>
                 <div className="w-1/3 text-right">
-                    <h2 className="text-[15px] font-black uppercase tracking-tighter text-slate-900">Purchase Order</h2>
-                    <div className="text-[10px] text-slate-500 mt-0.5 font-medium leading-tight">
+                    <h2 className="text-[15px] font-black uppercase tracking-tighter text-[#0F1A2B]">Purchase Order</h2>
+                    <div className="text-[10px] text-[#64748B] mt-0.5 font-medium leading-tight">
                         <p>Distributor: Al-Qavi Traders Gilgit</p>
                         <p>Warehouse: {purchase.warehouse_name || 'Main Warehouse'}</p>
                     </div>
-                    <p className="text-[12px] text-slate-900 font-bold mt-1 tracking-tight">PO No: {purchase.purchase_number}</p>
-                    <p className="text-[10px] text-slate-500 font-medium">{formatDate(purchase.order_date || purchase.created_at)}</p>
+                    <p className="text-[12px] text-[#0F1A2B] font-bold mt-1 tracking-tight">PO No: {purchase.purchase_number}</p>
+                    <p className="text-[10px] text-[#64748B] font-medium">{formatDate(purchase.order_date || purchase.created_at)}</p>
                 </div>
             </div>
 
             {/* Items */}
             <div className="mb-6">
-                <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
+                <table className="w-full text-left border-collapse border border-[#CBD5E1] [&_th]:border [&_th]:border-[#CBD5E1] [&_td]:border [&_td]:border-[#E7ECF2]">
                     <thead>
-                        <tr className="border-b-2 border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
+                        <tr className="border-b-2 border-[#CBD5E1] text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] bg-[#F8FAFC]">
                             <th className="py-1.5 px-2 w-12 text-center">#</th>
                             <th className="py-1.5 px-3">Item Description</th>
                             <th className="py-1.5 px-3 text-center w-28">Quantity</th>
@@ -63,20 +63,20 @@ function InvoicePaper({ purchase }: { purchase: any }) {
                             const units = item.total_units ?? (item.packaging_type === 'CARTON' ? qty * (item.items_per_carton || 1) : qty);
                             const amt = item.subtotal ?? (price * units);
                             return (
-                                <tr key={i} className="border-b border-slate-100">
-                                    <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
-                                    <td className="py-1.5 px-3 font-bold text-slate-900">
+                                <tr key={i} className="border-b border-[#F1F5F9]">
+                                    <td className="py-1.5 px-1 text-center text-[#94A3B8] tabular-nums">{i + 1}</td>
+                                    <td className="py-1.5 px-3 font-bold text-[#0F1A2B]">
                                         <span>{item.product_name}</span>
-                                        <span className="text-[9px] font-medium text-slate-400 ml-1.5">({item.packaging_type?.toLowerCase()})</span>
-                                        {item.company_name && <div className="text-[9px] font-semibold text-slate-400">{item.company_name}</div>}
+                                        <span className="text-[9px] font-medium text-[#94A3B8] ml-1.5">({item.packaging_type?.toLowerCase()})</span>
+                                        {item.company_name && <div className="text-[9px] font-semibold text-[#94A3B8]">{item.company_name}</div>}
                                     </td>
                                     <td className="py-1.5 px-3 text-center font-bold text-emerald-600 tabular-nums whitespace-nowrap">
                                         {item.packaging_type === 'CARTON'
-                                            ? <span>{units} pcs <span className="text-[10px] font-medium text-slate-400">({qty} ctn × {item.items_per_carton || 1})</span></span>
+                                            ? <span>{units} pcs <span className="text-[10px] font-medium text-[#94A3B8]">({qty} ctn × {item.items_per_carton || 1})</span></span>
                                             : qty}
                                     </td>
-                                    <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
-                                    <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(amt)}</td>
+                                    <td className="py-1.5 px-3 text-right text-[#64748B] tabular-nums">{formatCurrency(price)}</td>
+                                    <td className="py-1.5 px-3 text-right font-black text-[#0F1A2B] tabular-nums">{formatCurrency(amt)}</td>
                                 </tr>
                             );
                         })}
@@ -87,23 +87,23 @@ function InvoicePaper({ purchase }: { purchase: any }) {
             {/* Summary */}
             <div className="flex justify-between items-start gap-6 mb-6">
                 <div className="flex-1 pt-1">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
-                    <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{purchase.notes || 'Bulk stock replenishment order.'}</p>
+                    <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Notes</p>
+                    <p className="text-[11px] text-[#64748B] italic max-w-xs leading-relaxed">{purchase.notes || 'Bulk stock replenishment order.'}</p>
                 </div>
                 <div className="w-[280px] text-[12px] space-y-2">
                     <div className="flex justify-between">
-                        <span className="text-slate-500 font-bold uppercase text-[11px]">Subtotal</span>
-                        <span className="font-black text-slate-900 tabular-nums">{formatCurrency(totalAmount - (purchase.shipping_cost || 0) - (purchase.tax_amount || 0))}</span>
+                        <span className="text-[#64748B] font-bold uppercase text-[11px]">Subtotal</span>
+                        <span className="font-black text-[#0F1A2B] tabular-nums">{formatCurrency(totalAmount - (purchase.shipping_cost || 0) - (purchase.tax_amount || 0))}</span>
                     </div>
                     {purchase.shipping_cost > 0 && (
-                        <div className="flex justify-between"><span className="text-slate-500 font-bold uppercase text-[11px]">Shipping Fees</span><span className="font-black text-slate-900 tabular-nums">{formatCurrency(purchase.shipping_cost)}</span></div>
+                        <div className="flex justify-between"><span className="text-[#64748B] font-bold uppercase text-[11px]">Shipping Fees</span><span className="font-black text-[#0F1A2B] tabular-nums">{formatCurrency(purchase.shipping_cost)}</span></div>
                     )}
                     {purchase.tax_amount > 0 && (
-                        <div className="flex justify-between"><span className="text-slate-500 font-bold uppercase text-[11px]">Tax</span><span className="font-black text-slate-900 tabular-nums">{formatCurrency(purchase.tax_amount)}</span></div>
+                        <div className="flex justify-between"><span className="text-[#64748B] font-bold uppercase text-[11px]">Tax</span><span className="font-black text-[#0F1A2B] tabular-nums">{formatCurrency(purchase.tax_amount)}</span></div>
                     )}
-                    <div className="flex justify-between items-center pt-2 mt-1 border-t-2 border-slate-300">
-                        <span className="text-slate-900 font-black uppercase text-[13px]">Total Amount</span>
-                        <span className="font-black text-[#1A1A1A] text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                    <div className="flex justify-between items-center pt-2 mt-1 border-t-2 border-[#CBD5E1]">
+                        <span className="text-[#0F1A2B] font-black uppercase text-[13px]">Total Amount</span>
+                        <span className="font-black text-[#0F1A2B] text-[17px] tabular-nums">{formatCurrency(totalAmount)}</span>
                     </div>
                     <div className="flex justify-between pt-1"><span className="text-emerald-600 font-bold uppercase text-[11px]">Total Paid</span><span className="font-bold text-emerald-600 tabular-nums">{formatCurrency(paidAmount)}</span></div>
                     {balance > 0 && (
@@ -129,7 +129,7 @@ function InvoicePaper({ purchase }: { purchase: any }) {
                 </div>
 
                 <div dir="rtl" className="mt-2 mb-8">
-                    <p className="text-[9px] text-slate-900 urdu-text text-justify" style={{ lineHeight: 1.9 }}>
+                    <p className="text-[9px] text-[#0F1A2B] urdu-text text-justify" style={{ lineHeight: 1.9 }}>
                         <span className="font-black">نوٹ:۔ </span>
                         تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں الْقوی ٹریڈرز گلگت سے خریدی ہیں انہیں ایکسپائری سے تین مہینے پہلے تبدیل کرنا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیل کرنے کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بمعہ پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی کمی بیشی کی صورت میں فوراً رابطہ کریں، بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ۔
                     </p>
@@ -137,18 +137,18 @@ function InvoicePaper({ purchase }: { purchase: any }) {
 
                 <div className="flex justify-between items-end mt-10 px-2">
                     <div className="w-44">
-                        {purchase.staff_name && <p className="text-[12px] font-bold text-slate-900 mb-1 truncate">{purchase.staff_name}</p>}
+                        {purchase.staff_name && <p className="text-[12px] font-bold text-[#0F1A2B] mb-1 truncate">{purchase.staff_name}</p>}
                         <div className="border-t border-slate-700 mb-1.5"></div>
-                        <span className="text-[13px] font-black text-slate-900">Saleman</span>
+                        <span className="text-[13px] font-black text-[#0F1A2B]">Saleman</span>
                     </div>
                     <div className="w-44 text-right">
                         <div className="border-t border-slate-700 mb-1.5"></div>
-                        <span className="text-[13px] font-black text-slate-900">Store Manager</span>
+                        <span className="text-[13px] font-black text-[#0F1A2B]">Store Manager</span>
                     </div>
                 </div>
 
                 <div className="mt-3 text-center">
-                    <p className="text-[10.5px] text-slate-400 font-medium tracking-wide">
+                    <p className="text-[10.5px] text-[#94A3B8] font-medium tracking-wide">
                         Organization 1: Qazi Market, CMH Road, Khomer Gilgit&nbsp;&nbsp;•&nbsp;&nbsp;Organization 2: Ibrahim Market, Confection Bil, Skardu
                     </p>
                 </div>
@@ -175,12 +175,12 @@ export default function BulkPurchasePrintPage() {
     }, [search]);
 
     if (loading) return <PageLoader />;
-    if (purchases.length === 0) return <div className="p-20 text-center font-bold text-slate-900">No purchases to print.</div>;
+    if (purchases.length === 0) return <div className="p-20 text-center font-bold text-[#0F1A2B]">No purchases to print.</div>;
 
     return (
-        <div className="pb-20 font-sans text-slate-900 bg-[#f1f5f9] min-h-screen">
+        <div className="pb-20 font-sans text-[#0F1A2B] bg-[#f1f5f9] min-h-screen">
             <div className="max-w-[850px] mx-auto pt-4 px-4 flex items-center justify-between print:hidden">
-                <h1 className="text-[16px] font-bold text-slate-900">Printing {purchases.length} invoice{purchases.length > 1 ? 's' : ''} — 2 per page (rotated)</h1>
+                <h1 className="text-[16px] font-bold text-[#0F1A2B]">Printing {purchases.length} invoice{purchases.length > 1 ? 's' : ''} — 2 per page (rotated)</h1>
                 <div className="flex gap-2">
                     <Button variant="secondary" size="sm" onClick={() => router.back()}><ArrowLeft size={14} /> Back</Button>
                     <Button variant="primary" size="sm" onClick={() => window.print()}><Printer size={14} /> Print</Button>

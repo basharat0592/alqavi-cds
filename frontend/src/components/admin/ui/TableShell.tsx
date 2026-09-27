@@ -37,16 +37,16 @@ export function TableShell({
     return (
         <div
             className={cn(
-                'bg-white rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_30px_-14px_rgba(0,0,0,0.12)] overflow-hidden',
+                'bg-white rounded-2xl border border-[#E7ECF2] overflow-hidden',
                 className,
             )}
         >
             {(filters || meta) && (
-                <div className="px-4 sm:px-5 py-3.5 border-b border-[#F2F2F0]">
+                <div className="px-4 sm:px-5 py-3.5 border-b border-[#E7ECF2]">
                     <div className="flex flex-col xl:flex-row xl:items-center gap-3">
                         <div className="flex-1 min-w-0">{filters}</div>
                         {meta && (
-                            <div className="shrink-0 text-[12.5px] font-medium text-[#9C9C98] tabular-nums">
+                            <div className="shrink-0 text-[12.5px] font-medium text-[#94A3B8] tabular-nums">
                                 {meta}
                             </div>
                         )}

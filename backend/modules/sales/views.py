@@ -8,6 +8,7 @@ from .models import Order, OrderItem, PurchaseOrder, PurchaseOrderItem, Purchase
 from .serializers import OrderSerializer, CreateOrderSerializer, PurchaseOrderSerializer, PurchaseReturnSerializer, OrderStatsSerializer, CustomerBoughtProductSerializer, SaleReturnSerializer
 from modules.products.models import SupplierProduct
 from modules.inventory.models import StockMovement
+from modules.inventory import services as inventory_services
 from core.permissions import HasModulePermission
 from core.scoping import (
     BranchScopedQuerysetMixin, scope_queryset, user_warehouse_ids,
@@ -87,28 +88,11 @@ def complete_delivery_stock(order):
                 # Release the reservation (never below zero).
                 item.product.reserved_quantity = Greatest(F('reserved_quantity') - item.quantity, Value(0))
                 item.product.save()
-            if warehouse_id:
-                # Identity is NAME + warehouse (+ tenant) only — NOT weight/size — so a
-                # Stock row whose weight/size drifted from the Product's is still found
-                # and deducted (matches the storefront quantity + sync-signal identity).
-                base_filter = dict(
-                    product_name__iexact=item.product.product_name,
-                    warehouse_id=warehouse_id,
-                )
-                stock = None
-                if getattr(order, 'tenant_id', None):
-                    stock = (Stock.objects.filter(**base_filter, tenant_id=order.tenant_id)
-                             .order_by('-total_quantity').first())
-                if stock is None:
-                    stock = Stock.objects.filter(**base_filter).order_by('-total_quantity').first()
-                if stock:
-                    # Deduct physical stock, clamped at zero (no negative stock).
-                    stock.total_quantity = Greatest(F('total_quantity') - item.quantity, Value(0))
-                    stock.save()
-                    if hasattr(stock, 'product') and stock.product:
-                        stock.product.quantity = Greatest(F('quantity') - item.quantity, Value(0))
-                        stock.product.save()
-            item.product.save()
+            # One service owns every quantity change. It spreads the
+            # deduction across the line's batches and leaves
+            # Product.total_quantity to the signal that derives it.
+            inventory_services.consume_order_item(
+                item, order=order, reason=f'Sale {order.order_number}')
             CustomerBoughtProduct.objects.get_or_create(
                 order=order, product=item.product,
                 defaults={'customer': order.customer, 'user': order.user,
@@ -710,41 +694,10 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                                 item.product.reserved_quantity = Greatest(F("reserved_quantity") - item.quantity, Value(0))
                                 item.product.save()
 
-                            # Actual Deduction from Physical Stock (Master Stock Table).
-                            # Scope to THIS branch and, when the order is owned by a
-                            # tenant, to that tenant — so a delivery can only ever
-                            # deplete the current branch's own stock. Identity is
-                            # NAME + warehouse (+ tenant) ONLY — NOT weight/size — else a
-                            # Stock row whose weight/size drifted from the Product's is
-                            # never found and the delivery silently deducts nothing (which
-                            # is exactly why Current Stock didn't drop on delivery).
-                            base_filter = dict(
-                                product_name__iexact=item.product.product_name,
-                                warehouse_id=warehouse_id,
-                            )
-                            stock = None
-                            if getattr(order, 'tenant_id', None):
-                                stock = (Stock.objects.filter(**base_filter, tenant_id=order.tenant_id)
-                                         .order_by('-total_quantity').first())
-                            # Fall back to warehouse-only (the branch is the real isolation
-                            # boundary) so a Stock row with a NULL/mismatched tenant is still
-                            # found and deducted instead of silently skipped.
-                            if stock is None:
-                                stock = Stock.objects.filter(**base_filter).order_by('-total_quantity').first()
-
-                            if stock:
-                                # Clamp at zero so a delivery can never drive stock negative.
-                                stock.total_quantity = Greatest(F("total_quantity") - item.quantity, Value(0))
-                                stock.save()
-
-                                # Update Linked Supplier Product quantity if exists
-                                if hasattr(stock, "product") and stock.product:
-                                    sp_prod = stock.product
-                                    sp_prod.quantity = Greatest(F("quantity") - item.quantity, Value(0))
-                                    sp_prod.save()
-                            
-                            # Trigger re-aggregation of total_quantity in Admin Product record
-                            item.product.save()
+                            # One service owns every quantity change.
+                            inventory_services.consume_order_item(
+                                item, order=order,
+                                reason=f'Sale {order.order_number}')
 
                             # Log into CustomerBoughtProduct for history/analytics
                             from .models import CustomerBoughtProduct
@@ -987,22 +940,13 @@ class SaleReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 with transaction.atomic():
                     for item in instance.items.all():
                         if item.product:
-                            # 1. Add back to master Stock (Inventory)
-                            if hasattr(item.product, 'stock') and item.product.stock:
-                                stock = item.product.stock
-                                stock.total_quantity = F('total_quantity') + item.quantity
-                                stock.save()
-                                
-                                # 2. Add back to Supplier Product (All Products catalog)
-                                if hasattr(stock, 'product') and stock.product:
-                                    sp_prod = stock.product
-                                    sp_prod.quantity = F('quantity') + item.quantity
-                                    sp_prod.save()
-                            
-                            # 3. Add back to Admin Product record
-                            product = item.product
-                            product.total_quantity = F('total_quantity') + item.quantity
-                            product.save()
+                            # Same service, opposite direction. This also
+                            # fixes the old double-add: stock and product
+                            # were both written, but the stock signal
+                            # already re-derives the product quantity.
+                            inventory_services.release_order_item(
+                                item, order=instance,
+                                reason=f'Sale return {instance.pk}')
             except Exception as e:
                 print(f"Inventory Restock Error: {str(e)}")
 
@@ -1049,18 +993,13 @@ class SaleReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             with transaction.atomic():
                 for item in order.items.all():
                     if item.product:
-                        if hasattr(item.product, 'stock') and item.product.stock:
-                            stock = item.product.stock
-                            stock.total_quantity = F('total_quantity') - item.quantity
-                            stock.save()
-                            
-                            if hasattr(stock, 'product') and stock.product:
-                                sp_prod = stock.product
-                                sp_prod.quantity = F('quantity') - item.quantity
-                                sp_prod.save()
-                                
-                        item.product.total_quantity = F('total_quantity') - item.quantity
-                        item.product.save()
+                        # Previously this deducted the stock row AND wrote
+                        # Product.total_quantity, which the stock signal had
+                        # already re-derived, so every storefront delivery
+                        # double-counted. One service call now does both.
+                        inventory_services.consume_order_item(
+                            item, order=order,
+                            reason=f'Sale {order.order_number}')
 
                         # Sync to CustomerBoughtProduct Table
                         from .models import CustomerBoughtProduct
@@ -1181,45 +1120,27 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     sp.quantity = F('quantity') - units
                     sp.save()
                     
-                    # 2. Merge into the existing stock line for this product in this
-                    # branch — matched by NAME (not price, weight or size). A changed
-                    # purchase cost never creates a duplicate: the quantity is added to
-                    # the same line and the LATEST cost becomes the stock's cost. The
-                    # matching Product is repriced too (cost + margin-kept sale price).
-                    existing = Stock.objects.filter(
-                        product_name__iexact=sp.name,
-                        warehouse=warehouse,
+                    # 2. Hand the units to the one service that owns stock. It
+                    # merges into this branch's existing line for the product
+                    # (so a repeat purchase never forks a duplicate) and only
+                    # creates a row for a genuinely new name.
+                    self._reprice_product(sp.name, warehouse, purchase.tenant_id, item.price)
+                    stock = inventory_services.receive(
                         tenant_id=purchase.tenant_id,
-                    ).first()
-                    if existing:
-                        # Reprice the Admin Product(s) to the new cost BEFORE saving the
-                        # stock, so the stock->product sum signal lands on the right row.
-                        self._reprice_product(sp.name, warehouse, purchase.tenant_id, item.price)
-                        existing.price_per_item = item.price   # latest cost wins
-                        existing.total_quantity = F('total_quantity') + units
-                        existing.save()  # fires signal → re-sums qty into Product
-                        existing.refresh_from_db()
-                        stock = existing
-                    else:
-                        stock = Stock.objects.create(
-                            product_name=sp.name,
-                            product=sp,
-                            category=sp.category,
-                            supplier=purchase.supplier,
-                            warehouse=warehouse,
-                            purchase_type='single',
-                            total_quantity=units,
-                            price_per_item=item.price,
-                            weight=item.weight,
-                            size=item.size,
-                            date=timezone.now().date(),
-                            # Attribute the stock to whoever created the purchase, so a
-                            # branch admin sees only the stock from purchases they made.
-                            created_by=purchase.created_by,
-                            # Owning Admin (tenant) — inherit from the purchase order so
-                            # synced stock stays inside the same tenant.
-                            tenant_id=purchase.tenant_id,
-                        )
+                        warehouse=warehouse,
+                        product_name=sp.name,
+                        units=units,
+                        unit_cost=item.price,
+                        supplier=purchase.supplier,
+                        category=sp.category,
+                        supplier_product=sp,
+                        weight=item.weight,
+                        size=item.size,
+                        created_by=purchase.created_by,
+                        reason=f'Purchase Order #{purchase.purchase_number} received',
+                    )
+                    if not stock:
+                        continue
 
                     # 2b. Honor an explicitly-entered Sale Rate: push it onto the
                     # matching Admin Product(s) so the price the admin typed on the
@@ -1231,16 +1152,7 @@ class PurchaseViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                             tenant_id=purchase.tenant_id,
                         ).update(selling_price=Decimal(str(item.selling_price)))
 
-                    # 3. Record the movement history
-                    StockMovement.objects.create(
-                        stock=stock,
-                        movement_type='PURCHASE',
-                        quantity=units,
-                        to_warehouse=warehouse,
-                        date=timezone.now().date(),
-                        description=f"Purchase Order #{purchase.purchase_number} received",
-                        tenant_id=purchase.tenant_id,
-                    )
+                    # (movement history is logged by inventory.services)
             
             purchase.is_inventory_synced = True
             purchase.save()
@@ -1961,18 +1873,21 @@ class PurchaseReturnViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     sp = item.product
                     if not sp: continue
 
-                    # 1. Deduct from Admin Stock — tenant + branch scoped, clamped at
-                    # zero so a return can never drive stock negative.
-                    Stock.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id, **_branch).update(
-                        total_quantity=Greatest(F('total_quantity') - item.quantity, Value(0))
+                    # 1. Send the units back out of this branch's stock line.
+                    # The old code used queryset .update(), which bypasses the
+                    # signal that derives Product.total_quantity, so it had to
+                    # deduct the product by hand as well and matched on supplier
+                    # (missing any line whose supplier differed). The service
+                    # matches the line the way everything else does.
+                    inventory_services.consume(
+                        tenant_id=ret.tenant_id,
+                        warehouse_id=_wh,
+                        product_name=sp.name,
+                        units=item.quantity,
+                        reason=f'Purchase return {ret.pk}',
                     )
 
-                    # 1b. Deduct from Admin Product Catalog to sync Admin UI (tenant + branch scoped)
-                    Product.objects.filter(product_name=sp.name, supplier=ret.supplier, tenant_id=ret.tenant_id, **_branch).update(
-                        total_quantity=Greatest(F('total_quantity') - item.quantity, Value(0))
-                    )
-                    
-                    # 2. Add back to Supplier Product stock
+                    # 2. The units go back to the supplier's availability.
                     sp.quantity = F('quantity') + item.quantity
                     sp.save()
                 

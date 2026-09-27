@@ -13,7 +13,7 @@ interface Props {
 // ── AMAZON STYLE COMPONENTS ──
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -32,7 +32,7 @@ const Field = ({ label, value, onChange, icon: Icon, type = 'text', placeholder 
     <div className="space-y-1.5 text-left">
         <label className="text-[13px] font-bold text-[#111]">{label}</label>
         <div className="relative">
-            {Icon && <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />}
+            {Icon && <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />}
             <input type={type} value={value || ''}
                 onChange={e => onChange(e.target.value)}
                 placeholder={placeholder}
@@ -68,10 +68,10 @@ export default function ContactTab({ settings, onSave, saving }: Props) {
                     <div className="space-y-1.5 md:col-span-2">
                         <label className="text-[13px] font-bold text-[#111]">Business Address</label>
                         <div className="relative">
-                            <MapPin size={14} className="absolute left-3 top-3 text-slate-400" />
+                            <MapPin size={14} className="absolute left-3 top-3 text-[#94A3B8]" />
                             <textarea rows={2} value={form.address || ''} onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                                 placeholder="Shop #123, Main Market, Lahore, Pakistan"
-                                className="w-full min-h-[60px] px-9 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
+                                className="w-full min-h-[60px] px-9 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white transition-all resize-none" />
                         </div>
                     </div>
                 </div>
@@ -101,7 +101,7 @@ export default function ContactTab({ settings, onSave, saving }: Props) {
 
             {/* Footer Aligned Action */}
             <div className="flex items-center justify-between bg-white border border-[#e2e8f0] rounded-lg p-6 shadow-sm">
-                <div className="flex items-center gap-3 text-slate-400">
+                <div className="flex items-center gap-3 text-[#94A3B8]">
                     <RotateCcw size={18} />
                     <p className="text-[13px] font-medium italic">Updates are applied globally across the customer storefront.</p>
                 </div>

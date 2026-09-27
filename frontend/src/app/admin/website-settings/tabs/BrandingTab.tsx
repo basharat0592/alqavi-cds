@@ -20,7 +20,7 @@ interface Props {
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     return (
@@ -180,7 +180,7 @@ export default function BrandingTab({ settings, onSave, saving, setSettings }: P
 
             {/* Footer Aligned Action */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white border border-[#e2e8f0] rounded-lg p-4 md:p-6 shadow-sm">
-                <div className="flex items-center gap-3 text-slate-400">
+                <div className="flex items-center gap-3 text-[#94A3B8]">
                     <History size={18} />
                     <p className="text-[13px] font-medium italic">All branding changes update the live site instantly.</p>
                 </div>

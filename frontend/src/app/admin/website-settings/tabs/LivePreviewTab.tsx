@@ -32,14 +32,14 @@ const HERO_SLIDES = [
         description: "Witness the magic of cosmetics through ultra-high-definition captures.",
         cta: "Explore Shop", href: "/customer/shop",
         video: "/images/abstract-cosmetics.mp4",
-        img: "/images/hero-collage.png", color: "from-[#8A8A86] to-rose-600"
+        img: "/images/hero-collage.png", color: "from-[#94A3B8] to-rose-600"
     },
     {
         title: "Pure Radiant Glow", subtitle: "Exclusive Skin Care",
         description: "Experience ultimate hydration and rejuvenation.",
         cta: "Shop Serums", href: "/customer/shop",
         video: "/images/skincare-commercial.mp4",
-        img: "/images/hero-3.png", color: "from-[#8A8A86] to-[#5B5B58]"
+        img: "/images/hero-3.png", color: "from-[#94A3B8] to-[#64748B]"
     }
 ];
 
@@ -60,7 +60,7 @@ const FAQS = [
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, href }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
     };
     const Comp = href ? 'a' : 'button';
@@ -203,16 +203,16 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         <>
                             <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
                             <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
-                                <p className="text-[#1A1A1A] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
+                                <p className="text-[#0F1A2B] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
                                 <h3 className="text-4xl md:text-6xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
-                                <p className="text-slate-300 mt-4 max-w-lg text-sm md:text-base leading-relaxed">{slides[0].description}</p>
+                                <p className="text-[#CBD5E1] mt-4 max-w-lg text-sm md:text-base leading-relaxed">{slides[0].description}</p>
                                 <div className="mt-8 flex gap-4">
                                     <AmazonBtn className="h-11 px-8 rounded-full font-bold">Explore Now</AmazonBtn>
                                 </div>
                             </div>
                         </>
                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-3">
+                        <div className="w-full h-full flex flex-col items-center justify-center text-[#64748B] gap-3">
                             <ImageIcon size={48} strokeWidth={1} />
                             <p className="text-sm font-bold uppercase tracking-widest">No Slides Configured</p>
                         </div>
@@ -226,7 +226,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                 <div className="p-8 space-y-6">
                     <div className="flex flex-col gap-1">
                         <h4 className="text-2xl font-bold text-[#111]">{content.title}</h4>
-                        {content.subtitle && <p className="text-slate-500 text-sm">{content.subtitle}</p>}
+                        {content.subtitle && <p className="text-[#64748B] text-sm">{content.subtitle}</p>}
                     </div>
                     {gridProds.length > 0 ? (
                         <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${content.per_row || 4}, minmax(0, 1fr))` }}>
@@ -243,7 +243,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                             ))}
                         </div>
                     ) : (
-                        <div className="py-12 bg-slate-50 rounded-lg text-center text-slate-400">
+                        <div className="py-12 bg-[#F8FAFC] rounded-lg text-center text-[#94A3B8]">
                             <Package size={24} className="mx-auto mb-2 opacity-30" />
                             <p className="text-[12px] font-bold uppercase tracking-widest">No Products Selected</p>
                         </div>
@@ -292,7 +292,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         <p className="text-[#64748B] leading-relaxed text-[15px] whitespace-pre-wrap">{content.body}</p>
                         <AmazonBtn variant="secondary" className="w-fit h-10 px-8 rounded-full font-bold">Learn More Our Story</AmazonBtn>
                     </div>
-                    <div className="relative aspect-square rounded-3xl overflow-hidden shadow-2xl border border-[#eee]">
+                    <div className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl border border-[#eee]">
                         <img src={getImageUrl(content.image)} className="w-full h-full object-cover" />
                     </div>
                 </div>
@@ -304,7 +304,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                 <div className="p-8 md:p-16 bg-[#f8fafc] space-y-10">
                     <div className="text-center space-y-2">
                         <h4 className="text-3xl font-black text-[#111] tracking-tight">{content.title}</h4>
-                        <p className="text-slate-400 text-sm uppercase font-bold tracking-[0.2em]">Support Center</p>
+                        <p className="text-[#94A3B8] text-sm uppercase font-bold tracking-[0.2em]">Support Center</p>
                     </div>
                     <div className="max-w-3xl mx-auto space-y-3">
                         {items.map((item: any, i: number) => (
@@ -330,9 +330,9 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                 <div className="p-16 bg-[#111] text-center relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[#c4550020] via-transparent to-transparent" />
                     <div className="relative z-10 space-y-6 max-w-2xl mx-auto">
-                        <Mail size={40} className="mx-auto text-[#1A1A1A] mb-4" />
+                        <Mail size={40} className="mx-auto text-[#0F1A2B] mb-4" />
                         <h3 className="text-3xl font-black text-white">{content.title}</h3>
-                        <p className="text-slate-400">{content.subtitle}</p>
+                        <p className="text-[#94A3B8]">{content.subtitle}</p>
                         <div className="flex gap-2 max-w-md mx-auto pt-4">
                             <input readOnly placeholder={content.placeholder} className="flex-1 h-12 px-6 rounded-lg bg-white/10 border border-white/20 text-white outline-none" />
                             <AmazonBtn className="h-12 px-8 font-bold">Subscribe</AmazonBtn>
@@ -349,7 +349,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         <p className="text-[#64748B] leading-relaxed text-[15px]">{content.body}</p>
                         <AmazonBtn variant="secondary" className="w-fit h-10 px-8 font-bold uppercase tracking-widest text-[11px]">View Details</AmazonBtn>
                     </div>
-                    <div className={cn("aspect-square bg-slate-50", content.reversed ? "order-1" : "order-2")}>
+                    <div className={cn("aspect-square bg-[#F8FAFC]", content.reversed ? "order-1" : "order-2")}>
                         <img src={getImageUrl(content.image)} className="w-full h-full object-cover" />
                     </div>
                 </div>
@@ -362,7 +362,7 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
                         {[...Array(4)].map((_, i) => (
                             <span key={i} className="text-white font-black text-sm uppercase tracking-[0.3em] flex items-center shrink-0">
                                 {content.text}
-                                <Star size={14} className="mx-8 text-[#1A1A1A] fill-[#F59E0B]" />
+                                <Star size={14} className="mx-8 text-[#0F1A2B] fill-[#1877C2]" />
                             </span>
                         ))}
                     </div>
@@ -371,9 +371,9 @@ function renderSection(section: WebsiteSection, products: any[], categories: any
 
         default:
             return (
-                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#e2e8f0] m-4 rounded-xl">
-                    <Layers size={24} className="mx-auto mb-2 text-slate-300" />
-                    <p className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Preview Placeholder for {section_type}</p>
+                <div className="p-12 text-center bg-[#F8FAFC] border border-dashed border-[#e2e8f0] m-4 rounded-xl">
+                    <Layers size={24} className="mx-auto mb-2 text-[#CBD5E1]" />
+                    <p className="text-[11px] font-black uppercase text-[#94A3B8] tracking-[0.2em]">Preview Placeholder for {section_type}</p>
                 </div>
             );
     }

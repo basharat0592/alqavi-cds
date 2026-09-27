@@ -184,17 +184,17 @@ export function PaymentPanel({
         <div className={`space-y-4 ${className}`}>
             {/* Summary */}
             <div className="grid grid-cols-3 gap-2.5">
-                <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total</p>
-                    <p className="text-[15px] font-bold text-slate-900 tabular-nums">{fmt(total, currency)}</p>
+                <div className="rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] px-3 py-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">Total</p>
+                    <p className="text-[15px] font-bold text-[#0F1A2B] tabular-nums">{fmt(total, currency)}</p>
                 </div>
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 px-3 py-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Paid</p>
                     <p className="text-[15px] font-bold text-emerald-700 tabular-nums">{fmt(paid, currency)}</p>
                 </div>
-                <div className={`rounded-xl border px-3 py-2.5 ${remaining > 0 ? 'border-rose-100 bg-rose-50/60' : 'border-slate-200 bg-slate-50/60'}`}>
-                    <p className={`text-[10px] font-bold uppercase tracking-wider ${remaining > 0 ? 'text-rose-500' : 'text-slate-400'}`}>Remaining</p>
-                    <p className={`text-[15px] font-bold tabular-nums ${remaining > 0 ? 'text-rose-600' : 'text-slate-500'}`}>{fmt(remaining, currency)}</p>
+                <div className={`rounded-xl border px-3 py-2.5 ${remaining > 0 ? 'border-rose-100 bg-rose-50/60' : 'border-[#E7ECF2] bg-[#F8FAFC]'}`}>
+                    <p className={`text-[10px] font-bold uppercase tracking-wider ${remaining > 0 ? 'text-rose-500' : 'text-[#94A3B8]'}`}>Remaining</p>
+                    <p className={`text-[15px] font-bold tabular-nums ${remaining > 0 ? 'text-rose-600' : 'text-[#64748B]'}`}>{fmt(remaining, currency)}</p>
                 </div>
             </div>
 
@@ -202,39 +202,39 @@ export function PaymentPanel({
             <div className="space-y-1">
                 <div className="flex items-center justify-between text-[11px] font-semibold">
                     <span className={statusColor}>{statusLabel}</span>
-                    <span className="text-slate-400 tabular-nums">{pct}%{pendingAmt > 0 ? ` · ${fmt(pendingAmt, currency)} awaiting verification` : ''}</span>
+                    <span className="text-[#94A3B8] tabular-nums">{pct}%{pendingAmt > 0 ? ` · ${fmt(pendingAmt, currency)} awaiting verification` : ''}</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${remaining <= 0 ? 'bg-emerald-500' : 'bg-[#F59E0B]'}`} style={{ width: `${pct}%` }} />
+                <div className="h-2 w-full rounded-full bg-[#F4F6F9] overflow-hidden">
+                    <div className={`h-full rounded-full transition-all ${remaining <= 0 ? 'bg-emerald-500' : 'bg-[#1877C2]'}`} style={{ width: `${pct}%` }} />
                 </div>
             </div>
 
             {/* Due date */}
-            <div className="flex items-center gap-2.5 rounded-xl border border-slate-200 px-3 py-2.5">
-                <CalendarClock className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="text-[12px] font-semibold text-slate-600">Payment due date</span>
+            <div className="flex items-center gap-2.5 rounded-xl border border-[#E7ECF2] px-3 py-2.5">
+                <CalendarClock className="w-4 h-4 text-[#94A3B8] shrink-0" />
+                <span className="text-[12px] font-semibold text-[#64748B]">Payment due date</span>
                 <input
                     type="date"
                     value={localDue || ''}
                     disabled={readOnly || !onDueDateChange}
                     onChange={e => persistDue(e.target.value)}
-                    className="ml-auto h-8 rounded-lg border border-slate-200 px-2.5 text-[12.5px] text-slate-800 outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 disabled:bg-slate-50 disabled:text-slate-400"
+                    className="ml-auto h-8 rounded-lg border border-[#E7ECF2] px-2.5 text-[12.5px] text-[#0F1A2B] outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 disabled:bg-[#F8FAFC] disabled:text-[#94A3B8]"
                 />
             </div>
 
             {/* History */}
-            <div className="rounded-xl border border-slate-200 overflow-hidden">
-                <div className="flex items-center gap-2 px-3 py-2 bg-slate-50/70 border-b border-slate-100">
-                    <Wallet className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Payment History</span>
-                    <span className="ml-auto text-[10px] font-bold text-slate-400">{items.length} record{items.length !== 1 ? 's' : ''}</span>
+            <div className="rounded-xl border border-[#E7ECF2] overflow-hidden">
+                <div className="flex items-center gap-2 px-3 py-2 bg-[#F8FAFC] border-b border-[#F1F5F9]">
+                    <Wallet className="w-3.5 h-3.5 text-[#94A3B8]" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">Payment History</span>
+                    <span className="ml-auto text-[10px] font-bold text-[#94A3B8]">{items.length} record{items.length !== 1 ? 's' : ''}</span>
                 </div>
                 {loading ? (
-                    <div className="px-3 py-6 text-center text-[12px] text-slate-400 flex items-center justify-center gap-2">
+                    <div className="px-3 py-6 text-center text-[12px] text-[#94A3B8] flex items-center justify-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" /> Loading…
                     </div>
                 ) : items.length === 0 ? (
-                    <div className="px-3 py-6 text-center text-[12px] text-slate-400">No payments recorded yet.</div>
+                    <div className="px-3 py-6 text-center text-[12px] text-[#94A3B8]">No payments recorded yet.</div>
                 ) : (
                     <div className="divide-y divide-slate-50 max-h-56 overflow-y-auto">
                         {items.map((it, idx) => (
@@ -243,18 +243,18 @@ export function PaymentPanel({
                                     {it.status === 'confirmed' ? <CheckCircle2 className="w-3.5 h-3.5" /> : it.status === 'pending' ? <Clock className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[12.5px] font-semibold text-slate-800 tabular-nums">
+                                    <p className="text-[12.5px] font-semibold text-[#0F1A2B] tabular-nums">
                                         {fmt(Number(it.amount), currency)}
-                                        <span className="ml-2 text-[10.5px] font-medium text-slate-400 uppercase">{(METHODS.find(m => m.value === it.method)?.label) || it.method}</span>
+                                        <span className="ml-2 text-[10.5px] font-medium text-[#94A3B8] uppercase">{(METHODS.find(m => m.value === it.method)?.label) || it.method}</span>
                                     </p>
-                                    <p className="text-[10.5px] text-slate-400 truncate">
+                                    <p className="text-[10.5px] text-[#94A3B8] truncate">
                                         Payment {idx + 1} · {fmtDateTime(it.paid_at)}{it.reference ? ` · ${it.reference}` : ''}
                                         {it.created_by_name ? ` · by ${it.created_by_name}` : ''}
                                         {it.status === 'pending' ? ' · awaiting verification' : ''}
                                     </p>
                                 </div>
                                 {it.slip_url && (
-                                    <a href={it.slip_url} target="_blank" rel="noreferrer" className="p-1 text-slate-400 hover:text-[#0E7F98]" title="View slip">
+                                    <a href={it.slip_url} target="_blank" rel="noreferrer" className="p-1 text-[#94A3B8] hover:text-[#1567AB]" title="View slip">
                                         <Paperclip className="w-3.5 h-3.5" />
                                     </a>
                                 )}
@@ -262,7 +262,7 @@ export function PaymentPanel({
                                     <button onClick={() => toggleConfirm(it)} disabled={saving} className="text-[10.5px] font-bold text-emerald-600 hover:underline" title="Confirm">Verify</button>
                                 )}
                                 {!readOnly && (
-                                    <button onClick={() => removePayment(it.id)} disabled={saving} className="p-1 text-slate-300 hover:text-rose-600" title="Delete">
+                                    <button onClick={() => removePayment(it.id)} disabled={saving} className="p-1 text-[#CBD5E1] hover:text-rose-600" title="Delete">
                                         <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                 )}
@@ -274,62 +274,62 @@ export function PaymentPanel({
 
             {/* Add payment */}
             {!readOnly && remaining > 0 && (
-                <div className="rounded-xl border border-[#F59E0B]/15 bg-[#F59E0B]/30 p-3 space-y-2.5">
+                <div className="rounded-xl border border-[#1877C2]/15 bg-[#1877C2]/30 p-3 space-y-2.5">
                     <div className="flex items-center gap-2">
-                        <Plus className="w-3.5 h-3.5 text-[#1A1A1A]" />
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#1A1A1A]">Record a Payment</span>
+                        <Plus className="w-3.5 h-3.5 text-[#0F1A2B]" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#0F1A2B]">Record a Payment</span>
                         <button
                             type="button"
                             onClick={() => setAmount(String(remaining))}
-                            className="ml-auto text-[10.5px] font-bold text-[#119AB8] hover:underline"
+                            className="ml-auto text-[10.5px] font-bold text-[#1877C2] hover:underline"
                         >
                             Pay full ({fmt(remaining, currency)})
                         </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Amount</label>
+                            <label className="block text-[10px] font-bold text-[#64748B] mb-1">Amount</label>
                             <input
                                 type="number" min={0} max={remaining} value={amount}
                                 onChange={e => setAmount(e.target.value)} placeholder="0.00"
-                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 tabular-nums"
+                                className="w-full h-9 px-2.5 rounded-lg border border-[#E7ECF2] text-[13px] outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 tabular-nums"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Method</label>
+                            <label className="block text-[10px] font-bold text-[#64748B] mb-1">Method</label>
                             <select value={method} onChange={e => setMethod(e.target.value)}
-                                className="w-full h-9 px-2 rounded-lg border border-slate-200 text-[13px] bg-white outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10">
+                                className="w-full h-9 px-2 rounded-lg border border-[#E7ECF2] text-[13px] bg-white outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10">
                                 {METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Date &amp; Time</label>
+                            <label className="block text-[10px] font-bold text-[#64748B] mb-1">Date &amp; Time</label>
                             <input type="datetime-local" value={paidAt} onChange={e => setPaidAt(e.target.value)}
-                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10" />
+                                className="w-full h-9 px-2.5 rounded-lg border border-[#E7ECF2] text-[12.5px] outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10" />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-bold text-slate-500 mb-1">Reference / Cheque #</label>
+                            <label className="block text-[10px] font-bold text-[#64748B] mb-1">Reference / Cheque #</label>
                             <input value={reference} onChange={e => setReference(e.target.value)} placeholder="Optional"
-                                className="w-full h-9 px-2.5 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10" />
+                                className="w-full h-9 px-2.5 rounded-lg border border-[#E7ECF2] text-[13px] outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10" />
                         </div>
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
-                        <label className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-slate-600 cursor-pointer">
-                            <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                        <label className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[#64748B] cursor-pointer">
+                            <Paperclip className="w-3.5 h-3.5 text-[#94A3B8]" />
                             <span>{slip ? slip.name.slice(0, 18) : 'Attach slip'}</span>
                             <input type="file" accept="image/*,application/pdf" className="hidden"
                                 onChange={e => setSlip(e.target.files?.[0] || null)} />
                         </label>
                         {allowVerify && (
-                            <label className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-slate-600 cursor-pointer">
+                            <label className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-[#64748B] cursor-pointer">
                                 <input type="checkbox" checked={needsVerify} onChange={e => setNeedsVerify(e.target.checked)}
-                                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]" />
+                                    className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2]" />
                                 Needs verification
                             </label>
                         )}
                         <button
                             onClick={addPayment} disabled={saving || !amount}
-                            className="ml-auto inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#F59E0B] hover:bg-[#D97706] text-white text-[12.5px] font-bold disabled:opacity-50 transition-colors"
+                            className="ml-auto inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#1877C2] hover:bg-[#1567AB] text-white text-[12.5px] font-bold disabled:opacity-50 transition-colors"
                         >
                             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                             Add Payment

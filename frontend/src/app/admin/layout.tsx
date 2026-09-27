@@ -10,12 +10,12 @@ import {
     Menu, X, Bell, Search, Package, PackagePlus, ShoppingCart,
     User, ShoppingBag, Users, AlertTriangle, Sun, Moon, CreditCard, Shield,
     ChevronDown, ChevronRight, FileText, CornerDownLeft, Clock, ArrowLeft, Building2,
-    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, MapPin
+    Home, Globe, Settings, ScanLine, TrendingUp, Boxes, MapPin, Plus, Monitor
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { authService } from '@/lib/auth';
-import { userService, settingsService } from '@/lib/api';
+import { userService, settingsService, orderService } from '@/lib/api';
 import { ADMIN_PAGES, SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/adminPages';
 import { getImageUrl, cn } from '@/lib/utils';
 import { gradientFor, gradientCss } from '@/lib/tileTheme';
@@ -31,11 +31,11 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
     showBack: boolean; onBack: () => void;
 }) {
     return (
-        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-slate-800 dark:text-white px-4 py-3 flex items-center justify-between gap-4 border-b border-slate-100 dark:border-white/5 md:hidden z-[100] print:hidden sticky top-0 shadow-sm transition-colors duration-300">
+        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md text-[#0F1A2B] dark:text-white px-4 py-3 flex items-center justify-between gap-4 border-b border-[#F1F5F9] dark:border-white/5 md:hidden z-[100] print:hidden sticky top-0 shadow-sm transition-colors duration-300">
             {showMenu ? (
                 <button
                     onClick={onMenuToggle}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                    className="p-2 hover:bg-[#F4F6F9] dark:hover:bg-white/5 rounded-xl transition text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F1A2B] dark:hover:text-white"
                 >
                     <Menu className="h-5 w-5" />
                 </button>
@@ -43,8 +43,8 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
                 <span className="w-9 h-9 shrink-0" aria-hidden />
             )}
             <Link href="/admin/dashboard" className="flex flex-col leading-none items-center group">
-                <span className="font-extrabold text-sm tracking-widest text-slate-800 dark:text-white group-hover:opacity-85 transition-opacity">
-                    AL-QAVI <span className="bg-gradient-to-r from-[#F59E0B] to-[#F59E0B] bg-clip-text text-transparent">TRADES</span>
+                <span className="font-extrabold text-sm tracking-widest text-[#0F1A2B] dark:text-white group-hover:opacity-85 transition-opacity">
+                    AL-QAVI <span className="bg-gradient-to-r from-[#1877C2] to-[#1877C2] bg-clip-text text-transparent">TRADES</span>
                 </span>
             </Link>
             <div className="flex items-center gap-2">
@@ -52,14 +52,14 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
                     <button
                         onClick={onBack}
                         aria-label="Go back"
-                        className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                        className="p-2 hover:bg-[#F4F6F9] dark:hover:bg-white/5 rounded-xl transition text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F1A2B] dark:hover:text-white"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </button>
                 )}
                 <button
                     onClick={onToggleNotifications}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl transition relative text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                    className="p-2 hover:bg-[#F4F6F9] dark:hover:bg-white/5 rounded-xl transition relative text-[#64748B] dark:text-[#94A3B8] hover:text-[#0F1A2B] dark:hover:text-white"
                 >
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
@@ -68,7 +68,7 @@ function MobileTopBar({ onMenuToggle, showMenu = true, adminName, adminAvatar, u
                 </button>
                 <button 
                     onClick={onToggleProfile}
-                    className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-white font-extrabold text-xs hover:scale-105 active:scale-95 transition-all overflow-hidden border border-slate-200 dark:border-white/10"
+                    className="w-8 h-8 rounded-xl bg-[#F4F6F9] dark:bg-white/5 flex items-center justify-center text-[#334155] dark:text-white font-extrabold text-xs hover:scale-105 active:scale-95 transition-all overflow-hidden border border-[#E7ECF2] dark:border-white/10"
                 >
                     {adminAvatar ? (
                         <img src={getImageUrl(adminAvatar) || ''} alt="Profile" className="w-full h-full object-cover" />
@@ -118,16 +118,16 @@ function SessionTimer({ className = '', onTimeout }: { className?: string; onTim
     return (
         <div
             title="Current session duration"
-            className={cn("inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[12.5px] font-semibold text-slate-600 dark:text-slate-300 select-none", className)}
+            className={cn("inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-[#F8FAFC] dark:bg-white/5 border border-[#E7ECF2] dark:border-white/10 text-[12.5px] font-semibold text-[#64748B] dark:text-[#CBD5E1] select-none", className)}
         >
             <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
             </span>
-            <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-            <span className="text-slate-500 dark:text-slate-400">Session Time</span>
+            <Clock className="h-3.5 w-3.5 text-[#94A3B8] dark:text-[#64748B]" />
+            <span className="text-[#64748B] dark:text-[#94A3B8]">Session Time</span>
             <span className="h-3.5 w-px bg-slate-200 dark:bg-white/10" />
-            <span className="tabular-nums tracking-wide font-bold text-slate-700 dark:text-slate-200">{sessionTime}</span>
+            <span className="tabular-nums tracking-wide font-bold text-[#334155] dark:text-[#E2E8F0]">{sessionTime}</span>
         </div>
     );
 }
@@ -147,18 +147,18 @@ function BottomTab({ href, label, icon: Icon, active }: { href: string; label: s
             >
                 <Icon size={19} strokeWidth={active ? 2.6 : 2.1} style={{ color: active ? '#0f172a' : g.ink }} />
             </span>
-            <span className={cn("text-[9.5px] font-bold tracking-tight", active ? "text-slate-900" : "text-slate-400")}>{label}</span>
+            <span className={cn("text-[9.5px] font-bold tracking-tight", active ? "text-[#0F1A2B]" : "text-[#94A3B8]")}>{label}</span>
         </Link>
     );
 }
 
-const HOME_GRADIENT = 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)';
+const HOME_GRADIENT = 'linear-gradient(135deg, #1877C2 0%, #7C3AED 100%)';
 
 function SuperAdminBottomNav({ pathname }: { pathname: string }) {
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
     return (
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[80] print:hidden">
-            <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <div className="relative bg-white border-t border-[#E7ECF2] shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="grid grid-cols-5">
                     <BottomTab href="/admin/branches" label="Organizations" icon={Building2} active={isActive('/admin/branches')} />
                     <BottomTab href="/admin/company/areas" label="Region" icon={MapPin} active={isActive('/admin/company/areas')} />
@@ -182,27 +182,41 @@ function SuperAdminBottomNav({ pathname }: { pathname: string }) {
 
 /* App-style bottom tab bar for BRANCH ADMINS (mobile only) â€” same design as the
    super-admin bar, but with the branch's day-to-day quick actions. */
-function BranchAdminBottomNav({ pathname }: { pathname: string }) {
+function BranchAdminBottomNav({ pathname, orders = 0 }: { pathname: string; orders?: number }) {
     const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+    const tabs = [
+        { href: '/admin/dashboard', label: 'Dashboard', icon: Home },
+        { href: '/admin/orders', label: 'Orders', icon: ShoppingBag, badge: orders },
+        { href: '/admin/sales', label: 'Sales', icon: TrendingUp },
+        { href: '/admin/inventory/list', label: 'Inventory', icon: Boxes },
+        { href: '/admin/settings', label: 'Settings', icon: Settings },
+    ];
     return (
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 z-[80] print:hidden">
-            <div className="relative bg-white border-t border-slate-200 shadow-[0_-2px_14px_rgba(0,0,0,0.07)]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-[80] print:hidden">
+            <div className="bg-white border-t border-[#E7ECF2]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="grid grid-cols-5">
-                    <BottomTab href="/admin/sale" label="POS" icon={ScanLine} active={isActive('/admin/sale')} />
-                    <BottomTab href="/admin/sales" label="Sales" icon={TrendingUp} active={isActive('/admin/sales')} />
-                    <div aria-hidden />{/* center slot for the raised Home button */}
-                    <BottomTab href="/admin/inventory/list" label="Stock" icon={Boxes} active={isActive('/admin/inventory/list')} />
-                    <BottomTab href="/admin/purchases/add" label="Purchase" icon={ShoppingCart} active={isActive('/admin/purchases/add')} />
+                    {tabs.map(t => {
+                        const active = isActive(t.href);
+                        const Icon = t.icon;
+                        return (
+                            <Link key={t.href} href={t.href}
+                                className="relative flex flex-col items-center justify-center gap-1 py-2.5 transition-colors">
+                                <span className="relative">
+                                    <Icon size={21} strokeWidth={active ? 2.3 : 1.9}
+                                        className={active ? 'text-[#1877C2]' : 'text-[#94A3B8]'} />
+                                    {!!t.badge && t.badge > 0 && (
+                                        <span className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 rounded-full bg-[#1877C2] text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+                                            {t.badge}
+                                        </span>
+                                    )}
+                                </span>
+                                <span className={`text-[11px] font-semibold tracking-[-0.01em] ${active ? 'text-[#1877C2]' : 'text-[#94A3B8]'}`}>
+                                    {t.label}
+                                </span>
+                            </Link>
+                        );
+                    })}
                 </div>
-                {/* Raised center Home â€” gradient fill to match the pill buttons */}
-                <Link
-                    href="/admin/dashboard"
-                    aria-label="Dashboard"
-                    className="absolute left-1/2 -translate-x-1/2 -top-5 w-14 h-14 rounded-full flex items-center justify-center shadow-lg border-4 border-white text-white transition-transform active:scale-95"
-                    style={{ backgroundImage: HOME_GRADIENT }}
-                >
-                    <Home size={22} />
-                </Link>
             </div>
         </nav>
     );
@@ -248,6 +262,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const [adminRole, setAdminRole] = useState('');
     const [adminId, setAdminId] = useState<string | number>('');
     const [isSuperAdminUser, setIsSuperAdminUser] = useState<boolean | null>(null);
+    // The organization this console belongs to, shown in the mobile header.
+    const [orgLabel, setOrgLabel] = useState('Al-Qavi Traders');
+    const [branchLabel, setBranchLabel] = useState('');
+    // Live count of orders still needing action — badges the Orders tab.
+    const [activeOrders, setActiveOrders] = useState(0);
 
     // Settings & Display
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -290,6 +309,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             setAdminAvatar(user.avatar || null);
             setAdminRole(user.role || 'Admin');
             setAdminId(user.id || '');
+            const wh = (user as any).warehouses;
+            const names = Array.isArray(wh) ? wh.map((w: any) => w?.name).filter(Boolean) : [];
+            setBranchLabel(names.join(', '));
+            if (names.length) setOrgLabel('Al-Qavi Traders');
         }
 
         const loadSettings = async () => {
@@ -361,8 +384,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     href: isOrder ? '/admin/sales' : isUser ? '/admin/users' : '/admin/notifications',
                     read: log.is_read || false,
                     icon: isOrder ? ShoppingBag : isUser ? Users : isSecurity ? Shield : Bell,
-                    color: isOrder ? 'text-[#5B5B58]' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-slate-600',
-                    bg: isOrder ? 'bg-[#FAFAF8]' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-slate-50'
+                    color: isOrder ? 'text-[#64748B]' : isUser ? 'text-green-600' : isSecurity ? 'text-orange-600' : 'text-[#64748B]',
+                    bg: isOrder ? 'bg-[#F8FAFC]' : isUser ? 'bg-green-50' : isSecurity ? 'bg-orange-50' : 'bg-[#F8FAFC]'
                 };
             }));
         } catch { } finally { setActLoading(false); }
@@ -401,6 +424,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
     };
 
+    // Mirrors the sidebar's badge so the mobile tab bar agrees with the rail.
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const st: any = await orderService.getStats?.();
+                if (cancelled || !st) return;
+                const n = Number(st.total_active ?? st.pending_orders ?? 0);
+                setActiveOrders(isNaN(n) ? 0 : n);
+            } catch { /* a failed poll just leaves the badge as it was */ }
+        };
+        load();
+        const id = setInterval(load, 25000);
+        return () => { cancelled = true; clearInterval(id); };
+    }, []);
+
     const handleLogout = () => { authService.logout(); router.push('/login'); };
     const handleSessionTimeout = () => {
         toast.error('Session timed out after 24 hours. Please sign in again.', { duration: 5000 });
@@ -413,13 +452,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     };
 
     const unreadCount = activities.filter(a => !a.read).length;
+    const initialsOf = (v: string) =>
+        (v || '').split(/[\s,]+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    const orgInitials = initialsOf(orgLabel) || 'AQ';
+    const adminInitials = initialsOf(adminName) || 'A';
 
     return (
         <AuthGuard allowedRoles={['admin', 'staff']}>
-            <div className={cn("h-screen print:h-auto bg-[#F7F7F5] font-sans overflow-hidden print:overflow-visible print:bg-white text-[#1A1A1A]", theme)}>
+            <div className={cn("h-screen print:h-auto bg-[#F4F6F9] font-sans overflow-hidden print:overflow-visible print:bg-white text-[#0F1A2B]", theme)}>
               {/* Full-bleed: the console fills the viewport rather than floating
                   on a canvas, so there is no gutter, radius or drop shadow. */}
-              <div className="h-full w-full flex flex-row overflow-hidden bg-[#F7F7F5] print:overflow-visible">
+              <div className="h-full w-full flex flex-row overflow-hidden bg-[#F4F6F9] print:overflow-visible">
 
                 {/* ═══ SIDEBAR — desktop only; mobile navigates via the bottom tab bar ═══ */}
                 <div className="hidden md:block h-full shrink-0 print:hidden">
@@ -428,8 +471,49 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                 {/* â•â•â• RIGHT CONTAINER (Navbar + Main Content) â•â•â• */}
                 <div className="flex-1 flex flex-col min-w-0 min-h-0 print:m-0 print:p-0 print:overflow-visible">
-                    {/* Mobile top bar is hidden for everyone â€” nav is via the dashboard
-                        pills/tiles + the fixed bottom tab bar on all mobile pages. */}
+                    {/* Mobile header: identity, branch, alerts and account. */}
+                    <div className="md:hidden flex-shrink-0 bg-white border-b border-[#E7ECF2] px-4 pt-3 pb-3 print:hidden">
+                        <div className="flex items-center gap-2.5">
+                            <span className="w-10 h-10 rounded-xl bg-[#13AECB] flex items-center justify-center shrink-0">
+                                <span className="text-[13px] font-bold text-white tracking-tight">{orgInitials}</span>
+                            </span>
+                            <div className="min-w-0 flex-1 leading-none">
+                                <p className="flex items-center gap-2 text-[15px] font-bold text-[#0F1A2B] truncate">
+                                    <span className="truncate">{orgLabel}</span>
+                                    <span className="shrink-0 inline-flex items-center h-[19px] px-2 rounded-md bg-[#FEF3E2] text-[#1877C2] text-[10px] font-bold uppercase tracking-wider">
+                                        {adminRole}
+                                    </span>
+                                </p>
+                                <Link href="/admin/settings" className="mt-1.5 flex items-center gap-1 text-[12.5px] text-[#64748B] truncate">
+                                    {branchLabel || 'Console'} <ChevronDown size={13} className="shrink-0" />
+                                </Link>
+                            </div>
+                            <button onClick={() => setNotifOpen(!notifOpen)} aria-label="Notifications"
+                                className="relative w-9 h-9 shrink-0 flex items-center justify-center text-[#64748B]">
+                                <Bell size={20} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                            <button onClick={() => setProfileOpen(!profileOpen)} aria-label="Account"
+                                className="w-10 h-10 shrink-0 rounded-full bg-[#0B1526] flex items-center justify-center overflow-hidden">
+                                {adminAvatar
+                                    ? <img src={getImageUrl(adminAvatar) || ''} alt="" className="w-full h-full object-cover" />
+                                    : <span className="text-[12.5px] font-bold text-white">{adminInitials}</span>}
+                            </button>
+                        </div>
+
+                        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
+                            className="mt-3 flex items-center gap-2.5 h-11 px-3.5 bg-[#F4F6F9] rounded-xl">
+                            <Search className="h-[17px] w-[17px] text-[#94A3B8] shrink-0" />
+                            <input type="text" placeholder="Search pages, products, orders..."
+                                className="flex-1 h-full bg-transparent text-[14px] text-[#0F1A2B] outline-none placeholder:text-[#94A3B8]"
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)} />
+                        </form>
+                    </div>
 
                     {/* â•â•â• MOBILE NOTIFICATIONS PANEL â•â•â• */}
                     {notifOpen && (
@@ -452,20 +536,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                     {/* â•â•â• NAVBAR (takes remaining width) â•â•â• */}
                     {isDashboardRoute && (
-                    <div className="hidden md:flex h-[68px] w-full flex-shrink-0 bg-[#F7F7F5]/90 backdrop-blur-xl border-b border-[#EAEAE6] px-6 items-center justify-between gap-6 z-[50] sticky top-0 transition-colors duration-300 print:hidden">
+                    <div className="hidden md:flex h-[72px] w-full flex-shrink-0 bg-white border-b border-[#E7ECF2] px-5 items-center gap-3 z-[50] sticky top-0 print:hidden">
 
-                        {/* Left: the page name, set like every other page's title. */}
-                        <h1 className="text-[26px] leading-tight tracking-[-0.03em] font-semibold text-[#1A1A1A] shrink-0">Dashboard</h1>
-
-                        {/* Right: search, notifications, profile — nothing else. */}
-                        <div className="flex items-center gap-3">
-                            {/* Search Bar */}
-                            <div className="relative w-[280px] lg:w-[360px]" ref={searchRef}>
+                        {/* Search leads the bar, as in the reference. */}
+                        <div className="relative flex-1 max-w-[560px]" ref={searchRef}>
                                 <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}
-                                    className="group flex items-center gap-2.5 h-10 px-4 bg-slate-100/70 border border-slate-200/80 rounded-xl transition-all hover:bg-white hover:border-slate-300 focus-within:bg-white focus-within:border-[#F59E0B] focus-within:ring-4 focus-within:ring-[#F59E0B]/10 focus-within:shadow-sm">
-                                    <Search className="h-4 w-4 text-slate-400 group-focus-within:text-[#0E7F98] shrink-0 transition-colors" />
+                                    className="group flex items-center gap-2.5 h-11 px-4 bg-[#F4F6F9] border border-transparent rounded-xl transition-all focus-within:bg-white focus-within:border-[#1877C2]/40 focus-within:ring-4 focus-within:ring-[#1877C2]/10">
+                                    <Search className="h-[17px] w-[17px] text-[#94A3B8] shrink-0 transition-colors" />
                                     <input type="text" placeholder="Search pages, products, orders..."
-                                        className="flex-1 h-full bg-transparent text-[13.5px] text-slate-800 outline-none placeholder:text-slate-400 font-medium"
+                                        className="flex-1 h-full bg-transparent text-[13.5px] text-[#0F1A2B] outline-none placeholder:text-[#94A3B8] font-medium"
                                         value={searchQuery}
                                         onChange={e => { setSearchQuery(e.target.value); setShowSearchDropdown(true); }}
                                         onFocus={() => searchQuery.trim() && setShowSearchDropdown(true)} />
@@ -473,7 +552,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                         <button
                                             type="button"
                                             onClick={() => { setSearchQuery(''); setShowSearchDropdown(false); }}
-                                            className="shrink-0 text-slate-400 hover:text-slate-700 transition-colors"
+                                            className="shrink-0 text-[#94A3B8] hover:text-[#334155] transition-colors"
                                             aria-label="Clear search"
                                         >
                                             <X size={15} />
@@ -483,10 +562,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                                 {/* Page search dropdown */}
                                 {showSearchDropdown && searchQuery.trim() && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-slate-200 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.25)] z-[70] overflow-hidden">
-                                        <div className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 border-b border-slate-100 flex items-center justify-between">
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-[#E7ECF2] shadow-[0_16px_40px_-12px_rgba(0,0,0,0.25)] z-[70] overflow-hidden">
+                                        <div className="px-3.5 py-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[#94A3B8] border-b border-[#F1F5F9] flex items-center justify-between">
                                             <span>Pages</span>
-                                            <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full text-[9px]">{pageResults.length}</span>
+                                            <span className="bg-[#F4F6F9] text-[#64748B] px-1.5 py-0.5 rounded-full text-[9px]">{pageResults.length}</span>
                                         </div>
                                         {pageResults.length > 0 ? (
                                             <div className="max-h-[60vh] overflow-y-auto py-1.5">
@@ -495,70 +574,76 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                                         key={p.href}
                                                         type="button"
                                                         onClick={() => goToPage(p.href)}
-                                                        className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50 text-left transition-colors group"
+                                                        className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-[#F8FAFC] text-left transition-colors group"
                                                     >
                                                         <div className="flex items-center gap-2.5 min-w-0">
-                                                            <div className="w-7 h-7 rounded-md bg-slate-50 text-slate-400 group-hover:bg-[#F59E0B]/10 group-hover:text-[#0E7F98] flex items-center justify-center transition-colors shrink-0">
+                                                            <div className="w-7 h-7 rounded-md bg-[#F8FAFC] text-[#94A3B8] group-hover:bg-[#1877C2]/10 group-hover:text-[#1567AB] flex items-center justify-center transition-colors shrink-0">
                                                                 <FileText size={13} />
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="text-[13px] font-semibold text-slate-700 group-hover:text-slate-900 truncate">{p.name}</p>
-                                                                <p className="text-[10.5px] text-slate-400 truncate">{p.href}</p>
+                                                                <p className="text-[13px] font-semibold text-[#334155] group-hover:text-[#0F1A2B] truncate">{p.name}</p>
+                                                                <p className="text-[10.5px] text-[#94A3B8] truncate">{p.href}</p>
                                                             </div>
                                                         </div>
                                                         {i === 0 ? (
-                                                            <span className="hidden lg:flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-1.5 py-1 rounded shrink-0">
+                                                            <span className="hidden lg:flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#94A3B8] bg-[#F4F6F9] px-1.5 py-1 rounded shrink-0">
                                                                 <CornerDownLeft size={10} /> Enter
                                                             </span>
                                                         ) : (
-                                                            <ChevronRight size={14} className="text-slate-300 group-hover:text-[#0E7F98] transition-colors shrink-0" />
+                                                            <ChevronRight size={14} className="text-[#CBD5E1] group-hover:text-[#1567AB] transition-colors shrink-0" />
                                                         )}
                                                     </button>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="px-4 py-6 text-center text-[12.5px] text-slate-400">
+                                            <div className="px-4 py-6 text-center text-[12.5px] text-[#94A3B8]">
                                                 No pages found for â€œ{searchQuery}â€
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
-                            {/* Kept mounted but hidden: this component owns the 24-hour
-                                auto sign-out, which must keep running unseen. */}
-                            <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
-                            <div className="relative" ref={notifRef}>
+                        {/* Kept mounted but hidden: this component owns the 24-hour
+                            auto sign-out, which must keep running unseen. */}
+                        <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
+
+                        {/* Connection state — reflects whether the last activity poll
+                            succeeded, so it is a real signal rather than decoration. */}
+                        <span className="hidden lg:inline-flex items-center gap-2 h-11 px-3.5 rounded-xl border border-[#E7ECF2] text-[13px] font-medium text-[#64748B] shrink-0">
+                            <span className={`w-2 h-2 rounded-full ${actLoading ? 'bg-[#94A3B8]' : 'bg-[#1877C2]'}`} />
+                            {actLoading ? 'Syncing…' : 'Cloud Synced'}
+                        </span>
+
+                        <div className="relative shrink-0" ref={notifRef}>
                                 <button onClick={() => setNotifOpen(!notifOpen)}
-                                    className={`p-2.5 rounded-xl transition-all border ${notifOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20 text-slate-800 dark:text-white' : 'bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-white border-transparent'}`}>
-                                    <Bell className="h-5 w-5" />
+                                    className={`relative w-11 h-11 rounded-xl border flex items-center justify-center transition-all ${notifOpen ? 'bg-[#F4F6F9] border-[#E7ECF2] text-[#0F1A2B]' : 'bg-white border-[#E7ECF2] text-[#64748B] hover:text-[#0F1A2B] hover:bg-[#F8FAFC]'}`}>
+                                    <Bell className="h-[18px] w-[18px]" />
                                     {unreadCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 shadow-md">
+                                        <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 bg-[#DC2626] text-white text-[10.5px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                                             {unreadCount}
                                         </span>
                                     )}
                                 </button>
                                 {notifOpen && <NotificationPanel activities={activities} loading={actLoading} onClose={() => setNotifOpen(false)} onMarkAllRead={handleMarkAllRead} onMarkRead={handleMarkRead} onRefresh={fetchActivity} />}
                             </div>
-                            <div className="relative" ref={profileRef}>
+                        {/* Primary action, then the POS shortcut — the reference's
+                            two right-hand buttons. */}
+                        <Link href="/admin/sale" className="hidden sm:inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-[#1877C2] hover:bg-[#1567AB] text-white text-[14px] font-semibold shrink-0 transition-colors">
+                            <Plus size={17} strokeWidth={2.4} /> New Sale
+                        </Link>
+                        <Link href="/admin/sale" className="hidden xl:inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-white border border-[#E7ECF2] text-[14px] font-semibold text-[#0F1A2B] shrink-0 hover:bg-[#F8FAFC] transition-colors">
+                            <Monitor size={17} /> POS Terminal
+                        </Link>
+
+                        <div className="relative shrink-0" ref={profileRef}>
                                 <button onClick={() => setProfileOpen(!profileOpen)}
-                                    className={`flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all border ${profileOpen ? 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20' : 'border-transparent hover:bg-slate-100 dark:hover:bg-white/5'}`}>
-                                    <div className="relative">
-                                        <div className="w-8 h-8 bg-slate-100 dark:bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-slate-200 dark:border-white/10">
-                                            {adminAvatar ? <img src={getImageUrl(adminAvatar) || ''} alt="P" className="w-full h-full object-cover" /> : <span className="text-xs font-bold text-slate-700 dark:text-zinc-300">{adminName[0]}</span>}
-                                        </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
-                                    </div>
-                                    <div className="hidden xl:block text-left">
-                                        <p className="text-slate-800 dark:text-white font-bold text-[13px] leading-tight flex items-center gap-1.5">
-                                            {adminName} <ChevronDown size={12} className="text-slate-400 dark:text-zinc-500" />
-                                        </p>
-                                        <span className="inline-block text-[9px] font-extrabold text-[#B4780B] bg-[#F59E0B]/10 dark:text-[#FBBF24] dark:bg-[#F59E0B]/15 px-2 py-0.5 rounded-full border border-[#F59E0B]/20 dark:border-[#1A1A1A]/10 mt-1 uppercase tracking-wider">
-                                            {adminRole}
-                                        </span>
-                                    </div>
+                                    aria-label="Account"
+                                    className="w-11 h-11 rounded-full bg-[#1877C2] hover:bg-[#1567AB] flex items-center justify-center overflow-hidden transition-colors">
+                                    {adminAvatar
+                                        ? <img src={getImageUrl(adminAvatar) || ''} alt="" className="w-full h-full object-cover" />
+                                        : <User size={19} strokeWidth={2} className="text-white" />}
                                 </button>
                                 {profileOpen && <ProfileDropdown user={{ name: adminName, email: adminEmail, role: adminRole, id: String(adminId), avatar: adminAvatar || undefined }} onClose={() => setProfileOpen(false)} onLogout={handleLogout} onUpdated={handleProfileUpdated} />}
-                            </div>
                         </div>
                     </div>
                     )}
@@ -576,7 +661,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {/* App-style bottom tab bar â€” mobile only (per role) */}
                 {isSuperAdminUser
                     ? <SuperAdminBottomNav pathname={pathname} />
-                    : <BranchAdminBottomNav pathname={pathname} />}
+                    : <BranchAdminBottomNav pathname={pathname} orders={activeOrders} />}
               </div>
             </div>
         </AuthGuard>

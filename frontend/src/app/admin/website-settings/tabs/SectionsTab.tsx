@@ -73,8 +73,8 @@ const DEFAULT_CONTENT: Record<string, any> = {
 
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] hover:bg-[#D97706] text-white border border-transparent shadow-sm shadow-[#F59E0B]/20',
-        secondary: 'bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700',
+        primary: 'bg-[#1877C2] hover:bg-[#1567AB] text-white border border-transparent shadow-sm shadow-[#1877C2]/20',
+        secondary: 'bg-white border border-[#E7ECF2] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#334155]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -272,25 +272,25 @@ export default function SectionsTab({ sections, setSections, products = [], cate
             {editingAnnouncement && settings && (
               <div className="fixed inset-0 bg-[#000000a0] z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
                 <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 text-left">
-                    <div className="bg-slate-50/60 border-b border-slate-100 px-6 py-4 flex items-center justify-between shrink-0">
+                    <div className="bg-[#F8FAFC] border-b border-[#F1F5F9] px-6 py-4 flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
-                            <span className="text-[15px] font-bold text-slate-900">Announcement Bar</span>
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#F59E0B]/10 text-[#B4780B] px-2.5 py-0.5 rounded-full border border-[#F59E0B]/15">Header Notification</span>
+                            <span className="text-[15px] font-bold text-[#0F1A2B]">Announcement Bar</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-[#1877C2]/10 text-[#1877C2] px-2.5 py-0.5 rounded-full border border-[#1877C2]/15">Header Notification</span>
                         </div>
                         <div className="flex items-center gap-4">
                             <label className="flex items-center gap-2 cursor-pointer">
-                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Live</span>
+                                <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wider">Live</span>
                                 <input
                                     type="checkbox"
                                     className="hidden"
                                     checked={!!announcementForm.show_announcement}
                                     onChange={() => setAnnouncementForm(f => ({ ...f, show_announcement: !f.show_announcement }))}
                                 />
-                                <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
+                                <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.show_announcement ? 'bg-[#1877C2]' : 'bg-slate-300'}`}>
                                     <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.show_announcement ? 'left-[20px]' : 'left-0.5'}`} />
                                 </div>
                             </label>
-                            <button onClick={() => setEditingAnnouncement(false)} className="text-slate-400 hover:text-slate-900"><X size={20} /></button>
+                            <button onClick={() => setEditingAnnouncement(false)} className="text-[#94A3B8] hover:text-[#0F1A2B]"><X size={20} /></button>
                         </div>
                     </div>
 
@@ -328,7 +328,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         type="color"
                                         value={announcementForm.announcement_bg_color}
                                         onChange={e => setAnnouncementForm(f => ({ ...f, announcement_bg_color: e.target.value }))}
-                                        className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
+                                        className="w-9 h-9 rounded-lg border border-[#E7ECF2] cursor-pointer p-0.5"
                                     />
                                     <input
                                         type="text"
@@ -345,7 +345,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         type="color"
                                         value={announcementForm.announcement_text_color}
                                         onChange={e => setAnnouncementForm(f => ({ ...f, announcement_text_color: e.target.value }))}
-                                        className="w-9 h-9 rounded-lg border border-slate-200 cursor-pointer p-0.5"
+                                        className="w-9 h-9 rounded-lg border border-[#E7ECF2] cursor-pointer p-0.5"
                                     />
                                     <input
                                         type="text"
@@ -365,7 +365,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                             checked={!!announcementForm.announcement_scroll}
                                             onChange={() => setAnnouncementForm(f => ({ ...f, announcement_scroll: !f.announcement_scroll }))}
                                         />
-                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
+                                        <div className={`w-10 h-5 rounded-full transition-colors relative ${announcementForm.announcement_scroll ? 'bg-[#1877C2]' : 'bg-slate-300'}`}>
                                             <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all ${announcementForm.announcement_scroll ? 'left-[20px]' : 'left-0.5'}`} />
                                         </div>
                                     </label>
@@ -377,7 +377,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     value={announcementForm.announcement_scroll_speed}
                                     onChange={e => setAnnouncementForm(f => ({ ...f, announcement_scroll_speed: e.target.value }))}
                                     disabled={!announcementForm.announcement_scroll}
-                                    className="w-full h-9 px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-[#F59E0B] focus:ring-2 focus:ring-[#F59E0B]/20 disabled:bg-slate-50 disabled:text-slate-400"
+                                    className="w-full h-9 px-2 border border-[#E7ECF2] rounded-lg text-[13px] bg-white outline-none focus:border-[#1877C2] focus:ring-2 focus:ring-[#1877C2]/20 disabled:bg-[#F8FAFC] disabled:text-[#94A3B8]"
                                 >
                                     <option value="slow">Slow</option>
                                     <option value="medium">Medium</option>
@@ -399,7 +399,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
 
                     </div>
 
-                    <div className="bg-slate-50/60 border-t border-slate-100 px-6 py-4 flex justify-end gap-2 shrink-0">
+                    <div className="bg-[#F8FAFC] border-t border-[#F1F5F9] px-6 py-4 flex justify-end gap-2 shrink-0">
                         <AmazonBtn variant="secondary" onClick={() => setEditingAnnouncement(false)}>Cancel</AmazonBtn>
                         <AmazonBtn onClick={handleSaveAnnouncement} loading={savingAnnouncement}>
                             Save Announcement Bar
@@ -409,23 +409,23 @@ export default function SectionsTab({ sections, setSections, products = [], cate
               </div>
             )}
 
-            <div className="bg-white border border-slate-200/70 rounded-2xl px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="bg-white border border-[#E7ECF2] rounded-2xl px-4 md:px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
                 <div>
-                    <h3 className="text-[15px] font-bold text-slate-900">Landing Page Layout Builder</h3>
-                    <p className="text-[12px] text-slate-500">Manage the sequence and content of sections on your storefront.</p>
+                    <h3 className="text-[15px] font-bold text-[#0F1A2B]">Landing Page Layout Builder</h3>
+                    <p className="text-[12px] text-[#64748B]">Manage the sequence and content of sections on your storefront.</p>
                 </div>
                 <AmazonBtn onClick={() => setShowAddModal(true)} className="w-full sm:w-auto justify-center whitespace-nowrap">
                     <Plus size={16} /> Add Page Section
                 </AmazonBtn>
             </div>
 
-            <div className="bg-slate-50/60 border border-slate-200/70 rounded-2xl p-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden relative min-h-[400px]">
+            <div className="bg-[#F8FAFC] border border-[#E7ECF2] rounded-2xl p-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden relative min-h-[400px]">
                 {/* ── SYNCHRONIZING OVERLAY (FIXED VIEWPORT CENTER - DARK BG) ── */}
                 {isSyncing && (
                     <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
                         <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in-95 duration-300">
                             <div className="relative">
-                                <Loader2 className="w-20 h-20 text-[#119AB8] animate-spin opacity-40" strokeWidth={1} />
+                                <Loader2 className="w-20 h-20 text-[#1877C2] animate-spin opacity-40" strokeWidth={1} />
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <Globe className="w-8 h-8 text-[#c45500] animate-pulse" />
                                 </div>
@@ -437,7 +437,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                         </div>
                     </div>
                 )}
-                <div className="hidden md:grid grid-cols-12 px-6 py-3 border-b border-slate-200/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50/80">
+                <div className="hidden md:grid grid-cols-12 px-6 py-3 border-b border-[#E7ECF2] text-[11px] font-bold text-[#64748B] uppercase tracking-wider bg-[#F8FAFC]/80">
                     <div className="col-span-1">Order</div>
                     <div className="col-span-1">Type</div>
                     <div className="col-span-6">Section Name & Details</div>
@@ -448,18 +448,18 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                 <div className="bg-white divide-y divide-[#eee]">
                     {/* ── PINNED ANNOUNCEMENT BAR ROW (settings-backed, not a DB section) ── */}
                     {announcementAdded && (
-                        <div className="relative bg-[#F59E0B]/20">
+                        <div className="relative bg-[#1877C2]/20">
                             {/* DESKTOP */}
                             <div className="hidden md:grid grid-cols-12 items-center px-6 py-4 w-full">
                                 <div className="col-span-1">
-                                    <span className="text-[9px] font-black uppercase tracking-wider text-[#B4780B] bg-[#F59E0B]/10 border border-[#F59E0B]/15 px-1.5 py-0.5 rounded">Pinned</span>
+                                    <span className="text-[9px] font-black uppercase tracking-wider text-[#1877C2] bg-[#1877C2]/10 border border-[#1877C2]/15 px-1.5 py-0.5 rounded">Pinned</span>
                                 </div>
                                 <div className="col-span-1">
-                                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
+                                    <div className="w-8 h-8 rounded-lg bg-[#F8FAFC] border border-[#E7ECF2] flex items-center justify-center text-lg">📢</div>
                                 </div>
                                 <div className="col-span-6">
-                                    <p className="text-[14px] font-bold text-slate-900">Announcement Bar</p>
-                                    <p className="text-[12px] text-slate-500">Top header notification bar</p>
+                                    <p className="text-[14px] font-bold text-[#0F1A2B]">Announcement Bar</p>
+                                    <p className="text-[12px] text-[#64748B]">Top header notification bar</p>
                                 </div>
                                 <div className="col-span-2">
                                     <div className="flex items-center gap-3">
@@ -470,19 +470,19 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                     </div>
                                 </div>
                                 <div className="col-span-2 flex items-center justify-end gap-3">
-                                    <button onClick={() => setEditingAnnouncement(true)} className="text-[12px] font-bold text-[#119AB8] hover:underline">Edit</button>
+                                    <button onClick={() => setEditingAnnouncement(true)} className="text-[12px] font-bold text-[#1877C2] hover:underline">Edit</button>
                                     <span className="text-[#e2e8f0]">|</span>
-                                    <button onClick={removeAnnouncement} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                    <button onClick={removeAnnouncement} className="text-[12px] font-bold text-[#DC2626] hover:underline">Delete</button>
                                 </div>
                             </div>
                             {/* MOBILE */}
                             <div className="flex md:hidden flex-col p-4 gap-3 w-full">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[9px] font-black uppercase tracking-wider text-[#B4780B] bg-[#F59E0B]/10 border border-[#F59E0B]/15 px-1.5 py-0.5 rounded">Pinned</span>
-                                        <p className="text-[14px] font-bold text-slate-900">Announcement Bar</p>
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-[#1877C2] bg-[#1877C2]/10 border border-[#1877C2]/15 px-1.5 py-0.5 rounded">Pinned</span>
+                                        <p className="text-[14px] font-bold text-[#0F1A2B]">Announcement Bar</p>
                                     </div>
-                                    <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-lg">📢</div>
+                                    <div className="w-8 h-8 rounded-lg bg-[#F8FAFC] border border-[#E7ECF2] flex items-center justify-center text-lg">📢</div>
                                 </div>
                                 <div className="flex items-center justify-between border-t border-[#eee] pt-3">
                                     <div className="flex items-center gap-2">
@@ -492,8 +492,8 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         <span className={cn("text-[10px] font-black uppercase", announcementForm.show_announcement ? "text-green-700" : "text-gray-400")}>{announcementForm.show_announcement ? 'Live' : 'Hidden'}</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <button onClick={() => setEditingAnnouncement(true)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#1A1A1A] hover:bg-slate-50">Edit</button>
-                                        <button onClick={removeAnnouncement} className="h-[28px] px-3 border border-[#c40000]/20 rounded-lg text-[12px] font-bold text-[#c40000] hover:bg-red-50/50">Delete</button>
+                                        <button onClick={() => setEditingAnnouncement(true)} className="h-[28px] px-3 border border-[#E7ECF2] rounded-lg text-[12px] font-bold text-[#0F1A2B] hover:bg-[#F8FAFC]">Edit</button>
+                                        <button onClick={removeAnnouncement} className="h-[28px] px-3 border border-[#DC2626]/20 rounded-lg text-[12px] font-bold text-[#DC2626] hover:bg-red-50/50">Delete</button>
                                     </div>
                                 </div>
                             </div>
@@ -502,7 +502,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                     {sections.length === 0 && !announcementAdded ? (
                         <div className="p-16 text-center text-[#888]">
                             <p className="text-[14px]">No layout sections defined yet.</p>
-                            <button onClick={() => setShowAddModal(true)} className="text-[#119AB8] font-bold hover:underline mt-2">Get started by adding a hero section</button>
+                            <button onClick={() => setShowAddModal(true)} className="text-[#1877C2] font-bold hover:underline mt-2">Get started by adding a hero section</button>
                         </div>
                     ) : (
                         sections.map((s: WebsiteSection, idx: number) => {
@@ -540,16 +540,16 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                         }}
                                         className={cn(
                                             'hover:bg-[#fcfcfc] transition-all group relative border-l-4 border-transparent w-full',
-                                            !s.is_visible && 'opacity-60 bg-slate-50/50',
-                                            dragIndex === idx && 'bg-[#FAFAF8] border-[#8A8A86] shadow-inner scale-[0.98]',
-                                            dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-slate-50',
-                                            previewId === s.id && 'bg-[#F59E0B]/40 border-l-[#F59E0B]'
+                                            !s.is_visible && 'opacity-60 bg-[#F8FAFC]/50',
+                                            dragIndex === idx && 'bg-[#F8FAFC] border-[#94A3B8] shadow-inner scale-[0.98]',
+                                            dragOverIndex === idx && dragIndex !== idx && 'border-b-blue-400 bg-[#F8FAFC]',
+                                            previewId === s.id && 'bg-[#1877C2]/40 border-l-[#1877C2]'
                                         )}>
 
                                         {/* Drop Indicator */}
                                         {dragOverIndex === idx && dragIndex !== idx && (
                                             <div className={cn(
-                                                "absolute left-0 w-full h-1 bg-[#F59E0B] z-50 rounded-full animate-pulse",
+                                                "absolute left-0 w-full h-1 bg-[#1877C2] z-50 rounded-full animate-pulse",
                                                 dragIndex! < idx ? "bottom-0" : "top-0"
                                             )} />
                                         )}
@@ -564,14 +564,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                         disabled={idx === 0}
-                                                        className="text-[#999] hover:text-[#0E7F98] disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-[#1567AB] disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronUp size={16} strokeWidth={3} />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                         disabled={idx === sections.length - 1}
-                                                        className="text-[#999] hover:text-[#0E7F98] disabled:opacity-0 transition-all active:scale-125"
+                                                        className="text-[#999] hover:text-[#1567AB] disabled:opacity-0 transition-all active:scale-125"
                                                     >
                                                         <ChevronDown size={16} strokeWidth={3} />
                                                     </button>
@@ -620,15 +620,15 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
                                                     className={cn(
                                                         "p-1.5 rounded-full transition-all",
-                                                        previewId === s.id ? "bg-[#111] text-white" : "text-[#64748B] hover:bg-slate-100"
+                                                        previewId === s.id ? "bg-[#111] text-white" : "text-[#64748B] hover:bg-[#F4F6F9]"
                                                     )}
                                                     title="Toggle Preview"
                                                 >
                                                     {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                 </button>
-                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#119AB8] hover:underline">Edit</button>
+                                                <button onClick={() => setEditingId(s.id!)} className="text-[12px] font-bold text-[#1877C2] hover:underline">Edit</button>
                                                 <span className="text-[#e2e8f0]">|</span>
-                                                <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                                <button onClick={() => setDeletingId(s.id!)} className="text-[12px] font-bold text-[#DC2626] hover:underline">Delete</button>
                                             </div>
                                         </div>
 
@@ -643,19 +643,19 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'up'); }}
                                                             disabled={idx === 0}
-                                                            className="text-[#999] hover:text-[#0E7F98] disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-[#1567AB] disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronUp size={16} strokeWidth={3} />
                                                         </button>
                                                         <button
                                                             onClick={(e) => { e.stopPropagation(); moveSection(idx, 'down'); }}
                                                             disabled={idx === sections.length - 1}
-                                                            className="text-[#999] hover:text-[#0E7F98] disabled:opacity-0 transition-all active:scale-125"
+                                                            className="text-[#999] hover:text-[#1567AB] disabled:opacity-0 transition-all active:scale-125"
                                                         >
                                                             <ChevronDown size={16} strokeWidth={3} />
                                                         </button>
                                                     </div>
-                                                    <span className="text-[13px] font-black text-[#111] ml-1 bg-slate-100 w-6 h-6 rounded-full flex items-center justify-center border border-slate-200">
+                                                    <span className="text-[13px] font-black text-[#111] ml-1 bg-[#F4F6F9] w-6 h-6 rounded-full flex items-center justify-center border border-[#E7ECF2]">
                                                         {idx + 1}
                                                     </span>
                                                 </div>
@@ -699,14 +699,14 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                         onClick={() => setPreviewId(previewId === s.id ? null : s.id!)}
                                                         className={cn(
                                                             "p-1.5 rounded-full transition-all border",
-                                                            previewId === s.id ? "bg-[#111] text-white border-black" : "text-[#64748B] hover:bg-slate-100 border-[#e2e8f0]"
+                                                            previewId === s.id ? "bg-[#111] text-white border-black" : "text-[#64748B] hover:bg-[#F4F6F9] border-[#e2e8f0]"
                                                         )}
                                                         title="Toggle Preview"
                                                     >
                                                         {previewId === s.id ? <EyeOff size={14} /> : <Eye size={14} />}
                                                     </button>
-                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-slate-200 rounded-lg text-[12px] font-bold text-[#1A1A1A] hover:bg-slate-50 transition-all flex items-center justify-center">Edit</button>
-                                                    <button onClick={() => setDeletingId(s.id!)} className="h-[28px] px-3 border border-[#c40000]/20 rounded-lg text-[12px] font-bold text-[#c40000] hover:bg-red-50/50 transition-all flex items-center justify-center">Delete</button>
+                                                    <button onClick={() => setEditingId(s.id!)} className="h-[28px] px-3 border border-[#E7ECF2] rounded-lg text-[12px] font-bold text-[#0F1A2B] hover:bg-[#F8FAFC] transition-all flex items-center justify-center">Edit</button>
+                                                    <button onClick={() => setDeletingId(s.id!)} className="h-[28px] px-3 border border-[#DC2626]/20 rounded-lg text-[12px] font-bold text-[#DC2626] hover:bg-red-50/50 transition-all flex items-center justify-center">Delete</button>
                                                 </div>
                                             </div>
                                         </div>
@@ -720,7 +720,7 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                                                     <span className="text-[10px] font-black text-[#64748B] uppercase tracking-widest flex items-center gap-2">
                                                         <Monitor size={12} /> Live Render Simulation
                                                     </span>
-                                                    <button onClick={() => setPreviewId(null)} className="text-[#64748B] hover:text-[#c40000]"><X size={14} /></button>
+                                                    <button onClick={() => setPreviewId(null)} className="text-[#64748B] hover:text-[#DC2626]"><X size={14} /></button>
                                                 </div>
                                                 <div className="transform scale-[0.95] origin-top">
                                                     {renderPreview(s, products, categories, openFaq, setOpenFaq)}
@@ -748,23 +748,23 @@ export default function SectionsTab({ sections, setSections, products = [], cate
             {showAddModal && (
                 <div className="fixed inset-0 bg-[#000000a0] z-[60] flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="bg-slate-50/60 border-b border-slate-100 px-4 md:px-6 py-4 flex items-center justify-between">
-                            <h3 className="font-bold text-slate-900 text-[17px]">Select Section Type</h3>
-                            <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-900"><X size={20} /></button>
+                        <div className="bg-[#F8FAFC] border-b border-[#F1F5F9] px-4 md:px-6 py-4 flex items-center justify-between">
+                            <h3 className="font-bold text-[#0F1A2B] text-[17px]">Select Section Type</h3>
+                            <button onClick={() => setShowAddModal(false)} className="text-[#94A3B8] hover:text-[#0F1A2B]"><X size={20} /></button>
                         </div>
                         <div className="p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
                             {SECTION_TYPES.map(t => (
                                 <button key={t.type} onClick={() => addSection(t.type)}
-                                    className="flex items-center gap-4 p-4 border border-slate-200 rounded-xl hover:border-[#F59E0B]/35 hover:bg-[#F59E0B]/40 transition-all group text-left">
-                                    <span className="text-2xl w-10 h-10 bg-slate-50 flex items-center justify-center border border-slate-100 rounded-xl">{t.icon}</span>
+                                    className="flex items-center gap-4 p-4 border border-[#E7ECF2] rounded-xl hover:border-[#1877C2]/35 hover:bg-[#1877C2]/40 transition-all group text-left">
+                                    <span className="text-2xl w-10 h-10 bg-[#F8FAFC] flex items-center justify-center border border-[#F1F5F9] rounded-xl">{t.icon}</span>
                                     <div>
-                                        <p className="font-bold text-slate-900 text-[14px]">{t.label}</p>
-                                        <p className="text-[11px] text-slate-500">{t.desc}</p>
+                                        <p className="font-bold text-[#0F1A2B] text-[14px]">{t.label}</p>
+                                        <p className="text-[11px] text-[#64748B]">{t.desc}</p>
                                     </div>
                                 </button>
                             ))}
                         </div>
-                        <div className="bg-slate-50/60 border-t border-slate-100 px-6 py-4 flex justify-end">
+                        <div className="bg-[#F8FAFC] border-t border-[#F1F5F9] px-6 py-4 flex justify-end">
                             <AmazonBtn variant="secondary" onClick={() => setShowAddModal(false)}>Close</AmazonBtn>
                         </div>
                     </div>
@@ -800,20 +800,20 @@ export default function SectionsTab({ sections, setSections, products = [], cate
                             <p className="text-[13px] text-[#64748B] leading-relaxed">
                                 Are you sure you want to remove <span className="font-bold text-[#111]">"{sections.find(s => s.id === deletingId)?.name}"</span>?
                                 <br /><br />
-                                This will erase all configured content for this section. This action <span className="text-[#c40000] font-bold">cannot be undone</span>.
+                                This will erase all configured content for this section. This action <span className="text-[#DC2626] font-bold">cannot be undone</span>.
                             </p>
                         </div>
                         <div className="bg-[#f8fafc] px-6 py-4 flex justify-end gap-2 border-t border-[#eee]">
                             <button
                                 onClick={() => setDeletingId(null)}
-                                className="h-[31px] px-4 rounded-lg text-[13px] font-medium border border-[#cbd5e1] bg-white hover:bg-slate-50 text-[#111] transition-all"
+                                className="h-[31px] px-4 rounded-lg text-[13px] font-medium border border-[#cbd5e1] bg-white hover:bg-[#F8FAFC] text-[#111] transition-all"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={() => deleteSection(deletingId)}
                                 disabled={loading === deletingId}
-                                className="h-[31px] px-4 rounded-lg text-[13px] font-bold bg-[#c40000] text-white hover:bg-[#a00000] transition-all flex items-center gap-2 disabled:opacity-50"
+                                className="h-[31px] px-4 rounded-lg text-[13px] font-bold bg-[#DC2626] text-white hover:bg-[#a00000] transition-all flex items-center gap-2 disabled:opacity-50"
                             >
                                 {loading === deletingId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                                 Delete Section
@@ -844,13 +844,13 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                                 <img src={getImageUrl(slides[0].image)} className="w-full h-full object-cover opacity-60" />
                             )}
                             <div className="absolute inset-0 flex flex-col justify-center px-12 md:px-20">
-                                <p className="text-[#1A1A1A] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
+                                <p className="text-[#0F1A2B] text-[11px] font-black uppercase tracking-[0.3em] mb-3">{slides[0].subtitle}</p>
                                 <h3 className="text-4xl md:text-5xl font-bold text-white max-w-2xl leading-tight">{slides[0].title}</h3>
-                                <p className="text-slate-300 mt-4 max-w-lg text-sm leading-relaxed">{slides[0].description}</p>
+                                <p className="text-[#CBD5E1] mt-4 max-w-lg text-sm leading-relaxed">{slides[0].description}</p>
                             </div>
                         </>
                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-3">
+                        <div className="w-full h-full flex flex-col items-center justify-center text-[#64748B] gap-3">
                             <ImageIcon size={48} strokeWidth={1} />
                             <p className="text-sm font-bold uppercase tracking-widest">No Slides Configured</p>
                         </div>
@@ -864,7 +864,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                 <div className="p-8 space-y-6">
                     <div className="flex flex-col gap-1">
                         <h4 className="text-xl font-bold text-[#111]">{content.title}</h4>
-                        {content.subtitle && <p className="text-slate-500 text-xs">{content.subtitle}</p>}
+                        {content.subtitle && <p className="text-[#64748B] text-xs">{content.subtitle}</p>}
                     </div>
                     {gridProds.length > 0 ? (
                         <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${content.per_row || 4}, minmax(0, 1fr))` }}>
@@ -881,7 +881,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                             ))}
                         </div>
                     ) : (
-                        <div className="py-12 bg-slate-50 rounded-lg text-center text-slate-400">
+                        <div className="py-12 bg-[#F8FAFC] rounded-lg text-center text-[#94A3B8]">
                             <Package size={24} className="mx-auto mb-2 opacity-30" />
                             <p className="text-[12px] font-bold uppercase tracking-widest">No Products Selected</p>
                         </div>
@@ -949,13 +949,13 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                 <div className="flex bg-white border border-[#e2e8f0] rounded-xl overflow-hidden h-[300px]">
                     <div className="flex-1 p-8 flex flex-col justify-center space-y-4">
                         <div className="flex items-center gap-2">
-                            <div className="h-[1px] w-4 bg-[#119AB8]" />
-                            <span className="text-[8px] font-bold text-[#119AB8] uppercase tracking-[0.2em]">Elite Collection</span>
+                            <div className="h-[1px] w-4 bg-[#1877C2]" />
+                            <span className="text-[8px] font-bold text-[#1877C2] uppercase tracking-[0.2em]">Elite Collection</span>
                         </div>
                         <h3 className="text-2xl font-bold text-[#111] leading-tight">{content.title}</h3>
                         <p className="text-[#64748B] text-[10px] leading-relaxed max-w-xs">{content.subtitle}</p>
                         <div className="pt-2">
-                            <div className="inline-block px-6 py-2 bg-[#119AB8] text-white rounded-full text-[10px] font-bold uppercase tracking-widest">
+                            <div className="inline-block px-6 py-2 bg-[#1877C2] text-white rounded-full text-[10px] font-bold uppercase tracking-widest">
                                 {content.cta_text || "Shop Now"}
                             </div>
                         </div>
@@ -974,7 +974,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                     <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-60 grayscale hover:grayscale-0 transition-all">
                         {logos.length > 0 ? logos.map((logo: string, i: number) => (
                             <img key={i} src={getImageUrl(logo)} className="h-8 md:h-10 w-auto object-contain" />
-                        )) : <p className="text-[10px] font-bold text-slate-300">No logos added</p>}
+                        )) : <p className="text-[10px] font-bold text-[#CBD5E1]">No logos added</p>}
                     </div>
                 </div>
             );
@@ -987,7 +987,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                         {statItems.map((item: any, i: number) => (
                             <div key={i} className="text-center space-y-1">
                                 <p className="text-3xl font-black text-white tracking-tighter">{item.value}</p>
-                                <p className="text-[9px] font-bold text-[#119AB8] uppercase tracking-widest">{item.label}</p>
+                                <p className="text-[9px] font-bold text-[#1877C2] uppercase tracking-widest">{item.label}</p>
                             </div>
                         ))}
                     </div>
@@ -1001,8 +1001,8 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                 <div className="p-10 grid grid-cols-1 md:grid-cols-3 gap-8">
                     {featItems.map((item: any, i: number) => (
                         <div key={i} className="space-y-4">
-                            <div className="w-10 h-10 bg-slate-50 rounded-lg flex items-center justify-center">
-                                <Sparkles size={20} className="text-[#119AB8]" />
+                            <div className="w-10 h-10 bg-[#F8FAFC] rounded-lg flex items-center justify-center">
+                                <Sparkles size={20} className="text-[#1877C2]" />
                             </div>
                             <h5 className="font-bold text-[#111]">{item.title}</h5>
                             <p className="text-[11px] text-[#64748B] leading-relaxed">{item.text}</p>
@@ -1019,7 +1019,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                         {stepItems.map((item: any, i: number) => (
                             <div key={i} className="relative text-center space-y-4">
-                                <div className="w-12 h-12 bg-white border-2 border-[#119AB8] rounded-full flex items-center justify-center mx-auto text-[#119AB8] font-black text-lg shadow-lg">
+                                <div className="w-12 h-12 bg-white border-2 border-[#1877C2] rounded-full flex items-center justify-center mx-auto text-[#1877C2] font-black text-lg shadow-lg">
                                     {i + 1}
                                 </div>
                                 <h5 className="font-bold text-[#111] text-sm">{item.title}</h5>
@@ -1034,7 +1034,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
             const spotProd = products.find(p => p.id === content.product_id);
             return (
                 <div className="p-6 md:p-10">
-                    <div className="bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden grid md:grid-cols-2 items-center">
+                    <div className="bg-white rounded-xl border border-[#F1F5F9] shadow-xl overflow-hidden grid md:grid-cols-2 items-center">
                         <div className="aspect-square relative group overflow-hidden">
                             <img src={getImageUrl(content.image || spotProd?.images?.[0]?.image)} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
@@ -1043,7 +1043,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                             </div>
                         </div>
                         <div className="p-8 flex flex-col justify-center space-y-4">
-                            <span className="text-[8px] font-black text-[#119AB8] uppercase tracking-[0.4em]">Product Spotlight</span>
+                            <span className="text-[8px] font-black text-[#1877C2] uppercase tracking-[0.4em]">Product Spotlight</span>
                             <h4 className="text-2xl font-black text-[#111] tracking-tighter leading-none">{content.title || spotProd?.name}</h4>
                             <p className="text-[11px] text-[#64748B] leading-relaxed line-clamp-3">{content.description || spotProd?.description}</p>
                             <div className="flex items-center gap-4 pt-2">
@@ -1063,36 +1063,36 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                         <h4 className="text-3xl font-black text-[#111] tracking-tight">{content.title}</h4>
                         <div className="space-y-4">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-[#119AB8]/10 rounded-full flex items-center justify-center text-[#119AB8]">
+                                <div className="w-10 h-10 bg-[#1877C2]/10 rounded-full flex items-center justify-center text-[#1877C2]">
                                     <Mail size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Email Us</p>
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase">Email Us</p>
                                     <p className="text-sm font-bold text-[#111]">{content.email || "support@alqavi.com"}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-[#119AB8]/10 rounded-full flex items-center justify-center text-[#119AB8]">
+                                <div className="w-10 h-10 bg-[#1877C2]/10 rounded-full flex items-center justify-center text-[#1877C2]">
                                     <Phone size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Call Us</p>
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase">Call Us</p>
                                     <p className="text-sm font-bold text-[#111]">{content.phone || "+92 300 1234567"}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-[#119AB8]/10 rounded-full flex items-center justify-center text-[#119AB8]">
+                                <div className="w-10 h-10 bg-[#1877C2]/10 rounded-full flex items-center justify-center text-[#1877C2]">
                                     <MapPin size={18} />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">Visit Us</p>
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase">Visit Us</p>
                                     <p className="text-sm font-bold text-[#111]">{content.address || "123 Beauty Lane, Karachi, Pakistan"}</p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-slate-100 rounded-2xl h-[300px] flex items-center justify-center border-2 border-dashed border-slate-200">
-                        <MessageSquare size={48} className="text-slate-300" />
+                    <div className="bg-[#F4F6F9] rounded-2xl h-[300px] flex items-center justify-center border-2 border-dashed border-[#E7ECF2]">
+                        <MessageSquare size={48} className="text-[#CBD5E1]" />
                     </div>
                 </div>
             );
@@ -1102,16 +1102,16 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                 <div className="p-8">
                     {content.title && (
                         <div className="text-center mb-6">
-                            <span className="text-[8px] font-black text-[#119AB8] uppercase tracking-[0.4em] block mb-1">Visit Store</span>
+                            <span className="text-[8px] font-black text-[#1877C2] uppercase tracking-[0.4em] block mb-1">Visit Store</span>
                             <h4 className="text-xl font-bold text-[#111] tracking-tight">{content.title}</h4>
-                            <div className="h-0.5 w-8 bg-[#119AB8] mx-auto mt-2 rounded-full" />
+                            <div className="h-0.5 w-8 bg-[#1877C2] mx-auto mt-2 rounded-full" />
                         </div>
                     )}
-                    <div className="aspect-[21/9] bg-slate-100 rounded-xl overflow-hidden border-4 border-white shadow-xl relative">
+                    <div className="aspect-[21/9] bg-[#F4F6F9] rounded-xl overflow-hidden border-4 border-white shadow-xl relative">
                         {content.iframe_url ? (
                             <iframe src={content.iframe_url} className="w-full h-full border-0 grayscale" allowFullScreen loading="lazy" />
                         ) : (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 gap-2">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-[#94A3B8] gap-2">
                                 <MapPin size={32} strokeWidth={1} />
                                 <p className="text-[9px] font-bold uppercase tracking-widest">No Map URL Configured</p>
                             </div>
@@ -1126,7 +1126,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
                 <div className={cn("flex flex-col md:flex-row min-h-[400px]", content.reversed && "md:flex-row-reverse")}>
                     <div className="flex-1 bg-[#111] p-12 flex flex-col justify-center space-y-6">
                         <h4 className="text-3xl font-bold text-white leading-tight">{content.title}</h4>
-                        <p className="text-slate-400 text-sm leading-relaxed">{content.body}</p>
+                        <p className="text-[#94A3B8] text-sm leading-relaxed">{content.body}</p>
                     </div>
                     <div className="flex-1 relative">
                         <img src={getImageUrl(content.image)} className="absolute inset-0 w-full h-full object-cover" />
@@ -1148,7 +1148,7 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
 
         case 'marquee':
             return (
-                <div className="bg-[#119AB8] py-4 overflow-hidden">
+                <div className="bg-[#1877C2] py-4 overflow-hidden">
                     <div className="whitespace-nowrap flex items-center animate-marquee">
                         {[...Array(4)].map((_, i) => (
                             <span key={i} className="text-white font-black text-[10px] uppercase tracking-[0.3em] flex items-center shrink-0">
@@ -1162,21 +1162,21 @@ function renderPreview(section: WebsiteSection, products: any[], categories: any
 
         case 'html':
             return (
-                <div className="p-10 border-2 border-dashed border-[#119AB8]/30 m-4 rounded-xl relative overflow-hidden">
-                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-[#119AB8] text-white text-[8px] font-black uppercase rounded tracking-widest">Custom HTML Widget</div>
+                <div className="p-10 border-2 border-dashed border-[#1877C2]/30 m-4 rounded-xl relative overflow-hidden">
+                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-[#1877C2] text-white text-[8px] font-black uppercase rounded tracking-widest">Custom HTML Widget</div>
                     <div className="text-center py-12">
-                        <Zap size={32} className="mx-auto mb-4 text-[#119AB8] animate-pulse" />
+                        <Zap size={32} className="mx-auto mb-4 text-[#1877C2] animate-pulse" />
                         <h4 className="text-lg font-bold text-[#111] mb-1">{content.title || "Embedded Widget"}</h4>
-                        <p className="text-[10px] text-slate-500 font-mono opacity-60 truncate max-w-xs mx-auto">{content.code?.substring(0, 50)}...</p>
+                        <p className="text-[10px] text-[#64748B] font-mono opacity-60 truncate max-w-xs mx-auto">{content.code?.substring(0, 50)}...</p>
                     </div>
                 </div>
             );
 
         default:
             return (
-                <div className="p-12 text-center bg-slate-50 border border-dashed border-[#e2e8f0] m-4 rounded-xl">
-                    <Layers size={24} className="mx-auto mb-2 text-slate-300" />
-                    <p className="text-[11px] font-black uppercase text-slate-400 tracking-[0.2em]">Quick Preview: {section_type}</p>
+                <div className="p-12 text-center bg-[#F8FAFC] border border-dashed border-[#e2e8f0] m-4 rounded-xl">
+                    <Layers size={24} className="mx-auto mb-2 text-[#CBD5E1]" />
+                    <p className="text-[11px] font-black uppercase text-[#94A3B8] tracking-[0.2em]">Quick Preview: {section_type}</p>
                 </div>
             );
     }
@@ -1250,7 +1250,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                         <div className="flex flex-col justify-end gap-1.5">
                             <label className="text-[13px] font-bold text-[#111]">Visibility Status</label>
                             <label className="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" checked={form.is_visible} onChange={e => setForm(f => ({ ...f, is_visible: e.target.checked }))} className="rounded text-[#1A1A1A] w-4 h-4" />
+                                <input type="checkbox" checked={form.is_visible} onChange={e => setForm(f => ({ ...f, is_visible: e.target.checked }))} className="rounded text-[#0F1A2B] w-4 h-4" />
                                 <span className="text-[13px] text-[#64748B]">Show this section on the landing page</span>
                             </label>
                         </div>
@@ -1267,7 +1267,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     <div className="flex items-center justify-between border-b border-[#eee] pb-2">
                                         <label className="text-[13px] font-bold text-[#111]">Carousel Slides ({(form.content.slides || []).length})</label>
                                         <button onClick={() => updateContent('slides', [...(form.content.slides || []), { title: 'New Slide', subtitle: '', description: '', media_type: 'image', image: '', cta_text: '', cta_link: '', color: '', thumbnail: '' }])}
-                                            className="text-[12px] font-bold text-[#119AB8] hover:underline">+ Add Slide</button>
+                                            className="text-[12px] font-bold text-[#1877C2] hover:underline">+ Add Slide</button>
                                     </div>
                                     <div className="space-y-4">
                                         {(form.content.slides || []).map((s: any, i: number) => (
@@ -1297,10 +1297,10 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     <select value={s.color || ''} onChange={e => { const list = [...form.content.slides]; list[i].color = e.target.value; updateContent('slides', list); }} className={inputCls}>
                                                         <option value="">Default / Index Gradient</option>
                                                         <option value="from-amber-500 to-orange-600">Amber to Orange</option>
-                                                        <option value="from-[#8A8A86] to-rose-600">Pink to Rose</option>
-                                                        <option value="from-[#8A8A86] to-[#5B5B58]">Violet to Purple</option>
-                                                        <option value="from-[#B4B4B0] to-emerald-600">Teal to Emerald</option>
-                                                        <option value="from-[#8A8A86] to-[#5B5B58]">Blue to Cyan</option>
+                                                        <option value="from-[#94A3B8] to-rose-600">Pink to Rose</option>
+                                                        <option value="from-[#94A3B8] to-[#64748B]">Violet to Purple</option>
+                                                        <option value="from-[#CBD5E1] to-emerald-600">Teal to Emerald</option>
+                                                        <option value="from-[#94A3B8] to-[#64748B]">Blue to Cyan</option>
                                                     </select>
                                                     {checkIsVideo(s.image) && (
                                                         <MediaField
@@ -1314,7 +1314,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             }}
                                                         />
                                                     )}
-                                                    <textarea placeholder="Description Text" rows={2} value={s.description} onChange={e => { const list = [...form.content.slides]; list[i].description = e.target.value; updateContent('slides', list); }} className="md:col-span-2 w-full min-h-[60px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                                    <textarea placeholder="Description Text" rows={2} value={s.description} onChange={e => { const list = [...form.content.slides]; list[i].description = e.target.value; updateContent('slides', list); }} className="md:col-span-2 w-full min-h-[60px] px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                                 </div>
                                             </div>
                                         ))}
@@ -1359,11 +1359,11 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         <label className="text-[13px] font-bold text-[#111]">Display Toggles</label>
                                         <div className="flex gap-6">
                                             <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#64748B]">
-                                                <input type="checkbox" checked={form.content.show_price} onChange={e => updateContent('show_price', e.target.checked)} className="rounded text-[#1A1A1A]" />
+                                                <input type="checkbox" checked={form.content.show_price} onChange={e => updateContent('show_price', e.target.checked)} className="rounded text-[#0F1A2B]" />
                                                 Show Prices
                                             </label>
                                             <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#64748B]">
-                                                <input type="checkbox" checked={form.content.show_stock} onChange={e => updateContent('show_stock', e.target.checked)} className="rounded text-[#1A1A1A]" />
+                                                <input type="checkbox" checked={form.content.show_stock} onChange={e => updateContent('show_stock', e.target.checked)} className="rounded text-[#0F1A2B]" />
                                                 Stock Status
                                             </label>
                                         </div>
@@ -1392,7 +1392,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 onChange={(e) => setSearchQuery(e.target.value)}
                                                 onFocus={() => setIsDropdownOpen(true)}
                                                 onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                                className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#F59E0B] text-[13px] shadow-inner"}
+                                                className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#1877C2] text-[13px] shadow-inner"}
                                             />
 
                                             {/* Dropdown Results */}
@@ -1438,7 +1438,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     const p = products.find((prod: any) => prod.id === id);
                                                     if (!p) return null;
                                                     return (
-                                                        <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#F59E0B]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                        <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#1877C2]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
                                                             <div className="w-12 h-12 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0">
                                                                 <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                             </div>
@@ -1491,7 +1491,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 {form.content.description !== undefined && (
                                     <div className="space-y-1.5">
                                         <label className="text-[13px] font-bold text-[#111]">Description</label>
-                                        <textarea rows={3} value={form.content.description} onChange={e => updateContent('description', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                        <textarea rows={3} value={form.content.description} onChange={e => updateContent('description', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                     </div>
                                 )}
                                 <div className="grid md:grid-cols-2 gap-4">
@@ -1529,7 +1529,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         }}
                                                         className={cn(
                                                             "flex items-center gap-3 p-2 border rounded-lg text-left transition-all",
-                                                            isSelected ? "border-[#F59E0B] bg-[#fef3e2]" : "border-[#e2e8f0] hover:border-[#888]"
+                                                            isSelected ? "border-[#1877C2] bg-[#fef3e2]" : "border-[#e2e8f0] hover:border-[#888]"
                                                         )}>
                                                         <div className="w-10 h-10 bg-white border border-[#eee] rounded-[2px] overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
@@ -1538,7 +1538,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             <p className="text-[12px] font-bold text-[#111] truncate">{p.name || p.product_name}</p>
                                                             {(p.batch || p.batch_number) && <p className="text-[9px] text-[#888]">Batch: {p.batch || p.batch_number}</p>}
                                                         </div>
-                                                        {isSelected && <div className="ml-auto text-[#1A1A1A]"><CheckCircle size={14} /></div>}
+                                                        {isSelected && <div className="ml-auto text-[#0F1A2B]"><CheckCircle size={14} /></div>}
                                                     </button>
                                                 );
                                             })}
@@ -1590,7 +1590,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             onFocus={() => setIsDropdownOpen(true)}
                                             onBlur={() => setTimeout(() => setIsDropdownOpen(false), 200)}
-                                            className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#F59E0B] text-[13px] shadow-inner"}
+                                            className={inputCls + " w-full bg-[#f8fafc] border-[#cbd5e1] focus:bg-white focus:border-[#1877C2] text-[13px] shadow-inner"}
                                         />
 
                                         {/* Dropdown Results */}
@@ -1636,7 +1636,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 const p = products.find((prod: any) => prod.id === id);
                                                 if (!p) return null;
                                                 return (
-                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#F59E0B]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
+                                                    <div key={p.id} className="flex items-center gap-3 p-2.5 border-2 border-[#1877C2]/80 bg-[#fffdfa] shadow-sm rounded-[6px] relative group hover:shadow-md transition-shadow">
                                                         <div className="w-12 h-12 bg-white border border-[#eee] rounded-lg overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(p.images?.[0]?.image || p.image)} className="w-full h-full object-cover" />
                                                         </div>
@@ -1673,7 +1673,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 <MediaField label="Banner Image" value={form.content.image} onChange={(url: string) => updateContent('image', url)} />
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Our Story</label>
-                                    <textarea rows={6} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                    <textarea rows={6} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                 </div>
                             </div>
                         )}
@@ -1715,13 +1715,13 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                         }}
                                                         className={cn(
                                                             "flex flex-col items-center gap-2 p-3 border rounded-lg text-center transition-all",
-                                                            isSelected ? "border-[#F59E0B] bg-[#fef3e2]" : "border-[#e2e8f0] hover:border-[#888]"
+                                                            isSelected ? "border-[#1877C2] bg-[#fef3e2]" : "border-[#e2e8f0] hover:border-[#888]"
                                                         )}>
                                                         <div className="w-12 h-12 bg-white border border-[#eee] rounded-full overflow-hidden flex-shrink-0">
                                                             <img src={getImageUrl(cat.image)} className="w-full h-full object-cover" />
                                                         </div>
                                                         <p className="text-[11px] font-bold text-[#111] truncate w-full">{cat.name}</p>
-                                                        {isSelected && <CheckCircle size={12} className="text-[#1A1A1A]" />}
+                                                        {isSelected && <CheckCircle size={12} className="text-[#0F1A2B]" />}
                                                     </button>
                                                 );
                                             })}
@@ -1735,7 +1735,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                 const key = form.content.items ? 'items' : 'logos';
                                                 const newItem = key === 'items' ? { title: '', image: '', link: '' } : '';
                                                 updateContent(key, [...(form.content[key] || []), newItem]);
-                                            }} className="text-[12px] font-bold text-[#119AB8] hover:underline">+ Add Item</button>
+                                            }} className="text-[12px] font-bold text-[#1877C2] hover:underline">+ Add Item</button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             {(form.content.items || form.content.logos || []).map((item: any, i: number) => (
@@ -1785,7 +1785,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                     section.section_type === 'testimonials' ? { name: '', role: '', text: '', rating: 5, image: '' } :
                                                         { title: '', text: '' };
                                             updateContent(key, [...(form.content[key] || []), newItem]);
-                                        }} className="text-[12px] font-bold text-[#119AB8] hover:underline">+ Add Entry</button>
+                                        }} className="text-[12px] font-bold text-[#1877C2] hover:underline">+ Add Entry</button>
                                     </div>
                                     <div className="grid gap-3">
                                         {(form.content.items || form.content.reviews || []).map((item: any, i: number) => (
@@ -1833,7 +1833,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.reviews];
                                                             list[i].text = e.target.value;
                                                             updateContent('reviews', list);
-                                                        }} className="md:col-span-2 w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                                        }} className="md:col-span-2 w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                                     </div>
                                                 ) : section.section_type === 'stats' ? (
                                                     <div className="grid md:grid-cols-2 gap-4">
@@ -1865,7 +1865,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.items];
                                                             list[i].a = e.target.value;
                                                             updateContent('items', list);
-                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-3">
@@ -1878,7 +1878,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                                             const list = [...form.content.items];
                                                             list[i].text = e.target.value;
                                                             updateContent('items', list);
-                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                                        }} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                                     </div>
                                                 )}
                                             </div>
@@ -1892,7 +1892,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                             <div className="space-y-6">
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Scrolling Text</label>
-                                    <textarea rows={3} value={form.content.text} onChange={e => updateContent('text', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                    <textarea rows={3} value={form.content.text} onChange={e => updateContent('text', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Scroll Speed</label>
@@ -1922,7 +1922,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                     </div>
                                     <div className="md:col-span-2 space-y-1.5">
                                         <label className="text-[13px] font-bold text-[#111]">Physical Address</label>
-                                        <textarea rows={2} value={form.content.address} onChange={e => updateContent('address', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                        <textarea rows={2} value={form.content.address} onChange={e => updateContent('address', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                     </div>
                                 </div>
                             </div>
@@ -1949,9 +1949,9 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                             }
                                             updateContent('iframe_url', val);
                                         }}
-                                        className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[11px] font-mono outline-none focus:border-[#F59E0B] bg-white resize-none"
+                                        className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[11px] font-mono outline-none focus:border-[#1877C2] bg-white resize-none"
                                     />
-                                    <p className="text-[10px] text-slate-400 italic">Go to Google Maps &gt; Share &gt; Embed a map &gt; Copy HTML and paste it here.</p>
+                                    <p className="text-[10px] text-[#94A3B8] italic">Go to Google Maps &gt; Share &gt; Embed a map &gt; Copy HTML and paste it here.</p>
                                 </div>
                             </div>
                         )}
@@ -1966,13 +1966,13 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[13px] font-bold text-[#111]">Body Text</label>
-                                            <textarea rows={4} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                            <textarea rows={4} value={form.content.body} onChange={e => updateContent('body', e.target.value)} className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                         </div>
                                     </div>
                                     <div className="space-y-6">
                                         <MediaField label="Banner Image" value={form.content.image} onChange={(url: string) => updateContent('image', url)} />
                                         <label className="flex items-center gap-2 cursor-pointer">
-                                            <input type="checkbox" checked={form.content.reversed} onChange={e => updateContent('reversed', e.target.checked)} className="rounded text-[#1A1A1A]" />
+                                            <input type="checkbox" checked={form.content.reversed} onChange={e => updateContent('reversed', e.target.checked)} className="rounded text-[#0F1A2B]" />
                                             <span className="text-[13px] font-bold text-[#111]">Reverse Layout (Image on Right)</span>
                                         </label>
                                     </div>
@@ -1988,7 +1988,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[13px] font-bold text-[#111]">Custom HTML / Script Code</label>
-                                    <textarea rows={10} value={form.content.code} onChange={e => updateContent('code', e.target.value)} className="w-full font-mono text-[12px] px-3 py-2 border border-[#cbd5e1] rounded-lg outline-none focus:border-[#F59E0B] bg-[#1e1e1e] text-green-400 resize-none" />
+                                    <textarea rows={10} value={form.content.code} onChange={e => updateContent('code', e.target.value)} className="w-full font-mono text-[12px] px-3 py-2 border border-[#cbd5e1] rounded-lg outline-none focus:border-[#1877C2] bg-[#1e1e1e] text-green-400 resize-none" />
                                 </div>
                             </div>
                         )}
@@ -1996,7 +1996,7 @@ function SectionEditor({ section, onSave, onClose, products = [], categories = [
                 </div>
 
                 <div className="bg-[#f8fafc] border-t border-[#e2e8f0] px-8 py-4 flex justify-between items-center">
-                    <button onClick={onClose} className="text-[13px] font-bold text-[#119AB8] hover:underline">Dismiss Changes</button>
+                    <button onClick={onClose} className="text-[13px] font-bold text-[#1877C2] hover:underline">Dismiss Changes</button>
                     <div className="flex gap-2">
                         <AmazonBtn variant="secondary" onClick={onClose}>Cancel</AmazonBtn>
                         <AmazonBtn onClick={save} loading={saving} className="min-w-[140px]">Update Section</AmazonBtn>

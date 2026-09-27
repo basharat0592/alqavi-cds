@@ -21,7 +21,7 @@ const STATUS_FILTERS = ['All', 'Delivered', 'Cancelled'];
 function PayStatusCell({ o }: { o: any }) {
     // Cancelled / rejected sales are void — no money was collected.
     if (['CANCELLED', 'REJECTED'].includes((o.status || '').toUpperCase())) {
-        return <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase mt-1 tracking-tighter">No payment</div>;
+        return <div className="text-[10.5px] text-[#94A3B8] font-semibold uppercase mt-1 tracking-tighter">No payment</div>;
     }
     const status = (o.payment_status || 'PAID').toUpperCase();
     const remaining = Number(o.remaining_amount ?? 0);
@@ -35,7 +35,7 @@ function PayStatusCell({ o }: { o: any }) {
                 {status === 'PARTIAL' ? 'Partially paid' : 'Unpaid'} · {formatCurrency(remaining)} due
             </div>
             {o.due_date && (
-                <div className={`text-[10.5px] font-semibold ${overdue ? 'text-rose-600' : 'text-[#9C9C98]'}`}>
+                <div className={`text-[10.5px] font-semibold ${overdue ? 'text-rose-600' : 'text-[#94A3B8]'}`}>
                     {overdue ? `${o.days_overdue}d overdue` : `Due ${o.due_date}`}
                 </div>
             )}
@@ -215,27 +215,27 @@ export default function SalesPage() {
                     <div className="flex flex-col xl:flex-row xl:items-center gap-3">
                         {/* Search */}
                         <div className="relative flex-1 min-w-0">
-                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                             <input
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 placeholder="Search by order #, customer or phone…"
-                                className="w-full h-11 pl-11 pr-9 rounded-xl border border-[#EDEDEA] bg-[#FAFAF8] text-[13px] font-medium text-[#1A1A1A] placeholder:text-[#9C9C98] outline-none focus:bg-white focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all"
+                                className="w-full h-11 pl-11 pr-9 rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] text-[13px] font-medium text-[#0F1A2B] placeholder:text-[#94A3B8] outline-none focus:bg-white focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 transition-all"
                             />
                             {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9C9C98] hover:text-[#3A3A38] transition-colors">
+                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#334155] transition-colors">
                                     <X size={15} />
                                 </button>
                             )}
                         </div>
 
                         {/* Status segmented control */}
-                        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#F2F2F0] shrink-0 self-start xl:self-auto">
+                        <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-[#F4F6F9] shrink-0 self-start xl:self-auto">
                             {STATUS_FILTERS.map(f => (
                                 <button
                                     key={f}
                                     onClick={() => setStatusFilter(f)}
-                                    className={`h-9 px-3.5 sm:px-4 rounded-lg text-[11.5px] font-semibold transition-all ${statusFilter === f ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#8A8A86] hover:text-[#3A3A38]'}`}
+                                    className={`h-9 px-3.5 sm:px-4 rounded-lg text-[11.5px] font-semibold transition-all ${statusFilter === f ? 'bg-white text-[#0F1A2B] shadow-sm' : 'text-[#94A3B8] hover:text-[#334155]'}`}
                                 >
                                     {f}
                                 </button>
@@ -245,32 +245,32 @@ export default function SalesPage() {
                         {/* Channel + Payment dropdowns */}
                         <div className="flex items-center gap-2 shrink-0">
                             <div className="relative flex-1 xl:flex-none">
-                                <Store size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9C9C98]" />
+                                <Store size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#94A3B8]" />
                                 <select
                                     value={channelFilter}
                                     onChange={e => setChannelFilter(e.target.value)}
-                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#F59E0B]/10 appearance-none cursor-pointer transition-all ${channelFilter !== 'All' ? 'border-transparent bg-[#F59E0B] text-white' : 'border-[#EDEDEA] bg-white text-[#3A3A38] hover:border-slate-300'}`}
+                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#1877C2]/10 appearance-none cursor-pointer transition-all ${channelFilter !== 'All' ? 'border-transparent bg-[#1877C2] text-white' : 'border-[#E7ECF2] bg-white text-[#334155] hover:border-[#CBD5E1]'}`}
                                 >
                                     <option value="All">All Channels</option>
                                     <option value="POS">POS / Counter</option>
                                     <option value="Online">Online Store</option>
                                 </select>
-                                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#9C9C98]" />
+                                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#94A3B8]" />
                             </div>
 
                             <div className="relative flex-1 xl:flex-none">
-                                <Wallet size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#9C9C98]" />
+                                <Wallet size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#94A3B8]" />
                                 <select
                                     value={payFilter}
                                     onChange={e => setPayFilter(e.target.value)}
-                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#F59E0B]/10 appearance-none cursor-pointer transition-all ${payFilter !== 'All' ? 'border-transparent bg-[#F59E0B] text-white' : 'border-[#EDEDEA] bg-white text-[#3A3A38] hover:border-slate-300'}`}
+                                    className={`w-full xl:w-auto h-11 pl-9 pr-8 rounded-xl border text-[13px] font-semibold outline-none focus:ring-4 focus:ring-[#1877C2]/10 appearance-none cursor-pointer transition-all ${payFilter !== 'All' ? 'border-transparent bg-[#1877C2] text-white' : 'border-[#E7ECF2] bg-white text-[#334155] hover:border-[#CBD5E1]'}`}
                                 >
                                     <option value="All">All Payments</option>
                                     <option value="Paid">Paid in full</option>
                                     <option value="Partial">Partially paid</option>
                                     <option value="Unpaid">Unpaid</option>
                                 </select>
-                                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#9C9C98]" />
+                                <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#94A3B8]" />
                             </div>
                         </div>
                     </div>
@@ -278,13 +278,13 @@ export default function SalesPage() {
                     }
                     meta={
                         <span className="flex items-center gap-2">
-                            <SlidersHorizontal size={12} className="text-[#B4B4B0]" />
+                            <SlidersHorizontal size={12} className="text-[#CBD5E1]" />
                             {filtered.length} result{filtered.length !== 1 ? 's' : ''}
-                            {orders.length ? <span className="text-[#B4B4B0]">of {orders.length}</span> : null}
+                            {orders.length ? <span className="text-[#CBD5E1]">of {orders.length}</span> : null}
                             {(searchTerm || statusFilter !== 'All' || channelFilter !== 'All' || payFilter !== 'All') && (
                                 <button
                                     onClick={() => { setSearchTerm(''); setStatusFilter('All'); setChannelFilter('All'); setPayFilter('All'); }}
-                                    className="ml-1 text-[13px] font-medium text-[#119AB8] hover:underline inline-flex items-center gap-1 transition-colors"
+                                    className="ml-1 text-[13px] font-medium text-[#1877C2] hover:underline inline-flex items-center gap-1 transition-colors"
                                 >
                                     <X size={12} /> Clear
                                 </button>
@@ -307,8 +307,8 @@ export default function SalesPage() {
                 <div className="md:hidden p-3 space-y-3">
                     {filtered.length === 0 ? (
                         <Card className="py-16 text-center">
-                            <div className="text-[#DCDCD8] mb-3"><ShoppingBag size={48} className="mx-auto" /></div>
-                            <p className="text-[13px] text-[#8A8A86] font-medium">No sales found.</p>
+                            <div className="text-[#E2E8F0] mb-3"><ShoppingBag size={48} className="mx-auto" /></div>
+                            <p className="text-[13px] text-[#94A3B8] font-medium">No sales found.</p>
                         </Card>
                     ) : (
                         <>
@@ -317,21 +317,21 @@ export default function SalesPage() {
                                     {/* Row 1: Order # + Amount */}
                                     <div className="flex items-start justify-between gap-2">
                                         <div>
-                                            <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[13px] font-semibold text-[#119AB8] hover:text-[#0E7F98] hover:underline">
+                                            <button onClick={() => router.push(`/admin/sales/${o.id}`)} className="text-[13px] font-semibold text-[#1877C2] hover:text-[#1567AB] hover:underline">
                                                 #{o.order_number || o.id}
                                             </button>
-                                            <div className="flex items-center gap-1 text-[10.5px] text-[#8A8A86] font-medium mt-0.5">
+                                            <div className="flex items-center gap-1 text-[10.5px] text-[#94A3B8] font-medium mt-0.5">
                                                 <Clock size={10} />
                                                 {formatDateTime(o.created_at)}
                                             </div>
                                             {(o as any).warehouse_name && (
-                                                <div className="text-[10.5px] text-[#1A1A1A] font-semibold uppercase tracking-tighter mt-0.5 flex items-center gap-1">
+                                                <div className="text-[10.5px] text-[#0F1A2B] font-semibold uppercase tracking-tighter mt-0.5 flex items-center gap-1">
                                                     <Warehouse size={10} className="opacity-60" />{(o as any).warehouse_name}
                                                 </div>
                                             )}
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <div className="text-[13px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(o.total_amount)}</div>
+                                            <div className="text-[13px] font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(o.total_amount)}</div>
                                             <Badge tone={getStatusTone(o.status)} className="mt-1">
                                                 {o.status}
                                             </Badge>
@@ -339,25 +339,25 @@ export default function SalesPage() {
                                     </div>
 
                                     {/* Row 2: Customer + Payment */}
-                                    <div className="flex items-center justify-between border-t border-[#F2F2F0] pt-2.5">
+                                    <div className="flex items-center justify-between border-t border-[#F4F6F9] pt-2.5">
                                         <div className="flex items-center gap-2">
-                                            <User size={13} className="text-[#9C9C98]" />
+                                            <User size={13} className="text-[#94A3B8]" />
                                             <div>
-                                                <div className="text-[11.5px] font-semibold text-[#1A1A1A]">{(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}</div>
+                                                <div className="text-[11.5px] font-semibold text-[#0F1A2B]">{(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}</div>
                                                 {(o as any).customer_type === 'walkin'
-                                                    ? <div className="text-[10.5px] text-[#9C9C98] italic">Walk-in · POS</div>
+                                                    ? <div className="text-[10.5px] text-[#94A3B8] italic">Walk-in · POS</div>
                                                     : <div className="text-[10.5px] text-emerald-600/80 font-semibold">Registered account</div>}
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="flex items-center gap-1 text-[11.5px] font-semibold text-[#1A1A1A] justify-end">
-                                                <CreditCard size={11} className="text-[#9C9C98]" />
+                                            <div className="flex items-center gap-1 text-[11.5px] font-semibold text-[#0F1A2B] justify-end">
+                                                <CreditCard size={11} className="text-[#94A3B8]" />
                                                 {o.payment_method || 'Cash'}
-                                                <span className={`px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold uppercase ${channelOf(o) === 'POS' ? 'bg-[#FAFAF8] text-[#5B5B58]' : 'bg-[#FAFAF8] text-[#5B5B58]'}`}>{channelOf(o)}</span>
+                                                <span className={`px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold uppercase ${channelOf(o) === 'POS' ? 'bg-[#F8FAFC] text-[#64748B]' : 'bg-[#F8FAFC] text-[#64748B]'}`}>{channelOf(o)}</span>
                                             </div>
                                             {(() => {
                                                 const ps = effectivePay(o);
-                                                const cls = ps === 'PAID' ? 'text-emerald-600' : ps === 'PARTIAL' ? 'text-amber-600' : ps === 'UNPAID' ? 'text-rose-600' : 'text-[#9C9C98]';
+                                                const cls = ps === 'PAID' ? 'text-emerald-600' : ps === 'PARTIAL' ? 'text-amber-600' : ps === 'UNPAID' ? 'text-rose-600' : 'text-[#94A3B8]';
                                                 const label = ps === 'PAID' ? 'Paid in full' : ps === 'PARTIAL' ? 'Partially paid' : ps === 'UNPAID' ? 'Unpaid' : 'No payment';
                                                 return <div className={`text-[10.5px] font-semibold uppercase tracking-tighter mt-0.5 ${cls}`}>{label}</div>;
                                             })()}
@@ -392,57 +392,57 @@ export default function SalesPage() {
                         <tbody className="divide-y divide-slate-100">
                             {filtered.length === 0 ? (
                                 <tr><td colSpan={7} className="py-24 text-center">
-                                    <div className="text-[#DCDCD8] mb-4"><ShoppingBag size={60} className="mx-auto" /></div>
-                                    <p className="text-[13px] text-[#8A8A86] font-medium">No sales found matching your criteria.</p>
+                                    <div className="text-[#E2E8F0] mb-4"><ShoppingBag size={60} className="mx-auto" /></div>
+                                    <p className="text-[13px] text-[#94A3B8] font-medium">No sales found matching your criteria.</p>
                                 </td></tr>
                             ) : (
                                 paginated.map(o => (
-                                    <tr key={o.id} className="hover:bg-[#FAFAF8] transition-colors group text-[11.5px]">
+                                    <tr key={o.id} className="hover:bg-[#F8FAFC] transition-colors group text-[11.5px]">
                                         <RowCheckboxTd sel={sel} id={o.id} />
                                         <td className={ui.td}>
-                                            <div className="text-[11.5px] font-semibold text-[#119AB8] group-hover:text-[#0E7F98] group-hover:underline cursor-pointer" onClick={() => router.push(`/admin/sales/${o.id}`)}>
+                                            <div className="text-[11.5px] font-semibold text-[#1877C2] group-hover:text-[#1567AB] group-hover:underline cursor-pointer" onClick={() => router.push(`/admin/sales/${o.id}`)}>
                                                 #{o.order_number || o.id}
                                             </div>
                                             <div className="flex flex-col gap-1 mt-1">
-                                                <div className="text-[10.5px] text-[#8A8A86] flex items-center gap-1.5 font-medium">
-                                                    <Clock size={11} className="text-[#9C9C98]" /> {formatDateTime(o.created_at)}
+                                                <div className="text-[10.5px] text-[#94A3B8] flex items-center gap-1.5 font-medium">
+                                                    <Clock size={11} className="text-[#94A3B8]" /> {formatDateTime(o.created_at)}
                                                 </div>
                                                 {(o as any).warehouse_name && (
-                                                    <div className="text-[10.5px] text-[#1A1A1A] flex items-center gap-1.5 font-semibold uppercase tracking-tighter">
+                                                    <div className="text-[10.5px] text-[#0F1A2B] flex items-center gap-1.5 font-semibold uppercase tracking-tighter">
                                                         <Warehouse size={9} className="opacity-60" /> {(o as any).warehouse_name}
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
                                         <td className={ui.td}>
-                                            <div className="text-[#1A1A1A] font-semibold flex items-center gap-2">
-                                                <User size={13} className="text-[#9C9C98]" /> {(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}
+                                            <div className="text-[#0F1A2B] font-semibold flex items-center gap-2">
+                                                <User size={13} className="text-[#94A3B8]" /> {(o as any).customer_display_name || (o as any).customer_name || 'Counter Guest'}
                                             </div>
                                             {(o as any).customer_type === 'walkin'
-                                                ? <div className="text-[10.5px] text-[#9C9C98] mt-1 font-medium italic">Walk-in · POS</div>
+                                                ? <div className="text-[10.5px] text-[#94A3B8] mt-1 font-medium italic">Walk-in · POS</div>
                                                 : <div className="text-[10.5px] text-emerald-600/80 mt-1 font-semibold">Registered account</div>}
                                         </td>
                                         <td className={ui.td}>
-                                            <div className="flex items-center gap-2 text-[#1A1A1A] font-semibold">
-                                                <CreditCard size={13} className="text-[#9C9C98]" /> {o.payment_method || 'Cash'}
-                                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold uppercase tracking-tight ${channelOf(o) === 'POS' ? 'bg-[#FAFAF8] text-[#5B5B58] border border-[#F2F2F0]' : 'bg-[#FAFAF8] text-[#5B5B58] border border-[#F2F2F0]'}`}>
+                                            <div className="flex items-center gap-2 text-[#0F1A2B] font-semibold">
+                                                <CreditCard size={13} className="text-[#94A3B8]" /> {o.payment_method || 'Cash'}
+                                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10.5px] font-semibold uppercase tracking-tight ${channelOf(o) === 'POS' ? 'bg-[#F8FAFC] text-[#64748B] border border-[#F4F6F9]' : 'bg-[#F8FAFC] text-[#64748B] border border-[#F4F6F9]'}`}>
                                                     {channelOf(o) === 'POS' ? <Store size={8} /> : <Globe size={8} />}{channelOf(o)}
                                                 </span>
                                             </div>
                                             <PayStatusCell o={o} />
                                         </td>
                                         <td className={ui.td}>
-                                            <div className="text-[11.5px] text-[#1A1A1A] font-semibold tabular-nums">
+                                            <div className="text-[11.5px] text-[#0F1A2B] font-semibold tabular-nums">
                                                 {new Date(o.updated_at || o.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })}
                                             </div>
-                                            <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase mt-0.5 tracking-tighter tabular-nums">
+                                            <div className="text-[10.5px] text-[#94A3B8] font-semibold uppercase mt-0.5 tracking-tighter tabular-nums">
                                                 {new Date(o.updated_at || o.created_at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                             </div>
                                         </td>
                                         <td className={ui.td + ' text-right'}>
-                                            <div className="text-[13px] font-semibold text-[#1A1A1A] tabular-nums">{formatCurrency(o.total_amount)}</div>
+                                            <div className="text-[13px] font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(o.total_amount)}</div>
 
-                                            <div className="text-[10.5px] text-[#9C9C98] font-semibold uppercase mt-1">Net Amount</div>
+                                            <div className="text-[10.5px] text-[#94A3B8] font-semibold uppercase mt-1">Net Amount</div>
                                         </td>
                                         <td className={ui.td + ' text-right'}>
                                             <RowActions items={[
@@ -481,11 +481,11 @@ export default function SalesPage() {
                 />
 
                 {/* Summary Note */}
-                <div className="mt-8 bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">
-                    <AlertTriangle className="text-[#1A1A1A] shrink-0 mt-0.5" size={18} />
+                <div className="mt-8 bg-[#1877C2]/10 border border-[#1877C2]/15 rounded-2xl p-4 flex gap-4 items-start animate-in fade-in duration-1000">
+                    <AlertTriangle className="text-[#0F1A2B] shrink-0 mt-0.5" size={18} />
                     <div>
-                        <p className="text-[13px] font-semibold text-[#1A1A1A]">Order Integrity</p>
-                        <p className="text-[11.5px] text-[#3A3A38] leading-relaxed">Status changes here are permanent and will trigger stock adjustments where applicable. Ensure you verify physical delivery before marking as 'Delivered'.</p>
+                        <p className="text-[13px] font-semibold text-[#0F1A2B]">Order Integrity</p>
+                        <p className="text-[11.5px] text-[#334155] leading-relaxed">Status changes here are permanent and will trigger stock adjustments where applicable. Ensure you verify physical delivery before marking as 'Delivered'.</p>
                     </div>
                 </div>
                 {/* Delete Confirmation Modal */}
@@ -511,8 +511,8 @@ export default function SalesPage() {
                                 </div>
                             </div>
                             <div className="text-center">
-                                <h3 className="text-[15px] font-semibold text-[#1A1A1A] leading-snug">Permanently delete this order?</h3>
-                                <p className="text-[11.5px] text-[#3A3A38] mt-2 leading-relaxed">
+                                <h3 className="text-[15px] font-semibold text-[#0F1A2B] leading-snug">Permanently delete this order?</h3>
+                                <p className="text-[11.5px] text-[#334155] mt-2 leading-relaxed">
                                     You are about to delete Sale <strong>#{(orderToDelete as any).order_number || orderToDelete.id}</strong>. This action is irreversible and will remove the record entirely.
                                 </p>
                             </div>

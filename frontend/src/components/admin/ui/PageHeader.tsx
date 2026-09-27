@@ -19,8 +19,8 @@ function SplitTitle({ title }: { title: string }) {
     if (i === -1) return <>{title}</>;
     return (
         <>
-            <span className="font-semibold text-[#1A1A1A]">{title.slice(0, i)}</span>
-            <span className="font-normal text-[#8A8A86]">{title.slice(i)}</span>
+            <span className="font-bold text-[#0F1A2B]">{title.slice(0, i)}</span>
+            <span className="font-normal text-[#94A3B8]">{title.slice(i)}</span>
         </>
     );
 }
@@ -61,7 +61,7 @@ export function PageHeader({
                     <h1 className="text-[26px] sm:text-[30px] leading-tight tracking-[-0.03em] truncate">
                         <SplitTitle title={title} />
                     </h1>
-                    {subtitle && <p className={cn('text-[13.5px] text-[#8A8A86] mt-1.5', isSuper && 'hidden sm:block')}>{subtitle}</p>}
+                    {subtitle && <p className={cn('text-[13.5px] text-[#94A3B8] mt-1.5', isSuper && 'hidden sm:block')}>{subtitle}</p>}
                 </div>
                 {(actions || showBack) && (
                     <div className="flex items-center gap-2 shrink-0">
@@ -78,7 +78,7 @@ export function PageHeader({
                                 type="button"
                                 onClick={() => backUrl ? router.push(backUrl) : router.back()}
                                 aria-label="Go back"
-                                className="hidden md:inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-white text-[13.5px] font-medium tracking-[-0.01em] text-[#3A3A38] hover:bg-[#FAFAF8] shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all"
+                                className="hidden md:inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-white text-[13.5px] font-medium tracking-[-0.01em] text-[#334155] hover:bg-[#F8FAFC] shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all"
                             >
                                 <ArrowLeft className="h-4 w-4" />
                                 Back

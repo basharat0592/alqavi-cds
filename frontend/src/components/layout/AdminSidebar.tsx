@@ -8,7 +8,7 @@ import {
     Boxes, Settings, UserCheck, ShoppingBag,
     ShoppingCart, History, RefreshCcw,
     ShieldCheck, BarChart3, Store, RotateCcw, User, Users, UserCog, CreditCard,
-    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, ChevronDown, LogOut, PanelLeftClose, PanelLeftOpen
+    Truck, FileText, AlertTriangle, X, ArrowDownLeft, ArrowUpRight, MapPin, Building2, ChevronDown, LogOut, PanelLeftOpen, ChevronsUpDown
 } from 'lucide-react';
 import cmsService from '@/services/cms.service';
 import { getImageUrl } from '@/lib/utils';
@@ -236,131 +236,114 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
     const accountInitials = (account.name || 'A')
         .split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
-    /* One row treatment shared by the nav links and the Settings row. The active
-       state is a lifted white pill — that lift is the only "selected" signal in
-       this system, so it carries a real shadow rather than a tint. */
+    /* Rows: the selected one is a solid white pill on the navy, which is the
+       single strongest signal available on this ground. */
     const rowCls = (active: boolean) =>
-        `group relative flex items-center gap-3 rounded-[10px] overflow-visible transition-all duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'pl-3 pr-2.5 py-[9px]'} ${active
-            ? 'bg-[#F59E0B]/[0.16] ring-1 ring-inset ring-[#F59E0B]/30'
-            : 'hover:bg-white/[0.06]'}`;
+        `group relative flex items-center gap-3 rounded-xl overflow-visible transition-colors duration-150 ${isCollapsed ? 'justify-center px-0 py-2.5' : 'pl-3 pr-2.5 py-[10px]'} ${active
+            ? 'bg-white'
+            : 'hover:bg-white/[0.07]'}`;
     const rowIconCls = (active: boolean) =>
-        `shrink-0 transition-colors duration-150 ${active ? 'text-[#FBBF24]' : 'text-[#8E8E88] group-hover:text-[#E6E6E1]'}`;
+        `shrink-0 transition-colors duration-150 ${active ? 'text-[#0B1526]' : 'text-[#8FA3BA] group-hover:text-white'}`;
     const rowTextCls = (active: boolean) =>
-        `text-[13.5px] tracking-[-0.01em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-[#FBBF24] font-semibold' : 'text-[#A6A6A0] font-medium group-hover:text-white'}`;
+        `text-[14px] tracking-[-0.01em] whitespace-nowrap truncate transition-colors duration-150 ${active ? 'text-[#0B1526] font-semibold' : 'text-[#C3D0DF] font-medium group-hover:text-white'}`;
     const tooltipCls = `absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-[12.5px] font-medium whitespace-nowrap pointer-events-none
         opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-150 z-[100]
-        bg-white text-[#1A1A1A] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)]`;
+        bg-white text-[#0B1526] shadow-[0_8px_24px_-8px_rgba(0,0,0,0.45)]`;
 
     return (
         <>
             <style>{`
                 .sb-root {
-                    font-family: var(--font-inter), 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-                    font-feature-settings: 'cv05' 1, 'ss01' 1;
+                    font-family: var(--font-jakarta), 'Plus Jakarta Sans', var(--font-inter), system-ui, -apple-system, 'Segoe UI', sans-serif;
                     -webkit-font-smoothing: antialiased;
                 }
-
-                /* The rail only shows its scrollbar while actually scrolling, so a
-                   short menu never carries a stray line down its edge. */
-                .sidebar-scroll { scrollbar-gutter: stable; }
                 .sidebar-scroll::-webkit-scrollbar { width: 3px; }
                 .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
                 .sidebar-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 99px; }
-                .sidebar-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
-
+                .sidebar-scroll:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); }
                 .sb-reveal > * { animation: sbReveal .18s ease-out both; }
                 @keyframes sbReveal { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
                 @media (prefers-reduced-motion: reduce) { .sb-reveal > * { animation: none; } }
             `}</style>
 
-            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-[#1A1A1A] ${isCollapsed ? 'w-[72px]' : 'w-[252px]'}`}>
+            <div className={`sb-root relative h-full flex flex-col flex-shrink-0 z-[60] transition-all duration-300 overflow-hidden bg-[#0B1526] ${isCollapsed ? 'w-[76px]' : 'w-[256px]'}`}>
 
-                {/* ── BRAND ── */}
-                <div className={`flex-shrink-0 flex items-center gap-2.5 border-b border-white/[0.08] ${isCollapsed ? 'px-4 py-4 justify-center' : 'pl-4 pr-3 py-4'}`}>
-                    <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 min-w-0 flex-1 group/brand">
-                        <div className="relative w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center bg-[#F59E0B] transition-transform duration-200 group-hover/brand:scale-[1.04]">
-                            <span className="font-semibold text-[12.5px] text-white tracking-[-0.01em]">{orgInitials}</span>
-                        </div>
+                {/* ── BRAND CARD ── */}
+                <div className={`flex-shrink-0 ${isCollapsed ? 'px-3 pt-3 pb-2' : 'px-3 pt-3 pb-2'}`}>
+                    <div className={`flex items-center gap-2.5 rounded-2xl bg-white/[0.06] ring-1 ring-inset ring-white/[0.08] ${isCollapsed ? 'justify-center p-2' : 'p-2.5'}`}>
+                        <Link href="/admin/dashboard" onClick={() => onNavigate?.()} className="flex items-center gap-2.5 min-w-0 flex-1 group/brand">
+                            <span className="relative w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center bg-[#1877C2] transition-transform duration-200 group-hover/brand:scale-[1.04]">
+                                <Building2 size={19} strokeWidth={2} className="text-white" />
+                            </span>
+                            {!isCollapsed && (
+                                <span className="flex flex-col min-w-0 leading-none">
+                                    <span className="text-[14.5px] font-bold tracking-[-0.01em] text-white truncate" title={orgName || PLATFORM_NAME}>
+                                        {orgName || PLATFORM_NAME}
+                                    </span>
+                                    <span className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-[#8FA3BA] truncate">
+                                        <span className="w-1 h-1 rounded-full bg-[#1877C2] shrink-0" />
+                                        {orgName ? 'Skärdu Main S01' : 'Platform console'}
+                                    </span>
+                                </span>
+                            )}
+                        </Link>
                         {!isCollapsed && (
-                            <div className="flex flex-col min-w-0 leading-none">
-                                <span className="text-[14px] font-semibold tracking-[-0.02em] text-white truncate" title={orgName || PLATFORM_NAME}>
-                                    {orgName || PLATFORM_NAME}
-                                </span>
-                                <span className="mt-1 text-[10.5px] font-medium text-[#7C7C76] truncate">
-                                    {orgName ? 'Organization' : 'Platform'}
-                                </span>
-                            </div>
+                            <button
+                                onClick={onToggle}
+                                title="Collapse sidebar"
+                                aria-label="Collapse sidebar"
+                                className="hidden md:flex w-7 h-7 shrink-0 rounded-lg items-center justify-center text-[#8FA3BA] hover:text-white hover:bg-white/[0.10] transition-colors"
+                            >
+                                <ChevronsUpDown size={15} strokeWidth={2} />
+                            </button>
                         )}
-                    </Link>
-
-                    {/* Desktop rail collapse. Mobile gets a close button instead. */}
-                    {!isCollapsed && (
                         <button
                             onClick={onToggle}
-                            title="Collapse sidebar"
-                            aria-label="Collapse sidebar"
-                            className="hidden md:flex w-7 h-7 shrink-0 rounded-lg items-center justify-center text-[#7C7C76] hover:text-white hover:bg-white/[0.08] transition-colors"
+                            className="md:hidden p-1.5 rounded-lg transition hover:bg-white/[0.10] text-[#8FA3BA] hover:text-white"
+                            aria-label="Close sidebar"
                         >
-                            <PanelLeftClose size={16} strokeWidth={1.7} />
+                            <X size={18} />
                         </button>
-                    )}
-                    <button
-                        onClick={onToggle}
-                        className="md:hidden p-1.5 rounded-lg transition hover:bg-white/[0.08] text-[#8E8E88] hover:text-white"
-                        aria-label="Close sidebar"
-                    >
-                        <X size={18} />
-                    </button>
+                    </div>
                 </div>
 
-                {/* Expanding again needs its own affordance once the labels are gone. */}
                 {isCollapsed && (
                     <button
                         onClick={onToggle}
                         title="Expand sidebar"
                         aria-label="Expand sidebar"
-                        className="hidden md:flex mx-auto mt-3 w-9 h-9 rounded-[10px] items-center justify-center text-[#7C7C76] hover:text-white hover:bg-white/[0.08] transition-colors"
+                        className="hidden md:flex mx-auto mb-1 w-9 h-9 rounded-xl items-center justify-center text-[#8FA3BA] hover:text-white hover:bg-white/[0.10] transition-colors"
                     >
-                        <PanelLeftOpen size={17} strokeWidth={1.7} />
+                        <PanelLeftOpen size={17} strokeWidth={1.8} />
                     </button>
                 )}
 
                 {/* ── NAVIGATION ── */}
-                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll px-3 pt-3 pb-4">
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll px-3 pt-2 pb-4">
                     {filteredGroups.map((group, gIdx) => {
                         const groupActive = group.items.some(it => isActive(it.href));
-                        // Collapsed to an icon rail there is no room for headings, so
-                        // the accordion does not apply and every icon stays reachable.
-                        const groupOpen = isCollapsed || (openGroups[group.label] ?? groupActive);
+                        const groupOpen = isCollapsed || (openGroups[group.label] ?? true);
                         return (
-                        <div key={group.label} className={gIdx !== 0 ? 'mt-5' : ''}>
-                            {/* A quiet section label, deliberately unlike a nav row so the
-                                hierarchy reads at a glance. The chevron only appears on
-                                hover, keeping the resting state calm. */}
+                        <div key={group.label} className={gIdx !== 0 ? 'mt-5' : 'mt-1'}>
                             {!isCollapsed && (
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(group.label, groupOpen)}
                                     aria-expanded={groupOpen}
-                                    className="group/hdr w-full px-3 pb-1.5 pt-1 flex items-center gap-1.5 text-left"
+                                    className="group/hdr w-full px-2 pb-2 flex items-center gap-1.5 text-left"
                                 >
-                                    <span className={`text-[10.5px] font-semibold uppercase tracking-[0.09em] transition-colors ${groupActive ? 'text-[#9A9A94]' : 'text-[#6E6E68] group-hover/hdr:text-[#9A9A94]'}`}>
+                                    <span className={`text-[11px] font-bold uppercase tracking-[0.12em] transition-colors ${groupActive ? 'text-[#8FA3BA]' : 'text-[#5B7089] group-hover/hdr:text-[#8FA3BA]'}`}>
                                         {group.label}
                                     </span>
-                                    {groupActive && !groupOpen && (
-                                        <span className="w-1 h-1 rounded-full bg-[#F59E0B] shrink-0" />
-                                    )}
                                     <ChevronDown
                                         size={13}
-                                        className={`ml-auto shrink-0 transition-all duration-200 text-[#7C7C76] opacity-0 group-hover/hdr:opacity-100 ${groupOpen ? '' : '-rotate-90'}`}
+                                        className={`ml-auto shrink-0 transition-all duration-200 text-[#5B7089] opacity-0 group-hover/hdr:opacity-100 ${groupOpen ? '' : '-rotate-90'}`}
                                     />
                                 </button>
                             )}
-                            {isCollapsed && gIdx !== 0 && (
-                                <div className="mx-2 my-2 h-px bg-white/[0.08]" />
-                            )}
+                            {isCollapsed && gIdx !== 0 && <div className="mx-2 my-2 h-px bg-white/[0.08]" />}
 
-                            <div className={`space-y-0.5 ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
+                            <div className={`space-y-1 ${groupOpen ? 'sb-reveal' : 'hidden'}`}>
                                 {group.items.map((item) => {
                                     const active = isActive(item.href);
                                     return (
@@ -368,16 +351,13 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                                             onClick={() => onNavigate?.()}
                                             className={rowCls(active)}>
 
-                                            <item.icon className={rowIconCls(active)} size={17} strokeWidth={1.7} />
+                                            <item.icon className={rowIconCls(active)} size={18} strokeWidth={1.9} />
 
-                                            {!isCollapsed && (
-                                                <span className={rowTextCls(active)}>{item.name}</span>
-                                            )}
+                                            {!isCollapsed && <span className={rowTextCls(active)}>{item.name}</span>}
 
-                                            {/* Live active-orders count */}
                                             {item.href === '/admin/orders' && activeOrders > 0 && (
                                                 <span className={`inline-flex items-center justify-center shrink-0 ${isCollapsed ? 'absolute top-0.5 right-1' : 'relative ml-auto'}`}>
-                                                    <span className="relative inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full bg-[#F9C9A7] text-[#7C3A10] text-[11px] font-semibold tabular-nums">
+                                                    <span className="relative inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#1877C2] text-white text-[11.5px] font-bold tabular-nums">
                                                         {activeOrders}
                                                     </span>
                                                 </span>
@@ -393,45 +373,48 @@ export default function AdminSidebar({ isCollapsed = false, onToggle, onNavigate
                     })}
                 </nav>
 
-                {/* ── FOOTER: settings + the signed-in account ── */}
+                {/* ── FOOTER ── */}
                 <div className="flex-shrink-0 px-3 pt-2 pb-3 border-t border-white/[0.08]">
                     {isPageAllowed('/admin/settings') && (
                         <Link href="/admin/settings"
                             onClick={() => onNavigate?.()}
                             className={rowCls(isActive('/admin/settings'))}>
-                            <Settings size={17} strokeWidth={1.7} className={rowIconCls(isActive('/admin/settings'))} />
+                            <Settings size={18} strokeWidth={1.9} className={rowIconCls(isActive('/admin/settings'))} />
                             {!isCollapsed && <span className={rowTextCls(isActive('/admin/settings'))}>Settings</span>}
                             {isCollapsed && <div className={tooltipCls}>System Settings</div>}
                         </Link>
                     )}
 
-                    {/* The account block. Logout lives here because the top bar is
-                        dashboard-only — this is the one exit reachable everywhere. */}
-                    <div className={`mt-1.5 pt-2 border-t border-white/[0.07] ${isCollapsed ? 'flex flex-col items-center gap-1.5' : 'group/acct flex items-center gap-2.5 pl-1.5 pr-1 py-1 rounded-[10px] transition-colors hover:bg-white/[0.06]'}`}>
-                        <div className="relative w-8 h-8 shrink-0 rounded-full overflow-hidden bg-white/[0.10] flex items-center justify-center ring-1 ring-white/[0.08]">
+                    <div className={`mt-2 ${isCollapsed ? 'flex flex-col items-center gap-1.5' : 'group/acct flex items-center gap-2.5 pl-1 pr-1 py-1.5 rounded-xl transition-colors hover:bg-white/[0.06]'}`}>
+                        <div className="relative w-9 h-9 shrink-0 rounded-full overflow-hidden bg-[#1877C2] flex items-center justify-center">
                             {account.avatar
                                 ? <img src={getImageUrl(account.avatar) || ''} alt="" className="w-full h-full object-cover" />
-                                : <span className="text-[11.5px] font-semibold text-[#D8D8D2]">{accountInitials}</span>}
+                                : <User size={17} strokeWidth={2} className="text-white" />}
                         </div>
 
                         {!isCollapsed && (
-                            <div className="min-w-0 flex-1 leading-none">
-                                <p className="text-[12.5px] font-semibold tracking-[-0.01em] text-white truncate" title={account.name}>
-                                    {account.name}
-                                </p>
-                                <span className="block mt-1 text-[10.5px] font-medium text-[#7C7C76] capitalize truncate">
+                            <>
+                                <div className="min-w-0 flex-1 leading-none">
+                                    <p className="text-[13px] font-bold tracking-[-0.01em] text-white truncate" title={account.name}>
+                                        {account.name}
+                                    </p>
+                                    <span className="block mt-1.5 text-[11px] font-medium text-[#8FA3BA] truncate">
+                                        {accountInitials ? 'Admin Terminal' : ''}
+                                    </span>
+                                </div>
+                                <span className="shrink-0 inline-flex items-center h-[22px] px-2.5 rounded-full bg-white/[0.10] text-[10.5px] font-bold capitalize text-[#C3D0DF]">
                                     {account.role}
                                 </span>
-                            </div>
+                            </>
                         )}
 
                         <button
                             onClick={handleLogout}
                             title="Sign out"
                             aria-label="Sign out"
-                            className="group relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[#7C7C76] hover:text-[#FCA5A5] hover:bg-white/[0.08] transition-colors"
+                            className="group relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[#8FA3BA] hover:text-white hover:bg-[#DC2626] transition-colors"
                         >
-                            <LogOut size={15} strokeWidth={1.8} />
+                            <LogOut size={15} strokeWidth={2} />
                             {isCollapsed && <div className={tooltipCls}>Sign out</div>}
                         </button>
                     </div>

@@ -14,85 +14,85 @@
 
 export const adminColors = {
     // Shell
-    canvas: '#E6E6E4',             // outer grey the console floats on
-    shell: '#F7F7F5',              // the rounded app surface
-    sidebarBg: '#1A1A1A',          // dark nav column against the light content
-    pageBg: '#F7F7F5',             // content area
+    canvas: '#F4F6F9',             // outer grey the console floats on
+    shell: '#F4F6F9',              // the rounded app surface
+    sidebarBg: '#0A6E85',          // floating cyan rail; white text ~5.8:1
+    pageBg: '#F4F6F9',             // content area
     surface: '#FFFFFF',            // cards
-    hairline: '#E9E9E6',
+    hairline: '#E7ECF2',
     // Accent — the brand pair. Amber carries action, teal carries interaction.
-    accent: '#F59E0B',
-    accentHover: '#D97706',
-    accentText: '#B4780B',        // amber readable as text on a light ground
+    accent: '#1877C2',
+    accentHover: '#1567AB',
+    accentText: '#1877C2',
     accentOnDark: '#FFFFFF',
-    accentSoftBg: 'rgba(245,158,11,0.10)',
+    accentSoftBg: '#E8F2FB',
     // Secondary brand — links, clickable titles, sort and info states.
-    info: '#119AB8',
-    infoHover: '#0E7F98',
-    infoText: '#0E7F98',
-    infoSoftBg: 'rgba(17,154,184,0.10)',
+    info: '#1877C2',
+    infoHover: '#1567AB',
+    infoText: '#1877C2',
+    infoSoftBg: '#E8F2FB',
     // Secondary — the soft grey chip
-    secondary: '#F0F0EE',
-    secondaryText: '#5B5B58',
+    secondary: '#F4F6F9',
+    secondaryText: '#64748B',
     // Status
     positive: '#16A34A',
-    positiveBg: '#DCF3E4',
+    positiveBg: '#E7F7EF',
     negative: '#DC2626',
-    negativeBg: '#FCE9E9',
+    negativeBg: '#FDECEC',
     // Text
-    title: '#1A1A1A',
-    body: '#5B5B58',
-    muted: '#9C9C98',
+    title: '#0F1A2B',
+    body: '#64748B',
+    muted: '#94A3B8',
 } as const;
 
 /** Reusable class presets so pages share one language. */
 export const ui = {
-    page: 'bg-[#F7F7F5] min-h-screen text-[#1A1A1A]',
+    page: 'bg-[#F4F6F9] min-h-screen text-[#0F1A2B]',
     /** Borderless white card; the soft shadow does the separating. */
-    card: 'bg-white rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.03),0_10px_30px_-14px_rgba(0,0,0,0.12)]',
-    sectionLabel: 'text-[12px] font-semibold tracking-[-0.01em] text-[#9C9C98]',
+    card: 'bg-white rounded-2xl border border-[#E7ECF2]',
+    sectionLabel: 'text-[11px] font-bold uppercase tracking-[0.12em] text-[#94A3B8]',
     // Fields rest on a faint grey fill with no border, and lift to white with a
     // soft ink ring on focus — the same "lift" language as the active nav pill.
     inputBase:
-        'w-full h-10 px-3.5 bg-[#F2F2F0] rounded-xl text-[13.5px] font-medium text-[#1A1A1A] outline-none border border-transparent ' +
-        'placeholder:text-[#9C9C98] placeholder:font-normal transition-all ' +
-        'hover:bg-[#EDEDEA] focus:bg-white focus:border-[#F59E0B]/40 focus:ring-4 focus:ring-[#F59E0B]/15 ' +
+        'w-full h-11 px-3.5 bg-[#F4F6F9] rounded-xl text-[14px] font-medium text-[#0F1A2B] outline-none border border-transparent ' +
+        'placeholder:text-[#94A3B8] placeholder:font-normal transition-all ' +
+        'focus:bg-white focus:border-[#1877C2]/40 focus:ring-4 focus:ring-[#1877C2]/10 ' +
         'focus:shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
     /** Disabled/read-only field — clearly inert, not just faded. */
-    inputDisabled: 'bg-[#EFEFEC] border-transparent text-[#9C9C98] cursor-not-allowed shadow-none hover:bg-[#EFEFEC]',
+    inputDisabled: 'bg-[#EEF2F6] border-transparent text-[#94A3B8] cursor-not-allowed shadow-none',
     /** Field label above an input. */
-    fieldLabel: 'block text-[12.5px] font-medium tracking-[-0.01em] text-[#5B5B58] mb-1.5',
+    fieldLabel: 'block text-[13px] font-semibold tracking-[-0.01em] text-[#0F1A2B] mb-1.5',
     /** Unit affix (Rs, %) sitting inside a field. */
-    fieldAffix: 'absolute top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#9C9C98] pointer-events-none',
+    fieldAffix: 'absolute top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[#94A3B8] pointer-events-none',
     // Shared table presets — quiet rows, no vertical rules, hairline separators.
     tableWrap: 'w-full overflow-x-auto',
     table: 'w-full text-left border-collapse',
     /** Header cell. Every admin table uses exactly this — only alignment varies. */
-    th: 'px-5 py-3.5 bg-transparent border-b border-[#EDEDEA] text-[11.5px] font-medium tracking-[-0.01em] text-[#9C9C98] whitespace-nowrap',
+    th: 'px-5 py-3.5 bg-transparent border-b border-[#E7ECF2] text-[11px] font-bold uppercase tracking-[0.08em] text-[#94A3B8] whitespace-nowrap',
     /** Body cell. Emphasis inside a row comes from the content, never the cell. */
-    td: 'px-5 py-3.5 text-[13px] text-[#3A3A38] border-b border-[#F2F2F0] align-middle',
-    trHover: 'hover:bg-[#FAFAF8] transition-colors',
+    td: 'px-5 py-3.5 text-[13.5px] text-[#334155] border-b border-[#F1F5F9] align-middle',
+    trHover: 'hover:bg-[#F8FAFC] transition-colors',
     /** Empty-state cell spanning the table. */
-    tdEmpty: 'px-5 py-16 text-center text-[13px] text-[#9C9C98]',
+    tdEmpty: 'px-5 py-16 text-center text-[13.5px] text-[#94A3B8]',
     /** Accent presets — amber solid for actions, amber soft for emphasis. */
-    accentSolid: 'bg-[#F59E0B] hover:bg-[#D97706] text-white',
-    accentSoft: 'bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-inset ring-[#F59E0B]/25',
-    accentTextCls: 'text-[#B4780B]',
+    accentSolid: 'bg-[#1877C2] hover:bg-[#1567AB] text-white',
+    accentSoft: 'bg-[#E8F2FB] text-[#1877C2]',
+    accentTextCls: 'text-[#1877C2]',
     /** Secondary brand — interaction rather than action. */
-    infoSolid: 'bg-[#119AB8] hover:bg-[#0E7F98] text-white',
-    infoSoft: 'bg-[#119AB8]/10 text-[#0E7F98] ring-1 ring-inset ring-[#119AB8]/25',
-    infoTextCls: 'text-[#119AB8]',
+    infoSolid: 'bg-[#1877C2] hover:bg-[#1567AB] text-white',
+    infoSoft: 'bg-[#E8F2FB] text-[#1877C2]',
+    infoTextCls: 'text-[#1877C2]',
     /** A clickable title or inline link inside a table row. */
-    link: 'text-[#119AB8] hover:text-[#0E7F98] hover:underline transition-colors',
-    secondarySoft: 'bg-black/[0.05] text-[#5B5B58] ring-1 ring-inset ring-black/[0.06]',
-    secondaryTextCls: 'text-[#5B5B58]',
+    link: 'text-[#1877C2] hover:text-[#1567AB] hover:underline transition-colors',
+    secondarySoft: 'bg-[#F4F6F9] text-[#64748B]',
+    secondaryTextCls: 'text-[#64748B]',
     /** Money figure — big, tight, ink. Colour is reserved for deltas. */
-    money: 'font-semibold text-[#1A1A1A] tabular-nums tracking-[-0.02em]',
+    money: 'font-bold text-[#0F1A2B] tabular-nums tracking-[-0.02em]',
     /** Display figure, as per the reference's large metric numbers. */
-    metric: 'text-[40px] leading-none font-semibold text-[#1A1A1A] tabular-nums tracking-[-0.03em]',
+    metric: 'text-[34px] leading-none font-bold text-[#0F1A2B] tabular-nums tracking-[-0.03em]',
     /** Round icon chip that sits above a metric. */
-    iconChip: 'w-14 h-14 rounded-full bg-[#F2F2F0] text-[#1A1A1A] flex items-center justify-center shrink-0',
+    iconChip: 'w-10 h-10 rounded-xl bg-[#E8F2FB] text-[#1877C2] flex items-center justify-center shrink-0',
     /** Delta pills under a metric. */
-    deltaUp: 'inline-flex items-center gap-1 h-6 px-2 rounded-lg bg-[#DCF3E4] text-[#16A34A] text-[12px] font-medium',
-    deltaDown: 'inline-flex items-center gap-1 h-6 px-2 rounded-lg bg-[#FCE9E9] text-[#DC2626] text-[12px] font-medium',
+    deltaUp: 'inline-flex items-center gap-1 h-6 px-2 rounded-lg bg-[#E7F7EF] text-[#16A34A] text-[12px] font-semibold',
+    deltaDown: 'inline-flex items-center gap-1 h-6 px-2 rounded-lg bg-[#FDECEC] text-[#DC2626] text-[12px] font-semibold',
 } as const;

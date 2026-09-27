@@ -20,8 +20,8 @@ import { ui } from '@/components/admin/ui';
 
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] hover:border-[#F59E0B] text-white shadow-sm hover:shadow',
-        secondary: 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] hover:border-[#1877C2] text-white shadow-sm hover:shadow',
+        secondary: 'bg-white border-[#E7ECF2] hover:bg-[#F8FAFC] text-[#334155]',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -34,7 +34,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const Field = ({ label, required = false, children, className = "" }: { label: string; required?: boolean; children: React.ReactNode; className?: string }) => (
     <div className={`w-full ${className}`}>
-        <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">{label}{required && <span className="text-rose-500 ml-0.5">*</span>}</label>
+        <label className="block text-[11px] font-bold text-[#64748B] mb-1.5 uppercase tracking-wider">{label}{required && <span className="text-rose-500 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
@@ -76,13 +76,13 @@ const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Se
                 </button>
 
                 {open && (
-                    <div className="absolute z-[120] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div className="absolute z-[120] w-full mt-1 bg-white border border-[#E7ECF2] rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                         {searchable && (
-                            <div className="p-2 border-b border-slate-100 bg-slate-50">
+                            <div className="p-2 border-b border-[#F1F5F9] bg-[#F8FAFC]">
                                 <div className="relative">
                                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
                                     <input
-                                        className="w-full pl-7 pr-2 py-1 text-[12px] border border-slate-200 rounded-md outline-none focus:border-[#4f46e5]"
+                                        className="w-full pl-7 pr-2 py-1 text-[12px] border border-[#E7ECF2] rounded-md outline-none focus:border-[#4f46e5]"
                                         placeholder="Search..."
                                         value={search}
                                         onChange={e => setSearch(e.target.value)}
@@ -96,7 +96,7 @@ const ProfessionalSelect = ({ label, value, options, onChange, placeholder = "Se
                                 filtered.map((opt: any) => (
                                     <div
                                         key={opt.id}
-                                        className={`px-3 py-2 text-[13px] hover:bg-slate-50 cursor-pointer transition-colors ${String(value || '') === String(opt.id || '') ? 'bg-[#F59E0B]/10 font-bold text-[#4f46e5]' : 'text-[#0f172a]'}`}
+                                        className={`px-3 py-2 text-[13px] hover:bg-[#F8FAFC] cursor-pointer transition-colors ${String(value || '') === String(opt.id || '') ? 'bg-[#1877C2]/10 font-bold text-[#4f46e5]' : 'text-[#0f172a]'}`}
                                         onClick={() => {
                                             onChange(opt.id.toString());
                                             setOpen(false);
@@ -164,7 +164,7 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
             <button
                 type="button"
                 onClick={() => setOpen(!open)}
-                className="w-full px-2 border border-slate-200 rounded-lg text-[13px] bg-white outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 transition-all flex items-center justify-between text-left h-[46px]"
+                className="w-full px-2 border border-[#E7ECF2] rounded-lg text-[13px] bg-white outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 transition-all flex items-center justify-between text-left h-[46px]"
             >
                 {selectedGrouped ? (
                     <div className="flex items-center gap-2 overflow-hidden py-1">
@@ -194,12 +194,12 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
             </button>
 
             {open && (
-                <div className="absolute z-[100] w-[120%] mt-1 bg-white border border-slate-200 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.25)] overflow-hidden">
-                    <div className="p-2 bg-slate-100 border-b border-slate-200">
+                <div className="absolute z-[100] w-[120%] mt-1 bg-white border border-[#E7ECF2] rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.25)] overflow-hidden">
+                    <div className="p-2 bg-[#F4F6F9] border-b border-[#E7ECF2]">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
                             <input
-                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-slate-300 rounded-lg outline-none bg-white focus:border-[#4f46e5]"
+                                className="w-full pl-9 pr-3 py-2 text-[13px] border border-[#CBD5E1] rounded-lg outline-none bg-white focus:border-[#4f46e5]"
                                 placeholder="Type product name, SKU or barcode..."
                                 value={search}
                                 onChange={e => setSearch(e.target.value)}
@@ -212,10 +212,10 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                             filtered.map((s: any, idx: number) => (
                                 <div
                                     key={s.id || idx}
-                                    className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-all group flex items-start gap-3"
+                                    className="p-3 hover:bg-[#F8FAFC] cursor-pointer border-b border-[#F1F5F9] last:border-0 transition-all group flex items-start gap-3"
                                     onClick={() => { onSelect(s.id.toString()); setOpen(false); }}
                                 >
-                                    <div className="w-10 h-10 bg-white rounded border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center group-hover:border-[#4f46e5] transition-colors">
+                                    <div className="w-10 h-10 bg-white rounded border border-[#E7ECF2] overflow-hidden shrink-0 flex items-center justify-center group-hover:border-[#4f46e5] transition-colors">
                                         {getCatalogImg(s.product_name) ? (
                                             <img src={getImageUrl(getCatalogImg(s.product_name)) || ''} className="w-full h-full object-contain p-1" alt="" />
                                         ) : (
@@ -241,7 +241,7 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                                                 {s.supplier_name && (
                                                     <>
                                                         <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
+                                                        <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-tighter">
                                                             {s.supplier_name}
                                                         </span>
                                                     </>
@@ -249,7 +249,7 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                                                 {s.category_name && (
                                                     <>
                                                         <span className="w-1 h-1 bg-gray-200 rounded-full" />
-                                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
+                                                        <span className="text-[10px] text-[#64748B] font-bold uppercase tracking-tighter">
                                                             {s.category_name}
                                                         </span>
                                                     </>
@@ -257,20 +257,20 @@ const StockSelector = ({ selectedId, onSelect, stocks, catalogProducts }: any) =
                                             </div>
                                             <div className="mt-1 flex items-center gap-2">
                                                 {s.sku && (
-                                                    <div className="text-[9px] text-slate-400 font-mono flex gap-2">
-                                                        <span>SKU: <span className="text-slate-600 font-bold">{s.sku}</span></span>
-                                                        {s.barcode && <span>• BAR: <span className="text-slate-600 font-bold">{s.barcode}</span></span>}
+                                                    <div className="text-[9px] text-[#94A3B8] font-mono flex gap-2">
+                                                        <span>SKU: <span className="text-[#64748B] font-bold">{s.sku}</span></span>
+                                                        {s.barcode && <span>• BAR: <span className="text-[#64748B] font-bold">{s.barcode}</span></span>}
                                                     </div>
                                                 )}
                                                 {s.date && (
-                                                    <span className="text-[9px] text-slate-400 uppercase font-bold ml-auto">
+                                                    <span className="text-[9px] text-[#94A3B8] uppercase font-bold ml-auto">
                                                         Arrived: {new Date(s.date).toLocaleDateString()}
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-[12px] font-bold text-slate-900">Rs. {Number(s.price_per_item).toLocaleString()}</span>
+                                            <span className="text-[12px] font-bold text-[#0F1A2B]">Rs. {Number(s.price_per_item).toLocaleString()}</span>
                                             <p className="text-[9px] text-gray-400 uppercase font-black tracking-tighter">Shared Cost</p>
                                         </div>
                                     </div>
@@ -607,19 +607,19 @@ export default function ProductForm({ id }: ProductFormProps) {
                 </div>
 
                 <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{isEdit ? 'Update Product' : 'Add New Product'}</h1>
+                    <h1 className="text-2xl font-bold text-[#0F1A2B] tracking-tight">{isEdit ? 'Update Product' : 'Add New Product'}</h1>
                     <button onClick={() => router.back()} className="text-[13px] text-[#4f46e5] hover:text-[#4338ca] hover:underline flex items-center gap-1">
                         <ChevronLeft size={14} /> Back to registry
                     </button>
                 </div>
-                <div className="border-b border-slate-200 mb-8" />
+                <div className="border-b border-[#E7ECF2] mb-8" />
 
                 <form onSubmit={handleSubmit} className="flex flex-col lg:flex-row gap-6 items-start">
                     <div className="flex-1 space-y-6">
 
                         {/* 1. PRODUCT & STOCK INFO */}
-                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] relative z-[50]">
-                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 rounded-t-2xl">
+                        <div className="bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] relative z-[50]">
+                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC] rounded-t-2xl">
                                 <h2 className="text-[14px] font-bold">1. Product & Stock Info</h2>
                                 <p className="text-[12px] text-[#64748b]">Link this product to your warehouse stock.</p>
                             </div>
@@ -665,14 +665,14 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 </div>
 
                                 {selectedStock && (
-                                    <div className="bg-[#F59E0B]/40 border border-[#F59E0B]/15 rounded-lg p-4 animate-in zoom-in-95 mt-2 space-y-4">
+                                    <div className="bg-[#1877C2]/40 border border-[#1877C2]/15 rounded-lg p-4 animate-in zoom-in-95 mt-2 space-y-4">
                                         <div className="flex gap-4">
                                             <Info className="text-[#4f46e5] shrink-0" size={18} />
                                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cost Base</p><p className="text-[14px] font-bold">Rs. {Number(selectedGrouped?.price_per_item).toLocaleString()}</p></div>
-                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</p><p className="text-[14px] font-bold">{selectedGrouped?.category_name || 'Generic'}</p></div>
-                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Supplier</p><p className="text-[14px] font-bold truncate">{selectedGrouped?.supplier_name}</p></div>
-                                                <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Stock</p><p className="text-[14px] font-bold text-emerald-600">{selectedGrouped?.total_quantity} Units</p></div>
+                                                <div><p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Cost Base</p><p className="text-[14px] font-bold">Rs. {Number(selectedGrouped?.price_per_item).toLocaleString()}</p></div>
+                                                <div><p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Category</p><p className="text-[14px] font-bold">{selectedGrouped?.category_name || 'Generic'}</p></div>
+                                                <div><p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Supplier</p><p className="text-[14px] font-bold truncate">{selectedGrouped?.supplier_name}</p></div>
+                                                <div><p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-widest">Total Stock</p><p className="text-[14px] font-bold text-emerald-600">{selectedGrouped?.total_quantity} Units</p></div>
                                             </div>
                                         </div>
                                     </div>
@@ -681,14 +681,14 @@ export default function ProductForm({ id }: ProductFormProps) {
                         </div>
 
                         {/* 2. PRICING */}
-                        <div className={`bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
-                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+                        <div className={`bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC]">
                                 <h2 className="text-[14px] font-bold">2. Pricing</h2>
                             </div>
                             <div className="p-6 space-y-6">
-                                <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-[2px] w-[180px]">
-                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'percent' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#64748b]'}`}>Profit %</button>
-                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'manual' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#64748b]'}`}>Manual Price</button>
+                                <div className="flex bg-[#F4F6F9] border border-[#E7ECF2] rounded-lg p-[2px] w-[180px]">
+                                    <button type="button" onClick={() => setPricingMode('percent')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'percent' ? 'bg-white text-[#0F1A2B] shadow-sm' : 'text-[#64748b]'}`}>Profit %</button>
+                                    <button type="button" onClick={() => setPricingMode('manual')} className={`flex-1 py-1 text-[11px] font-bold uppercase rounded-md transition-all ${pricingMode === 'manual' ? 'bg-white text-[#0F1A2B] shadow-sm' : 'text-[#64748b]'}`}>Manual Price</button>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -709,7 +709,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                                         className={inputCls}
                                         placeholder="Leave blank for no discount"
                                     />
-                                    <p className="text-[11px] text-slate-400 mt-1">
+                                    <p className="text-[11px] text-[#94A3B8] mt-1">
                                         Set higher than the selling price to show a strikethrough discount and list the item under Deals.
                                     </p>
                                 </Field>
@@ -733,8 +733,8 @@ export default function ProductForm({ id }: ProductFormProps) {
                         </div>
 
                         {/* 3. OTHER DETAILS */}
-                        <div className={`bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
-                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+                        <div className={`bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden transition-all ${!selectedStock ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC]">
                                 <h2 className="text-[14px] font-bold">3. Other Details</h2>
                             </div>
                             <div className="p-6 space-y-5">
@@ -792,8 +792,8 @@ export default function ProductForm({ id }: ProductFormProps) {
                     </div>
 
                     <aside className="w-full lg:w-[320px] shrink-0 space-y-4 lg:sticky lg:top-4">
-                        <div className="bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+                        <div className="bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] overflow-hidden">
+                            <div className="px-5 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC]">
                                 <h3 className="text-[14px] font-bold text-center">Product Image</h3>
                             </div>
                             <div className="p-6 text-center">
@@ -802,7 +802,7 @@ export default function ProductForm({ id }: ProductFormProps) {
                                     onDragOver={(e) => { e.preventDefault(); setIsDraggingMain(true); }}
                                     onDragLeave={() => setIsDraggingMain(false)}
                                     onDrop={(e) => handleDrop(e, 'main')}
-                                    className={`aspect-square bg-slate-50 border-2 border-dashed rounded-lg flex items-center justify-center relative overflow-hidden cursor-pointer transition-all group ${isDraggingMain ? 'border-[#4f46e5] bg-[#F59E0B]/10' : 'border-slate-300 hover:border-[#4f46e5]'}`}
+                                    className={`aspect-square bg-[#F8FAFC] border-2 border-dashed rounded-lg flex items-center justify-center relative overflow-hidden cursor-pointer transition-all group ${isDraggingMain ? 'border-[#4f46e5] bg-[#1877C2]/10' : 'border-[#CBD5E1] hover:border-[#4f46e5]'}`}
                                 >
                                     {imagePreview ? (
                                         <img src={imagePreview} className="w-full h-full object-contain p-2" alt="Preview" />
@@ -821,24 +821,24 @@ export default function ProductForm({ id }: ProductFormProps) {
                                         onDragOver={(e) => { e.preventDefault(); setIsDraggingGallery(true); }}
                                         onDragLeave={() => setIsDraggingGallery(false)}
                                         onDrop={(e) => handleDrop(e, 'gallery')}
-                                        className={`grid grid-cols-4 gap-2 p-2 rounded-xl transition-colors ${isDraggingGallery ? 'bg-[#F59E0B]/10 border border-dashed border-[#4f46e5]' : ''}`}
+                                        className={`grid grid-cols-4 gap-2 p-2 rounded-xl transition-colors ${isDraggingGallery ? 'bg-[#1877C2]/10 border border-dashed border-[#4f46e5]' : ''}`}
                                     >
                                         {galleryPreviews.map((src, i) => (
-                                            <div key={i} className="aspect-square bg-white border border-slate-200 rounded-md relative group overflow-hidden">
+                                            <div key={i} className="aspect-square bg-white border border-[#E7ECF2] rounded-md relative group overflow-hidden">
                                                 <img src={src} className="w-full h-full object-cover" />
                                                 <button type="button" onClick={() => removeGalleryImage(i)} className="absolute top-0 right-0 bg-black/50 text-white p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <X size={10} />
                                                 </button>
                                             </div>
                                         ))}
-                                        <button type="button" onClick={() => galleryInputRef.current?.click()} className="aspect-square border border-dashed border-slate-300 rounded-md flex items-center justify-center hover:bg-slate-50 transition-colors">
+                                        <button type="button" onClick={() => galleryInputRef.current?.click()} className="aspect-square border border-dashed border-[#CBD5E1] rounded-md flex items-center justify-center hover:bg-[#F8FAFC] transition-colors">
                                             <Plus size={16} className="text-[#64748b]" />
                                         </button>
                                     </div>
                                     <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} />
                                 </div>
 
-                                <div className="mt-8 space-y-3 pt-6 border-t border-slate-100">
+                                <div className="mt-8 space-y-3 pt-6 border-t border-[#F1F5F9]">
                                     <Btn className="w-full text-[14px] justify-center" onClick={handleSubmit} loading={saving}>
                                         <Save size={14} /> {isEdit ? 'Update Listing' : 'Add Listing'}
                                     </Btn>
@@ -848,8 +848,8 @@ export default function ProductForm({ id }: ProductFormProps) {
                                 </div>
                             </div>
                         </div>
-                        <div className="bg-[#F59E0B]/60 border border-[#F59E0B]/15 rounded-xl p-4 flex gap-3">
-                            <ShieldCheck className="text-[#1A1A1A] shrink-0" size={20} />
+                        <div className="bg-[#1877C2]/60 border border-[#1877C2]/15 rounded-xl p-4 flex gap-3">
+                            <ShieldCheck className="text-[#0F1A2B] shrink-0" size={20} />
                             <p className="text-[12px] text-[#64748b] leading-relaxed italic">Products are linked to their source stock signatures for data integrity.</p>
                         </div>
                     </aside>

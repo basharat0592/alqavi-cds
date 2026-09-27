@@ -97,7 +97,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
     if (loading) return <PageLoader />;
 
     const inputCls = ui.inputBase;
-    const labelCls = 'block text-[11px] font-bold text-slate-700 mb-1.5';
+    const labelCls = 'block text-[11px] font-bold text-[#334155] mb-1.5';
 
     return (
         <div className="text-left max-w-[900px] mx-auto">
@@ -114,8 +114,8 @@ export default function DeliveryForm({ id }: { id?: string }) {
 
             <Card className="p-5 sm:p-6">
                 <div className="flex items-center gap-2 mb-5">
-                    <div className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center"><Bike size={16} /></div>
-                    <h3 className="text-[14px] font-bold text-slate-900">Rider Details</h3>
+                    <div className="w-8 h-8 rounded-lg bg-[#1877C2]/10 text-[#1877C2] flex items-center justify-center"><Bike size={16} /></div>
+                    <h3 className="text-[14px] font-bold text-[#0F1A2B]">Rider Details</h3>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -132,7 +132,7 @@ export default function DeliveryForm({ id }: { id?: string }) {
                         <div className="relative">
                             <input type={showPw ? 'text' : 'password'} className={inputCls + ' pr-10'} value={form.password}
                                 onChange={e => handle('password', e.target.value)} placeholder={isEdit ? 'Leave blank to keep' : 'Set a password'} />
-                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]">
+                            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#1567AB]">
                                 {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                             </button>
                         </div>
@@ -150,32 +150,32 @@ export default function DeliveryForm({ id }: { id?: string }) {
                             <option value="">â€” None â€”</option>
                             {branches.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
                         </select>
-                        <p className="text-[10.5px] text-slate-400 mt-1">Rider sees this organizationâ€™s active orders in their notifications.</p>
+                        <p className="text-[10.5px] text-[#94A3B8] mt-1">Rider sees this organizationâ€™s active orders in their notifications.</p>
                     </div>
                     <div><label className={labelCls}>City</label>
                         <input className={inputCls} value={form.city} onChange={e => handle('city', e.target.value)} placeholder="City" /></div>
                     <div className="sm:col-span-2"><label className={labelCls}>Address</label>
                         <input className={inputCls} value={form.address} onChange={e => handle('address', e.target.value)} placeholder="Address" /></div>
-                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-slate-50 border border-slate-200/70 rounded-lg">
-                        <span className="text-[12px] font-bold text-slate-600">Account Active</span>
+                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-[#F8FAFC] border border-[#E7ECF2] rounded-lg">
+                        <span className="text-[12px] font-bold text-[#64748B]">Account Active</span>
                         <button type="button" onClick={() => handle('is_active', !form.is_active)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_active ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_active ? 'bg-[#1877C2]' : 'bg-slate-300'}`}>
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_active ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>
-                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-[#F59E0B]/50 border border-[#F59E0B]/60 rounded-lg">
+                    <div className="sm:col-span-2 flex items-center justify-between p-3 bg-[#1877C2]/50 border border-[#1877C2]/60 rounded-lg">
                         <div>
-                            <span className="text-[12px] font-bold text-slate-700">System Rider (in-house)</span>
-                            <p className="text-[10.5px] text-slate-500 mt-0.5 leading-snug max-w-[440px]">Your own salaried rider â€” visible only to you, shown at the top when dispatching, and no per-delivery charge is offered.</p>
+                            <span className="text-[12px] font-bold text-[#334155]">System Rider (in-house)</span>
+                            <p className="text-[10.5px] text-[#64748B] mt-0.5 leading-snug max-w-[440px]">Your own salaried rider â€” visible only to you, shown at the top when dispatching, and no per-delivery charge is offered.</p>
                         </div>
                         <button type="button" onClick={() => handle('is_system', !form.is_system)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.is_system ? 'bg-[#F59E0B]' : 'bg-slate-300'}`}>
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${form.is_system ? 'bg-[#1877C2]' : 'bg-slate-300'}`}>
                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${form.is_system ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 mt-6 pt-5 border-t border-slate-100">
+                <div className="flex items-center justify-end gap-2 mt-6 pt-5 border-t border-[#F1F5F9]">
                     <Button variant="outline" onClick={() => router.push('/admin/delivery')} disabled={saving}>Cancel</Button>
                     <Button variant="primary" onClick={save} disabled={saving}>
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

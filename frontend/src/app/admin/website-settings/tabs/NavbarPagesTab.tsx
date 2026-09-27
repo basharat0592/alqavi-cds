@@ -23,7 +23,7 @@ const EMPTY_PAGE: NavbarPage = { name: '', slug: '', link: '', description: '', 
 // ── AMAZON STYLE COMPONENTS ──
 const AmazonBtn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false, size = 'md' }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] text-[#0F172A]',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] text-[#0F172A]',
         secondary: 'bg-gradient-to-b from-[#f8fafc] to-[#e7e9ec] border-[#cbd5e1] hover:from-[#eef1f3] hover:to-[#dce0e4] text-[#0F172A]',
         danger: 'bg-gradient-to-b from-[#f7b5b0] to-[#f08080] border-[#d32f2f] hover:from-[#f5a0a0] hover:to-[#ee6f6f] text-[#0F172A]',
     };
@@ -80,7 +80,7 @@ const PageForm = ({ page, onChange }: { page: NavbarPage; onChange: (p: NavbarPa
             <textarea rows={2} value={page.description}
                 onChange={e => onChange({ ...page, description: e.target.value })}
                 placeholder="Internal description for admin"
-                className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#F59E0B] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white resize-none" />
+                className="w-full px-3 py-2 border border-[#cbd5e1] rounded-lg text-[13px] outline-none focus:border-[#1877C2] focus:shadow-[0_0_3px_2_rgba(228,121,17,0.5)] bg-white resize-none" />
         </div>
         <div className="flex items-center gap-2 pt-4 border-t border-[#eee]">
             <input type="checkbox" id={`visible-${page.id ?? 'new'}`} checked={page.is_visible}
@@ -284,7 +284,7 @@ export default function NavbarPagesTab() {
                                             <code className="bg-[#f1f3f5] text-[#d63031] px-2 py-1 rounded text-[11px] font-mono">{page.slug}</code>
                                         </td>
                                         <td className="px-6 py-3">
-                                            <span className="bg-[#FAFAF8] text-[#3A3A38] px-3 py-1 rounded-full text-[12px] font-medium">
+                                            <span className="bg-[#F8FAFC] text-[#334155] px-3 py-1 rounded-full text-[12px] font-medium">
                                                 {categoriesCounts[page.id || 0] || 0} categories
                                             </span>
                                         </td>
@@ -300,9 +300,9 @@ export default function NavbarPagesTab() {
                                         </td>
                                         <td className="px-6 py-3">
                                             <div className="flex items-center justify-end gap-2.5">
-                                                <button onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} className="text-[12px] font-bold text-[#119AB8] hover:underline">Edit</button>
-                                                <span className="text-slate-300">|</span>
-                                                <button onClick={() => handleDeletePage(page.id!)} className="text-[12px] font-bold text-[#c40000] hover:underline">Delete</button>
+                                                <button onClick={() => setEditingPage({ ...EMPTY_PAGE, ...page })} className="text-[12px] font-bold text-[#1877C2] hover:underline">Edit</button>
+                                                <span className="text-[#CBD5E1]">|</span>
+                                                <button onClick={() => handleDeletePage(page.id!)} className="text-[12px] font-bold text-[#DC2626] hover:underline">Delete</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -336,7 +336,7 @@ export default function NavbarPagesTab() {
             />
 
             {/* Info Box */}
-            <div className="bg-[#FAFAF8] border border-[#E9E9E6] rounded-lg p-4">
+            <div className="bg-[#F8FAFC] border border-[#E7ECF2] rounded-lg p-4">
                 <p className="text-[13px] text-[#262624] flex items-start gap-2">
                     <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
                     <span><strong>Tip:</strong> Create navbar pages first, then assign categories to them. Categories will appear as dropdown items in the navbar under their parent page.</span>

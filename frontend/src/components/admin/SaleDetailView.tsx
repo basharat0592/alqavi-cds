@@ -171,18 +171,18 @@ export default function SaleDetailView({
     };
 
     return (
-        <div className="pb-24 text-left font-sans text-slate-800 bg-[#f8fafc] min-h-screen">
+        <div className="pb-24 text-left font-sans text-[#0F1A2B] bg-[#f8fafc] min-h-screen">
             <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-6">
 
                 {/* Back — steps back in history instead of pushing a duplicate entry */}
-                <button onClick={goBack} className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-800 text-[13px] font-semibold mb-4 transition-colors">
+                <button onClick={goBack} className="inline-flex items-center gap-1.5 text-[#64748B] hover:text-[#0F1A2B] text-[13px] font-semibold mb-4 transition-colors">
                     <ArrowLeft size={15} /> {backLabel}
                 </button>
 
                 {/* Header Section */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-200 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-[#E7ECF2] mb-6">
                     <div className="flex flex-wrap items-center gap-2.5">
-                        <h1 className="text-[22px] font-black text-slate-900 tracking-tight">
+                        <h1 className="text-[22px] font-black text-[#0F1A2B] tracking-tight">
                             Sale #{order.order_number || order.tracking_id}
                         </h1>
                         <Badge tone={getStatusTone(order.status)}>{order.status}</Badge>
@@ -210,14 +210,14 @@ export default function SaleDetailView({
                     <div className="lg:col-span-2 space-y-6">
 
                         {/* Products List Table Card */}
-                        <Card className="p-0 overflow-hidden border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-                                <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                        <Card className="p-0 overflow-hidden border border-[#E7ECF2] shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                            <div className="px-5 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC]/50">
+                                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] flex items-center gap-2">
                                     <Package size={15} /> Items Summary
                                 </h3>
                             </div>
                             <table className="w-full text-left text-[13px]">
-                                <thead className="bg-slate-50/20 border-b border-slate-100 text-[10.5px] font-bold uppercase text-slate-400">
+                                <thead className="bg-[#F8FAFC]/20 border-b border-[#F1F5F9] text-[10.5px] font-bold uppercase text-[#94A3B8]">
                                     <tr>
                                         <th className="px-6 py-3">Product</th>
                                         <th className="px-3 py-3 text-center">Qty</th>
@@ -233,61 +233,61 @@ export default function SaleDetailView({
                                         const bonus = Number(it.bonus_quantity || 0);
                                         const net = it.line_net != null ? Number(it.line_net) : (Number(it.price) * Number(it.quantity) - disc);
                                         return (
-                                        <tr key={index} className="hover:bg-slate-50/30 transition-colors">
+                                        <tr key={index} className="hover:bg-[#F8FAFC]/30 transition-colors">
                                             <td className="px-6 py-4">
-                                                <p className="font-semibold text-slate-900">{it.product_name || 'Unnamed Product'}</p>
+                                                <p className="font-semibold text-[#0F1A2B]">{it.product_name || 'Unnamed Product'}</p>
                                                 {(it.weight || it.size) && (
-                                                    <p className="text-[10px] text-[#1A1A1A] font-bold uppercase mt-0.5 tracking-wide">
+                                                    <p className="text-[10px] text-[#0F1A2B] font-bold uppercase mt-0.5 tracking-wide">
                                                         {it.weight}{it.weight && it.size ? ' • ' : ''}{it.size}
                                                     </p>
                                                 )}
                                             </td>
-                                            <td className="px-3 py-4 text-center text-slate-600 font-medium">{it.quantity}</td>
+                                            <td className="px-3 py-4 text-center text-[#64748B] font-medium">{it.quantity}</td>
                                             <td className="px-3 py-4 text-center font-bold tabular-nums text-emerald-700">{bonus > 0 ? `+${bonus}` : '—'}</td>
-                                            <td className="px-3 py-4 text-right text-slate-500 tabular-nums">{formatCurrency(it.price)}</td>
+                                            <td className="px-3 py-4 text-right text-[#64748B] tabular-nums">{formatCurrency(it.price)}</td>
                                             <td className="px-3 py-4 text-right tabular-nums text-rose-600">{disc > 0 ? `-${formatCurrency(disc)}` : '—'}</td>
-                                            <td className="px-6 py-4 text-right font-semibold text-slate-900 tabular-nums">{formatCurrency(net)}</td>
+                                            <td className="px-6 py-4 text-right font-semibold text-[#0F1A2B] tabular-nums">{formatCurrency(net)}</td>
                                         </tr>
                                     );})}
                                 </tbody>
                             </table>
 
                             {/* Totals Summary */}
-                            <div className="bg-slate-50/30 p-5 border-t border-slate-100 flex justify-end">
+                            <div className="bg-[#F8FAFC]/30 p-5 border-t border-[#F1F5F9] flex justify-end">
                                 <div className="w-full sm:w-[280px] space-y-2 text-[12.5px]">
-                                    <div className="flex justify-between items-center text-slate-500">
+                                    <div className="flex justify-between items-center text-[#64748B]">
                                         <span>Subtotal</span>
                                         <span className="font-semibold tabular-nums">
                                             {formatCurrency((order.items || []).reduce((s: number, it: any) => s + (it.line_net != null ? Number(it.line_net) : (Number(it.price) * Number(it.quantity) - Number(it.discount || 0))), 0))}
                                         </span>
                                     </div>
                                     {(order.items || []).reduce((s: number, it: any) => s + Number(it.bonus_quantity || 0), 0) > 0 && (
-                                        <div className="flex justify-between items-center text-slate-500">
+                                        <div className="flex justify-between items-center text-[#64748B]">
                                             <span>Bonus Units</span>
                                             <span className="font-semibold text-emerald-700 tabular-nums">+{(order.items || []).reduce((s: number, it: any) => s + Number(it.bonus_quantity || 0), 0)} free</span>
                                         </div>
                                     )}
                                     {(order.items || []).reduce((s: number, it: any) => s + Number(it.discount || 0), 0) > 0 && (
-                                        <div className="flex justify-between items-center text-slate-500">
+                                        <div className="flex justify-between items-center text-[#64748B]">
                                             <span>Line Discounts</span>
                                             <span className="font-semibold text-rose-600 tabular-nums">-{formatCurrency((order.items || []).reduce((s: number, it: any) => s + Number(it.discount || 0), 0))}</span>
                                         </div>
                                     )}
                                     {Number(order.shipping_cost || 0) > 0 && (
-                                        <div className="flex justify-between items-center text-slate-500">
+                                        <div className="flex justify-between items-center text-[#64748B]">
                                             <span>Delivery Charges</span>
                                             <span className="font-semibold tabular-nums">+{formatCurrency(Number(order.shipping_cost))}</span>
                                         </div>
                                     )}
                                     {Number(order.discount || 0) > 0 && (
-                                        <div className="flex justify-between items-center text-slate-500">
+                                        <div className="flex justify-between items-center text-[#64748B]">
                                             <span>Discount</span>
                                             <span className="font-semibold text-rose-600 tabular-nums">-{formatCurrency(Number(order.discount))}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center text-[14.5px] pt-2 border-t border-slate-200/60 font-black text-slate-900">
+                                    <div className="flex justify-between items-center text-[14.5px] pt-2 border-t border-[#E7ECF2]/60 font-black text-[#0F1A2B]">
                                         <span>Grand Total</span>
-                                        <span className="text-[#1A1A1A] tabular-nums">{formatCurrency(total)}</span>
+                                        <span className="text-[#0F1A2B] tabular-nums">{formatCurrency(total)}</span>
                                     </div>
                                     <div className="flex justify-between items-center text-emerald-600 font-semibold pt-1">
                                         <span>Amount Paid</span>
@@ -301,17 +301,17 @@ export default function SaleDetailView({
                                     )}
                                     {prevBalance > 0 && (
                                         <>
-                                            <div className="flex justify-between items-center text-amber-600 font-semibold pt-2 border-t border-slate-200/60">
+                                            <div className="flex justify-between items-center text-amber-600 font-semibold pt-2 border-t border-[#E7ECF2]/60">
                                                 <span>Previous Balance</span>
                                                 <span className="tabular-nums">{formatCurrency(prevBalance)}</span>
                                             </div>
                                             {prevDueDate && (
-                                                <div className="flex justify-between items-center text-slate-500">
+                                                <div className="flex justify-between items-center text-[#64748B]">
                                                     <span>Prev. Due Date</span>
                                                     <span className="tabular-nums">{formatDate(prevDueDate)}</span>
                                                 </div>
                                             )}
-                                            <div className="flex justify-between items-center text-[13.5px] font-black text-rose-700 pt-1 border-t border-slate-200/60">
+                                            <div className="flex justify-between items-center text-[13.5px] font-black text-rose-700 pt-1 border-t border-[#E7ECF2]/60">
                                                 <span>Net Balance</span>
                                                 <span className="tabular-nums">{formatCurrency(prevBalance + remaining)}</span>
                                             </div>
@@ -322,19 +322,19 @@ export default function SaleDetailView({
                         </Card>
 
                         {/* Payment History Card */}
-                        <Card className="p-0 overflow-hidden border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-                                <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                        <Card className="p-0 overflow-hidden border border-[#E7ECF2] shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                            <div className="px-5 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC]/50">
+                                <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#64748B] flex items-center gap-2">
                                     <Clock size={15} /> Payment History
                                 </h3>
                             </div>
                             {installments.length === 0 ? (
-                                <div className="py-12 text-center text-[12.5px] text-slate-400 font-medium">
+                                <div className="py-12 text-center text-[12.5px] text-[#94A3B8] font-medium">
                                     No partial payments recorded. Total was settled at checkout.
                                 </div>
                             ) : (
                                 <table className="w-full text-left text-[12.5px]">
-                                    <thead className="bg-slate-50/10 border-b border-slate-100 text-[10px] font-bold uppercase text-slate-400">
+                                    <thead className="bg-[#F8FAFC]/10 border-b border-[#F1F5F9] text-[10px] font-bold uppercase text-[#94A3B8]">
                                         <tr>
                                             <th className="px-6 py-2.5">Date & Time</th>
                                             <th className="px-4 py-2.5">Reference</th>
@@ -349,21 +349,21 @@ export default function SaleDetailView({
                                         {installments.map((pm: any) => (
                                             <tr
                                                 key={pm.id}
-                                                className="hover:bg-slate-50/30 transition-colors cursor-pointer"
+                                                className="hover:bg-[#F8FAFC]/30 transition-colors cursor-pointer"
                                                 onClick={() => setSelectedInstallment(pm)}
                                             >
-                                                <td className="px-6 py-3.5 text-slate-500 tabular-nums">
+                                                <td className="px-6 py-3.5 text-[#64748B] tabular-nums">
                                                     {formatDateTime(pm.paid_at || pm.created_at)}
                                                 </td>
-                                                <td className="px-4 py-3.5 font-medium text-slate-700">
+                                                <td className="px-4 py-3.5 font-medium text-[#334155]">
                                                     {pm.reference || '—'}
                                                 </td>
                                                 <td className="px-4 py-3.5">
-                                                    <span className="inline-block px-2 py-0.5 bg-slate-100 border border-slate-200/50 text-[10px] font-bold uppercase text-slate-600 rounded">
+                                                    <span className="inline-block px-2 py-0.5 bg-[#F4F6F9] border border-[#E7ECF2] text-[10px] font-bold uppercase text-[#64748B] rounded">
                                                         {pm.method || 'cash'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3.5 text-slate-500">
+                                                <td className="px-4 py-3.5 text-[#64748B]">
                                                     {pm.created_by_name || 'System'}
                                                 </td>
                                                 <td className="px-4 py-3.5 text-center">
@@ -377,12 +377,12 @@ export default function SaleDetailView({
                                                         {pm.status === 'confirmed' ? 'Confirmed' : pm.status === 'rejected' ? 'Rejected' : 'Pending Verification'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-3.5 text-right font-bold text-slate-900 tabular-nums">
+                                                <td className="px-6 py-3.5 text-right font-bold text-[#0F1A2B] tabular-nums">
                                                     {formatCurrency(pm.amount)}
                                                 </td>
                                                 <td className="px-6 py-3.5 text-right space-x-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                                     {pm.slip_url && (
-                                                        <a href={pm.slip_url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-[#0E7F98] inline-block align-middle" title="View Slip">
+                                                        <a href={pm.slip_url} target="_blank" rel="noreferrer" className="text-[#94A3B8] hover:text-[#1567AB] inline-block align-middle" title="View Slip">
                                                             <Paperclip size={14} />
                                                         </a>
                                                     )}
@@ -396,7 +396,7 @@ export default function SaleDetailView({
                                                             </button>
                                                         </>
                                                     )}
-                                                    <button onClick={() => handleDeletePayment(pm.id)} className="text-slate-300 hover:text-rose-600 inline-block align-middle" title="Delete Record">
+                                                    <button onClick={() => handleDeletePayment(pm.id)} className="text-[#CBD5E1] hover:text-rose-600 inline-block align-middle" title="Delete Record">
                                                         <Trash2 size={13} />
                                                     </button>
                                                 </td>
@@ -412,43 +412,43 @@ export default function SaleDetailView({
                     <div className="space-y-6">
 
                         {/* Customer Profile Card */}
-                        <Card className="p-5 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                            <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-400 mb-3.5 flex items-center gap-1.5">
+                        <Card className="p-5 border border-[#E7ECF2] shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                            <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#94A3B8] mb-3.5 flex items-center gap-1.5">
                                 <User size={14} /> Customer Profile
                             </h3>
                             <div className="space-y-3.5 text-[13px]">
                                 <div>
-                                    <p className="font-bold text-slate-800">{order.customer_display_name || order.customer_name || 'Walk-in Customer'}</p>
+                                    <p className="font-bold text-[#0F1A2B]">{order.customer_display_name || order.customer_name || 'Walk-in Customer'}</p>
                                     {order.customer_type === 'walkin' ? (
-                                        <p className="text-[10px] text-slate-400 italic mt-0.5">Walk-in Account</p>
+                                        <p className="text-[10px] text-[#94A3B8] italic mt-0.5">Walk-in Account</p>
                                     ) : (
                                         <p className="text-[10.5px] text-emerald-600 font-semibold mt-0.5">Registered customer account</p>
                                     )}
                                 </div>
                                 {order.customer_phone || (order.phone_number && order.phone_number !== 'N/A') ? (
-                                    <div className="flex items-center gap-2 text-slate-600 pt-2 border-t border-slate-100/60">
-                                        <Phone size={13} className="text-slate-400 shrink-0" />
+                                    <div className="flex items-center gap-2 text-[#64748B] pt-2 border-t border-[#F1F5F9]/60">
+                                        <Phone size={13} className="text-[#94A3B8] shrink-0" />
                                         <span>{order.customer_phone || order.phone_number}</span>
                                     </div>
                                 ) : null}
                                 {order.shipping_address && order.shipping_address !== 'Walk-in Store Selection' && (
-                                    <div className="flex items-start gap-2 text-slate-600 pt-2 border-t border-slate-100/60">
-                                        <MapPin size={13} className="text-slate-400 shrink-0 mt-0.5" />
+                                    <div className="flex items-start gap-2 text-[#64748B] pt-2 border-t border-[#F1F5F9]/60">
+                                        <MapPin size={13} className="text-[#94A3B8] shrink-0 mt-0.5" />
                                         <span className="leading-relaxed">{order.shipping_address}</span>
                                     </div>
                                 )}
                                 {order.proof_image_url && (
-                                    <div className="pt-3 mt-1 border-t border-slate-100/60">
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5"><MapPin size={12} /> Proof of Delivery</p>
+                                    <div className="pt-3 mt-1 border-t border-[#F1F5F9]/60">
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] mb-2 flex items-center gap-1.5"><MapPin size={12} /> Proof of Delivery</p>
                                         <div className="flex items-start gap-3">
                                             <a href={order.proof_image_url} target="_blank" rel="noreferrer">
-                                                <img src={order.proof_image_url} alt="Delivery proof" className="w-24 h-24 rounded-lg object-cover border border-slate-200" />
+                                                <img src={order.proof_image_url} alt="Delivery proof" className="w-24 h-24 rounded-lg object-cover border border-[#E7ECF2]" />
                                             </a>
-                                            <div className="text-[12px] text-slate-600 space-y-1">
+                                            <div className="text-[12px] text-[#64748B] space-y-1">
                                                 {order.proof_at && <p>Captured: {formatDate(order.proof_at)}</p>}
                                                 {order.proof_lat && order.proof_lng ? (
-                                                    <a href={`https://maps.google.com/?q=${order.proof_lat},${order.proof_lng}`} target="_blank" rel="noreferrer" className="text-[#5B5B58] hover:underline font-semibold inline-flex items-center gap-1"><MapPin size={12} /> {order.proof_lat}, {order.proof_lng}</a>
-                                                ) : <p className="text-slate-400">Location unavailable</p>}
+                                                    <a href={`https://maps.google.com/?q=${order.proof_lat},${order.proof_lng}`} target="_blank" rel="noreferrer" className="text-[#64748B] hover:underline font-semibold inline-flex items-center gap-1"><MapPin size={12} /> {order.proof_lat}, {order.proof_lng}</a>
+                                                ) : <p className="text-[#94A3B8]">Location unavailable</p>}
                                             </div>
                                         </div>
                                     </div>
@@ -457,43 +457,43 @@ export default function SaleDetailView({
                         </Card>
 
                         {/* Order Metadata Card */}
-                        <Card className="p-5 border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
-                            <h3 className="text-[12px] font-bold uppercase tracking-wider text-slate-400 mb-3.5 flex items-center gap-1.5">
+                        <Card className="p-5 border border-[#E7ECF2] shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+                            <h3 className="text-[12px] font-bold uppercase tracking-wider text-[#94A3B8] mb-3.5 flex items-center gap-1.5">
                                 <FileText size={14} /> Order Metadata
                             </h3>
                             <div className="space-y-3 text-[12.5px]">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400 font-medium">Date & Time</span>
-                                    <span className="font-semibold text-slate-700">{formatDateTime(order.created_at)}</span>
+                                    <span className="text-[#94A3B8] font-medium">Date & Time</span>
+                                    <span className="font-semibold text-[#334155]">{formatDateTime(order.created_at)}</span>
                                 </div>
                                 {order.sale_date && (
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-400 font-medium">Sale Date</span>
-                                        <span className="font-semibold text-slate-700">{formatDate(order.sale_date)}</span>
+                                        <span className="text-[#94A3B8] font-medium">Sale Date</span>
+                                        <span className="font-semibold text-[#334155]">{formatDate(order.sale_date)}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400 font-medium">Organization</span>
-                                    <span className="font-semibold text-slate-700">{order.warehouse_name || 'Main Organization'}</span>
+                                    <span className="text-[#94A3B8] font-medium">Organization</span>
+                                    <span className="font-semibold text-[#334155]">{order.warehouse_name || 'Main Organization'}</span>
                                 </div>
                                 {order.salesperson_name && (
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-400 font-medium">Salesman</span>
-                                        <span className="font-semibold text-slate-700">{order.salesperson_name}</span>
+                                        <span className="text-[#94A3B8] font-medium">Salesman</span>
+                                        <span className="font-semibold text-[#334155]">{order.salesperson_name}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400 font-medium">Sales Channel</span>
-                                    <span className="font-semibold text-slate-700">{channel} Counter</span>
+                                    <span className="text-[#94A3B8] font-medium">Sales Channel</span>
+                                    <span className="font-semibold text-[#334155]">{channel} Counter</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-slate-400 font-medium">Payment Method</span>
-                                    <span className="font-semibold text-slate-700">{order.payment_method || 'Cash'}</span>
+                                    <span className="text-[#94A3B8] font-medium">Payment Method</span>
+                                    <span className="font-semibold text-[#334155]">{order.payment_method || 'Cash'}</span>
                                 </div>
                                 {order.due_date && (
-                                    <div className="flex justify-between items-center pt-2 border-t border-slate-100/60">
-                                        <span className="text-slate-400 font-medium">Due Date</span>
-                                        <span className={`font-bold ${isOverdue ? 'text-rose-600' : 'text-slate-700'}`}>
+                                    <div className="flex justify-between items-center pt-2 border-t border-[#F1F5F9]/60">
+                                        <span className="text-[#94A3B8] font-medium">Due Date</span>
+                                        <span className={`font-bold ${isOverdue ? 'text-rose-600' : 'text-[#334155]'}`}>
                                             {formatDate(order.due_date)}
                                         </span>
                                     </div>
@@ -527,8 +527,8 @@ export default function SaleDetailView({
                         </div>
                     </div>
                     <div className="text-center">
-                        <h3 className="text-[15px] font-bold text-slate-900 leading-snug">Permanently delete this order?</h3>
-                        <p className="text-[12px] text-slate-600 mt-2 leading-relaxed">
+                        <h3 className="text-[15px] font-bold text-[#0F1A2B] leading-snug">Permanently delete this order?</h3>
+                        <p className="text-[12px] text-[#64748B] mt-2 leading-relaxed">
                             You are about to delete Sale <strong>#{order.order_number || order.tracking_id}</strong>. This action is irreversible and will remove the record entirely.
                         </p>
                     </div>
@@ -562,53 +562,53 @@ export default function SaleDetailView({
                     title="Payment Record Details"
                     size="md"
                 >
-                    <div className="space-y-5 text-left text-sm font-sans text-slate-800">
-                        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <div className="space-y-5 text-left text-sm font-sans text-[#0F1A2B]">
+                        <div className="grid grid-cols-2 gap-4 bg-[#F8FAFC] p-4 rounded-lg border border-[#F1F5F9]">
                             <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Payer Account</span>
-                                <p className="font-bold text-slate-900 mt-0.5">{order.customer_name || 'Walk-in Customer'}</p>
+                                <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Payer Account</span>
+                                <p className="font-bold text-[#0F1A2B] mt-0.5">{order.customer_name || 'Walk-in Customer'}</p>
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sale Invoice</span>
-                                <p className="font-bold text-slate-900 mt-0.5">Order #{order.tracking_id}</p>
+                                <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Sale Invoice</span>
+                                <p className="font-bold text-[#0F1A2B] mt-0.5">Order #{order.tracking_id}</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Organization (Selected)</label>
-                                <p className="font-semibold text-slate-800 mt-1 flex items-center gap-1.5">
-                                    <Warehouse size={14} className="text-slate-400" />
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Organization (Selected)</label>
+                                <p className="font-semibold text-[#0F1A2B] mt-1 flex items-center gap-1.5">
+                                    <Warehouse size={14} className="text-[#94A3B8]" />
                                     {warehouses.find(w => w.id === selectedInstallment.warehouse)?.name || 'Default Organization'}
                                 </p>
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Payment Method</label>
-                                <p className="font-semibold text-slate-800 mt-1 capitalize">{selectedInstallment.method || 'Cash'}</p>
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Payment Method</label>
+                                <p className="font-semibold text-[#0F1A2B] mt-1 capitalize">{selectedInstallment.method || 'Cash'}</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Txn Reference / ID</label>
-                                <p className="font-bold text-slate-900 mt-1">{selectedInstallment.reference || '—'}</p>
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Txn Reference / ID</label>
+                                <p className="font-bold text-[#0F1A2B] mt-1">{selectedInstallment.reference || '—'}</p>
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Date & Time</label>
-                                <p className="font-semibold text-slate-700 mt-1">{formatDateTime(selectedInstallment.paid_at || selectedInstallment.created_at)}</p>
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Date & Time</label>
+                                <p className="font-semibold text-[#334155] mt-1">{formatDateTime(selectedInstallment.paid_at || selectedInstallment.created_at)}</p>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Amount Paid</label>
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Amount Paid</label>
                                 <p className="text-[15px] font-black text-emerald-600 mt-1">{formatCurrency(selectedInstallment.amount)}</p>
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Verification Status</label>
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Verification Status</label>
                                 <div className="mt-1">
                                     <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase rounded ${
                                         selectedInstallment.status === 'confirmed'
@@ -625,19 +625,19 @@ export default function SaleDetailView({
 
                         {selectedInstallment.note && (
                             <div>
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Note</label>
-                                <p className="text-slate-600 mt-1 italic">"{selectedInstallment.note}"</p>
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">Note</label>
+                                <p className="text-[#64748B] mt-1 italic">"{selectedInstallment.note}"</p>
                             </div>
                         )}
 
                         {selectedInstallment.slip_url && (
-                            <div className="border-t border-slate-100 pt-4">
-                                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Receipt Proof Slip</label>
-                                <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 flex flex-col items-center">
+                            <div className="border-t border-[#F1F5F9] pt-4">
+                                <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider block mb-2">Receipt Proof Slip</label>
+                                <div className="bg-[#F8FAFC] p-2 rounded-lg border border-[#E7ECF2] flex flex-col items-center">
                                     {selectedInstallment.slip_url.match(/\.(pdf)$/i) ? (
                                         <div className="py-6 flex flex-col items-center gap-2">
-                                            <FileText size={40} className="text-slate-400" />
-                                            <span className="text-xs text-slate-500 font-semibold">PDF Receipt Document</span>
+                                            <FileText size={40} className="text-[#94A3B8]" />
+                                            <span className="text-xs text-[#64748B] font-semibold">PDF Receipt Document</span>
                                         </div>
                                     ) : (
                                         <img
@@ -647,14 +647,14 @@ export default function SaleDetailView({
                                             onClick={() => window.open(selectedInstallment.slip_url, '_blank')}
                                         />
                                     )}
-                                    <a href={selectedInstallment.slip_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#119AB8] hover:text-[#0E7F98] hover:underline">
+                                    <a href={selectedInstallment.slip_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#1877C2] hover:text-[#1567AB] hover:underline">
                                         <ExternalLink size={13} /> View full receipt document
                                     </a>
                                 </div>
                             </div>
                         )}
 
-                        <div className="flex justify-between items-center gap-3 border-t border-slate-100 pt-4">
+                        <div className="flex justify-between items-center gap-3 border-t border-[#F1F5F9] pt-4">
                             <button onClick={() => handleDeletePayment(selectedInstallment.id)} className="h-10 px-4 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold border border-rose-200 rounded-lg text-xs sm:text-[13px] flex items-center gap-1.5 transition-colors">
                                 <Trash2 size={14} /> Delete
                             </button>

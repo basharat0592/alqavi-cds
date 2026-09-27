@@ -87,24 +87,24 @@ export default function CompaniesPage() {
 
             {/* ── Add / edit form ── */}
             <Card className="overflow-hidden mb-5">
-                <div className="px-5 sm:px-6 py-4 border-b border-[#F2F2F0] flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
-                    <div className="w-9 h-9 rounded-xl bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center ring-1 ring-inset ring-[#F59E0B]/15 shrink-0">
+                <div className="px-5 sm:px-6 py-4 border-b border-[#F4F6F9] flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
+                    <div className="w-9 h-9 rounded-xl bg-[#1877C2]/10 text-[#1877C2] flex items-center justify-center ring-1 ring-inset ring-[#1877C2]/15 shrink-0">
                         <Building2 size={17} strokeWidth={2} />
                     </div>
                     <div>
-                        <h2 className="text-[13px] font-semibold text-[#1A1A1A] tracking-tight">{editId ? 'Edit Company' : 'Add Company'}</h2>
-                        <p className="text-[11.5px] text-[#8A8A86]">Company name and category.</p>
+                        <h2 className="text-[13px] font-semibold text-[#0F1A2B] tracking-tight">{editId ? 'Edit Company' : 'Add Company'}</h2>
+                        <p className="text-[11.5px] text-[#94A3B8]">Company name and category.</p>
                     </div>
                 </div>
                 <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1">Company Name <span className="text-rose-600">*</span></label>
+                        <label className="block text-[11.5px] font-semibold text-[#334155] mb-1">Company Name <span className="text-rose-600">*</span></label>
                         <input className={ui.inputBase} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Amour Company" />
                     </div>
                     <div>
-                        <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1">Company Category</label>
+                        <label className="block text-[11.5px] font-semibold text-[#334155] mb-1">Company Category</label>
                         <div className="relative">
-                            <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C98]" />
+                            <Tag size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                             <input className={ui.inputBase + ' pl-9'} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Local / Imported / Pakistani" />
                         </div>
                     </div>
@@ -122,13 +122,13 @@ export default function CompaniesPage() {
 
             {/* ── List ── */}
             <Card className="overflow-hidden">
-                <div className="px-5 sm:px-6 py-3.5 border-b border-[#F2F2F0] flex items-center justify-between gap-3">
-                    <h3 className="text-[13px] font-semibold text-[#1A1A1A] tracking-tight flex items-center gap-2">
+                <div className="px-5 sm:px-6 py-3.5 border-b border-[#F4F6F9] flex items-center justify-between gap-3">
+                    <h3 className="text-[13px] font-semibold text-[#0F1A2B] tracking-tight flex items-center gap-2">
                         Company List
-                        <span className="text-[10.5px] font-semibold text-[#B4780B] bg-[#F59E0B]/10 px-2 py-0.5 rounded-full tabular-nums">{filtered.length}</span>
+                        <span className="text-[10.5px] font-semibold text-[#1877C2] bg-[#1877C2]/10 px-2 py-0.5 rounded-full tabular-nums">{filtered.length}</span>
                     </h3>
                     <div className="relative w-full max-w-[240px]">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C98]" />
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8]" />
                         <input className={ui.inputBase + ' pl-9 h-9'} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search companies..." />
                     </div>
                 </div>
@@ -143,21 +143,21 @@ export default function CompaniesPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {loading ? (
-                                <tr><td colSpan={3} className="px-5 py-8 text-center text-[#9C9C98]">Loading…</td></tr>
+                                <tr><td colSpan={3} className="px-5 py-8 text-center text-[#94A3B8]">Loading…</td></tr>
                             ) : filtered.length === 0 ? (
-                                <tr><td colSpan={3} className="px-5 py-8 text-center text-[#9C9C98] italic">No companies yet. Add one above.</td></tr>
+                                <tr><td colSpan={3} className="px-5 py-8 text-center text-[#94A3B8] italic">No companies yet. Add one above.</td></tr>
                             ) : (
                                 paged.map(c => (
-                                    <tr key={c.id} className="hover:bg-[#FAFAF8] transition-colors">
+                                    <tr key={c.id} className="hover:bg-[#F8FAFC] transition-colors">
                                         <td className={ui.td}>{c.name}</td>
                                         <td className={ui.td}>
                                             {c.category
-                                                ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#F2F2F0] text-[#3A3A38] text-[11.5px] font-semibold">{c.category}</span>
-                                                : <span className="text-[#9C9C98]">—</span>}
+                                                ? <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#F4F6F9] text-[#334155] text-[11.5px] font-semibold">{c.category}</span>
+                                                : <span className="text-[#94A3B8]">—</span>}
                                         </td>
                                         <td className={ui.td + ' text-right whitespace-nowrap'}>
-                                            <button onClick={() => startEdit(c)} className="text-[#9C9C98] hover:text-[#0E7F98] p-1.5 rounded-lg hover:bg-[#F59E0B]/10 transition-colors" title="Edit"><Pencil size={15} /></button>
-                                            <button onClick={() => remove(c)} className="text-[#9C9C98] hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors ml-1" title="Delete"><Trash2 size={15} /></button>
+                                            <button onClick={() => startEdit(c)} className="text-[#94A3B8] hover:text-[#1567AB] p-1.5 rounded-lg hover:bg-[#1877C2]/10 transition-colors" title="Edit"><Pencil size={15} /></button>
+                                            <button onClick={() => remove(c)} className="text-[#94A3B8] hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors ml-1" title="Delete"><Trash2 size={15} /></button>
                                         </td>
                                     </tr>
                                 ))

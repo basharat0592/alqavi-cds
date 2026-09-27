@@ -1,10 +1,13 @@
 import './globals.css';
-import { Inter, Playfair_Display } from 'next/font/google';
+import { Inter, Playfair_Display, Plus_Jakarta_Sans } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
 import { WishlistProvider } from '@/context/WishlistContext';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
+// The admin rail runs on its own face — a touch more geometric than Inter,
+// which keeps the nav distinct from page content set in Inter.
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], weight: ['500', '600', '700'], variable: '--font-jakarta' });
 
 export const metadata = {
     title: 'Al-Qavi Cosmetics - Premium Beauty Wholesale',
@@ -23,7 +26,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" suppressHydrationWarning={true}>
-            <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning={true}>
+            <body className={`${inter.variable} ${playfair.variable} ${jakarta.variable} font-sans`} suppressHydrationWarning={true}>
                 <SiteIdentityManager />
                 <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
                 <WhatsAppButton />

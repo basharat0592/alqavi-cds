@@ -37,7 +37,7 @@ export default function MenuGroupPage() {
     const label = decodeURIComponent(String(params?.group || ''));
     const { groups } = useVisibleGroups();
     const group = groups.find((g) => g.label.toLowerCase() === label.toLowerCase());
-    const meta = GROUP_META[group?.label || label] || { icon: Boxes, color: '#6366f1' };
+    const meta = GROUP_META[group?.label || label] || { icon: Boxes, color: '#1877C2' };
     const GIcon = meta.icon;
 
     const doLogout = () => { authService.logout(); router.push('/login'); };
@@ -47,14 +47,14 @@ export default function MenuGroupPage() {
         const inner = (
             <>
                 <span className="absolute left-[6px] top-1/2 -translate-y-1/2 z-10 w-[42px] h-[42px] rounded-full bg-white flex items-center justify-center shadow-[0_5px_14px_rgba(15,23,42,0.45)]">
-                    <Icon size={21} strokeWidth={2.8} style={{ color: '#4F46E5' }} />
+                    <Icon size={21} strokeWidth={2.8} style={{ color: '#1877C2' }} />
                 </span>
                 <span className="flex-1 min-w-0 text-left text-white font-extrabold uppercase tracking-wide text-[13px] leading-[1.12] line-clamp-2">{it.name}</span>
                 <ChevronRight className="shrink-0 w-4 h-4 text-white/80" />
             </>
         );
         const cls = "w-full relative flex items-center h-[56px] rounded-full border-2 pl-[54px] pr-6 shadow-[0_3px_10px_-3px_rgba(15,23,42,0.18)] transition-all duration-300 active:scale-[0.99]";
-        const st = { backgroundColor: '#4F46E5', borderColor: '#4338CA' };
+        const st = { backgroundColor: '#1877C2', borderColor: '#1567AB' };
         return it.action === 'logout' ? (
             <button key="logout" type="button" onClick={doLogout} className={cls} style={st}>{inner}</button>
         ) : (
@@ -63,24 +63,24 @@ export default function MenuGroupPage() {
     };
 
     return (
-        <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-slate-800 animate-in fade-in duration-300">
+        <div className="bg-[#f8fafc] min-h-screen pb-24 font-sans text-[#0F1A2B] animate-in fade-in duration-300">
             <div className="max-w-[560px] mx-auto px-3 pt-3">
                 {/* Header — back + group identity */}
                 <div className="flex items-center gap-3 mb-5">
                     <button
                         type="button"
                         onClick={() => router.push('/admin/dashboard')}
-                        className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 shadow-sm active:scale-95 transition-all shrink-0"
+                        className="w-10 h-10 rounded-full bg-white border border-[#E7ECF2] flex items-center justify-center text-[#64748B] shadow-sm active:scale-95 transition-all shrink-0"
                         aria-label="Back"
                     >
                         <ArrowLeft size={18} />
                     </button>
-                    <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ backgroundColor: '#4F46E5' }}>
+                    <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm" style={{ backgroundColor: '#1877C2' }}>
                         <GIcon size={20} strokeWidth={2.6} className="text-white" />
                     </span>
                     <div className="min-w-0">
-                        <h1 className="text-[19px] font-bold text-slate-900 leading-tight truncate">{group?.label || label}</h1>
-                        <p className="text-[12px] text-slate-500">{group ? `${group.items.length} pages` : 'Menu'}</p>
+                        <h1 className="text-[19px] font-bold text-[#0F1A2B] leading-tight truncate">{group?.label || label}</h1>
+                        <p className="text-[12px] text-[#64748B]">{group ? `${group.items.length} pages` : 'Menu'}</p>
                     </div>
                 </div>
 
@@ -90,10 +90,10 @@ export default function MenuGroupPage() {
                         {group.items.map((it: any) => renderPill(it))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 text-[13px] text-slate-400">
+                    <div className="text-center py-20 text-[13px] text-[#94A3B8]">
                         This menu isn’t available.
                         <div className="mt-3">
-                            <Link href="/admin/dashboard" className="text-[#119AB8] font-semibold hover:underline">Back to Dashboard</Link>
+                            <Link href="/admin/dashboard" className="text-[#1877C2] font-semibold hover:underline">Back to Dashboard</Link>
                         </div>
                     </div>
                 )}

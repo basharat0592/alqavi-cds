@@ -67,7 +67,7 @@ export default function CustomerLedgerReport() {
                 <Card className="p-4 mb-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                         <div className="lg:col-span-2">
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Customer</label>
+                            <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">Customer</label>
                             <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={ui.inputBase + ' cursor-pointer'}>
                                 <option value="">Select a customer…</option>
                                 {customers.map((c) => (
@@ -76,11 +76,11 @@ export default function CustomerLedgerReport() {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">From</label>
+                            <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">From</label>
                             <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={ui.inputBase + ' cursor-pointer'} />
                         </div>
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">To</label>
+                            <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1">To</label>
                             <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={ui.inputBase + ' cursor-pointer'} />
                         </div>
                     </div>
@@ -100,14 +100,14 @@ export default function CustomerLedgerReport() {
 
             {/* Ledger */}
             {loading ? (
-                <div className="py-24 text-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
+                <div className="py-24 text-center text-[#94A3B8]"><Loader2 className="w-6 h-6 animate-spin mx-auto" /></div>
             ) : !data ? (
                 <Card className="py-16 text-center print:hidden">
-                    <BookUser className="w-10 h-10 text-[#DCDCD8] mx-auto mb-3" />
-                    <p className="text-[13px] text-slate-500">Select a customer and click <b>Generate</b> to view the ledger.</p>
+                    <BookUser className="w-10 h-10 text-[#E2E8F0] mx-auto mb-3" />
+                    <p className="text-[13px] text-[#64748B]">Select a customer and click <b>Generate</b> to view the ledger.</p>
                 </Card>
             ) : data.rows.length === 0 ? (
-                <Card className="py-16 text-center print:hidden"><p className="text-[13px] text-slate-500">No transactions for this customer in the selected range.</p></Card>
+                <Card className="py-16 text-center print:hidden"><p className="text-[13px] text-[#64748B]">No transactions for this customer in the selected range.</p></Card>
             ) : (
                 <div className="max-w-[900px] mx-auto bg-white p-4 sm:p-6 rounded-lg print:p-0 print:shadow-none">
                     <InvoiceHeader
@@ -118,9 +118,9 @@ export default function CustomerLedgerReport() {
                         date={formatDate(new Date().toISOString())}
                     />
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200 text-[12px]">
+                        <table className="w-full text-left border-collapse border border-[#CBD5E1] [&_th]:border [&_th]:border-[#CBD5E1] [&_td]:border [&_td]:border-[#E7ECF2] text-[12px]">
                             <thead>
-                                <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                <tr className="bg-[#F8FAFC] text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">
                                     <th className="py-1.5 px-2">Date</th>
                                     <th className="py-1.5 px-2">Reference</th>
                                     <th className="py-1.5 px-2">Detail</th>
@@ -135,20 +135,20 @@ export default function CustomerLedgerReport() {
                                     <td className="py-1.5 px-2 text-right tabular-nums">{formatCurrency(data.opening)}</td>
                                 </tr>
                                 {data.rows.map((r: any, i: number) => (
-                                    <tr key={i} className="hover:bg-slate-50">
+                                    <tr key={i} className="hover:bg-[#F8FAFC]">
                                         <td className="py-1.5 px-2 whitespace-nowrap">{formatDate(r.date)}</td>
-                                        <td className="py-1.5 px-2 font-semibold text-slate-700">{r.ref}</td>
-                                        <td className="py-1.5 px-2 text-slate-600">{r.detail}</td>
-                                        <td className="py-1.5 px-2 text-right tabular-nums text-slate-800">{r.debit ? formatCurrency(r.debit) : ''}</td>
+                                        <td className="py-1.5 px-2 font-semibold text-[#334155]">{r.ref}</td>
+                                        <td className="py-1.5 px-2 text-[#64748B]">{r.detail}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums text-[#0F1A2B]">{r.debit ? formatCurrency(r.debit) : ''}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums text-emerald-700">{r.credit ? formatCurrency(r.credit) : ''}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums font-bold">{formatCurrency(r.balance)}</td>
                                     </tr>
                                 ))}
-                                <tr className="bg-slate-100 font-black">
+                                <tr className="bg-[#F4F6F9] font-black">
                                     <td className="py-2 px-2" colSpan={3}>Closing Balance</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(data.totals.debit)}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{formatCurrency(data.totals.credit)}</td>
-                                    <td className="py-2 px-2 text-right tabular-nums text-[#1A1A1A]">{formatCurrency(data.closing)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums text-[#0F1A2B]">{formatCurrency(data.closing)}</td>
                                 </tr>
                             </tbody>
                         </table>

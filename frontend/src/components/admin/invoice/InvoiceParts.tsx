@@ -225,21 +225,21 @@ export function InvoiceHeader({
             </div>
 
             <div className="w-1/3 text-center py-1">
-                <h1 className="text-[22px] font-bold text-slate-900 urdu-text mb-1.5" style={{ lineHeight: 2 }}>
+                <h1 className="text-[22px] font-bold text-[#0F1A2B] urdu-text mb-1.5" style={{ lineHeight: 2 }}>
                     القوی ٹریڈرز
                 </h1>
-                <p className="text-[10px] font-bold text-slate-500 tracking-widest urdu-text" style={{ lineHeight: 1.8 }}>
+                <p className="text-[10px] font-bold text-[#64748B] tracking-widest urdu-text" style={{ lineHeight: 1.8 }}>
                     کاسمیٹکس ڈیلر گلگت بلتستان
                 </p>
             </div>
 
             <div className="w-1/3 text-right">
-                <h2 className="text-[15px] font-black uppercase tracking-tighter text-slate-900">{docTitle}</h2>
-                <div className="text-[10px] text-slate-500 mt-0.5 font-medium leading-tight">
+                <h2 className="text-[15px] font-black uppercase tracking-tighter text-[#0F1A2B]">{docTitle}</h2>
+                <div className="text-[10px] text-[#64748B] mt-0.5 font-medium leading-tight">
                     {metaLines.map((l, i) => <p key={i}>{l}</p>)}
                 </div>
-                {refValue && <p className="text-[12px] text-slate-900 font-bold mt-1 tracking-tight">{refLabel}: {refValue}</p>}
-                {date && <p className="text-[10px] text-slate-500 font-medium">{date}</p>}
+                {refValue && <p className="text-[12px] text-[#0F1A2B] font-bold mt-1 tracking-tight">{refLabel}: {refValue}</p>}
+                {date && <p className="text-[10px] text-[#64748B] font-medium">{date}</p>}
             </div>
         </div>
     );
@@ -279,7 +279,7 @@ export function InvoiceFooter({ pinned = true }: { pinned?: boolean }) {
 
             {/* Note / Terms (Urdu, justified) */}
             <div dir="rtl" className="mt-2 mb-10">
-                <p className="text-[11px] text-slate-900 urdu-text text-justify" style={{ lineHeight: 2.2 }}>
+                <p className="text-[11px] text-[#0F1A2B] urdu-text text-justify" style={{ lineHeight: 2.2 }}>
                     <span className="font-black">نوٹ:۔ </span>
                     تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں الْقوی ٹریڈرز گلگت سے خریدی ہیں انہیں ایکسپائری سے تین مہینے پہلے تبدیل کرنا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیل کرنے کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بمعہ پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی کمی بیشی کی صورت میں فوراً رابطہ کریں، بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ۔
                 </p>
@@ -289,17 +289,17 @@ export function InvoiceFooter({ pinned = true }: { pinned?: boolean }) {
             <div className="flex justify-between items-end mt-12 px-2">
                 <div className="w-44">
                     <div className="border-t border-slate-700 mb-1.5"></div>
-                    <span className="text-[13px] font-black text-slate-900">Store Manager</span>
+                    <span className="text-[13px] font-black text-[#0F1A2B]">Store Manager</span>
                 </div>
                 <div className="w-44 text-right">
                     <div className="border-t border-slate-700 mb-1.5"></div>
-                    <span className="text-[13px] font-black text-slate-900">Saleman</span>
+                    <span className="text-[13px] font-black text-[#0F1A2B]">Saleman</span>
                 </div>
             </div>
 
             {/* Contact strip */}
             <div className="mt-3 text-center">
-                <p className="text-[8px] text-slate-400 font-medium tracking-wide">
+                <p className="text-[8px] text-[#94A3B8] font-medium tracking-wide">
                     Organization 1: Qazi Market, CMH Road, Khomer Gilgit&nbsp;&nbsp;•&nbsp;&nbsp;Organization 2: Ibrahim Market, Confection Bil, Skardu
                 </p>
             </div>

@@ -111,7 +111,7 @@ export function RowActions({
                 aria-expanded={open}
                 className={cn(
                     'inline-flex items-center gap-1.5 h-8 pl-3 pr-2 rounded-lg text-[12.5px] font-medium tracking-[-0.01em] transition-colors',
-                    open ? 'bg-[#E8E8E4] text-[#1A1A1A]' : 'bg-[#F2F2F0] text-[#5B5B58] hover:bg-[#E8E8E4] hover:text-[#0E7F98]',
+                    open ? 'bg-[#E8F2FB] text-[#1877C2]' : 'bg-[#F4F6F9] text-[#64748B] hover:bg-[#E8F2FB] hover:text-[#1877C2]',
                     className,
                 )}
             >
@@ -124,14 +124,14 @@ export function RowActions({
                     ref={menuRef}
                     role="menu"
                     style={{ top: pos.top, left: pos.left, width: MENU_W }}
-                    className="fixed z-[300] py-1.5 bg-white rounded-2xl shadow-[0_2px_4px_rgba(0,0,0,0.04),0_18px_44px_-16px_rgba(0,0,0,0.28)] animate-in fade-in zoom-in-95 duration-150"
+                    className="fixed z-[300] py-1.5 bg-white rounded-2xl border border-[#E7ECF2] shadow-[0_18px_44px_-16px_rgba(15,26,43,0.28)] animate-in fade-in zoom-in-95 duration-150"
                 >
                     {actions.map((a, i) => {
                         const Icon = a.icon;
                         const firstDanger = a.danger && !actions[i - 1]?.danger && i > 0;
                         return (
                             <React.Fragment key={a.label}>
-                                {firstDanger && <div className="my-1 h-px bg-[#F2F2F0]" />}
+                                {firstDanger && <div className="my-1 h-px bg-[#F1F5F9]" />}
                                 <button
                                     type="button"
                                     role="menuitem"
@@ -140,8 +140,8 @@ export function RowActions({
                                     className={cn(
                                         'flex items-center gap-2.5 w-full px-3.5 py-2 text-[13.5px] font-medium tracking-[-0.01em] text-left transition-colors disabled:opacity-40 disabled:pointer-events-none',
                                         a.danger
-                                            ? 'text-[#DC2626] hover:bg-[#FCE9E9]'
-                                            : 'text-[#5B5B58] hover:bg-[#F5F5F3] hover:text-[#0E7F98]',
+                                            ? 'text-[#DC2626] hover:bg-[#FDECEC]'
+                                            : 'text-[#334155] hover:bg-[#F8FAFC] hover:text-[#1877C2]',
                                     )}
                                 >
                                     {Icon && <Icon size={15} strokeWidth={1.7} className="shrink-0 opacity-80" />}

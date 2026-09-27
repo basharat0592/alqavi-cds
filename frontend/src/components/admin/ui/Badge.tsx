@@ -7,8 +7,8 @@ type Tone = 'neutral' | 'indigo' | 'green' | 'amber' | 'red' | 'blue';
    as a tone name only so existing call sites keep compiling — it resolves to the
    neutral ink chip, since the system has no brand hue. */
 const tones: Record<Tone, string> = {
-    neutral: 'bg-[#F0F0EE] text-[#5B5B58]',
-    indigo: 'bg-[#EAEAE6] text-[#1A1A1A]',
+    neutral: 'bg-[#F4F6F9] text-[#64748B]',
+    indigo: 'bg-[#E7ECF2] text-[#0F1A2B]',
     green: 'bg-[#A9E7C5] text-[#14532D]',
     amber: 'bg-[#F9C9A7] text-[#7C3A10]',
     red: 'bg-[#FBD5D5] text-[#991B1B]',

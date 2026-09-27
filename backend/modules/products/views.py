@@ -104,8 +104,25 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
         if existing:
             # Same item, same branch -> merge quantities, keep ONE row for this branch.
-            added_qty = serializer.validated_data.get('total_quantity', 0)
-            existing.total_quantity = F('total_quantity') + added_qty
+            # Quantity is NOT written here. Stock is the single source of truth
+            # and `inventory.signals.sync_product_stock` derives this field from
+            # it, so a direct write is overwritten on the next stock change. Push
+            # the units into the branch's stock line instead and let the signal
+            # bring them back — that keeps Add Listing, Add Purchase and the POS
+            # all adding stock the same way.
+            added_qty = int(serializer.validated_data.get('total_quantity', 0) or 0)
+            if added_qty > 0 and existing.warehouse_id:
+                from modules.inventory import services as inventory_services
+                inventory_services.receive(
+                    tenant_id=existing.tenant_id,
+                    warehouse=existing.warehouse,
+                    product_name=existing.product_name,
+                    units=added_qty,
+                    unit_cost=serializer.validated_data.get('cost_price'),
+                    supplier_product=getattr(stock_obj, 'product', None),
+                    category=serializer.validated_data.get('category') or existing.category,
+                    reason='Listing quantity added',
+                )
             existing.category = serializer.validated_data.get('category', existing.category)
             existing.cost_price = serializer.validated_data.get('cost_price', existing.cost_price)
             existing.stock = stock_obj or existing.stock

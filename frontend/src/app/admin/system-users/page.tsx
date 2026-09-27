@@ -106,14 +106,14 @@ export default function SystemUsersPage() {
                 <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                     <ShieldCheck size={26} />
                 </div>
-                <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Organization admins only</h2>
-                <p className="text-[13px] text-[#8A8A86] mt-2">Only a organization admin can manage their own system users.</p>
+                <h2 className="text-[18px] font-semibold text-[#0F1A2B]">Organization admins only</h2>
+                <p className="text-[13px] text-[#94A3B8] mt-2">Only a organization admin can manage their own system users.</p>
             </div>
         );
     }
 
     return (
-        <div className="pb-12 text-left text-[#1A1A1A]">
+        <div className="pb-12 text-left text-[#0F1A2B]">
             <div className="max-w-[1200px] mx-auto">
                 <PageHeader
                     title="System Users"
@@ -135,7 +135,7 @@ export default function SystemUsersPage() {
                     className="mb-6"
                     filters={
                     <div className="relative max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users by name, email or role..." className={ui.inputBase + ' pl-10'} />
                     </div>
                     }
@@ -163,20 +163,20 @@ export default function SystemUsersPage() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {loading && users.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#8A8A86] font-medium">Loading...</td></tr>
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#94A3B8] font-medium">Loading...</td></tr>
                                 ) : filtered.length === 0 ? (
-                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#8A8A86] font-medium">No system users yet. Click “Add User” to create one.</td></tr>
+                                    <tr><td colSpan={5} className="py-20 text-center text-[13px] text-[#94A3B8] font-medium">No system users yet. Click “Add User” to create one.</td></tr>
                                 ) : (
                                     paged.map(u => (
-                                        <tr key={u.id} className="hover:bg-[#FAFAF8] transition-colors">
+                                        <tr key={u.id} className="hover:bg-[#F8FAFC] transition-colors">
                                             <td className={ui.td}>
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-[#F59E0B]/10 border border-[#F59E0B]/15 text-[#B4780B] flex items-center justify-center font-semibold text-[13px] shrink-0">
+                                                    <div className="h-10 w-10 rounded-full bg-[#1877C2]/10 border border-[#1877C2]/15 text-[#1877C2] flex items-center justify-center font-semibold text-[13px] shrink-0">
                                                         {(fullName(u)[0] || 'U').toUpperCase()}
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="font-semibold text-[13px] text-[#1A1A1A] truncate">{fullName(u)}</p>
-                                                        <p className="text-[11.5px] text-[#8A8A86] flex items-center gap-1 truncate"><Mail size={11} /> {u.email}</p>
+                                                        <p className="font-semibold text-[13px] text-[#0F1A2B] truncate">{fullName(u)}</p>
+                                                        <p className="text-[11.5px] text-[#94A3B8] flex items-center gap-1 truncate"><Mail size={11} /> {u.email}</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -184,7 +184,7 @@ export default function SystemUsersPage() {
                                                 <Badge tone="blue">{u.role_name || '—'}</Badge>
                                             </td>
                                             <td className={ui.td}>
-                                                {u.phone ? <span className="inline-flex items-center gap-1"><Phone size={11} className="text-[#9C9C98]" /> {u.phone}</span> : '—'}
+                                                {u.phone ? <span className="inline-flex items-center gap-1"><Phone size={11} className="text-[#94A3B8]" /> {u.phone}</span> : '—'}
                                             </td>
                                             <td className={ui.td + ' text-center'}>
                                                 <button
@@ -226,8 +226,8 @@ export default function SystemUsersPage() {
                     <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
                         <AlertTriangle size={20} />
                     </div>
-                    <p className="text-[13px] text-[#3A3A38]">
-                        Remove <span className="font-semibold text-[#1A1A1A]">{deleteTarget ? fullName(deleteTarget) : ''}</span> from your workspace? They will no longer be able to sign in. This cannot be undone.
+                    <p className="text-[13px] text-[#334155]">
+                        Remove <span className="font-semibold text-[#0F1A2B]">{deleteTarget ? fullName(deleteTarget) : ''}</span> from your workspace? They will no longer be able to sign in. This cannot be undone.
                     </p>
                 </div>
             </Modal>

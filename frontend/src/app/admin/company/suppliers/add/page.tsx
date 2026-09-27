@@ -10,12 +10,12 @@ import toast from 'react-hot-toast';
 import { PageHeader, Card, Button, ui } from '@/components/admin/ui';
 import CredentialShareModal, { CreatedAccount, buildCreatedAccount } from '@/components/admin/CredentialShareModal';
 
-const LABEL = 'block text-[10px] font-bold text-slate-500 mb-1.5 uppercase tracking-widest';
+const LABEL = 'block text-[10px] font-bold text-[#64748B] mb-1.5 uppercase tracking-widest';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: any }) => (
-    <div className="bg-slate-50/60 px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-        {Icon && <Icon className="w-5 h-5 text-[#1A1A1A]" />}
-        <span className="text-sm font-bold text-slate-900 tracking-tight">{title}</span>
+    <div className="bg-[#F8FAFC] px-6 py-4 border-b border-[#F1F5F9] flex items-center gap-3">
+        {Icon && <Icon className="w-5 h-5 text-[#0F1A2B]" />}
+        <span className="text-sm font-bold text-[#0F1A2B] tracking-tight">{title}</span>
     </div>
 );
 
@@ -106,7 +106,7 @@ export default function OnboardSupplier() {
                         <div className="flex flex-col sm:flex-row gap-6">
                             {/* Avatar */}
                             <div className="shrink-0">
-                                <div className="relative w-24 h-24 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden group hover:border-[#F59E0B] transition-colors">
+                                <div className="relative w-24 h-24 bg-[#F8FAFC] rounded-2xl border-2 border-dashed border-[#E7ECF2] flex items-center justify-center overflow-hidden group hover:border-[#1877C2] transition-colors">
                                     {form.avatar ? (
                                         <>
                                             <img src={URL.createObjectURL(form.avatar)} className="w-full h-full object-cover" alt="" />
@@ -114,8 +114,8 @@ export default function OnboardSupplier() {
                                         </>
                                     ) : (
                                         <label className="flex flex-col items-center cursor-pointer w-full h-full justify-center">
-                                            <Camera className="text-slate-300 group-hover:text-[#0E7F98]" size={20} />
-                                            <span className="text-[9px] font-bold uppercase text-slate-400 mt-1.5">Upload</span>
+                                            <Camera className="text-[#CBD5E1] group-hover:text-[#1567AB]" size={20} />
+                                            <span className="text-[9px] font-bold uppercase text-[#94A3B8] mt-1.5">Upload</span>
                                             <input type="file" className="hidden" accept="image/*" onChange={e => handle('avatar', e.target.files?.[0] || null)} />
                                         </label>
                                     )}
@@ -133,21 +133,21 @@ export default function OnboardSupplier() {
                                 <div className="space-y-1.5">
                                     <label className={LABEL}>Email <span className="text-red-500">*</span></label>
                                     <div className="relative">
-                                        <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                        <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#CBD5E1]" />
                                         <input type="email" value={form.email} onChange={e => handle('email', e.target.value)} className={INPUT(!!errors.email)} placeholder="office@email.com" />
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className={LABEL}>Phone / WhatsApp <span className="text-red-500">*</span></label>
                                     <div className="relative">
-                                        <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                        <Phone className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#CBD5E1]" />
                                         <input value={form.phone} onChange={e => handle('phone', e.target.value)} className={INPUT(!!errors.phone)} placeholder="03XX XXXXXXX" />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <hr className="my-2 border-slate-100" />
+                        <hr className="my-2 border-[#F1F5F9]" />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
                             <div className="space-y-1.5">
@@ -173,7 +173,7 @@ export default function OnboardSupplier() {
                             <div className="space-y-1.5">
                                 <label className={LABEL}>Address <span className="text-red-500">*</span></label>
                                 <div className="relative">
-                                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                                    <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#CBD5E1]" />
                                     <input value={form.address} onChange={e => handle('address', e.target.value)} className={INPUT(!!errors.address)} placeholder="Warehouse / HQ address" />
                                 </div>
                             </div>

@@ -145,7 +145,7 @@ const usePortalMenu = (open: boolean, onClose: () => void) => {
     return { anchorRef, popRef, coords };
 };
 
-const menuCls = 'bg-white border border-slate-200 rounded-xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] overflow-hidden';
+const menuCls = 'bg-white border border-[#E7ECF2] rounded-xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] overflow-hidden';
 
 /* ─── Product Selector — single searchable input (type to filter or write custom) ─── */
 const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
@@ -179,7 +179,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                     }
                 }}
             />
-            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#1A1A1A]' : ''}`} />
+            <ChevronDown size={13} className={`absolute right-1.5 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none transition-transform ${open ? 'rotate-180 text-[#0F1A2B]' : ''}`} />
 
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
@@ -187,19 +187,19 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                         {filtered.slice(0, 60).map((p: any) => (
                             <div
                                 key={p.id}
-                                className="px-3 py-2 hover:bg-[#F59E0B]/10 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
+                                className="px-3 py-2 hover:bg-[#1877C2]/10 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between gap-3"
                                 onClick={() => { onSelect(p.id); setOpen(false); setSearch(''); }}
                             >
                                 <div className="min-w-0">
-                                    <p className="text-[12.5px] font-semibold text-slate-800 truncate">{(p.name || '').replace(/\s*\(.*?\)\s*$/, '')}</p>
-                                    <p className="text-[9.5px] text-slate-400 font-bold uppercase tracking-wide">SKU: {p.sku || 'N/A'} · {p.quantity ?? 0} in stock</p>
+                                    <p className="text-[12.5px] font-semibold text-[#0F1A2B] truncate">{(p.name || '').replace(/\s*\(.*?\)\s*$/, '')}</p>
+                                    <p className="text-[9.5px] text-[#94A3B8] font-bold uppercase tracking-wide">SKU: {p.sku || 'N/A'} · {p.quantity ?? 0} in stock</p>
                                 </div>
-                                <span className="text-[12px] font-black text-slate-700 shrink-0 tabular-nums">{formatCurrency(p.retail_price || 0)}</span>
+                                <span className="text-[12px] font-black text-[#334155] shrink-0 tabular-nums">{formatCurrency(p.retail_price || 0)}</span>
                             </div>
                         ))}
 
                         {filtered.length === 0 && (
-                            <div className="px-3 py-6 text-center text-slate-400 text-[12px]">
+                            <div className="px-3 py-6 text-center text-[#94A3B8] text-[12px]">
                                 No products{q ? ' match' : ' for this company'}. Add one via “Add Products”.
                             </div>
                         )}
@@ -231,20 +231,20 @@ const SupplierSelector = ({ selectedId, onSelect, suppliers, inputCls }: any) =>
     return (
         <div className="relative w-full" ref={containerRef}>
             <button type="button" onClick={() => setOpen(!open)} className={inputCls + " flex items-center justify-between text-left"}>
-                <span className={selected ? 'text-slate-900 font-bold' : 'text-slate-400'}>
+                <span className={selected ? 'text-[#0F1A2B] font-bold' : 'text-[#94A3B8]'}>
                     {selected ? selected.name : 'Select a registered supplier...'}
                 </span>
-                <ChevronDown size={14} className="text-slate-400" />
+                <ChevronDown size={14} className="text-[#94A3B8]" />
             </button>
             {open && (
-                <div className="absolute z-[50] w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                    <div className="p-2 border-b border-slate-100"><input className="w-full px-2.5 py-1 text-[11.5px] border border-slate-200 rounded-lg outline-none focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/20 transition-all bg-white text-slate-800" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
+                <div className="absolute z-[50] w-full mt-1 bg-white border border-[#E7ECF2] rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                    <div className="p-2 border-b border-[#F1F5F9]"><input className="w-full px-2.5 py-1 text-[11.5px] border border-[#E7ECF2] rounded-lg outline-none focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/20 transition-all bg-white text-[#0F1A2B]" placeholder="Search suppliers..." value={search} onChange={e => setSearch(e.target.value)} autoFocus /></div>
                     <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                         {filtered.map((s: any) => (
-                            <div key={s.id} className="px-4 py-2 hover:bg-slate-50 cursor-pointer text-[12px] text-slate-700 border-b border-slate-100 last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
+                            <div key={s.id} className="px-4 py-2 hover:bg-[#F8FAFC] cursor-pointer text-[12px] text-[#334155] border-b border-[#F1F5F9] last:border-0" onClick={() => { onSelect(s.id); setOpen(false); }}>{s.name}</div>
                         ))}
                         {filtered.length === 0 && (
-                            <div className="px-4 py-6 text-center text-slate-400 text-[11px]">
+                            <div className="px-4 py-6 text-center text-[#94A3B8] text-[11px]">
                                 No registered suppliers{search.trim() ? ' match your search' : ''}. Add one in the Supplier Registry first.
                             </div>
                         )}
@@ -281,18 +281,18 @@ const CompanySelector = ({ selectedId, onSelect, companies, inputCls }: any) => 
                     }
                 }}
             />
-            <ChevronDown size={13} className={`text-slate-400 shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#1A1A1A]' : ''}`} />
+            <ChevronDown size={13} className={`text-[#94A3B8] shrink-0 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-transform ${open ? 'rotate-180 text-[#0F1A2B]' : ''}`} />
             {open && coords && createPortal(
                 <div ref={popRef} style={{ position: 'fixed', top: coords.top, left: coords.left, width: coords.width, zIndex: 1001 }} className={menuCls}>
                     <div className="max-h-[220px] overflow-y-auto custom-scrollbar">
                         {filtered.map((c: any) => (
-                            <div key={c.id} className="px-4 py-2 hover:bg-[#F59E0B]/10 cursor-pointer text-[12px] text-slate-700 border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
-                                <span className="font-semibold text-slate-800 truncate">{c.name}</span>
-                                {c.category && <span className="text-[9px] text-slate-400 uppercase font-bold shrink-0">{c.category}</span>}
+                            <div key={c.id} className="px-4 py-2 hover:bg-[#1877C2]/10 cursor-pointer text-[12px] text-[#334155] border-b border-slate-50 last:border-0 flex items-center justify-between gap-2" onClick={() => { onSelect(String(c.id)); setOpen(false); setSearch(''); }}>
+                                <span className="font-semibold text-[#0F1A2B] truncate">{c.name}</span>
+                                {c.category && <span className="text-[9px] text-[#94A3B8] uppercase font-bold shrink-0">{c.category}</span>}
                             </div>
                         ))}
                         {filtered.length === 0 && (
-                            <div className="px-4 py-6 text-center text-slate-400 text-[11px]">
+                            <div className="px-4 py-6 text-center text-[#94A3B8] text-[11px]">
                                 No companies{q ? ' match your search' : ''}. Add one via “Add Products → Find Company”.
                             </div>
                         )}
@@ -877,7 +877,7 @@ export default function AddPurchasePage() {
     const paymentPill = {
         PAID: 'bg-emerald-50 text-emerald-700 border-emerald-200',
         PARTIAL: 'bg-amber-50 text-amber-700 border-amber-200',
-        UNPAID: 'bg-slate-100 text-slate-500 border-slate-200',
+        UNPAID: 'bg-[#F4F6F9] text-[#64748B] border-[#E7ECF2]',
     }[paymentStatus];
 
     /* ─── Keyboard-first entry ───
@@ -1113,7 +1113,7 @@ export default function AddPurchasePage() {
                         </Cell>
                         <Cell>
                             <input
-                                className={cellCls + ' tabular-nums tracking-wide text-slate-600'}
+                                className={cellCls + ' tabular-nums tracking-wide text-[#64748B]'}
                                 value={item.barcode || ''}
                                 onChange={e => updateItem(i, 'barcode', e.target.value)}
                                 onKeyDown={e => {
@@ -1142,7 +1142,7 @@ export default function AddPurchasePage() {
                         </Cell>
                         <Cell>
                             <input
-                                className={cellNum + ' text-[#1A1A1A]' + err(bad.quantity)}
+                                className={cellNum + ' text-[#0F1A2B]' + err(bad.quantity)}
                                 type="number" min="1"
                                 value={item.quantity || ''}
                                 onChange={e => updateItem(i, 'quantity', e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value) || 0))}
@@ -1199,7 +1199,7 @@ export default function AddPurchasePage() {
                                 onClick={() => removeItem(i)}
                                 disabled={items.length === 1}
                                 title={items.length === 1 ? 'A purchase needs at least one row' : 'Remove row'}
-                                className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
+                                className="w-7 h-7 flex items-center justify-center rounded-md text-[#CBD5E1] hover:text-rose-600 hover:bg-rose-50 disabled:opacity-40 disabled:hover:text-[#CBD5E1] disabled:hover:bg-transparent disabled:cursor-not-allowed transition-colors"
                             >
                                 <Trash2 size={14} />
                             </button>
@@ -1208,14 +1208,14 @@ export default function AddPurchasePage() {
 
                     {/* Per-row readout — only once the row actually has a product on it. */}
                     {item.product && (
-                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[11px] text-slate-500'}>
-                            <span className="font-bold text-slate-400 tabular-nums">#{i + 1}</span>
+                        <div className={GRID_MIN + ' flex flex-wrap items-center gap-x-3 gap-y-1 px-3 pb-1.5 -mt-0.5 text-[11px] text-[#64748B]'}>
+                            <span className="font-bold text-[#94A3B8] tabular-nums">#{i + 1}</span>
                             {isDupe && (
                                 <span className="inline-flex items-center gap-1 font-semibold text-amber-700">
                                     <AlertTriangle size={12} /> duplicate product
                                 </span>
                             )}
-                            <span>Total <b className="text-slate-700 tabular-nums">{totalPcs}</b> pcs</span>
+                            <span>Total <b className="text-[#334155] tabular-nums">{totalPcs}</b> pcs</span>
                             {(item.bonus_quantity || 0) > 0 && (
                                 <>
                                     <span className="w-1 h-1 bg-slate-300 rounded-full" />
@@ -1225,7 +1225,7 @@ export default function AddPurchasePage() {
                             {p && (
                                 <>
                                     <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                                    <span>stock <b className="text-slate-700 tabular-nums">{p.quantity}</b></span>
+                                    <span>stock <b className="text-[#334155] tabular-nums">{p.quantity}</b></span>
                                 </>
                             )}
                             {profit !== null && (
@@ -1247,12 +1247,12 @@ export default function AddPurchasePage() {
                                             value={item.expiry_date || ''}
                                             onChange={e => updateItem(i, 'expiry_date', e.target.value)}
                                             title="Expiry for this line — overrides the order default"
-                                            className="h-6 px-1.5 rounded border border-slate-200 bg-slate-50 text-[11px] tabular-nums text-slate-700 outline-none transition-colors hover:border-slate-300 focus:border-[#F59E0B] focus:bg-white focus:ring-2 focus:ring-[#F59E0B]/25"
+                                            className="h-6 px-1.5 rounded border border-[#E7ECF2] bg-[#F8FAFC] text-[11px] tabular-nums text-[#334155] outline-none transition-colors hover:border-[#CBD5E1] focus:border-[#1877C2] focus:bg-white focus:ring-2 focus:ring-[#1877C2]/25"
                                         />
                                     </label>
                                 </>
                             )}
-                            <span className="ml-auto text-[12.5px] font-bold text-[#1A1A1A] tabular-nums">
+                            <span className="ml-auto text-[12.5px] font-bold text-[#0F1A2B] tabular-nums">
                                 {formatCurrency(calculateSubtotal(item))}
                             </span>
                         </div>
@@ -1285,25 +1285,25 @@ export default function AddPurchasePage() {
                 {/* Column totals — aligned to the grid so each sum sits under its column.
                     "Add row" lives here rather than in a separate bar below. */}
                 <div className={GRID_COLS + ' ' + GRID_MIN + ' ' + gridFoot}>
-                    <div className="px-2 py-1.5 border-r border-slate-200/80">
+                    <div className="px-2 py-1.5 border-r border-[#E7ECF2]">
                         <button
                             onClick={addItem}
-                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] hover:bg-[#F59E0B]/10 px-2 py-1 rounded-md transition-colors"
+                            className="inline-flex items-center gap-1 text-[11.5px] font-bold text-[#0F1A2B] hover:text-[#1567AB] hover:bg-[#1877C2]/10 px-2 py-1 rounded-md transition-colors"
                         >
                             <Plus size={13} /> Add row
                         </button>
                     </div>
-                    <div className="px-2 py-2 text-[11.5px] text-slate-500 border-r border-slate-200/80">
-                        <b className="text-slate-700 tabular-nums">{items.length}</b> {items.length === 1 ? 'line' : 'lines'}
+                    <div className="px-2 py-2 text-[11.5px] text-[#64748B] border-r border-[#E7ECF2]">
+                        <b className="text-[#334155] tabular-nums">{items.length}</b> {items.length === 1 ? 'line' : 'lines'}
                     </div>
-                    <div className="border-r border-slate-200/80" />
-                    <div className="border-r border-slate-200/80" />
-                    <div className="px-2 py-2 text-[12px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnits}</div>
-                    <div className="border-r border-slate-200/80" />
-                    <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonus || ''}</div>
-                    <div className="border-r border-slate-200/80" />
-                    <div className="border-r border-slate-200/80" />
-                    <div className="px-2 py-2 text-[12.5px] font-black text-[#1A1A1A] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
+                    <div className="border-r border-[#E7ECF2]" />
+                    <div className="border-r border-[#E7ECF2]" />
+                    <div className="px-2 py-2 text-[12px] font-black text-[#0F1A2B] tabular-nums text-right border-r border-[#E7ECF2]">{totalUnits}</div>
+                    <div className="border-r border-[#E7ECF2]" />
+                    <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-[#E7ECF2]">{totalBonus || ''}</div>
+                    <div className="border-r border-[#E7ECF2]" />
+                    <div className="border-r border-[#E7ECF2]" />
+                    <div className="px-2 py-2 text-[12.5px] font-black text-[#0F1A2B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalAmount)}</div>
                 </div>
             </div>
         </>
@@ -1321,10 +1321,10 @@ export default function AddPurchasePage() {
         <div className="px-4 sm:px-5 py-4">
             <div className="flex items-center gap-2.5 mb-4 select-none">
                 {/* Money section — amber, matching Net Amount and the row totals. */}
-                <div className="w-7 h-7 rounded-lg bg-[#F59E0B]/12 text-[#B4780B] flex items-center justify-center ring-1 ring-inset ring-[#F59E0B]/30 shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-[#1877C2]/12 text-[#1877C2] flex items-center justify-center ring-1 ring-inset ring-[#1877C2]/30 shrink-0">
                     <CreditCard size={14} strokeWidth={2} />
                 </div>
-                <span className="text-[12px] font-bold text-slate-800 tracking-tight">Settlement &amp; Charges</span>
+                <span className="text-[12px] font-bold text-[#0F1A2B] tracking-tight">Settlement &amp; Charges</span>
                 <div className="h-px flex-1 bg-slate-200/70" />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-x-3 gap-y-3.5">
@@ -1379,13 +1379,13 @@ export default function AddPurchasePage() {
     /* ─── Order Information section — shared shell; only the Supplier field differs per mode ─── */
     const renderOrderInfoCard = (supplierField: React.ReactNode) => (
         <>
-            <div className="px-5 sm:px-6 py-4 border-y border-slate-100 flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
-                <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center ring-1 ring-inset ring-slate-200 shrink-0">
+            <div className="px-5 sm:px-6 py-4 border-y border-[#F1F5F9] flex items-center gap-3 bg-gradient-to-r from-slate-50/80 to-transparent">
+                <div className="w-9 h-9 rounded-xl bg-[#F4F6F9] text-[#64748B] flex items-center justify-center ring-1 ring-inset ring-slate-200 shrink-0">
                     <Building2 size={17} strokeWidth={2} />
                 </div>
                 <div>
-                    <h2 className="text-[14px] font-bold text-slate-900 tracking-tight">Order Information</h2>
-                    <p className="text-[11.5px] text-slate-500">Supplier, bill no., staff, and settlement.</p>
+                    <h2 className="text-[14px] font-bold text-[#0F1A2B] tracking-tight">Order Information</h2>
+                    <p className="text-[11.5px] text-[#64748B]">Supplier, bill no., staff, and settlement.</p>
                 </div>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -1445,11 +1445,11 @@ export default function AddPurchasePage() {
                     </Field>
                 )}
 
-                <div className="col-span-1 md:col-span-3 pt-2 border-t border-slate-100 flex justify-between items-center">
+                <div className="col-span-1 md:col-span-3 pt-2 border-t border-[#F1F5F9] flex justify-between items-center">
                     <button
                         type="button"
                         onClick={() => setShowAdvanced(!showAdvanced)}
-                        className="text-[12px] font-bold text-[#1A1A1A] hover:text-[#0E7F98] flex items-center gap-1 transition-colors"
+                        className="text-[12px] font-bold text-[#0F1A2B] hover:text-[#1567AB] flex items-center gap-1 transition-colors"
                     >
                         {showAdvanced ? 'Hide Advanced Options' : 'Show Advanced Options (Freight, Tax, Extra Discount, Balance Date)'}
                     </button>
@@ -1526,42 +1526,42 @@ export default function AddPurchasePage() {
                 {/* Breadcrumb doubles as the page's action bar — the title block and the
                     Order Items header were both removed, so this is the only chrome left. */}
                 <div className="flex items-center justify-between gap-4 mb-4">
-                    <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 min-w-0">
+                    <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-[#94A3B8] min-w-0">
                         <button
                             onClick={() => router.push('/admin/purchases')}
                             title="Back to Purchases"
                             aria-label="Back to Purchases"
-                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#0E7F98] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-[#E7ECF2] bg-white text-[#64748B] hover:text-[#1567AB] hover:border-[#1877C2]/50 hover:bg-[#1877C2]/10 flex items-center justify-center transition-colors shadow-sm"
                         >
                             <ArrowLeft size={15} />
                         </button>
-                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-slate-600 transition-colors">Console</button>
-                        <span className="text-slate-300">/</span>
-                        <button onClick={() => router.push('/admin/purchases')} className="hover:text-slate-600 transition-colors">Purchases</button>
-                        <span className="text-slate-300">/</span>
-                        <span className="text-slate-600 truncate">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
+                        <button onClick={() => router.push('/admin/dashboard')} className="hover:text-[#64748B] transition-colors">Console</button>
+                        <span className="text-[#CBD5E1]">/</span>
+                        <button onClick={() => router.push('/admin/purchases')} className="hover:text-[#64748B] transition-colors">Purchases</button>
+                        <span className="text-[#CBD5E1]">/</span>
+                        <span className="text-[#64748B] truncate">{editId ? 'Edit Purchase' : 'New Purchase'}</span>
                     </nav>
                     {/* Secondary action — a tint, so it reads as lighter than the solid Save CTA. */}
-                    <Btn variant="secondary" className="shrink-0 text-[12px] py-1.5 px-3.5 !bg-[#F59E0B]/10 !border-[#F59E0B]/40 !text-[#B4780B] hover:!bg-[#F59E0B]/20 hover:!border-[#F59E0B]/60" onClick={openAddProduct}>
+                    <Btn variant="secondary" className="shrink-0 text-[12px] py-1.5 px-3.5 !bg-[#1877C2]/10 !border-[#1877C2]/40 !text-[#1877C2] hover:!bg-[#1877C2]/20 hover:!border-[#1877C2]/60" onClick={openAddProduct}>
                         <Plus size={14} /> Add New Products
                     </Btn>
                 </div>
 
                 {draftOffer && (
-                    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#F59E0B]/40 bg-[#F59E0B]/10 px-4 py-3">
-                        <AlertTriangle size={16} className="text-[#1A1A1A] shrink-0" />
-                        <span className="text-[12.5px] font-semibold text-slate-700">
+                    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-[#1877C2]/40 bg-[#1877C2]/10 px-4 py-3">
+                        <AlertTriangle size={16} className="text-[#0F1A2B] shrink-0" />
+                        <span className="text-[12.5px] font-semibold text-[#334155]">
                             An unsaved purchase from {draftOffer.savedAtLabel} was recovered.
                         </span>
                         <div className="ml-auto flex items-center gap-2">
-                            <button onClick={restoreDraft} className="px-3 py-1.5 rounded-lg bg-[#F59E0B] text-white text-[12px] font-bold hover:bg-[#D97706] transition-colors">Restore</button>
-                            <button onClick={discardDraft} className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-[12px] font-bold text-slate-600 hover:bg-slate-50 transition-colors">Discard</button>
+                            <button onClick={restoreDraft} className="px-3 py-1.5 rounded-lg bg-[#1877C2] text-white text-[12px] font-bold hover:bg-[#1567AB] transition-colors">Restore</button>
+                            <button onClick={discardDraft} className="px-3 py-1.5 rounded-lg border border-[#CBD5E1] bg-white text-[12px] font-bold text-[#64748B] hover:bg-[#F8FAFC] transition-colors">Discard</button>
                         </div>
                     </div>
                 )}
 
                 {loading ? (
-                    <div className="text-center py-20 text-[13px] text-slate-500">Loading data...</div>
+                    <div className="text-center py-20 text-[13px] text-[#64748B]">Loading data...</div>
                 ) : (
                     <div className="space-y-5">
                         {/* Order Items (rows + settlement fields) — full width */}
@@ -1576,20 +1576,20 @@ export default function AddPurchasePage() {
                             {/* LEFT: Previous Purchase History */}
                             <div className="flex-1 min-w-0 w-full">
                                 <Card className="overflow-hidden">
-                                    <div className="px-5 py-3.5 border-b border-slate-100 bg-gradient-to-r from-slate-50/80 to-transparent flex items-center justify-between gap-3 flex-wrap">
-                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2"><History size={15} className="text-[#1A1A1A]" /> Previous Purchase History</h3>
+                                    <div className="px-5 py-3.5 border-b border-[#F1F5F9] bg-gradient-to-r from-slate-50/80 to-transparent flex items-center justify-between gap-3 flex-wrap">
+                                        <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#334155] flex items-center gap-2"><History size={15} className="text-[#0F1A2B]" /> Previous Purchase History</h3>
                                         <Btn variant="secondary" className="text-[12px] py-1.5 px-3.5" loading={histLoading} onClick={loadPrevHistory}>Show Previous History</Btn>
                                     </div>
                                     <div className="p-4 sm:p-5">
                                         {!histLoaded ? (
-                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400"><History size={22} className="opacity-40" /><p className="text-[12.5px]">Select a product to see its previous purchase history.</p></div>
+                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-[#94A3B8]"><History size={22} className="opacity-40" /><p className="text-[12.5px]">Select a product to see its previous purchase history.</p></div>
                                         ) : histRows.length === 0 ? (
-                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-slate-400"><History size={22} className="opacity-40" /><p className="text-[12.5px]">No previous purchase history for these products.</p></div>
+                                            <div className="flex flex-col items-center justify-center py-8 gap-2 text-[#94A3B8]"><History size={22} className="opacity-40" /><p className="text-[12.5px]">No previous purchase history for these products.</p></div>
                                         ) : (
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-left text-[12px] border-collapse min-w-[640px]">
                                                     <thead>
-                                                        <tr className="bg-slate-50/60 border-b border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-400">
+                                                        <tr className="bg-[#F8FAFC] border-b border-[#E7ECF2] text-[10px] font-black uppercase tracking-wider text-[#94A3B8]">
                                                             <th className="px-3 py-2">Date</th>
                                                             <th className="px-3 py-2">PO No.</th>
                                                             <th className="px-3 py-2">Product</th>
@@ -1601,11 +1601,11 @@ export default function AddPurchasePage() {
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100">
                                                         {histRows.map((r, idx) => (
-                                                            <tr key={idx} className="hover:bg-slate-50">
-                                                                <td className="px-3 py-2 tabular-nums text-slate-600 whitespace-nowrap">{r.date || '—'}</td>
-                                                                <td className="px-3 py-2 font-semibold text-slate-700 whitespace-nowrap">{r.po}</td>
-                                                                <td className="px-3 py-2 text-slate-800">{r.product}</td>
-                                                                <td className="px-3 py-2 text-slate-500">{r.company}</td>
+                                                            <tr key={idx} className="hover:bg-[#F8FAFC]">
+                                                                <td className="px-3 py-2 tabular-nums text-[#64748B] whitespace-nowrap">{r.date || '—'}</td>
+                                                                <td className="px-3 py-2 font-semibold text-[#334155] whitespace-nowrap">{r.po}</td>
+                                                                <td className="px-3 py-2 text-[#0F1A2B]">{r.product}</td>
+                                                                <td className="px-3 py-2 text-[#64748B]">{r.company}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums">{r.qty}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(r.rate)}</td>
                                                                 <td className="px-3 py-2 text-right tabular-nums font-bold">{formatCurrency(r.subtotal)}</td>
@@ -1622,44 +1622,44 @@ export default function AddPurchasePage() {
                             {/* RIGHT: totals panel + actions */}
                             <div className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-4">
                             <Card className="overflow-hidden">
-                                <div className="px-5 py-3.5 border-b border-slate-200 flex items-center gap-2.5 bg-gradient-to-r from-slate-50 to-transparent">
-                                    <span className="w-1 h-4 rounded-full bg-[#F59E0B] shrink-0" />
-                                    <h3 className="text-[13px] font-bold uppercase tracking-wider text-slate-700">Purchase Summary</h3>
-                                    <span className="ml-auto text-[11px] font-semibold text-slate-400 tabular-nums">{items.filter(i => i.product).length} items</span>
+                                <div className="px-5 py-3.5 border-b border-[#E7ECF2] flex items-center gap-2.5 bg-gradient-to-r from-slate-50 to-transparent">
+                                    <span className="w-1 h-4 rounded-full bg-[#1877C2] shrink-0" />
+                                    <h3 className="text-[13px] font-bold uppercase tracking-wider text-[#334155]">Purchase Summary</h3>
+                                    <span className="ml-auto text-[11px] font-semibold text-[#94A3B8] tabular-nums">{items.filter(i => i.product).length} items</span>
                                 </div>
                                 <div className="p-5 space-y-2.5">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Purchase</span>
-                                        <span className="font-extrabold text-slate-800 tabular-nums text-[13px]">{formatCurrency(totalAmount)}</span>
+                                        <span className="text-[#64748B] font-semibold uppercase text-[11px] tracking-wide">Amt Purchase</span>
+                                        <span className="font-extrabold text-[#0F1A2B] tabular-nums text-[13px]">{formatCurrency(totalAmount)}</span>
                                     </div>
                                     {bonusValue > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Amt Bonus</span>
+                                            <span className="text-[#64748B] font-semibold uppercase text-[11px] tracking-wide">Amt Bonus</span>
                                             <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(bonusValue)}</span>
                                         </div>
                                     )}
                                     {(form as any).shipping_cost > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Freight</span>
-                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency((form as any).shipping_cost)}</span>
+                                            <span className="text-[#64748B] font-semibold uppercase text-[11px] tracking-wide">Freight</span>
+                                            <span className="font-bold text-[#334155] tabular-nums text-[13px]">+{formatCurrency((form as any).shipping_cost)}</span>
                                         </div>
                                     )}
                                     {taxAmountLive > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Tax ({(form as any).tax_rate || 0}%)</span>
-                                            <span className="font-bold text-slate-700 tabular-nums text-[13px]">+{formatCurrency(taxAmountLive)}</span>
+                                            <span className="text-[#64748B] font-semibold uppercase text-[11px] tracking-wide">Tax ({(form as any).tax_rate || 0}%)</span>
+                                            <span className="font-bold text-[#334155] tabular-nums text-[13px]">+{formatCurrency(taxAmountLive)}</span>
                                         </div>
                                     )}
                                     {extraDiscount > 0 && (
                                         <div className="flex justify-between items-center">
-                                            <span className="text-slate-500 font-semibold uppercase text-[11px] tracking-wide">Extra Disc.</span>
+                                            <span className="text-[#64748B] font-semibold uppercase text-[11px] tracking-wide">Extra Disc.</span>
                                             <span className="font-bold text-rose-600 tabular-nums text-[13px]">−{formatCurrency(extraDiscount)}</span>
                                         </div>
                                     )}
-                                    <div className="h-px bg-slate-100 my-1" />
-                                    <div className="flex justify-between items-center rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/35 px-4 py-3">
-                                        <span className="text-slate-700 font-black uppercase text-[12px] tracking-wide">Net Amount</span>
-                                        <span className="text-[21px] font-black text-[#1A1A1A] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
+                                    <div className="h-px bg-[#F4F6F9] my-1" />
+                                    <div className="flex justify-between items-center rounded-xl bg-[#1877C2]/10 border border-[#1877C2]/35 px-4 py-3">
+                                        <span className="text-[#334155] font-black uppercase text-[12px] tracking-wide">Net Amount</span>
+                                        <span className="text-[21px] font-black text-[#0F1A2B] tabular-nums leading-none">{formatCurrency(grandTotal)}</span>
                                     </div>
                                     {paidNow > 0 && (
                                         <div className="flex justify-between items-center">
@@ -1667,17 +1667,17 @@ export default function AddPurchasePage() {
                                             <span className="font-extrabold text-emerald-700 tabular-nums text-[13px]">{formatCurrency(paidNow)}</span>
                                         </div>
                                     )}
-                                    <div className="flex justify-between items-center pt-1 border-t border-slate-100">
-                                        <span className="text-slate-800 font-black uppercase text-[12px] tracking-wide">Balance</span>
+                                    <div className="flex justify-between items-center pt-1 border-t border-[#F1F5F9]">
+                                        <span className="text-[#0F1A2B] font-black uppercase text-[12px] tracking-wide">Balance</span>
                                         <span className={`text-[16px] font-black tabular-nums ${balanceDue > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{formatCurrency(balanceDue)}</span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wide">Status</span>
+                                        <span className="text-[#94A3B8] font-semibold uppercase text-[10px] tracking-wide">Status</span>
                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${paymentPill}`}>{paymentStatus}</span>
                                     </div>
 
-                                    <div className="pt-3 space-y-2 border-t border-slate-100 mt-2">
-                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#F59E0B] hover:!bg-[#F59E0B] shadow-sm shadow-[#F59E0B]/30" loading={saving} onClick={() => handleSave()}>
+                                    <div className="pt-3 space-y-2 border-t border-[#F1F5F9] mt-2">
+                                        <Btn className="w-full justify-center py-3 uppercase tracking-wider font-extrabold text-[12px] !bg-[#1877C2] hover:!bg-[#1877C2] shadow-sm shadow-[#1877C2]/30" loading={saving} onClick={() => handleSave()}>
                                             {editId ? 'Update Order' : 'Save Purchase'}
                                         </Btn>
                                         <div className="grid grid-cols-2 gap-2">
@@ -1700,11 +1700,11 @@ export default function AddPurchasePage() {
                 <Modal open={!!successOrder} onClose={() => setSuccessOrder(null)} size="sm">
                     <div className="py-4 text-center">
                         <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle size={32} /></div>
-                        <h2 className="text-[20px] font-bold tracking-tight mb-2 text-slate-900">Order Placed Successfully!</h2>
-                        <p className="text-[13px] text-slate-500 mb-6">Your purchase order <b className="text-slate-900">{successOrder?.purchase_number}</b> has been recorded.</p>
+                        <h2 className="text-[20px] font-bold tracking-tight mb-2 text-[#0F1A2B]">Order Placed Successfully!</h2>
+                        <p className="text-[13px] text-[#64748B] mb-6">Your purchase order <b className="text-[#0F1A2B]">{successOrder?.purchase_number}</b> has been recorded.</p>
                         <div className="flex flex-col gap-2">
                             <Btn className="w-full justify-center" onClick={() => router.push('/admin/purchases')}>View All Purchases</Btn>
-                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline">Create Another Order</button>
+                            <button onClick={() => setSuccessOrder(null)} className="text-[13px] text-[#1877C2] hover:text-[#1567AB] hover:underline">Create Another Order</button>
                         </div>
                     </div>
                 </Modal>
@@ -1767,7 +1767,7 @@ export default function AddPurchasePage() {
                             </select>
                         </Field>
                     </div>
-                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <div className="flex justify-end gap-2 pt-3 border-t border-[#F1F5F9]">
                         <Btn variant="secondary" onClick={() => setShowProductModal(false)}>Cancel</Btn>
                         <Btn loading={savingProduct} onClick={confirmAddProduct}><Plus size={14} /> Add to Purchase</Btn>
                     </div>
@@ -1783,7 +1783,7 @@ export default function AddPurchasePage() {
                     <Field label="Company Category">
                         <input className={inputCls} value={cForm.category} onChange={e => setCForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Local / Imported / Pakistani" />
                     </Field>
-                    <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <div className="flex justify-end gap-2 pt-3 border-t border-[#F1F5F9]">
                         <Btn variant="secondary" onClick={() => setShowCompanyModal(false)}>Cancel</Btn>
                         <Btn loading={savingCompany} onClick={saveCompanyInline}><Plus size={14} /> Add Company</Btn>
                     </div>

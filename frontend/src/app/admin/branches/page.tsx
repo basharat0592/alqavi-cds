@@ -364,8 +364,8 @@ export default function BranchesPage() {
                 <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                     <ShieldCheck size={26} />
                 </div>
-                <h2 className="text-[18px] font-semibold text-[#1A1A1A]">Super Admin only</h2>
-                <p className="text-[13px] text-[#8A8A86] mt-2">Organization ↔ admin assignments can only be managed by a Super Admin.</p>
+                <h2 className="text-[18px] font-semibold text-[#0F1A2B]">Super Admin only</h2>
+                <p className="text-[13px] text-[#94A3B8] mt-2">Organization ↔ admin assignments can only be managed by a Super Admin.</p>
             </div>
         );
     }
@@ -373,7 +373,7 @@ export default function BranchesPage() {
     if (loading && warehouses.length === 0) return <PageLoader />;
 
     return (
-        <div className="pb-16 text-left text-[#1A1A1A]">
+        <div className="pb-16 text-left text-[#0F1A2B]">
             <div className="max-w-[1200px] mx-auto">
                 <PageHeader
                     title="Organizations"
@@ -414,13 +414,13 @@ export default function BranchesPage() {
                 {/* Organizations as one table — area is a column rather than a heading,
                     so every organization is comparable in a single scan. */}
                 {warehouses.length === 0 ? (
-                    <Card className="py-20 text-center text-[13px] text-[#8A8A86]">No organizations yet. Click “New Organization” to create one.</Card>
+                    <Card className="py-20 text-center text-[13px] text-[#94A3B8]">No organizations yet. Click “New Organization” to create one.</Card>
                 ) : (
                     <Card className="overflow-hidden">
                         {/* Filters */}
-                        <div className="px-4 sm:px-5 py-3.5 border-b border-[#F2F2F0] flex items-center gap-2.5 overflow-x-auto custom-scrollbar">
+                        <div className="px-4 sm:px-5 py-3.5 border-b border-[#F4F6F9] flex items-center gap-2.5 overflow-x-auto custom-scrollbar">
                             <div className="relative flex-1 min-w-[180px]">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9C9C98] pointer-events-none" />
+                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none" />
                                 <input
                                     value={q}
                                     onChange={e => setQ(e.target.value)}
@@ -431,7 +431,7 @@ export default function BranchesPage() {
                                     <button
                                         onClick={() => setQ('')}
                                         aria-label="Clear search"
-                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9C9C98] hover:text-[#3A3A38]"
+                                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#334155]"
                                     >
                                         <XIcon size={14} />
                                     </button>
@@ -460,7 +460,7 @@ export default function BranchesPage() {
                             {filtersOn && (
                                 <button
                                     onClick={clearFilters}
-                                    className="inline-flex items-center gap-1 h-9 px-3 shrink-0 rounded-lg border border-[#EDEDEA] bg-white text-[11.5px] font-semibold text-[#3A3A38] hover:border-[#F59E0B]/40 hover:text-[#0E7F98] transition-colors"
+                                    className="inline-flex items-center gap-1 h-9 px-3 shrink-0 rounded-lg border border-[#E7ECF2] bg-white text-[11.5px] font-semibold text-[#334155] hover:border-[#1877C2]/40 hover:text-[#1567AB] transition-colors"
                                 >
                                     <XIcon size={13} /> Clear
                                 </button>
@@ -488,27 +488,27 @@ export default function BranchesPage() {
                                             <tr
                                                 key={wh.id}
                                                 onClick={() => setDetailFor(wh)}
-                                                className={`${idx % 2 ? 'bg-[#FAFAF8]/40' : 'bg-white'} hover:bg-[#F59E0B]/[0.06] transition-colors group cursor-pointer ${active ? '' : 'opacity-60'}`}
+                                                className={`${idx % 2 ? 'bg-[#F8FAFC]/40' : 'bg-white'} hover:bg-[#1877C2]/[0.06] transition-colors group cursor-pointer ${active ? '' : 'opacity-60'}`}
                                             >
                                                 <td className={ui.td + ' relative'}>
-                                                    <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-transparent group-hover:bg-[#F59E0B] transition-colors" />
+                                                    <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-transparent group-hover:bg-[#1877C2] transition-colors" />
                                                     <div className="flex items-center gap-2.5 min-w-0">
-                                                        <span className="w-9 h-9 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                                                        <span className="w-9 h-9 rounded-lg bg-[#1877C2]/10 ring-1 ring-inset ring-[#1877C2]/20 text-[#1877C2] flex items-center justify-center shrink-0">
                                                             <Building2 size={16} />
                                                         </span>
                                                         <div className="min-w-0">
-                                                            <p className="font-semibold text-[13px] text-[#1A1A1A] truncate leading-tight">{wh.name}</p>
-                                                            {wh.location && <p className="text-[11.5px] text-[#9C9C98] truncate">{wh.location}</p>}
+                                                            <p className="font-semibold text-[13px] text-[#0F1A2B] truncate leading-tight">{wh.name}</p>
+                                                            {wh.location && <p className="text-[11.5px] text-[#94A3B8] truncate">{wh.location}</p>}
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className={ui.td}>
                                                     {wh.area_name ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F2F2F0] text-[11.5px] font-semibold text-[#3A3A38]">
-                                                            <MapPin size={11} className="text-[#9C9C98] shrink-0" /> {wh.area_name}
+                                                        <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-[#F4F6F9] text-[11.5px] font-semibold text-[#334155]">
+                                                            <MapPin size={11} className="text-[#94A3B8] shrink-0" /> {wh.area_name}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[11.5px] text-[#9C9C98] italic">No city</span>
+                                                        <span className="text-[11.5px] text-[#94A3B8] italic">No city</span>
                                                     )}
                                                 </td>
                                                 <td className={ui.td}>
@@ -524,18 +524,18 @@ export default function BranchesPage() {
                                                         <span className={`relative w-9 h-5 rounded-full transition-colors shrink-0 ${active ? 'bg-emerald-500' : 'bg-slate-300'}`}>
                                                             <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${active ? 'left-[18px]' : 'left-0.5'}`} />
                                                         </span>
-                                                        <span className={`text-[11.5px] font-semibold uppercase tracking-wider ${active ? 'text-emerald-700' : 'text-[#9C9C98]'}`}>
+                                                        <span className={`text-[11.5px] font-semibold uppercase tracking-wider ${active ? 'text-emerald-700' : 'text-[#94A3B8]'}`}>
                                                             {active ? 'Active' : 'Off'}
                                                         </span>
                                                     </button>
                                                 </td>
                                                 <td className={ui.td + ' text-right'}>
                                                     {Number(wh.stock_count || 0) > 0 ? (
-                                                        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-[#1A1A1A]">
-                                                            <Boxes size={12} className="text-[#9C9C98]" /> {wh.stock_count}
+                                                        <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums text-[#0F1A2B]">
+                                                            <Boxes size={12} className="text-[#94A3B8]" /> {wh.stock_count}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[13px] text-[#C4C4C0] tabular-nums">—</span>
+                                                        <span className="text-[13px] text-[#CBD5E1] tabular-nums">—</span>
                                                     )}
                                                 </td>
                                                 <td className={ui.td}>
@@ -544,19 +544,19 @@ export default function BranchesPage() {
                                                            so the row offers the link rather than an admin chip. */
                                                         <div className="flex flex-wrap items-center gap-1.5">
                                                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10.5px] font-semibold uppercase tracking-wider ${
-                                                                invite.state === 'pending' ? 'bg-[#F59E0B]/12 text-[#B4780B]'
-                                                                    : invite.state === 'expired' ? 'bg-[#F2F2F0] text-[#8A8A86]'
+                                                                invite.state === 'pending' ? 'bg-[#1877C2]/12 text-[#1877C2]'
+                                                                    : invite.state === 'expired' ? 'bg-[#F4F6F9] text-[#94A3B8]'
                                                                         : 'bg-rose-50 text-rose-600'}`}>
                                                                 <Clock size={10} /> {invite.state}
                                                             </span>
-                                                            <span className="text-[11.5px] text-[#8A8A86] truncate max-w-[160px]" title={invite.email}>
+                                                            <span className="text-[11.5px] text-[#94A3B8] truncate max-w-[160px]" title={invite.email}>
                                                                 {invite.admin_name || invite.email}
                                                             </span>
                                                             {invite.state === 'pending' ? (
                                                                 <button
                                                                     type="button"
                                                                     onClick={e => { e.stopPropagation(); setLinkFor(invite); setCopied(false); }}
-                                                                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                                                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#1877C2] hover:bg-[#1877C2]/10 border border-[#1877C2]/30 rounded-md px-2 py-1 transition-colors"
                                                                 >
                                                                     <Link2 size={11} /> Link
                                                                 </button>
@@ -565,7 +565,7 @@ export default function BranchesPage() {
                                                                     type="button"
                                                                     disabled={busyInvite === invite.id}
                                                                     onClick={e => { e.stopPropagation(); regenerate(invite); }}
-                                                                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#3A3A38] hover:bg-[#F2F2F0] border border-[#EDEDEA] rounded-md px-2 py-1 transition-colors disabled:opacity-50"
+                                                                    className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#334155] hover:bg-[#F4F6F9] border border-[#E7ECF2] rounded-md px-2 py-1 transition-colors disabled:opacity-50"
                                                                 >
                                                                     <RotateCcw size={11} /> New link
                                                                 </button>
@@ -573,18 +573,18 @@ export default function BranchesPage() {
                                                         </div>
                                                     ) : admins.length === 0 ? (
                                                         <div className="flex flex-wrap items-center gap-1.5">
-                                                            <span className="text-[11.5px] text-[#9C9C98] italic mr-1">None assigned</span>
+                                                            <span className="text-[11.5px] text-[#94A3B8] italic mr-1">None assigned</span>
                                                             <button
                                                                 type="button"
                                                                 onClick={e => { e.stopPropagation(); setSelectFor(wh); }}
-                                                                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#3A3A38] hover:bg-[#F2F2F0] border border-[#EDEDEA] rounded-md px-2 py-1 transition-colors"
+                                                                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#334155] hover:bg-[#F4F6F9] border border-[#E7ECF2] rounded-md px-2 py-1 transition-colors"
                                                             >
-                                                                <Users size={11} className="text-[#9C9C98]" /> Select
+                                                                <Users size={11} className="text-[#94A3B8]" /> Select
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={e => { e.stopPropagation(); openInvite(wh); }}
-                                                                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                                                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#1877C2] hover:bg-[#1877C2]/10 border border-dashed border-[#1877C2]/30 rounded-md px-2 py-1 transition-colors"
                                                             >
                                                                 <Mail size={11} /> Invite
                                                             </button>
@@ -596,16 +596,16 @@ export default function BranchesPage() {
                                                                     key={u.id}
                                                                     onClick={e => { e.stopPropagation(); router.push(`/admin/users/edit/${u.id}`); }}
                                                                     title={`${u.email || ''}${u.phone ? ' · ' + u.phone : ''} — view / edit`}
-                                                                    className="inline-flex items-center gap-1.5 max-w-[220px] text-[11.5px] font-semibold text-[#3A3A38] bg-white hover:bg-[#F59E0B]/10 border border-[#EDEDEA] hover:border-[#F59E0B]/30 rounded-full pl-1 pr-2.5 py-1 transition-colors group"
+                                                                    className="inline-flex items-center gap-1.5 max-w-[220px] text-[11.5px] font-semibold text-[#334155] bg-white hover:bg-[#1877C2]/10 border border-[#E7ECF2] hover:border-[#1877C2]/30 rounded-full pl-1 pr-2.5 py-1 transition-colors group"
                                                                 >
-                                                                    <span className="w-5 h-5 rounded-full bg-[#F2F2F0] border border-[#EDEDEA] flex items-center justify-center overflow-hidden shrink-0 text-[10.5px] font-semibold text-[#8A8A86]">
+                                                                    <span className="w-5 h-5 rounded-full bg-[#F4F6F9] border border-[#E7ECF2] flex items-center justify-center overflow-hidden shrink-0 text-[10.5px] font-semibold text-[#94A3B8]">
                                                                         {u.avatar
                                                                             ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                                                             : (u.full_name || u.username || 'A').split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()}
                                                                     </span>
                                                                     <span className="truncate">{u.full_name?.trim() || u.username || 'Admin'}</span>
                                                                     {u.status && String(u.status).toLowerCase() !== 'active' && (
-                                                                        <span className="text-[10.5px] font-semibold uppercase text-[#9C9C98]">{u.status}</span>
+                                                                        <span className="text-[10.5px] font-semibold uppercase text-[#94A3B8]">{u.status}</span>
                                                                     )}
                                                                 </button>
                                                             ))}
@@ -615,11 +615,11 @@ export default function BranchesPage() {
                                                 <td className={ui.td + ' text-right whitespace-nowrap'}>
                                                     <div className="inline-flex items-center gap-1.5 opacity-100 xl:opacity-60 xl:group-hover:opacity-100 transition-opacity">
                                                     <button onClick={e => { e.stopPropagation(); openEdit(wh); }} title="Edit organization"
-                                                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#8A8A86] hover:text-[#0E7F98] hover:bg-[#F59E0B]/10 border border-[#EDEDEA] hover:border-[#F59E0B]/25 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#94A3B8] hover:text-[#1567AB] hover:bg-[#1877C2]/10 border border-[#E7ECF2] hover:border-[#1877C2]/25 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Pencil size={12} /> Edit
                                                     </button>
                                                     <button onClick={e => { e.stopPropagation(); setDeleteTarget(wh); }} title="Delete organization"
-                                                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-[#EDEDEA] hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
+                                                        className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-rose-500 hover:text-rose-700 hover:bg-rose-50 border border-[#E7ECF2] hover:border-rose-200 rounded-lg px-2.5 py-1.5 transition-colors">
                                                         <Trash2 size={12} /> Delete
                                                     </button>
                                                     </div>
@@ -630,18 +630,18 @@ export default function BranchesPage() {
                                 </tbody>
                             </table>
                             {rows.length === 0 && (
-                                <div className="py-14 text-center text-[13px] text-[#9C9C98]">
+                                <div className="py-14 text-center text-[13px] text-[#94A3B8]">
                                     No organizations match these filters.
                                 </div>
                             )}
                         </div>
-                        <div className="px-4 py-2.5 border-t border-[#EDEDEA] bg-[#FAFAF8] text-[11.5px] text-[#8A8A86]">
-                            <b className="text-[#3A3A38] tabular-nums">{rows.length}</b> {rows.length === 1 ? 'organization' : 'organizations'}
-                            {filtersOn && <> of <b className="text-[#3A3A38] tabular-nums">{warehouses.length}</b></>}
+                        <div className="px-4 py-2.5 border-t border-[#E7ECF2] bg-[#F8FAFC] text-[11.5px] text-[#94A3B8]">
+                            <b className="text-[#334155] tabular-nums">{rows.length}</b> {rows.length === 1 ? 'organization' : 'organizations'}
+                            {filtersOn && <> of <b className="text-[#334155] tabular-nums">{warehouses.length}</b></>}
                             {' · '}
-                            <b className="text-[#3A3A38] tabular-nums">{rows.filter(w => adminsFor(w.id).length === 0).length}</b> without an admin
+                            <b className="text-[#334155] tabular-nums">{rows.filter(w => adminsFor(w.id).length === 0).length}</b> without an admin
                             {rows.some(w => !(w.is_active ?? true)) && (
-                                <> · <b className="text-[#3A3A38] tabular-nums">{rows.filter(w => !(w.is_active ?? true)).length}</b> deactivated</>
+                                <> · <b className="text-[#334155] tabular-nums">{rows.filter(w => !(w.is_active ?? true)).length}</b> deactivated</>
                             )}
                         </div>
                         <Pagination
@@ -673,7 +673,7 @@ export default function BranchesPage() {
             >
                 <form onSubmit={saveBranch} className="space-y-4">
                     <div>
-                        <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
+                        <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Organization Name <span className="text-rose-600">*</span></label>
                         <input
                             autoFocus
                             value={nb.name}
@@ -688,7 +688,7 @@ export default function BranchesPage() {
                     {editing && (
                         <>
                             <div>
-                                <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">City</label>
+                                <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">City</label>
                                 <select
                                     value={nb.area}
                                     onChange={e => setNb(p => ({ ...p, area: e.target.value }))}
@@ -701,7 +701,7 @@ export default function BranchesPage() {
                             </div>
                             {nb.area === '__new__' && (
                                 <div>
-                                    <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">New City Name <span className="text-rose-600">*</span></label>
+                                    <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">New City Name <span className="text-rose-600">*</span></label>
                                     <input
                                         value={nb.newCity}
                                         onChange={e => setNb(p => ({ ...p, newCity: e.target.value }))}
@@ -711,7 +711,7 @@ export default function BranchesPage() {
                                 </div>
                             )}
                             <div>
-                                <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Address <span className="text-[#9C9C98] font-medium">(optional)</span></label>
+                                <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Address <span className="text-[#94A3B8] font-medium">(optional)</span></label>
                                 <input
                                     value={nb.address}
                                     onChange={e => setNb(p => ({ ...p, address: e.target.value }))}
@@ -722,17 +722,17 @@ export default function BranchesPage() {
                         </>
                     )}
                     {!editing && (
-                        <div className="pt-4 mt-1 border-t border-[#EDEDEA] space-y-4">
+                        <div className="pt-4 mt-1 border-t border-[#E7ECF2] space-y-4">
                             <div className="flex items-center gap-2">
-                                <span className="w-7 h-7 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                                <span className="w-7 h-7 rounded-lg bg-[#1877C2]/10 ring-1 ring-inset ring-[#1877C2]/20 text-[#1877C2] flex items-center justify-center shrink-0">
                                     <UserPlus size={14} />
                                 </span>
-                                <p className="text-[13px] font-semibold text-[#1A1A1A] leading-none">Who will run it</p>
+                                <p className="text-[13px] font-semibold text-[#0F1A2B] leading-none">Who will run it</p>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Name</label>
+                                    <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Admin Name</label>
                                     <input
                                         value={nb.adminName}
                                         onChange={e => setNb(p => ({ ...p, adminName: e.target.value }))}
@@ -741,7 +741,7 @@ export default function BranchesPage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Phone <span className="text-[#9C9C98] font-medium">(optional)</span></label>
+                                    <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Phone <span className="text-[#94A3B8] font-medium">(optional)</span></label>
                                     <input
                                         value={nb.phone}
                                         onChange={e => setNb(p => ({ ...p, phone: e.target.value }))}
@@ -752,7 +752,7 @@ export default function BranchesPage() {
                             </div>
 
                             <div>
-                                <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
+                                <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
                                 <input
                                     type="email"
                                     value={nb.email}
@@ -791,33 +791,33 @@ export default function BranchesPage() {
                     return (
                         <div className="space-y-5">
                             <div className="flex items-start gap-3">
-                                <span className="w-12 h-12 rounded-xl bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                                <span className="w-12 h-12 rounded-xl bg-[#1877C2]/10 ring-1 ring-inset ring-[#1877C2]/20 text-[#1877C2] flex items-center justify-center shrink-0">
                                     <Building2 size={22} />
                                 </span>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[17px] font-semibold text-[#1A1A1A] tracking-tight truncate">{detailFor.name}</p>
-                                    <p className="text-[11.5px] text-[#8A8A86] truncate">{detailFor.location || 'No address on file'}</p>
+                                    <p className="text-[17px] font-semibold text-[#0F1A2B] tracking-tight truncate">{detailFor.name}</p>
+                                    <p className="text-[11.5px] text-[#94A3B8] truncate">{detailFor.location || 'No address on file'}</p>
                                 </div>
-                                <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-wider ${dActive ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F2F2F0] text-[#8A8A86]'}`}>
+                                <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-semibold uppercase tracking-wider ${dActive ? 'bg-emerald-50 text-emerald-700' : 'bg-[#F4F6F9] text-[#94A3B8]'}`}>
                                     {dActive ? 'Active' : 'Deactivated'}
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-xl border border-[#EDEDEA] bg-[#FAFAF8] p-3">
-                                    <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#9C9C98]">City</p>
-                                    <p className="text-[13px] font-semibold text-[#1A1A1A] mt-1 truncate">
-                                        {detailFor.area_name || <span className="text-[#9C9C98] font-medium italic">Not set</span>}
+                                <div className="rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] p-3">
+                                    <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#94A3B8]">City</p>
+                                    <p className="text-[13px] font-semibold text-[#0F1A2B] mt-1 truncate">
+                                        {detailFor.area_name || <span className="text-[#94A3B8] font-medium italic">Not set</span>}
                                     </p>
                                 </div>
-                                <div className="rounded-xl border border-[#EDEDEA] bg-[#FAFAF8] p-3">
-                                    <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#9C9C98]">Products</p>
-                                    <p className="text-[13px] font-semibold text-[#1A1A1A] mt-1 tabular-nums">{detailFor.stock_count || 0}</p>
+                                <div className="rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] p-3">
+                                    <p className="text-[10.5px] font-semibold uppercase tracking-wider text-[#94A3B8]">Products</p>
+                                    <p className="text-[13px] font-semibold text-[#0F1A2B] mt-1 tabular-nums">{detailFor.stock_count || 0}</p>
                                 </div>
                             </div>
 
                             <div>
-                                <p className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#9C9C98] pb-2 mb-2.5 border-b border-[#F2F2F0]">
+                                <p className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8] pb-2 mb-2.5 border-b border-[#F4F6F9]">
                                     Who runs it
                                 </p>
                                 {dAdmins.length > 0 ? (
@@ -826,29 +826,29 @@ export default function BranchesPage() {
                                             <button
                                                 key={u.id}
                                                 onClick={() => router.push(`/admin/users/edit/${u.id}`)}
-                                                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-[#EDEDEA] hover:border-[#F59E0B]/40 hover:bg-[#F59E0B]/[0.05] transition-colors text-left"
+                                                className="w-full flex items-center gap-2.5 p-2.5 rounded-xl border border-[#E7ECF2] hover:border-[#1877C2]/40 hover:bg-[#1877C2]/[0.05] transition-colors text-left"
                                             >
-                                                <span className="w-8 h-8 rounded-full bg-[#F2F2F0] border border-[#EDEDEA] flex items-center justify-center overflow-hidden shrink-0 text-[10.5px] font-semibold text-[#8A8A86]">
+                                                <span className="w-8 h-8 rounded-full bg-[#F4F6F9] border border-[#E7ECF2] flex items-center justify-center overflow-hidden shrink-0 text-[10.5px] font-semibold text-[#94A3B8]">
                                                     {u.avatar
                                                         ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                                         : (u.full_name || u.username || 'A').split(' ').map((x: string) => x[0]).join('').slice(0, 2).toUpperCase()}
                                                 </span>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">{u.full_name?.trim() || u.username}</p>
-                                                    <p className="text-[11.5px] text-[#9C9C98] truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
+                                                    <p className="text-[13px] font-semibold text-[#0F1A2B] truncate">{u.full_name?.trim() || u.username}</p>
+                                                    <p className="text-[11.5px] text-[#94A3B8] truncate">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
                                                 </div>
-                                                <ChevronRight size={14} className="text-[#C4C4C0] shrink-0" />
+                                                <ChevronRight size={14} className="text-[#CBD5E1] shrink-0" />
                                             </button>
                                         ))}
                                     </div>
                                 ) : dInvite ? (
-                                    <div className="flex items-center gap-2.5 p-3 rounded-xl border border-dashed border-[#F59E0B]/40 bg-[#F59E0B]/[0.05]">
-                                        <Clock size={15} className="text-[#1A1A1A] shrink-0" />
+                                    <div className="flex items-center gap-2.5 p-3 rounded-xl border border-dashed border-[#1877C2]/40 bg-[#1877C2]/[0.05]">
+                                        <Clock size={15} className="text-[#0F1A2B] shrink-0" />
                                         <div className="min-w-0 flex-1">
-                                            <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">
+                                            <p className="text-[13px] font-semibold text-[#0F1A2B] truncate">
                                                 {dInvite.admin_name || dInvite.email}
                                             </p>
-                                            <p className="text-[11.5px] text-[#8A8A86]">
+                                            <p className="text-[11.5px] text-[#94A3B8]">
                                                 Invite {dInvite.state}
                                                 {dInvite.expires_at && dInvite.state === 'pending'
                                                     ? ` · expires ${new Date(dInvite.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
@@ -858,18 +858,18 @@ export default function BranchesPage() {
                                         {dInvite.state === 'pending' && (
                                             <button
                                                 onClick={() => { setLinkFor(dInvite); setCopied(false); setDetailFor(null); }}
-                                                className="shrink-0 inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/15 border border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                                className="shrink-0 inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#1877C2] hover:bg-[#1877C2]/15 border border-[#1877C2]/30 rounded-md px-2 py-1 transition-colors"
                                             >
                                                 <Link2 size={11} /> Link
                                             </button>
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-[#EDEDEA] bg-[#FAFAF8]">
-                                        <p className="text-[11.5px] text-[#9C9C98] italic">Nobody runs this organization yet.</p>
+                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-dashed border-[#E7ECF2] bg-[#F8FAFC]">
+                                        <p className="text-[11.5px] text-[#94A3B8] italic">Nobody runs this organization yet.</p>
                                         <button
                                             onClick={() => { const wh = detailFor; setDetailFor(null); openInvite(wh); }}
-                                            className="shrink-0 inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#B4780B] hover:bg-[#F59E0B]/10 border border-dashed border-[#F59E0B]/30 rounded-md px-2 py-1 transition-colors"
+                                            className="shrink-0 inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#1877C2] hover:bg-[#1877C2]/10 border border-dashed border-[#1877C2]/30 rounded-md px-2 py-1 transition-colors"
                                         >
                                             <Mail size={11} /> Invite
                                         </button>
@@ -898,15 +898,15 @@ export default function BranchesPage() {
             >
                 <form onSubmit={sendInvite} className="space-y-4">
                     <div className="flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                        <span className="w-8 h-8 rounded-lg bg-[#1877C2]/10 ring-1 ring-inset ring-[#1877C2]/20 text-[#1877C2] flex items-center justify-center shrink-0">
                             <Building2 size={15} />
                         </span>
-                        <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">{inviteFor2?.name}</p>
+                        <p className="text-[13px] font-semibold text-[#0F1A2B] truncate">{inviteFor2?.name}</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Name</label>
+                            <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Admin Name</label>
                             <input
                                 autoFocus
                                 value={inviteForm.adminName}
@@ -916,7 +916,7 @@ export default function BranchesPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Phone <span className="text-[#9C9C98] font-medium">(optional)</span></label>
+                            <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Phone <span className="text-[#94A3B8] font-medium">(optional)</span></label>
                             <input
                                 value={inviteForm.phone}
                                 onChange={e => setInviteForm(p => ({ ...p, phone: e.target.value }))}
@@ -927,7 +927,7 @@ export default function BranchesPage() {
                     </div>
 
                     <div>
-                        <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
+                        <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Admin Email <span className="text-rose-600">*</span></label>
                         <input
                             type="email"
                             value={inviteForm.email}
@@ -961,12 +961,12 @@ export default function BranchesPage() {
                 {linkFor && (
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
-                            <span className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/20 text-[#B4780B] flex items-center justify-center shrink-0">
+                            <span className="w-10 h-10 rounded-xl bg-[#1877C2]/10 ring-1 ring-inset ring-[#1877C2]/20 text-[#1877C2] flex items-center justify-center shrink-0">
                                 <Building2 size={18} />
                             </span>
                             <div className="min-w-0">
-                                <p className="text-[13px] font-semibold text-[#1A1A1A] truncate">{linkFor.organization_name}</p>
-                                <p className="text-[11.5px] text-[#8A8A86] truncate">
+                                <p className="text-[13px] font-semibold text-[#0F1A2B] truncate">{linkFor.organization_name}</p>
+                                <p className="text-[11.5px] text-[#94A3B8] truncate">
                                     {linkFor.admin_name ? `${linkFor.admin_name} · ` : ''}{linkFor.email}
                                     {linkFor.phone ? ` · ${linkFor.phone}` : ''}
                                 </p>
@@ -974,7 +974,7 @@ export default function BranchesPage() {
                         </div>
 
                         <div>
-                            <label className="block text-[11.5px] font-semibold text-[#3A3A38] mb-1.5">Send them this link</label>
+                            <label className="block text-[11.5px] font-semibold text-[#334155] mb-1.5">Send them this link</label>
                             {/* Selectable input rather than plain text: if the clipboard
                                 API is unavailable the link can still be copied by hand. */}
                             <input
@@ -985,11 +985,11 @@ export default function BranchesPage() {
                             />
                         </div>
 
-                        <div className="flex items-start gap-2 p-3 rounded-xl bg-[#FAFAF8] border border-[#EDEDEA] text-[11.5px] text-[#3A3A38] leading-relaxed">
-                            <Clock size={14} className="shrink-0 mt-px text-[#9C9C98]" />
+                        <div className="flex items-start gap-2 p-3 rounded-xl bg-[#F8FAFC] border border-[#E7ECF2] text-[11.5px] text-[#334155] leading-relaxed">
+                            <Clock size={14} className="shrink-0 mt-px text-[#94A3B8]" />
                             <span>
                                 Works once, and expires{' '}
-                                <b className="text-[#1A1A1A]">
+                                <b className="text-[#0F1A2B]">
                                     {linkFor.expires_at ? new Date(linkFor.expires_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'in 7 days'}
                                 </b>.
                                 Anyone holding it can claim this organization, so send it to {linkFor.email} directly.
@@ -1001,7 +1001,7 @@ export default function BranchesPage() {
                             type="button"
                             onClick={() => regenerate(linkFor)}
                             disabled={busyInvite === linkFor.id}
-                            className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[#3A3A38] hover:text-[#0E7F98] transition-colors disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[#334155] hover:text-[#1567AB] transition-colors disabled:opacity-50"
                         >
                             <RotateCcw size={13} className={busyInvite === linkFor.id ? 'animate-spin' : ''} /> Generate a new link
                         </button>
@@ -1028,8 +1028,8 @@ export default function BranchesPage() {
                     <div className="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0 border border-rose-100">
                         <AlertTriangle size={20} />
                     </div>
-                    <div className="text-[13px] text-[#3A3A38]">
-                        <p className="font-semibold text-[#1A1A1A] mb-1">Delete “{deleteTarget?.name}”?</p>
+                    <div className="text-[13px] text-[#334155]">
+                        <p className="font-semibold text-[#0F1A2B] mb-1">Delete “{deleteTarget?.name}”?</p>
                         <p>This permanently removes the organization and any inventory (products &amp; stock) in it, and unassigns its admin. This cannot be undone.</p>
                     </div>
                 </div>
@@ -1050,7 +1050,7 @@ export default function BranchesPage() {
                     if (eligible.length === 0) {
                         return (
                             <div className="py-8 text-center">
-                                <p className="text-[13px] text-[#8A8A86]">No other internal users available to assign.</p>
+                                <p className="text-[13px] text-[#94A3B8]">No other internal users available to assign.</p>
                                 <Button
                                     className="mt-4"
                                     onClick={() => { const wh = selectFor; setSelectFor(null); router.push(`/admin/users/add?warehouse=${wh.id}`); }}
@@ -1062,29 +1062,29 @@ export default function BranchesPage() {
                     }
                     return (
                         <div className="space-y-2 max-h-[55vh] overflow-y-auto">
-                            <p className="text-[11.5px] text-[#8A8A86] mb-1">Pick an existing internal user to also manage this organization.</p>
+                            <p className="text-[11.5px] text-[#94A3B8] mb-1">Pick an existing internal user to also manage this organization.</p>
                             {eligible.map(u => (
                                 <button
                                     key={u.id}
                                     onClick={() => assignExisting(u, selectFor)}
                                     disabled={!!assigningId}
-                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-[#EDEDEA] bg-white hover:bg-[#F59E0B]/50 hover:border-[#F59E0B]/25 transition-colors text-left disabled:opacity-50"
+                                    className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-[#E7ECF2] bg-white hover:bg-[#1877C2]/50 hover:border-[#1877C2]/25 transition-colors text-left disabled:opacity-50"
                                 >
-                                    <div className="w-9 h-9 rounded-full bg-[#F2F2F0] border border-[#EDEDEA] flex items-center justify-center overflow-hidden shrink-0 text-[11.5px] font-semibold text-[#8A8A86]">
+                                    <div className="w-9 h-9 rounded-full bg-[#F4F6F9] border border-[#E7ECF2] flex items-center justify-center overflow-hidden shrink-0 text-[11.5px] font-semibold text-[#94A3B8]">
                                         {u.avatar ? <img src={getImageUrl(u.avatar) || ''} alt="" className="w-full h-full object-cover" />
                                             : name(u).split(' ').map((s: string) => s[0]).join('').slice(0, 2).toUpperCase()}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <p className="font-semibold text-[13px] text-[#1A1A1A] truncate">{name(u)}</p>
-                                        <p className="text-[11.5px] text-[#8A8A86] truncate flex items-center gap-1"><Mail size={10} className="shrink-0" /> {u.email}</p>
+                                        <p className="font-semibold text-[13px] text-[#0F1A2B] truncate">{name(u)}</p>
+                                        <p className="text-[11.5px] text-[#94A3B8] truncate flex items-center gap-1"><Mail size={10} className="shrink-0" /> {u.email}</p>
                                         <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                             {u.role_name && <Badge tone="blue">{u.role_name}</Badge>}
-                                            {(u.warehouses || []).length > 0 && <span className="text-[10.5px] text-[#9C9C98]">Also manages {(u.warehouses || []).length} branch(es)</span>}
+                                            {(u.warehouses || []).length > 0 && <span className="text-[10.5px] text-[#94A3B8]">Also manages {(u.warehouses || []).length} branch(es)</span>}
                                         </div>
                                     </div>
                                     {assigningId === u.id
-                                        ? <RefreshCw size={15} className="animate-spin text-[#1A1A1A] shrink-0" />
-                                        : <Plus size={15} className="text-[#C4C4C0] shrink-0" />}
+                                        ? <RefreshCw size={15} className="animate-spin text-[#0F1A2B] shrink-0" />
+                                        : <Plus size={15} className="text-[#CBD5E1] shrink-0" />}
                                 </button>
                             ))}
                         </div>

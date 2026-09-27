@@ -17,7 +17,7 @@ import type { RevenueDataPoint } from '@/types';
    and transaction counts alongside the net that used to be the only field read,
    and revenueData30 was being passed in and computed but never rendered. */
 
-const AMBER = '#1A1A1A';
+const AMBER = '#0F1A2B';
 const GRID = '#eef2f7';
 const AXIS = '#94a3b8';
 
@@ -35,8 +35,8 @@ const dayFmt = (d: string) => {
 function ChartTip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
     return (
-        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg text-left">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{dayFmt(label)}</p>
+        <div className="rounded-lg border border-[#E7ECF2] bg-white px-3 py-2 shadow-lg text-left">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">{dayFmt(label)}</p>
             {payload.map((p: any) => (
                 <p key={p.dataKey} className="text-[12px] font-bold tabular-nums" style={{ color: p.color || p.fill }}>
                     {formatCurrency(Number(p.value || 0))}
@@ -48,12 +48,12 @@ function ChartTip({ active, payload, label }: any) {
 
 function Panel({ icon: Icon, title, subtitle, action, children, className = '' }: any) {
     return (
-        <div className={`bg-white border border-slate-200/70 rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-4 sm:p-5 ${className}`}>
+        <div className={`bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_2px_rgba(15,23,42,0.04)] p-4 sm:p-5 ${className}`}>
             <div className="flex items-center gap-2.5 mb-3">
-                <span className="w-8 h-8 rounded-lg bg-[#F59E0B]/10 ring-1 ring-inset ring-[#F59E0B]/25 text-[#B4780B] flex items-center justify-center shrink-0"><Icon size={16} /></span>
+                <span className="w-8 h-8 rounded-lg bg-[#1877C2]/10 ring-1 ring-inset ring-[#1877C2]/25 text-[#1877C2] flex items-center justify-center shrink-0"><Icon size={16} /></span>
                 <div className="min-w-0">
-                    <h3 className="text-[13px] font-bold text-slate-800 tracking-tight leading-none">{title}</h3>
-                    <p className="text-[10.5px] text-slate-400 font-medium mt-1">{subtitle}</p>
+                    <h3 className="text-[13px] font-bold text-[#0F1A2B] tracking-tight leading-none">{title}</h3>
+                    <p className="text-[10.5px] text-[#94A3B8] font-medium mt-1">{subtitle}</p>
                 </div>
                 {action && <div className="ml-auto shrink-0">{action}</div>}
             </div>
@@ -157,10 +157,10 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
     }, [pipelineOrg, orgStats, stats]);
 
     const pipeline = [
-        { label: 'Pending', value: Number(pipeSrc?.pendingOrders || 0), bar: 'bg-[#F59E0B]', tone: 'text-[#1A1A1A]' },
-        { label: 'Active', value: Number(pipeSrc?.totalActive || 0), bar: 'bg-[#8A8A86]', tone: 'text-[#3A3A38]' },
+        { label: 'Pending', value: Number(pipeSrc?.pendingOrders || 0), bar: 'bg-[#1877C2]', tone: 'text-[#0F1A2B]' },
+        { label: 'Active', value: Number(pipeSrc?.totalActive || 0), bar: 'bg-[#94A3B8]', tone: 'text-[#334155]' },
         { label: 'Delivered', value: Number(pipeSrc?.deliveredOrders || 0), bar: 'bg-emerald-500', tone: 'text-emerald-700' },
-        { label: 'Today', value: Number(pipeSrc?.ordersToday || 0), bar: 'bg-[#8A8A86]', tone: 'text-[#3A3A38]' },
+        { label: 'Today', value: Number(pipeSrc?.ordersToday || 0), bar: 'bg-[#94A3B8]', tone: 'text-[#334155]' },
     ];
     const pipelineMax = Math.max(1, ...pipeline.map((r) => r.value));
     const pipelineOrgName = orgs.find((o) => o.id === pipelineOrg)?.name || '';
@@ -191,7 +191,7 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                             </AreaChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">
+                        <div className="h-[230px] flex items-center justify-center text-[12px] text-[#94A3B8]">
                             {loaded ? 'No delivered orders in the last 7 days.' : 'Loading…'}
                         </div>
                     )}
@@ -204,14 +204,14 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                                 {branches.map((b) => (
                                     <div key={b.name} className="min-w-0">
                                         <div className="flex items-baseline justify-between gap-2 mb-1">
-                                            <span className="text-[12.5px] font-bold text-slate-800 truncate">{b.name}</span>
+                                            <span className="text-[12.5px] font-bold text-[#0F1A2B] truncate">{b.name}</span>
                                             <span className={`text-[12.5px] font-black tabular-nums shrink-0 ${b.net >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
                                                 {formatCurrency(b.net)}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-1 h-1.5">
                                             {b.count === 0 ? (
-                                                <div className="h-full w-full rounded-full bg-slate-100" title="No activity recorded" />
+                                                <div className="h-full w-full rounded-full bg-[#F4F6F9]" title="No activity recorded" />
                                             ) : (
                                                 <>
                                                     <div className="h-full rounded-full bg-emerald-500" style={{ width: `${(b.income / maxGross) * 100}%` }} title={`Income ${formatCurrency(b.income)}`} />
@@ -219,7 +219,7 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                                                 </>
                                             )}
                                         </div>
-                                        <div className="flex items-center gap-3 mt-1 text-[10.5px] text-slate-400 font-medium">
+                                        <div className="flex items-center gap-3 mt-1 text-[10.5px] text-[#94A3B8] font-medium">
                                             {b.count === 0 ? (
                                                 <span className="italic">No activity yet</span>
                                             ) : (
@@ -235,7 +235,7 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                             </div>
                         </div>
                     ) : (
-                        <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">
+                        <div className="h-[230px] flex items-center justify-center text-[12px] text-[#94A3B8]">
                             {loaded ? 'No organization activity recorded yet.' : 'Loading…'}
                         </div>
                     )}
@@ -251,22 +251,22 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                     : 'Where orders currently sit · every organization'}
                 action={
                     <div className="relative">
-                        <Building2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Building2 size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none" />
                         <select
                             value={pipelineOrg}
                             onChange={(e) => setPipelineOrg(e.target.value)}
                             aria-label="Filter pipeline by organization"
-                            className="h-8 pl-7 pr-7 rounded-lg border border-slate-300 bg-white text-[11.5px] font-semibold text-slate-700 cursor-pointer outline-none appearance-none transition-colors hover:border-slate-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/20 max-w-[190px] truncate"
+                            className="h-8 pl-7 pr-7 rounded-lg border border-[#CBD5E1] bg-white text-[11.5px] font-semibold text-[#334155] cursor-pointer outline-none appearance-none transition-colors hover:border-slate-400 focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/20 max-w-[190px] truncate"
                         >
                             <option value="">All organizations</option>
                             {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                         </select>
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[9px]">▾</span>
+                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94A3B8] pointer-events-none text-[9px]">▾</span>
                     </div>
                 }
             >
                 {pipelineOrg && !pipeSrc ? (
-                    <div className="h-[132px] flex items-center justify-center text-[12px] text-slate-400">
+                    <div className="h-[132px] flex items-center justify-center text-[12px] text-[#94A3B8]">
                         {orgStatsLoading ? 'Loading…' : 'Could not load this organization\u2019s pipeline.'}
                     </div>
                 ) : (
@@ -275,10 +275,10 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                         {/* Stages */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {pipeline.map((row) => (
-                                <div key={row.label} className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3">
+                                <div key={row.label} className="rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] p-3">
                                     <div className="flex items-center gap-1.5 mb-1.5">
                                         <span className={`w-1.5 h-1.5 rounded-full ${row.bar}`} />
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{row.label}</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">{row.label}</span>
                                     </div>
                                     <p className={`text-[22px] font-black tabular-nums leading-none ${row.tone}`}>{row.value}</p>
                                     <div className="h-1.5 mt-2.5 rounded-full bg-slate-200/70 overflow-hidden">
@@ -289,15 +289,15 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                         </div>
 
                         {/* Money position for the same scope as the stages */}
-                        <div className="grid grid-cols-2 gap-3 xl:border-l xl:border-slate-100 xl:pl-5">
+                        <div className="grid grid-cols-2 gap-3 xl:border-l xl:border-[#F1F5F9] xl:pl-5">
                             <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Receivable</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Receivable</p>
                                 <p className="text-[16px] font-black tabular-nums text-rose-600 mt-1 leading-tight break-all">
                                     {formatCurrency(Number(pipeSrc?.totalPayable || 0))}
                                 </p>
                             </div>
                             <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Profit</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Profit</p>
                                 <p className="text-[16px] font-black tabular-nums text-emerald-700 mt-1 leading-tight break-all">
                                     {formatCurrency(Number(pipeSrc?.totalProfit || 0))}
                                 </p>
@@ -316,13 +316,13 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                             <div className="divide-y divide-slate-100">
                                 {stockRows.map((p: any, i: number) => (
                                     <div key={i} className="flex items-center gap-3 py-2">
-                                        <span className="min-w-0 flex-1 text-[12.5px] font-semibold text-slate-800 truncate">
+                                        <span className="min-w-0 flex-1 text-[12.5px] font-semibold text-[#0F1A2B] truncate">
                                             {p.product_name || p.name || 'Unnamed product'}
                                         </span>
-                                        <span className="shrink-0 text-[11px] text-slate-400 font-medium tabular-nums">
+                                        <span className="shrink-0 text-[11px] text-[#94A3B8] font-medium tabular-nums">
                                             min {Number(p.min ?? p.reorder_level ?? 0)}
                                         </span>
-                                        <span className={`shrink-0 w-[58px] text-right text-[12.5px] font-black tabular-nums ${Number(p.qty ?? p.total_quantity ?? 0) <= 0 ? 'text-rose-600' : 'text-[#1A1A1A]'}`}>
+                                        <span className={`shrink-0 w-[58px] text-right text-[12.5px] font-black tabular-nums ${Number(p.qty ?? p.total_quantity ?? 0) <= 0 ? 'text-rose-600' : 'text-[#0F1A2B]'}`}>
                                             {Number(p.qty ?? p.total_quantity ?? 0)}
                                         </span>
                                     </div>
@@ -330,7 +330,7 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                             </div>
                         </div>
                     ) : (
-                        <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">Nothing below its reorder point.</div>
+                        <div className="h-[230px] flex items-center justify-center text-[12px] text-[#94A3B8]">Nothing below its reorder point.</div>
                     )}
                 </Panel>
 
@@ -340,12 +340,12 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                             <div className="space-y-2.5">
                                 {logs.map((l: any, i: number) => (
                                     <div key={i} className="flex gap-2.5">
-                                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#F59E0B] shrink-0" />
+                                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-[#1877C2] shrink-0" />
                                         <div className="min-w-0">
-                                            <p className="text-[12px] font-semibold text-slate-700 leading-snug line-clamp-2">
+                                            <p className="text-[12px] font-semibold text-[#334155] leading-snug line-clamp-2">
                                                 {l.description || l.action || l.title || 'Activity'}
                                             </p>
-                                            <p className="text-[10.5px] text-slate-400 font-medium">
+                                            <p className="text-[10.5px] text-[#94A3B8] font-medium">
                                                 {(l.created_at || l.timestamp || '').toString().slice(0, 16).replace('T', ' ')}
                                             </p>
                                         </div>
@@ -354,7 +354,7 @@ export default function SuperAdminOverview({ revenueData, stats, lowStock, activ
                             </div>
                         </div>
                     ) : (
-                        <div className="h-[230px] flex items-center justify-center text-[12px] text-slate-400">No recent activity.</div>
+                        <div className="h-[230px] flex items-center justify-center text-[12px] text-[#94A3B8]">No recent activity.</div>
                     )}
                 </Panel>
             </div>

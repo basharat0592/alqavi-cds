@@ -100,8 +100,8 @@ export default function WebsiteSettingsPage() {
                 <div className="w-14 h-14 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100">
                     <ShieldCheck size={26} />
                 </div>
-                <h2 className="text-[18px] font-bold text-slate-900">Super Admin only</h2>
-                <p className="text-[13px] text-slate-500 mt-2">Website CMS is restricted to Super Admins.</p>
+                <h2 className="text-[18px] font-bold text-[#0F1A2B]">Super Admin only</h2>
+                <p className="text-[13px] text-[#64748B] mt-2">Website CMS is restricted to Super Admins.</p>
             </div>
         );
     }
@@ -109,8 +109,8 @@ export default function WebsiteSettingsPage() {
     if (loading) return (
         <div className="flex items-center justify-center min-h-[70vh]">
             <div className="text-center space-y-4">
-                <Loader2 className="w-12 h-12 text-[#1A1A1A] animate-spin mx-auto" strokeWidth={1} />
-                <p className="text-slate-500 font-medium text-[13px] animate-pulse">Loading CMS Console...</p>
+                <Loader2 className="w-12 h-12 text-[#0F1A2B] animate-spin mx-auto" strokeWidth={1} />
+                <p className="text-[#64748B] font-medium text-[13px] animate-pulse">Loading CMS Console...</p>
             </div>
         </div>
     );
@@ -147,15 +147,15 @@ export default function WebsiteSettingsPage() {
                 />
 
                 {/* ── TABS NAVIGATION ── */}
-                <div className="flex gap-4 md:gap-8 overflow-x-auto scrollbar-hide border-b border-slate-200 mb-6 pb-0.5">
+                <div className="flex gap-4 md:gap-8 overflow-x-auto scrollbar-hide border-b border-[#E7ECF2] mb-6 pb-0.5">
                     {TABS.map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 pb-3.5 text-[14px] font-semibold transition-all relative whitespace-nowrap pt-2 ${activeTab === tab.id ? 'text-[#1A1A1A]' : 'text-slate-500 hover:text-slate-900'
+                            className={`flex items-center gap-2 pb-3.5 text-[14px] font-semibold transition-all relative whitespace-nowrap pt-2 ${activeTab === tab.id ? 'text-[#0F1A2B]' : 'text-[#64748B] hover:text-[#0F1A2B]'
                                 }`}>
                             <tab.icon size={16} />
                             <span>{tab.label}</span>
                             {activeTab === tab.id && (
-                                <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#F59E0B]" />
+                                <div className="absolute bottom-0 left-0 w-full h-[2.5px] bg-[#1877C2]" />
                             )}
                         </button>
                     ))}

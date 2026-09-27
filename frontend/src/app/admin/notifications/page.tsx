@@ -67,11 +67,11 @@ export default function NotificationsPage() {
         const action = (log.action_type || '').toLowerCase();
         const desc = (log.description || '').toLowerCase();
         if (action.includes('error') || action.includes('fail')) return 'text-rose-500 bg-rose-50';
-        if (action.includes('order')) return 'text-[#8A8A86] bg-[#FAFAF8]';
+        if (action.includes('order')) return 'text-[#94A3B8] bg-[#F8FAFC]';
         if (action.includes('user')) return 'text-emerald-500 bg-emerald-50';
         if (action.includes('login')) return 'text-amber-500 bg-amber-50';
-        if (desc.includes('newsletter')) return 'text-[#5B5B58] bg-[#FAFAF8]';
-        return 'text-[#B4780B] bg-[#F59E0B]/10';
+        if (desc.includes('newsletter')) return 'text-[#64748B] bg-[#F8FAFC]';
+        return 'text-[#1877C2] bg-[#1877C2]/10';
     };
 
     return (
@@ -90,9 +90,9 @@ export default function NotificationsPage() {
             {/* Search & Filters */}
             <Card className="p-5 mb-6 flex items-end gap-4">
                 <div className="flex-1">
-                    <label className="block text-[13px] font-bold text-slate-900 mb-1.5">Search Logs</label>
+                    <label className="block text-[13px] font-bold text-[#0F1A2B] mb-1.5">Search Logs</label>
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                         <input
                             type="text"
                             placeholder="Search by description or type..."
@@ -108,7 +108,7 @@ export default function NotificationsPage() {
             </Card>
 
             {/* Status Tabs */}
-            <div className="flex gap-8 border-b border-slate-200 mb-6 px-1 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-8 border-b border-[#E7ECF2] mb-6 px-1 overflow-x-auto scrollbar-hide">
                 {[
                     { id: 'all', label: 'All Activity', icon: ListFilter },
                     { id: 'users', label: 'User Actions', icon: Users },
@@ -120,13 +120,13 @@ export default function NotificationsPage() {
                         onClick={() => setFilter(tab.id)}
                         className={cn(
                             'flex items-center gap-2 pb-3 text-[14px] font-medium transition-all relative whitespace-nowrap',
-                            filter === tab.id ? 'text-[#1A1A1A]' : 'text-slate-600 hover:text-slate-900'
+                            filter === tab.id ? 'text-[#0F1A2B]' : 'text-[#64748B] hover:text-[#0F1A2B]'
                         )}
                     >
                         <tab.icon size={16} />
                         {tab.label}
                         {filter === tab.id && (
-                            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#F59E0B]" />
+                            <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#1877C2]" />
                         )}
                     </button>
                 ))}
@@ -136,14 +136,14 @@ export default function NotificationsPage() {
             <Card className="overflow-hidden">
                 {loading ? (
                     <div className="py-20 flex flex-col items-center justify-center gap-4">
-                        <RefreshCw className="h-6 w-6 text-[#1A1A1A] animate-spin" />
-                        <p className="text-[13px] text-slate-600">Updating activity feed...</p>
+                        <RefreshCw className="h-6 w-6 text-[#0F1A2B] animate-spin" />
+                        <p className="text-[13px] text-[#64748B]">Updating activity feed...</p>
                     </div>
                 ) : filteredNotifications.length === 0 ? (
                     <div className="py-20 flex flex-col items-center justify-center text-center px-6">
-                        <Bell className="text-slate-300 mb-4" size={48} />
-                        <h3 className="text-[15px] font-bold text-slate-900">No events found</h3>
-                        <p className="text-[13px] text-slate-600 mt-1">Try adjusting your filters or search terms.</p>
+                        <Bell className="text-[#CBD5E1] mb-4" size={48} />
+                        <h3 className="text-[15px] font-bold text-[#0F1A2B]">No events found</h3>
+                        <p className="text-[13px] text-[#64748B] mt-1">Try adjusting your filters or search terms.</p>
                     </div>
                 ) : (
                     <div className="divide-y divide-slate-100">
@@ -151,17 +151,17 @@ export default function NotificationsPage() {
                             const Icon = getIcon(notif);
                             const colorClass = getColor(notif);
                             return (
-                                <div key={notif.id} className="p-5 hover:bg-slate-50 transition-all group flex items-start gap-5">
-                                    <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-slate-200 bg-white shadow-sm group-hover:border-[#F59E0B]/25 transition-colors", colorClass)}>
+                                <div key={notif.id} className="p-5 hover:bg-[#F8FAFC] transition-all group flex items-start gap-5">
+                                    <div className={cn("w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border border-[#E7ECF2] bg-white shadow-sm group-hover:border-[#1877C2]/25 transition-colors", colorClass)}>
                                         <Icon size={18} strokeWidth={2.5} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-4">
-                                            <p className="text-[14px] font-bold text-slate-900 leading-tight group-hover:text-[#0E7F98] transition-colors">
+                                            <p className="text-[14px] font-bold text-[#0F1A2B] leading-tight group-hover:text-[#1567AB] transition-colors">
                                                 {notif.action_type || 'System Event'}
                                             </p>
-                                            <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500 uppercase tracking-tighter tabular-nums">
-                                                <Clock size={12} className="text-slate-400" />
+                                            <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#64748B] uppercase tracking-tighter tabular-nums">
+                                                <Clock size={12} className="text-[#94A3B8]" />
                                                 {new Date(notif.timestamp || Date.now()).toLocaleString('en-PK', {
                                                     day: 'numeric',
                                                     month: 'short',
@@ -172,15 +172,15 @@ export default function NotificationsPage() {
                                                 })}
                                             </span>
                                         </div>
-                                        <p className="text-[13px] text-slate-600 mt-1.5 leading-relaxed">
+                                        <p className="text-[13px] text-[#64748B] mt-1.5 leading-relaxed">
                                             {notif.description}
                                         </p>
                                         <div className="mt-4 flex items-center gap-4">
-                                            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-slate-50 text-slate-600 rounded-md border border-slate-200 tabular-nums">
+                                            <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 bg-[#F8FAFC] text-[#64748B] rounded-md border border-[#E7ECF2] tabular-nums">
                                                 ID: {notif.id}
                                             </span>
                                             {notif.ip_address && (
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                <span className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-tighter">
                                                     Network: {notif.ip_address}
                                                 </span>
                                             )}

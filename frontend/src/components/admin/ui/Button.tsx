@@ -9,10 +9,10 @@ type Size = 'sm' | 'md' | 'lg';
 // Ink leads: a solid near-black fill is the primary CTA, a faint grey chip is
 // the secondary action. No brand hue — hierarchy is fill weight, not colour.
 const variants: Record<Variant, string> = {
-    primary: 'bg-[#F59E0B] hover:bg-[#D97706] text-white shadow-[0_1px_2px_rgba(0,0,0,0.12)]',
-    secondary: 'bg-[#119AB8]/10 hover:bg-[#119AB8]/[0.16] text-[#0E7F98]',
-    outline: 'bg-white hover:bg-[#FAFAF8] text-[#3A3A38] shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
-    ghost: 'text-[#5B5B58] hover:text-[#0E7F98] hover:bg-black/[0.04]',
+    primary: 'bg-[#1877C2] hover:bg-[#1567AB] text-white',
+    secondary: 'bg-[#E8F2FB] hover:bg-[#DCEBF8] text-[#1877C2]',
+    outline: 'bg-white hover:bg-[#F8FAFC] text-[#334155] shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
+    ghost: 'text-[#64748B] hover:text-[#1567AB] hover:bg-black/[0.04]',
     danger: 'bg-[#DC2626] hover:bg-[#B91C1C] text-white shadow-[0_1px_2px_rgba(0,0,0,0.12)]',
 };
 

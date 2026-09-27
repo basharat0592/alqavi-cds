@@ -142,10 +142,10 @@ function ProfitRow({ label, value, sub, bold, neg }: { label: string; value: num
     return (
         <div className="flex items-center justify-between px-4 py-2.5">
             <div>
-                <p className={bold ? 'text-[13px] font-bold text-slate-900' : 'text-[13px] font-medium text-slate-600'}>{label}</p>
-                {sub && <p className="text-[10.5px] text-slate-400 mt-0.5">{sub}</p>}
+                <p className={bold ? 'text-[13px] font-bold text-[#0F1A2B]' : 'text-[13px] font-medium text-[#64748B]'}>{label}</p>
+                {sub && <p className="text-[10.5px] text-[#94A3B8] mt-0.5">{sub}</p>}
             </div>
-            <p className={`text-[13.5px] tabular-nums ${bold ? 'font-black text-slate-900' : neg ? 'font-bold text-rose-600' : 'font-bold text-slate-700'}`}>
+            <p className={`text-[13.5px] tabular-nums ${bold ? 'font-black text-[#0F1A2B]' : neg ? 'font-bold text-rose-600' : 'font-bold text-[#334155]'}`}>
                 {neg ? '− ' : ''}{formatCurrency(value)}
             </p>
         </div>
@@ -692,7 +692,7 @@ function ReportsEngineInner() {
                         {/* Super Admin: branch scope comes first — the report follows it. */}
                         {isSuperAdmin && (
                             <div className="space-y-1.5">
-                                <label className="text-[13px] font-bold text-slate-900">Select Organization</label>
+                                <label className="text-[13px] font-bold text-[#0F1A2B]">Select Organization</label>
                                 <select
                                     value={filters.branch}
                                     onChange={e => { setFilters({ ...filters, branch: e.target.value, category: '', view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); setReportResult([]); }}
@@ -710,12 +710,12 @@ function ReportsEngineInner() {
                         )}
 
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-slate-900">{isNetProfitMode ? 'Select Scope' : '1. Select Category'}</label>
+                            <label className="text-[13px] font-bold text-[#0F1A2B]">{isNetProfitMode ? 'Select Scope' : '1. Select Category'}</label>
                             <select
                                 value={filters.category}
                                 onChange={e => { setFilters({ ...filters, category: e.target.value, view: '', subView: '' }); setHasGenerated(false); setProfitSummary(null); }}
                                 disabled={isSuperAdmin && !filters.branch}
-                                className={inputCls + " disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"}
+                                className={inputCls + " disabled:bg-[#F4F6F9] disabled:text-[#94A3B8] disabled:cursor-not-allowed"}
                             >
                                 {isNetProfitMode ? (
                                     <>
@@ -737,12 +737,12 @@ function ReportsEngineInner() {
 
                         {!isNetProfitMode && (
                         <div className="space-y-1.5">
-                            <label className="text-[13px] font-bold text-slate-900">{filters.category === 'customers' ? '2. Select Customer' : '2. Select View'}</label>
+                            <label className="text-[13px] font-bold text-[#0F1A2B]">{filters.category === 'customers' ? '2. Select Customer' : '2. Select View'}</label>
                             <select
                                 value={filters.view}
                                 onChange={e => { setFilters({ ...filters, view: e.target.value, subView: '' }); setHasGenerated(false); setProfitSummary(null); setCustomerSummary(null); }}
                                 disabled={!filters.category}
-                                className={inputCls + " disabled:bg-slate-100 disabled:text-slate-400"}
+                                className={inputCls + " disabled:bg-[#F4F6F9] disabled:text-[#94A3B8]"}
                             >
                                 {filters.category === 'customers' ? (
                                     <>
@@ -765,7 +765,7 @@ function ReportsEngineInner() {
 
                         {isThreeLevel && (
                             <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
-                                <label className="text-[13px] font-bold text-slate-900">3. Select Filter</label>
+                                <label className="text-[13px] font-bold text-[#0F1A2B]">3. Select Filter</label>
                                 <select
                                     value={filters.subView}
                                     onChange={e => { setFilters({ ...filters, subView: e.target.value }); setHasGenerated(false); }}
@@ -785,16 +785,16 @@ function ReportsEngineInner() {
                             <div key={field} className="space-y-1.5 animate-in slide-in-from-left-2 duration-300">
                                 {field === 'dateRange' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Date Range</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Date Range</label>
                                         <div className="flex items-center gap-2">
                                             <input type="date" value={filters.dateFrom} onChange={e => { setFilters({ ...filters, dateFrom: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1 px-2"} />
-                                            <span className="text-[12px] font-bold text-slate-400 shrink-0">to</span>
+                                            <span className="text-[12px] font-bold text-[#94A3B8] shrink-0">to</span>
                                             <input type="date" value={filters.dateTo} onChange={e => { setFilters({ ...filters, dateTo: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1 px-2"} />
                                         </div>
                                         <div className="flex flex-wrap gap-1.5 mt-1.5">
                                             {([['today', 'Today'], ['week', 'This Week'], ['month', 'This Month'], ['year', 'This Year']] as const).map(([key, label]) => (
                                                 <button key={key} type="button" onClick={() => applyPreset(key)}
-                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-slate-200 text-slate-600 hover:bg-[#F59E0B]/10 hover:text-[#0E7F98] hover:border-[#F59E0B]/25 transition-colors">
+                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-[#E7ECF2] text-[#64748B] hover:bg-[#1877C2]/10 hover:text-[#1567AB] hover:border-[#1877C2]/25 transition-colors">
                                                     {label}
                                                 </button>
                                             ))}
@@ -803,7 +803,7 @@ function ReportsEngineInner() {
                                 )}
                                 {field === 'supplierId' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Select Supplier</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Select Supplier</label>
                                         <select value={filters.supplierId} onChange={e => { setFilters({ ...filters, supplierId: e.target.value }); setHasGenerated(false); }} className={inputCls}>
                                             <option value="">All Suppliers</option>
                                             {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -812,7 +812,7 @@ function ReportsEngineInner() {
                                 )}
                                 {field === 'categoryId' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Select Category</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Select Category</label>
                                         <select value={filters.categoryId} onChange={e => { setFilters({ ...filters, categoryId: e.target.value }); setHasGenerated(false); }} className={inputCls}>
                                             <option value="">All Categories</option>
                                             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -821,7 +821,7 @@ function ReportsEngineInner() {
                                 )}
                                 {field === 'priceRange' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Price Range</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Price Range</label>
                                         <div className="flex items-center gap-2">
                                             <input type="number" placeholder="Min" value={filters.minPrice} onChange={e => { setFilters({ ...filters, minPrice: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1"} />
                                             <input type="number" placeholder="Max" value={filters.maxPrice} onChange={e => { setFilters({ ...filters, maxPrice: e.target.value }); setHasGenerated(false); }} className={inputCls + " min-w-0 flex-1"} />
@@ -830,43 +830,43 @@ function ReportsEngineInner() {
                                 )}
                                 {field === 'customerId' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Search Customer</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Search Customer</label>
                                         <input placeholder="Search name/ID..." value={filters.customerId} onChange={e => { setFilters({ ...filters, customerId: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
                                 {field === 'invoiceNo' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Invoice Number</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Invoice Number</label>
                                         <input placeholder="e.g. INV-001" value={filters.invoiceNo} onChange={e => { setFilters({ ...filters, invoiceNo: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
                                 {field === 'brandSearch' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Brand</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Brand</label>
                                         <input placeholder="Search brand..." value={filters.brandSearch} onChange={e => { setFilters({ ...filters, brandSearch: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
                                 {field === 'areaSearch' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Area</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Area</label>
                                         <input placeholder="Search area/city..." value={filters.areaSearch} onChange={e => { setFilters({ ...filters, areaSearch: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
                                 {field === 'salesmanSearch' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Salesman</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Salesman</label>
                                         <input placeholder="Search salesman..." value={filters.salesmanSearch} onChange={e => { setFilters({ ...filters, salesmanSearch: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
                                 {field === 'reasonSearch' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Reason</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Reason</label>
                                         <input placeholder="Search reason..." value={filters.reasonSearch} onChange={e => { setFilters({ ...filters, reasonSearch: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
                                 {field === 'accountSearch' && (
                                     <>
-                                        <label className="text-[13px] font-bold text-slate-900">Account</label>
+                                        <label className="text-[13px] font-bold text-[#0F1A2B]">Account</label>
                                         <input placeholder="Search account..." value={filters.accountSearch} onChange={e => { setFilters({ ...filters, accountSearch: e.target.value }); setHasGenerated(false); }} className={inputCls} />
                                     </>
                                 )}
@@ -900,27 +900,27 @@ function ReportsEngineInner() {
                 {customerSummary && (
                     <div className="animate-in fade-in duration-500 mb-6">
                         <Card className="overflow-hidden">
-                            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                                <span className="flex items-center justify-center w-11 h-11 rounded-xl bg-[#FAFAF8] text-[#5B5B58] border border-[#F2F2F0] text-[16px] font-black">
+                            <div className="px-6 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]/50 flex items-center gap-3">
+                                <span className="flex items-center justify-center w-11 h-11 rounded-xl bg-[#F8FAFC] text-[#64748B] border border-[#F4F6F9] text-[16px] font-black">
                                     {(customerSummary.name || 'C').slice(0, 1).toUpperCase()}
                                 </span>
                                 <div className="min-w-0">
-                                    <h3 className="text-[16px] font-bold text-slate-900">{customerSummary.name}</h3>
-                                    <p className="text-[12px] text-slate-500 truncate">{customerSummary.phone} · {customerSummary.email}{customerSummary.address !== '—' ? ` · ${customerSummary.address}` : ''}</p>
+                                    <h3 className="text-[16px] font-bold text-[#0F1A2B]">{customerSummary.name}</h3>
+                                    <p className="text-[12px] text-[#64748B] truncate">{customerSummary.phone} · {customerSummary.email}{customerSummary.address !== '—' ? ` · ${customerSummary.address}` : ''}</p>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-slate-100">
                                 {[
-                                    { label: 'Total Bought', value: formatCurrency(customerSummary.totalBought), tone: 'text-slate-900' },
+                                    { label: 'Total Bought', value: formatCurrency(customerSummary.totalBought), tone: 'text-[#0F1A2B]' },
                                     { label: 'Total Paid', value: formatCurrency(customerSummary.totalPaid), tone: 'text-emerald-600' },
-                                    { label: 'Dues', value: formatCurrency(customerSummary.dues), tone: customerSummary.dues > 0 ? 'text-rose-600' : 'text-slate-900' },
-                                    { label: 'Orders', value: String(customerSummary.allOrders), tone: 'text-slate-900' },
+                                    { label: 'Dues', value: formatCurrency(customerSummary.dues), tone: customerSummary.dues > 0 ? 'text-rose-600' : 'text-[#0F1A2B]' },
+                                    { label: 'Orders', value: String(customerSummary.allOrders), tone: 'text-[#0F1A2B]' },
                                     { label: 'Delivered', value: String(customerSummary.delivered), tone: 'text-emerald-600' },
-                                    { label: 'Last Order', value: customerSummary.lastOrder ? formatDate(customerSummary.lastOrder) : '—', tone: 'text-slate-700' },
+                                    { label: 'Last Order', value: customerSummary.lastOrder ? formatDate(customerSummary.lastOrder) : '—', tone: 'text-[#334155]' },
                                 ].map((m) => (
                                     <div key={m.label} className="px-5 py-4 text-center">
                                         <p className={`text-[18px] font-black tabular-nums ${m.tone}`}>{m.value}</p>
-                                        <p className="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{m.label}</p>
+                                        <p className="text-[10.5px] font-bold text-[#94A3B8] uppercase tracking-wider mt-0.5">{m.label}</p>
                                     </div>
                                 ))}
                             </div>
@@ -931,11 +931,11 @@ function ReportsEngineInner() {
                 {profitSummary ? (
                     <div className="animate-in fade-in duration-500">
                         <Card className="overflow-hidden">
-                            <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
-                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#B4780B] border border-[#F59E0B]/15"><DollarSign size={20} /></span>
+                            <div className="px-6 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]/50 flex items-center gap-3">
+                                <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-[#1877C2]/10 text-[#1877C2] border border-[#1877C2]/15"><DollarSign size={20} /></span>
                                 <div>
-                                    <h3 className="text-[15px] font-bold text-slate-900">Net Profit</h3>
-                                    <p className="text-[12px] text-slate-500">
+                                    <h3 className="text-[15px] font-bold text-[#0F1A2B]">Net Profit</h3>
+                                    <p className="text-[12px] text-[#64748B]">
                                         {profitSummary.personal
                                             ? 'Personal'
                                             : (effectiveBranch && effectiveBranch !== 'all'
@@ -946,16 +946,16 @@ function ReportsEngineInner() {
                             </div>
                             <div className="p-6 space-y-6">
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
-                                        <div className="px-4 py-2.5 bg-emerald-50/60 border-b border-slate-100 text-[12px] font-bold text-emerald-700 uppercase tracking-wider">{profitSummary.personal ? 'Income' : 'Sales'}</div>
+                                    <div className="rounded-xl border border-[#E7ECF2] overflow-hidden">
+                                        <div className="px-4 py-2.5 bg-emerald-50/60 border-b border-[#F1F5F9] text-[12px] font-bold text-emerald-700 uppercase tracking-wider">{profitSummary.personal ? 'Income' : 'Sales'}</div>
                                         <div className="divide-y divide-slate-100">
                                             <ProfitRow label={profitSummary.personal ? 'Total Income' : 'Total Sales'} value={profitSummary.totalSales} sub={`${profitSummary.counts.sales} ${profitSummary.personal ? 'entry(s)' : 'order(s)'}`} />
                                             {!profitSummary.personal && <ProfitRow label="Sales Returns" value={profitSummary.salesReturns} sub={`${profitSummary.counts.salesReturns} return(s)`} neg />}
                                             <ProfitRow label={profitSummary.personal ? 'Net Income' : 'Net Sales'} value={profitSummary.netSales} bold />
                                         </div>
                                     </div>
-                                    <div className="rounded-xl border border-slate-200 overflow-hidden">
-                                        <div className="px-4 py-2.5 bg-amber-50/60 border-b border-slate-100 text-[12px] font-bold text-amber-700 uppercase tracking-wider">{profitSummary.personal ? 'Expense' : 'Purchases'}</div>
+                                    <div className="rounded-xl border border-[#E7ECF2] overflow-hidden">
+                                        <div className="px-4 py-2.5 bg-amber-50/60 border-b border-[#F1F5F9] text-[12px] font-bold text-amber-700 uppercase tracking-wider">{profitSummary.personal ? 'Expense' : 'Purchases'}</div>
                                         <div className="divide-y divide-slate-100">
                                             <ProfitRow label={profitSummary.personal ? 'Total Expense' : 'Total Purchases'} value={profitSummary.totalPurchases} sub={`${profitSummary.counts.purchases} ${profitSummary.personal ? 'entry(s)' : 'order(s)'}`} />
                                             {!profitSummary.personal && <ProfitRow label="Purchase Returns" value={profitSummary.purchaseReturns} sub={`${profitSummary.counts.purchaseReturns} return(s)`} neg />}
@@ -965,8 +965,8 @@ function ReportsEngineInner() {
                                 </div>
                                 <div className={`rounded-xl border p-5 flex items-center justify-between gap-4 ${profitSummary.netProfit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
                                     <div>
-                                        <p className="text-[12px] font-bold uppercase tracking-wider text-slate-600">Net Profit</p>
-                                        <p className="text-[11px] text-slate-500 mt-0.5">{profitSummary.personal ? 'Income − Expense' : 'Net Sales − Net Purchases'}</p>
+                                        <p className="text-[12px] font-bold uppercase tracking-wider text-[#64748B]">Net Profit</p>
+                                        <p className="text-[11px] text-[#64748B] mt-0.5">{profitSummary.personal ? 'Income − Expense' : 'Net Sales − Net Purchases'}</p>
                                     </div>
                                     <p className={`text-[26px] font-black tabular-nums ${profitSummary.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(profitSummary.netProfit)}</p>
                                 </div>
@@ -979,16 +979,16 @@ function ReportsEngineInner() {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-2 mb-4 no-print">
                              <div className="flex items-center gap-2">
                                  <CheckCircle className="text-emerald-600 h-4 w-4" />
-                                 <p className="text-[13px] text-slate-600 font-medium">
-                                     Report Summary: <span className="font-bold text-slate-900">{reportResult.length} Items Found</span>
+                                 <p className="text-[13px] text-[#64748B] font-medium">
+                                     Report Summary: <span className="font-bold text-[#0F1A2B]">{reportResult.length} Items Found</span>
                                  </p>
                              </div>
                              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                                 <div className="text-[13px] text-slate-600 font-medium">
-                                     Total Amount: <span className="text-[#1A1A1A] font-black tabular-nums">{formatCurrency(reportResult.reduce((s, r) => s + rowAmount(r), 0))}</span>
+                                 <div className="text-[13px] text-[#64748B] font-medium">
+                                     Total Amount: <span className="text-[#0F1A2B] font-black tabular-nums">{formatCurrency(reportResult.reduce((s, r) => s + rowAmount(r), 0))}</span>
                                  </div>
-                                 <div className="text-[13px] text-slate-600 font-medium">
-                                     Total Quantity: <span className="text-slate-900 font-black tabular-nums">{reportResult.reduce((s, r) => s + rowQty(r), 0)}</span>
+                                 <div className="text-[13px] text-[#64748B] font-medium">
+                                     Total Quantity: <span className="text-[#0F1A2B] font-black tabular-nums">{reportResult.reduce((s, r) => s + rowQty(r), 0)}</span>
                                  </div>
                              </div>
                          </div>
@@ -996,7 +996,7 @@ function ReportsEngineInner() {
                          <Card className="overflow-x-auto no-print">
                              <table className="w-full text-left border-collapse">
                                  <thead>
-                                     <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                                     <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9] text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
                                          <SelectAllTh sel={sel} />
                                          <th className="px-4 py-2.5 w-16">ID</th>
                                          <th className="px-4 py-2.5 w-28">Date</th>
@@ -1007,17 +1007,17 @@ function ReportsEngineInner() {
                                  </thead>
                                  <tbody className="divide-y divide-slate-100">
                                      {reportResult.map((row, idx) => (
-                                         <tr key={idx} className="hover:bg-slate-50 transition-colors group text-[10px]">
+                                         <tr key={idx} className="hover:bg-[#F8FAFC] transition-colors group text-[10px]">
                                              <RowCheckboxTd sel={sel} id={String(idx)} />
-                                             <td className="px-4 py-2 font-bold text-[#1A1A1A] tabular-nums">
+                                             <td className="px-4 py-2 font-bold text-[#0F1A2B] tabular-nums">
                                                  #{row.return_number || row.order_number || row.id?.toString().slice(0, 8) || idx + 1}
                                              </td>
-                                             <td className="px-4 py-2 text-slate-500 font-medium">
+                                             <td className="px-4 py-2 text-[#64748B] font-medium">
                                                  {formatDate(rowDateVal(row))}
                                              </td>
                                              <td className="px-4 py-2">
-                                                 <div className="text-slate-900 font-bold uppercase tracking-tight text-[10.5px]">{rowTitle(row)}</div>
-                                                 <div className="text-[9px] text-slate-400 mt-0.5 font-medium italic">
+                                                 <div className="text-[#0F1A2B] font-bold uppercase tracking-tight text-[10.5px]">{rowTitle(row)}</div>
+                                                 <div className="text-[9px] text-[#94A3B8] mt-0.5 font-medium italic">
                                                      {rowSubtitle(row, filters.category)}
                                                  </div>
                                              </td>
@@ -1027,9 +1027,9 @@ function ReportsEngineInner() {
                                                  </Badge>
                                              </td>
                                              <td className="px-4 py-2 text-right">
-                                                 <div className="font-black text-slate-900 text-[11px] tabular-nums">{formatCurrency(rowAmount(row))}</div>
+                                                 <div className="font-black text-[#0F1A2B] text-[11px] tabular-nums">{formatCurrency(rowAmount(row))}</div>
                                                  {rowQty(row) > 0 && (
-                                                     <div className="text-[8.5px] text-slate-500 font-bold uppercase tracking-tighter mt-0.5 italic tabular-nums">Qty: {rowQty(row)}</div>
+                                                     <div className="text-[8.5px] text-[#64748B] font-bold uppercase tracking-tighter mt-0.5 italic tabular-nums">Qty: {rowQty(row)}</div>
                                                  )}
                                              </td>
                                          </tr>
@@ -1154,12 +1154,12 @@ function ReportsEngineInner() {
                 ) : (
                     <Card className="flex flex-col items-center justify-center py-28 text-center px-10 no-print">
                         <div className="mb-4">
-                            {hasGenerated ? <AlertTriangle size={60} className="mx-auto text-amber-400" /> : <BarChart3 size={60} className="mx-auto text-slate-300" />}
+                            {hasGenerated ? <AlertTriangle size={60} className="mx-auto text-amber-400" /> : <BarChart3 size={60} className="mx-auto text-[#CBD5E1]" />}
                         </div>
-                        <h3 className="text-[16px] font-bold text-slate-900 tracking-tight">
+                        <h3 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">
                             {hasGenerated ? "No items found for this selection." : "Report Generator"}
                         </h3>
-                        <p className="text-[13px] text-slate-600 mt-2 max-w-sm leading-relaxed">
+                        <p className="text-[13px] text-[#64748B] mt-2 max-w-sm leading-relaxed">
                             {hasGenerated
                                 ? "We couldn't find any data matching your criteria. Please adjust your filters and try again."
                                 : "Select your filters above and click **Generate Report** to see the results."

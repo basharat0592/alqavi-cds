@@ -28,11 +28,11 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 /* ─── Form Field ─── */
 const Field = ({ label, required = false, children, hint }: { label: string; required?: boolean; children: React.ReactNode; hint?: string }) => (
     <div className="flex flex-col gap-1.5">
-        <label className="text-[13px] font-semibold text-slate-700">
+        <label className="text-[13px] font-semibold text-[#334155]">
             {label} {required && <span className="text-rose-600">*</span>}
         </label>
         {children}
-        {hint && <span className="text-[11px] text-slate-400">{hint}</span>}
+        {hint && <span className="text-[11px] text-[#94A3B8]">{hint}</span>}
     </div>
 );
 
@@ -48,7 +48,7 @@ const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full border transition-colors ${checked ? 'bg-[#F59E0B] border-[#F59E0B]' : 'bg-slate-200 border-slate-300'}`}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full border transition-colors ${checked ? 'bg-[#1877C2] border-[#1877C2]' : 'bg-slate-200 border-[#CBD5E1]'}`}
     >
         <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
     </button>
@@ -177,7 +177,7 @@ export default function SettingsPage() {
         notifications: 'Notifications', security: 'Login & Security', display: 'Display', 'all-pages': 'Sidebar Pages'
     };
 
-    if (pageLoading) return <div className="p-20 text-center text-slate-400 text-[13px]">Loading settings...</div>;
+    if (pageLoading) return <div className="p-20 text-center text-[#94A3B8] text-[13px]">Loading settings...</div>;
 
     return (
         <div className="pb-20">
@@ -210,14 +210,14 @@ export default function SettingsPage() {
                             return true;
                         }).map(tab => (
                             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="text-left group w-full">
-                                <Card className="p-5 hover:border-[#F59E0B]/35 transition-all">
+                                <Card className="p-5 hover:border-[#1877C2]/35 transition-all">
                                     <div className="flex items-start gap-3">
-                                        <div className="mt-0.5 p-2 bg-slate-100 rounded-xl group-hover:bg-[#F59E0B]/10 transition-colors">
-                                            <tab.icon size={20} className="text-slate-500 group-hover:text-[#0E7F98] transition-colors" />
+                                        <div className="mt-0.5 p-2 bg-[#F4F6F9] rounded-xl group-hover:bg-[#1877C2]/10 transition-colors">
+                                            <tab.icon size={20} className="text-[#64748B] group-hover:text-[#1567AB] transition-colors" />
                                         </div>
                                         <div>
-                                            <h3 className="text-[14px] font-bold text-slate-900 group-hover:text-[#0E7F98] transition-colors">{tab.label}</h3>
-                                            <p className="text-[12px] text-slate-600 mt-0.5 leading-snug">{tab.desc}</p>
+                                            <h3 className="text-[14px] font-bold text-[#0F1A2B] group-hover:text-[#1567AB] transition-colors">{tab.label}</h3>
+                                            <p className="text-[12px] text-[#64748B] mt-0.5 leading-snug">{tab.desc}</p>
                                         </div>
                                     </div>
                                 </Card>
@@ -229,22 +229,22 @@ export default function SettingsPage() {
                 {/* ── PROFILE ── */}
                 {activeTab === 'profile' && (
                     <Card className="overflow-hidden">
-                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Profile Details</h2>
-                            <p className="text-[12px] text-slate-600">Manage how you appear in the system.</p>
+                        <div className="px-8 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">Profile Details</h2>
+                            <p className="text-[12px] text-[#64748B]">Manage how you appear in the system.</p>
                         </div>
                         <div className="p-8">
                             <div className="flex flex-col sm:flex-row gap-8 items-start">
                                 {/* Avatar */}
                                 <div className="flex flex-col items-center gap-3 shrink-0">
                                     <div
-                                        className="w-28 h-28 rounded-full border-2 border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer group relative"
+                                        className="w-28 h-28 rounded-full border-2 border-[#E7ECF2] bg-[#F8FAFC] flex items-center justify-center overflow-hidden cursor-pointer group relative"
                                         onClick={() => avatarRef.current?.click()}
                                     >
                                         {(avatarPreview || profile.avatar) ? (
                                             <img src={avatarPreview || getImageUrl(profile.avatar) || ''} className="w-full h-full object-cover" alt="Avatar" />
                                         ) : (
-                                            <User size={40} className="text-slate-300" />
+                                            <User size={40} className="text-[#CBD5E1]" />
                                         )}
                                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                             <Camera size={20} className="text-white" />
@@ -254,7 +254,7 @@ export default function SettingsPage() {
                                         const f = e.target.files?.[0];
                                         if (f) { setSelectedAvatar(f); setAvatarPreview(URL.createObjectURL(f)); }
                                     }} />
-                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-[#119AB8] hover:text-[#0E7F98] hover:underline font-medium">Change photo</button>
+                                    <button onClick={() => avatarRef.current?.click()} className="text-[12px] text-[#1877C2] hover:text-[#1567AB] hover:underline font-medium">Change photo</button>
                                 </div>
 
                                 {/* Fields */}
@@ -274,7 +274,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
+                            <div className="mt-8 pt-5 border-t border-[#F1F5F9] flex justify-end">
                                 <Btn loading={profileSaving} onClick={handleSaveProfile} className="w-full sm:w-auto justify-center px-6">
                                     <Save size={13} /> Save changes
                                 </Btn>
@@ -286,9 +286,9 @@ export default function SettingsPage() {
                 {/* ── BUSINESS INFO ── */}
                 {activeTab === 'store' && isSuperAdmin && (
                     <Card className="overflow-hidden">
-                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Business Information</h2>
-                            <p className="text-[12px] text-slate-600">Store profile and identification details.</p>
+                        <div className="px-8 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">Business Information</h2>
+                            <p className="text-[12px] text-[#64748B]">Store profile and identification details.</p>
                         </div>
                         <div className="p-8">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -308,7 +308,7 @@ export default function SettingsPage() {
                                     <Input value={store.tax_number} onChange={e => setStore({ ...store, tax_number: e.target.value })} placeholder="1234567-8" />
                                 </Field>
                                 <Field label="Currency" hint="Currency cannot be changed">
-                                    <Input value={store.currency} disabled className="bg-slate-50 cursor-not-allowed opacity-60" />
+                                    <Input value={store.currency} disabled className="bg-[#F8FAFC] cursor-not-allowed opacity-60" />
                                 </Field>
                                 <div className="sm:col-span-2">
                                     <Field label="Full Address">
@@ -316,7 +316,7 @@ export default function SettingsPage() {
                                     </Field>
                                 </div>
                             </div>
-                            <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
+                            <div className="mt-8 pt-5 border-t border-[#F1F5F9] flex justify-end">
                                 <Btn loading={storeSaving} onClick={handleSaveStore} className="w-full sm:w-auto justify-center px-6">
                                     <Save size={13} /> Save info
                                 </Btn>
@@ -328,9 +328,9 @@ export default function SettingsPage() {
                 {/* ── SECURITY ── */}
                 {activeTab === 'security' && (
                     <Card className="overflow-hidden">
-                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Change Password</h2>
-                            <p className="text-[12px] text-slate-600">Update your login credentials.</p>
+                        <div className="px-8 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">Change Password</h2>
+                            <p className="text-[12px] text-[#64748B]">Update your login credentials.</p>
                         </div>
                         <div className="p-8">
                             <div className="flex flex-col sm:flex-row gap-8">
@@ -345,12 +345,12 @@ export default function SettingsPage() {
                                         <Input type="password" value={passwords.confirm} onChange={e => setPasswords({ ...passwords, confirm: e.target.value })} placeholder="Repeat new password" />
                                     </Field>
                                 </div>
-                                <div className="w-full sm:w-[220px] bg-[#F59E0B]/10 border border-[#F59E0B]/15 rounded-xl p-5 text-[12px] text-slate-600 leading-relaxed self-start">
-                                    <p className="font-bold text-[#1A1A1A] mb-2 text-[12px]">Security Tips</p>
+                                <div className="w-full sm:w-[220px] bg-[#1877C2]/10 border border-[#1877C2]/15 rounded-xl p-5 text-[12px] text-[#64748B] leading-relaxed self-start">
+                                    <p className="font-bold text-[#0F1A2B] mb-2 text-[12px]">Security Tips</p>
                                     Use at least 8 characters with a mix of letters, numbers, and symbols. Never share your password with anyone.
                                 </div>
                             </div>
-                            <div className="mt-8 pt-5 border-t border-slate-100 flex justify-end">
+                            <div className="mt-8 pt-5 border-t border-[#F1F5F9] flex justify-end">
                                 <Btn loading={pwSaving} onClick={async () => {
                                     setPwSaving(true);
                                     try {
@@ -369,9 +369,9 @@ export default function SettingsPage() {
                 {/* ── NOTIFICATIONS ── */}
                 {activeTab === 'notifications' && (
                     <Card className="overflow-hidden">
-                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Notification Preferences</h2>
-                            <p className="text-[12px] text-slate-600">Select which alerts you want to receive.</p>
+                        <div className="px-8 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">Notification Preferences</h2>
+                            <p className="text-[12px] text-[#64748B]">Select which alerts you want to receive.</p>
                         </div>
                         <div className="p-8">
                             <div className="divide-y divide-slate-100">
@@ -383,14 +383,14 @@ export default function SettingsPage() {
                                 ].map(f => (
                                     <div key={f.k} className="flex items-center justify-between py-4">
                                         <div>
-                                            <h4 className="text-[13px] font-bold text-slate-900">{f.l}</h4>
-                                            <p className="text-[12px] text-slate-600 mt-0.5">{f.d}</p>
+                                            <h4 className="text-[13px] font-bold text-[#0F1A2B]">{f.l}</h4>
+                                            <p className="text-[12px] text-[#64748B] mt-0.5">{f.d}</p>
                                         </div>
                                         <Toggle checked={(notif as any)[f.k]} onChange={v => setNotif({ ...notif, [f.k]: v })} />
                                     </div>
                                 ))}
                             </div>
-                            <div className="mt-6 pt-5 border-t border-slate-100 flex justify-end">
+                            <div className="mt-6 pt-5 border-t border-[#F1F5F9] flex justify-end">
                                 <Btn loading={notifSaving} onClick={async () => {
                                     setNotifSaving(true);
                                     try { await settingsService.updateSettings(notif); toast.success('Preferences saved'); } catch { } finally { setNotifSaving(false); }
@@ -405,21 +405,21 @@ export default function SettingsPage() {
                 {/* ── DISPLAY ── */}
                 {activeTab === 'display' && (
                     <Card className="overflow-hidden">
-                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Display Settings</h2>
-                            <p className="text-[12px] text-slate-600">Customize your workspace appearance.</p>
+                        <div className="px-8 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">Display Settings</h2>
+                            <p className="text-[12px] text-[#64748B]">Customize your workspace appearance.</p>
                         </div>
                         <div className="p-8">
                             {/* Theme */}
-                            <p className="text-[13px] font-bold text-slate-900 mb-3">Theme</p>
+                            <p className="text-[13px] font-bold text-[#0F1A2B] mb-3">Theme</p>
                             <div className="flex gap-4 mb-8">
                                 {[{ id: 'light', label: 'Light', icon: Sun }, { id: 'dark', label: 'Dark', icon: Moon }].map(t => (
                                     <button
                                         key={t.id}
                                         onClick={() => { setTheme(t.id as any); handleSaveAppearance({ theme: t.id }); }}
-                                        className={`flex items-center gap-3 px-5 py-3 border rounded-xl text-[13px] font-bold transition-all ${theme === t.id ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+                                        className={`flex items-center gap-3 px-5 py-3 border rounded-xl text-[13px] font-bold transition-all ${theme === t.id ? 'border-[#1877C2] bg-[#1877C2]/10 text-[#1877C2]' : 'border-[#E7ECF2] bg-white text-[#64748B] hover:border-[#CBD5E1]'}`}
                                     >
-                                        <t.icon size={16} className={theme === t.id ? 'text-[#1A1A1A]' : 'text-slate-400'} />
+                                        <t.icon size={16} className={theme === t.id ? 'text-[#0F1A2B]' : 'text-[#94A3B8]'} />
                                         {t.label}
                                         {theme === t.id && <Badge tone="indigo">Active</Badge>}
                                     </button>
@@ -427,18 +427,18 @@ export default function SettingsPage() {
                             </div>
 
                             {/* Toggles */}
-                            <div className="border-t border-slate-100 divide-y divide-slate-100">
+                            <div className="border-t border-[#F1F5F9] divide-y divide-slate-100">
                                 <div className="flex items-center justify-between py-4">
                                     <div>
-                                        <h4 className="text-[13px] font-bold text-slate-900">Interface Animations</h4>
-                                        <p className="text-[12px] text-slate-600">Smooth transitions and micro-animations.</p>
+                                        <h4 className="text-[13px] font-bold text-[#0F1A2B]">Interface Animations</h4>
+                                        <p className="text-[12px] text-[#64748B]">Smooth transitions and micro-animations.</p>
                                     </div>
                                     <Toggle checked={animations} onChange={v => { setAnimations(v); handleSaveAppearance({ animations: v }); }} />
                                 </div>
                                 <div className="flex items-center justify-between py-4">
                                     <div>
-                                        <h4 className="text-[13px] font-bold text-slate-900">Condensed Sidebar</h4>
-                                        <p className="text-[12px] text-slate-600">Hide text labels, show icons only.</p>
+                                        <h4 className="text-[13px] font-bold text-[#0F1A2B]">Condensed Sidebar</h4>
+                                        <p className="text-[12px] text-[#64748B]">Hide text labels, show icons only.</p>
                                     </div>
                                     <Toggle checked={sidebarCollapsed} onChange={v => { setSidebarCollapsed(v); handleSaveAppearance({ sidebarCollapsed: v }); }} />
                                 </div>
@@ -450,9 +450,9 @@ export default function SettingsPage() {
                 {/* ── SIDEBAR PAGES ── */}
                 {activeTab === 'all-pages' && (
                     <Card className="overflow-hidden">
-                        <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/60">
-                            <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">Sidebar Navigation</h2>
-                            <p className="text-[12px] text-slate-600">Show or hide specific pages in the navigation sidebar. Changes apply immediately after saving.</p>
+                        <div className="px-8 py-5 border-b border-[#F1F5F9] bg-[#F8FAFC]">
+                            <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">Sidebar Navigation</h2>
+                            <p className="text-[12px] text-[#64748B]">Show or hide specific pages in the navigation sidebar. Changes apply immediately after saving.</p>
                         </div>
                         <div className="p-8">
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
@@ -465,13 +465,13 @@ export default function SettingsPage() {
                                     if (items.length === 0) return null;
                                     return (
                                     <div key={g.group}>
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">{g.group}</p>
+                                        <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-3 pb-2 border-b border-[#F1F5F9]">{g.group}</p>
                                         <div className="divide-y divide-slate-100">
                                             {items.map(i => {
                                                 const vis = sidebarVisibility[i.h] !== false;
                                                 return (
                                                     <div key={i.h} className="flex items-center justify-between py-2.5">
-                                                        <span className={`text-[13px] ${!vis ? 'text-slate-300 line-through' : 'text-slate-700'}`}>{i.n}</span>
+                                                        <span className={`text-[13px] ${!vis ? 'text-[#CBD5E1] line-through' : 'text-[#334155]'}`}>{i.n}</span>
                                                         <Toggle checked={vis} onChange={() => toggleSidebarItem(i.h)} />
                                                     </div>
                                                 );
@@ -482,8 +482,8 @@ export default function SettingsPage() {
                                 })}
                             </div>
 
-                            <div className="mt-8 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                                <p className="text-[12px] text-slate-600 text-center sm:text-left">Toggling off a page will hide it from the sidebar but not delete it.</p>
+                            <div className="mt-8 pt-5 border-t border-[#F1F5F9] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                                <p className="text-[12px] text-[#64748B] text-center sm:text-left">Toggling off a page will hide it from the sidebar but not delete it.</p>
                                 <Btn onClick={() => {
                                     localStorage.setItem(sidebarVisibilityKey(), JSON.stringify(sidebarVisibility));
                                     window.dispatchEvent(new Event('sidebar_visibility_change'));

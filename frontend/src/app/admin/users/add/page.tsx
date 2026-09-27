@@ -16,16 +16,16 @@ import { authService } from '@/lib/auth';
 const INPUT = (err?: boolean) =>
     `${ui.inputBase} ${err ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-500/10' : ''}`;
 
-const LABEL = 'block text-xs font-bold text-slate-700 mb-1.5';
+const LABEL = 'block text-xs font-bold text-[#334155] mb-1.5';
 
 const SectionHeader = ({ title, icon: Icon }: { title: string; icon?: any }) => (
-    <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-4 border-b border-slate-100 flex items-center gap-3">
+    <div className="bg-gradient-to-r from-slate-50 to-white px-6 py-4 border-b border-[#F1F5F9] flex items-center gap-3">
         {Icon && (
-            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#F59E0B]/10 text-[#B4780B] border border-[#F59E0B]/15 shrink-0">
+            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#1877C2]/10 text-[#1877C2] border border-[#1877C2]/15 shrink-0">
                 <Icon className="w-4 h-4" />
             </span>
         )}
-        <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">{title}</span>
+        <span className="text-[12px] font-bold text-[#334155] uppercase tracking-wider">{title}</span>
     </div>
 );
 
@@ -341,10 +341,10 @@ export default function AddUserPage() {
                                         <option value="">Select Role</option>
                                         {visibleRoles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                                     </select>
-                                    <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    <ChevronDown className="w-4 h-4 text-[#94A3B8] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                 </div>
                                 {getRolePreset(selectedRoleName) && (
-                                    <p className="flex items-center gap-1.5 text-[11px] text-[#B4780B] font-medium mt-2 bg-[#F59E0B]/60 border border-[#F59E0B]/15 rounded-lg px-2.5 py-1.5">
+                                    <p className="flex items-center gap-1.5 text-[11px] text-[#1877C2] font-medium mt-2 bg-[#1877C2]/60 border border-[#1877C2]/15 rounded-lg px-2.5 py-1.5">
                                         <Info className="w-3.5 h-3.5 shrink-0" />
                                         Page access pre-filled for this role — adjust below if needed.
                                     </p>
@@ -361,12 +361,12 @@ export default function AddUserPage() {
                                 Admin is selected. A branch admin only sees data for the
                                 warehouse(s) chosen here. */}
                             {showBranches && (
-                                <div className="md:col-span-2 space-y-4 rounded-xl border border-slate-200 bg-slate-50/40 p-5">
+                                <div className="md:col-span-2 space-y-4 rounded-xl border border-[#E7ECF2] bg-[#F8FAFC]/40 p-5">
                                     <div className="flex items-center gap-2">
-                                        <Store className="w-4 h-4 text-[#1A1A1A] shrink-0" />
-                                        <span className="text-[12px] font-bold text-slate-700 uppercase tracking-wider">Assigned Organizations</span>
+                                        <Store className="w-4 h-4 text-[#0F1A2B] shrink-0" />
+                                        <span className="text-[12px] font-bold text-[#334155] uppercase tracking-wider">Assigned Organizations</span>
                                     </div>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs text-[#64748B]">
                                         This admin gets their own fully independent workspace — their own products,
                                         stock, customers, sales and payments. Optionally tag the organization warehouse(s)
                                         they work in (organizational only); it can be left empty.
@@ -387,20 +387,20 @@ export default function AddUserPage() {
                                                         <option key={a.id} value={String(a.id)}>{a.name}{a.code ? ` (${a.code})` : ''}</option>
                                                     ))}
                                                 </select>
-                                                <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                <ChevronDown className="w-4 h-4 text-[#94A3B8] absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                             </div>
                                         </div>
                                         {branchWarehouses.length > 0 && (
                                             <div className="flex gap-2 pb-0.5">
                                                 <button type="button"
                                                     onClick={() => setSelectedWarehouses(prev => [...new Set([...prev, ...branchWarehouses.map(w => String(w.id))])])}
-                                                    className="text-[11px] font-semibold text-[#119AB8] hover:underline">
+                                                    className="text-[11px] font-semibold text-[#1877C2] hover:underline">
                                                     Select all shown
                                                 </button>
-                                                <span className="text-slate-300">|</span>
+                                                <span className="text-[#CBD5E1]">|</span>
                                                 <button type="button"
                                                     onClick={() => setSelectedWarehouses(prev => prev.filter(id => !branchWarehouses.some(w => String(w.id) === id)))}
-                                                    className="text-[11px] font-semibold text-slate-500 hover:underline">
+                                                    className="text-[11px] font-semibold text-[#64748B] hover:underline">
                                                     Clear shown
                                                 </button>
                                             </div>
@@ -409,20 +409,20 @@ export default function AddUserPage() {
 
                                     {/* Step 2 — pick warehouses (multi-select). */}
                                     {warehouses.length === 0 ? (
-                                        <p className="text-[12px] text-slate-400 italic">No warehouses available. Create a warehouse first.</p>
+                                        <p className="text-[12px] text-[#94A3B8] italic">No warehouses available. Create a warehouse first.</p>
                                     ) : branchWarehouses.length === 0 ? (
-                                        <p className="text-[12px] text-slate-400 italic">No warehouses in this area yet. Tag a warehouse to this area first, or pick "All areas".</p>
+                                        <p className="text-[12px] text-[#94A3B8] italic">No warehouses in this area yet. Tag a warehouse to this area first, or pick "All areas".</p>
                                     ) : (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                             {branchWarehouses.map(w => (
-                                                <label key={w.id} className="flex items-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl cursor-pointer bg-white/60 hover:bg-white transition-colors">
+                                                <label key={w.id} className="flex items-center gap-3 px-4 py-2.5 border border-[#E7ECF2] rounded-xl cursor-pointer bg-white/60 hover:bg-white transition-colors">
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedWarehouses.includes(String(w.id))}
                                                         onChange={() => toggleWarehouse(String(w.id))}
-                                                        className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
+                                                        className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2]"
                                                     />
-                                                    <span className="text-[12px] font-medium text-slate-700 truncate">
+                                                    <span className="text-[12px] font-medium text-[#334155] truncate">
                                                         {w.name}{w.area_name ? ` · ${w.area_name}` : (w.location ? ` · ${w.location}` : '')}
                                                     </span>
                                                 </label>
@@ -430,14 +430,14 @@ export default function AddUserPage() {
                                         </div>
                                     )}
                                     {selectedWarehouses.length === 0 && warehouses.length > 0 && (
-                                        <p className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1.5">
+                                        <p className="flex items-center gap-1.5 text-[11px] text-[#64748B] font-medium bg-[#F8FAFC] border border-[#F1F5F9] rounded-lg px-2.5 py-1.5">
                                             <Info className="w-3.5 h-3.5 shrink-0" />
                                             Optional — leaving this empty is fine. This admin starts with their own
                                             empty workspace and builds their own products, stock and organizations.
                                         </p>
                                     )}
                                     {selectedWarehouses.length > 0 && (
-                                        <p className="text-[11px] text-[#1A1A1A] font-medium">
+                                        <p className="text-[11px] text-[#0F1A2B] font-medium">
                                             {selectedWarehouses.length} branch{selectedWarehouses.length !== 1 ? 'es' : ''} selected
                                         </p>
                                     )}
@@ -445,7 +445,7 @@ export default function AddUserPage() {
                             )}
                         </div>
 
-                        <hr className="border-slate-100" />
+                        <hr className="border-[#F1F5F9]" />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -461,7 +461,7 @@ export default function AddUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#1567AB]"
                                     >
                                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -480,7 +480,7 @@ export default function AddUserPage() {
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-[#0E7F98]"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#1567AB]"
                                     >
                                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
@@ -495,15 +495,15 @@ export default function AddUserPage() {
                             <SectionHeader title="Page Access" icon={ShieldCheck} />
                             <div className="p-6 space-y-5">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-xs text-slate-500">Select which pages this user can access after login.</p>
+                                    <p className="text-xs text-[#64748B]">Select which pages this user can access after login.</p>
                                     <div className="flex gap-2">
                                         <button type="button" onClick={selectAll}
-                                            className="text-[11px] font-semibold text-[#119AB8] hover:underline">
+                                            className="text-[11px] font-semibold text-[#1877C2] hover:underline">
                                             Select All
                                         </button>
-                                        <span className="text-slate-300">|</span>
+                                        <span className="text-[#CBD5E1]">|</span>
                                         <button type="button" onClick={clearAll}
-                                            className="text-[11px] font-semibold text-slate-500 hover:underline">
+                                            className="text-[11px] font-semibold text-[#64748B] hover:underline">
                                             Clear All
                                         </button>
                                     </div>
@@ -515,33 +515,33 @@ export default function AddUserPage() {
                                         const allChecked = groupHrefs.every(h => selectedPages.includes(h));
                                         const someChecked = groupHrefs.some(h => selectedPages.includes(h));
                                         return (
-                                            <div key={group.label} className="border border-slate-200 rounded-xl overflow-hidden">
+                                            <div key={group.label} className="border border-[#E7ECF2] rounded-xl overflow-hidden">
                                                 {/* Group header with select-all toggle */}
                                                 <div
-                                                    className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 cursor-pointer select-none"
+                                                    className="flex items-center gap-2 px-4 py-2.5 bg-[#F8FAFC] border-b border-[#E7ECF2] cursor-pointer select-none"
                                                     onClick={() => toggleGroup(groupHrefs)}
                                                 >
-                                                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-[#F59E0B] border-[#F59E0B]' : someChecked ? 'bg-[#F59E0B]/25 border-[#F59E0B]' : 'border-slate-300 bg-white'}`}>
+                                                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-colors ${allChecked ? 'bg-[#1877C2] border-[#1877C2]' : someChecked ? 'bg-[#1877C2]/25 border-[#1877C2]' : 'border-[#CBD5E1] bg-white'}`}>
                                                         {allChecked && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                                                        {someChecked && !allChecked && <div className="w-2 h-0.5 bg-[#F59E0B] rounded" />}
+                                                        {someChecked && !allChecked && <div className="w-2 h-0.5 bg-[#1877C2] rounded" />}
                                                     </div>
-                                                    <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{group.label}</span>
-                                                    <span className="ml-auto text-[10px] text-slate-400">{groupHrefs.filter(h => selectedPages.includes(h)).length}/{groupHrefs.length}</span>
+                                                    <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-wide">{group.label}</span>
+                                                    <span className="ml-auto text-[10px] text-[#94A3B8]">{groupHrefs.filter(h => selectedPages.includes(h)).length}/{groupHrefs.length}</span>
                                                 </div>
                                                 {/* Individual items */}
                                                 <div className="divide-y divide-slate-100">
                                                     {group.items.map(item => (
-                                                        <div key={item.href} className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-slate-50 transition-colors">
-                                                            <span className="text-[12px] text-slate-700">{item.name}</span>
+                                                        <div key={item.href} className="flex items-center justify-between gap-3 px-4 py-2 hover:bg-[#F8FAFC] transition-colors">
+                                                            <span className="text-[12px] text-[#334155]">{item.name}</span>
                                                             <div className="flex items-center gap-4">
                                                                 <label className="flex items-center gap-1 cursor-pointer select-none">
                                                                     <input
                                                                         type="checkbox"
                                                                         checked={selectedPages.includes(item.href)}
                                                                         onChange={() => toggleView(item.href)}
-                                                                        className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
+                                                                        className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2]"
                                                                     />
-                                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">View</span>
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-[#94A3B8]">View</span>
                                                                 </label>
                                                                 <label className={`flex items-center gap-1 select-none ${selectedPages.includes(item.href) ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'}`}>
                                                                     <input
@@ -549,9 +549,9 @@ export default function AddUserPage() {
                                                                         checked={selectedEditPages.includes(item.href)}
                                                                         disabled={!selectedPages.includes(item.href)}
                                                                         onChange={() => toggleEdit(item.href)}
-                                                                        className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B] disabled:cursor-not-allowed"
+                                                                        className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2] disabled:cursor-not-allowed"
                                                                     />
-                                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Edit</span>
+                                                                    <span className="text-[9px] font-bold uppercase tracking-wide text-[#94A3B8]">Edit</span>
                                                                 </label>
                                                             </div>
                                                         </div>
@@ -563,7 +563,7 @@ export default function AddUserPage() {
                                 </div>
 
                                 {selectedPages.length > 0 && (
-                                    <p className="text-[11px] text-[#1A1A1A] font-medium">
+                                    <p className="text-[11px] text-[#0F1A2B] font-medium">
                                         {selectedPages.length} page{selectedPages.length !== 1 ? 's' : ''} selected
                                     </p>
                                 )}
@@ -573,9 +573,9 @@ export default function AddUserPage() {
 
                     {form.role && isFullAccess && (
                         <div className="px-6 pb-4">
-                            <div className="flex items-center gap-2 px-4 py-3 bg-[#F59E0B]/10 rounded-lg border border-[#F59E0B]/15">
-                                <ShieldCheck className="w-4 h-4 text-[#1A1A1A]" />
-                                <p className="text-xs text-[#1A1A1A] font-medium">
+                            <div className="flex items-center gap-2 px-4 py-3 bg-[#1877C2]/10 rounded-lg border border-[#1877C2]/15">
+                                <ShieldCheck className="w-4 h-4 text-[#0F1A2B]" />
+                                <p className="text-xs text-[#0F1A2B] font-medium">
                                     This role has full access to all pages — no restrictions apply.
                                 </p>
                             </div>
@@ -587,26 +587,26 @@ export default function AddUserPage() {
                         <>
                             <SectionHeader title="Assigned Areas" icon={MapPin} />
                             <div className="p-6 space-y-4">
-                                <p className="text-xs text-slate-500">Select the territories this area manager is responsible for.</p>
+                                <p className="text-xs text-[#64748B]">Select the territories this area manager is responsible for.</p>
                                 {areas.length === 0 ? (
-                                    <p className="text-[12px] text-slate-400 italic">No active areas available. Create areas first.</p>
+                                    <p className="text-[12px] text-[#94A3B8] italic">No active areas available. Create areas first.</p>
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                                         {areas.map(area => (
-                                            <label key={area.id} className="flex items-center gap-3 px-4 py-2.5 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                            <label key={area.id} className="flex items-center gap-3 px-4 py-2.5 border border-[#E7ECF2] rounded-xl cursor-pointer hover:bg-[#F8FAFC] transition-colors">
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedAreas.includes(area.id)}
                                                     onChange={() => toggleArea(area.id)}
-                                                    className="w-3.5 h-3.5 rounded border-slate-300 text-[#1A1A1A] focus:ring-[#F59E0B]"
+                                                    className="w-3.5 h-3.5 rounded border-[#CBD5E1] text-[#0F1A2B] focus:ring-[#1877C2]"
                                                 />
-                                                <span className="text-[12px] font-medium text-slate-700">{area.name}{area.code ? ` (${area.code})` : ''}</span>
+                                                <span className="text-[12px] font-medium text-[#334155]">{area.name}{area.code ? ` (${area.code})` : ''}</span>
                                             </label>
                                         ))}
                                     </div>
                                 )}
                                 {selectedAreas.length > 0 && (
-                                    <p className="text-[11px] text-[#1A1A1A] font-medium">
+                                    <p className="text-[11px] text-[#0F1A2B] font-medium">
                                         {selectedAreas.length} area{selectedAreas.length !== 1 ? 's' : ''} selected
                                     </p>
                                 )}
@@ -614,7 +614,7 @@ export default function AddUserPage() {
                         </>
                     )}
 
-                    <div className="bg-slate-50/60 px-8 py-4 flex justify-end gap-3 border-t border-slate-100">
+                    <div className="bg-[#F8FAFC] px-8 py-4 flex justify-end gap-3 border-t border-[#F1F5F9]">
                         <Button
                             type="button"
                             variant="outline"
@@ -635,7 +635,7 @@ export default function AddUserPage() {
             </form>
 
             {toast && (
-                <div className="fixed bottom-6 right-6 bg-white text-slate-700 px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-[240px] border border-slate-200/70 border-l-4 border-l-emerald-500 z-[100] animate-in slide-in-from-bottom-5">
+                <div className="fixed bottom-6 right-6 bg-white text-[#334155] px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-[240px] border border-[#E7ECF2] border-l-4 border-l-emerald-500 z-[100] animate-in slide-in-from-bottom-5">
                     <CheckCircle className="h-5 w-5 text-emerald-500" />
                     <span className="text-sm font-medium">{toast}</span>
                 </div>
@@ -644,53 +644,53 @@ export default function AddUserPage() {
             {/* Success — shareable login link + credentials for the new account. */}
             {created && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-                    <div className="bg-white rounded-2xl border border-slate-200 max-w-md w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-2xl border border-[#E7ECF2] max-w-md w-full shadow-2xl overflow-hidden text-left animate-in zoom-in-95 duration-200">
                         <div className="bg-emerald-50/60 px-5 py-4 border-b border-emerald-100 flex items-center gap-3">
                             <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 shrink-0"><CheckCircle className="w-5 h-5" /></span>
                             <div className="min-w-0 flex-1">
-                                <h3 className="text-[14px] font-bold text-slate-900 tracking-tight">Account created</h3>
-                                <p className="text-[11px] text-slate-500 truncate">Share the login link below with {created.name || 'the new user'}.</p>
+                                <h3 className="text-[14px] font-bold text-[#0F1A2B] tracking-tight">Account created</h3>
+                                <p className="text-[11px] text-[#64748B] truncate">Share the login link below with {created.name || 'the new user'}.</p>
                             </div>
-                            <button type="button" onClick={() => { setCreated(null); router.push('/admin/users'); }} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"><X size={16} /></button>
+                            <button type="button" onClick={() => { setCreated(null); router.push('/admin/users'); }} className="p-1.5 rounded-lg text-[#94A3B8] hover:text-[#334155] hover:bg-[#F4F6F9] transition-colors shrink-0"><X size={16} /></button>
                         </div>
 
                         <div className="p-5 space-y-4">
                             <div>
-                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Login link</label>
+                                <label className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Login link</label>
                                 <div className="mt-1.5 flex items-center gap-2">
                                     <input
                                         readOnly
                                         value={created.loginUrl}
                                         onFocus={e => e.currentTarget.select()}
-                                        className="flex-1 h-9 px-3 rounded-lg border border-slate-200 bg-slate-50 text-[12px] text-slate-700 outline-none focus:border-[#F59E0B]"
+                                        className="flex-1 h-9 px-3 rounded-lg border border-[#E7ECF2] bg-[#F8FAFC] text-[12px] text-[#334155] outline-none focus:border-[#1877C2]"
                                     />
-                                    <button type="button" onClick={() => copy('link', created.loginUrl)} className="h-9 px-3 rounded-lg bg-[#F59E0B] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#D97706] transition-colors shrink-0">
+                                    <button type="button" onClick={() => copy('link', created.loginUrl)} className="h-9 px-3 rounded-lg bg-[#1877C2] text-white text-[11px] font-bold inline-flex items-center gap-1.5 hover:bg-[#1567AB] transition-colors shrink-0">
                                         {copied === 'link' ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
                                     </button>
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 min-w-0">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p>
-                                    <p className="text-[12px] font-bold text-slate-800 truncate">{created.email}</p>
+                                <div className="rounded-lg border border-[#E7ECF2] bg-[#F8FAFC] px-3 py-2 min-w-0">
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Email</p>
+                                    <p className="text-[12px] font-bold text-[#0F1A2B] truncate">{created.email}</p>
                                 </div>
-                                <div className="rounded-lg border border-slate-200 bg-slate-50/60 px-3 py-2 min-w-0">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</p>
-                                    <p className="text-[12px] font-bold text-slate-800 font-mono truncate">{created.password}</p>
+                                <div className="rounded-lg border border-[#E7ECF2] bg-[#F8FAFC] px-3 py-2 min-w-0">
+                                    <p className="text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">Password</p>
+                                    <p className="text-[12px] font-bold text-[#0F1A2B] font-mono truncate">{created.password}</p>
                                 </div>
                             </div>
 
-                            <button type="button" onClick={() => copy('invite', created.invite)} className="w-full h-10 rounded-xl border border-[#F59E0B]/25 bg-[#F59E0B]/10 text-[#B4780B] text-[12px] font-bold inline-flex items-center justify-center gap-2 hover:bg-[#F59E0B]/15 transition-colors">
+                            <button type="button" onClick={() => copy('invite', created.invite)} className="w-full h-10 rounded-xl border border-[#1877C2]/25 bg-[#1877C2]/10 text-[#1877C2] text-[12px] font-bold inline-flex items-center justify-center gap-2 hover:bg-[#1877C2]/15 transition-colors">
                                 {copied === 'invite' ? <><Check className="w-4 h-4" /> Copied invite message</> : <><Copy className="w-4 h-4" /> Copy invite (link + credentials)</>}
                             </button>
 
-                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                            <p className="text-[11px] text-[#94A3B8] leading-relaxed">
                                 The user opens the link with their email pre-filled — they just enter the password above to sign in.
                             </p>
                         </div>
 
-                        <div className="px-5 py-3.5 bg-slate-50/60 border-t border-slate-100 flex justify-end">
+                        <div className="px-5 py-3.5 bg-[#F8FAFC] border-t border-[#F1F5F9] flex justify-end">
                             <Button variant="primary" onClick={() => { setCreated(null); router.push('/admin/users'); }}>
                                 Done
                             </Button>

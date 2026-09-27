@@ -197,13 +197,13 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                         <StatCard label="This Month" val={thisMonth} icon={CalendarDays}
                             color={cfg.accent} bg={cfg.accentBg} bar={cfg.accentBar} />
                         <StatCard label="Entries" val={filtered.length} icon={ListChecks}
-                            color="text-slate-900" bg="#f1f5f9" bar="#64748b" isCount />
+                            color="text-[#0F1A2B]" bg="#f1f5f9" bar="#64748b" isCount />
                     </div>
 
                     {/* Search + source tabs */}
                     <Card className="p-4 mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
                         <div className="relative flex-1 w-full">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                             <input
                                 placeholder="Search by name, reference or note..."
                                 value={search}
@@ -211,13 +211,13 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                                 className={ui.inputBase + ' pl-10'}
                             />
                         </div>
-                        <div className="flex bg-slate-100 p-1 rounded-lg gap-1 overflow-x-auto no-scrollbar">
+                        <div className="flex bg-[#F4F6F9] p-1 rounded-lg gap-1 overflow-x-auto no-scrollbar">
                             {cfg.sources.map((s) => (
                                 <button
                                     key={s}
                                     onClick={() => setSourceTab(s)}
                                     className={`px-3.5 py-1.5 text-[11px] font-bold uppercase rounded-md transition-all whitespace-nowrap
-                                        ${sourceTab === s ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        ${sourceTab === s ? 'bg-white text-[#0F1A2B] shadow-sm' : 'text-[#64748B] hover:text-[#334155]'}`}
                                 >
                                     {s === 'all' ? 'All' : SOURCE_LABELS[s]}
                                 </button>
@@ -230,7 +230,7 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="bg-slate-50/60 border-b border-slate-200/70 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    <tr className="bg-[#F8FAFC] border-b border-[#E7ECF2] text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">
                                         <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Reference</th>
                                         <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Source</th>
                                         <th className="px-2.5 sm:px-6 py-3 whitespace-nowrap">Person / Company</th>
@@ -241,26 +241,26 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {loading ? (
-                                        <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="h-8 w-8 text-slate-300 animate-spin mx-auto" /></td></tr>
+                                        <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="h-8 w-8 text-[#CBD5E1] animate-spin mx-auto" /></td></tr>
                                     ) : filtered.length === 0 ? (
-                                        <tr><td colSpan={6} className="py-24 text-center text-[13px] text-slate-500">No {cfg.title.toLowerCase()} entries found.</td></tr>
+                                        <tr><td colSpan={6} className="py-24 text-center text-[13px] text-[#64748B]">No {cfg.title.toLowerCase()} entries found.</td></tr>
                                     ) : (
                                         paginated.map((e) => (
-                                            <tr key={e.id} className="hover:bg-slate-50 transition-colors group text-[13px]">
+                                            <tr key={e.id} className="hover:bg-[#F8FAFC] transition-colors group text-[13px]">
                                                 <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                                    <div className="font-bold text-slate-900">{e.reference_number || `#${e.id}`}</div>
-                                                    <div className="text-[11px] text-slate-400 mt-1">{formatDate(e.date)}</div>
+                                                    <div className="font-bold text-[#0F1A2B]">{e.reference_number || `#${e.id}`}</div>
+                                                    <div className="text-[11px] text-[#94A3B8] mt-1">{formatDate(e.date)}</div>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
                                                     <Badge tone={SOURCE_TONE[e.source] || 'neutral'}>{SOURCE_LABELS[e.source] || e.source}</Badge>
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
-                                                    <div className="font-bold text-slate-900">{e.payer_payee || 'Internal'}</div>
+                                                    <div className="font-bold text-[#0F1A2B]">{e.payer_payee || 'Internal'}</div>
                                                     {e.description && (
-                                                        <div className="text-[11px] text-slate-400 mt-1 italic max-w-xs truncate hidden sm:block">{e.description}</div>
+                                                        <div className="text-[11px] text-[#94A3B8] mt-1 italic max-w-xs truncate hidden sm:block">{e.description}</div>
                                                     )}
                                                 </td>
-                                                <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-slate-600 whitespace-nowrap">
+                                                <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-[#64748B] whitespace-nowrap">
                                                     {e.category_name || '—'}
                                                 </td>
                                                 <td className={`px-2.5 sm:px-6 py-3 sm:py-4 text-right font-bold tabular-nums whitespace-nowrap ${cfg.accent}`}>
@@ -268,11 +268,11 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                                                 </td>
                                                 <td className="px-2.5 sm:px-6 py-3 sm:py-4 text-right whitespace-nowrap">
                                                     <div className="inline-flex items-center gap-2">
-                                                        {e.is_auto && <span className="text-[10px] text-slate-400 italic">Auto</span>}
+                                                        {e.is_auto && <span className="text-[10px] text-[#94A3B8] italic">Auto</span>}
                                                         <button
                                                             onClick={() => setConfirmEntry(e)}
                                                             disabled={deleting === e.id}
-                                                            className="inline-flex items-center gap-1 text-[12px] font-bold text-[#c40000] hover:underline disabled:opacity-50"
+                                                            className="inline-flex items-center gap-1 text-[12px] font-bold text-[#DC2626] hover:underline disabled:opacity-50"
                                                         >
                                                             {deleting === e.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Delete
                                                         </button>
@@ -285,16 +285,16 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                             </table>
                         </div>
                         {totalPages > 1 && (
-                            <div className="px-4 sm:px-6 py-3 border-t border-slate-100 flex items-center justify-between text-[12px]">
-                                <span className="text-slate-500">
+                            <div className="px-4 sm:px-6 py-3 border-t border-[#F1F5F9] flex items-center justify-between text-[12px]">
+                                <span className="text-[#64748B]">
                                     Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
                                 </span>
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                                        className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Prev</button>
-                                    <span className="text-slate-500 font-semibold">Page {currentPage} / {totalPages}</span>
+                                        className="px-3 py-1.5 rounded-lg border border-[#E7ECF2] font-semibold text-[#64748B] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F8FAFC]">Prev</button>
+                                    <span className="text-[#64748B] font-semibold">Page {currentPage} / {totalPages}</span>
                                     <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                                        className="px-3 py-1.5 rounded-lg border border-slate-200 font-semibold text-slate-600 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-50">Next</button>
+                                        className="px-3 py-1.5 rounded-lg border border-[#E7ECF2] font-semibold text-[#64748B] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#F8FAFC]">Next</button>
                                 </div>
                             </div>
                         )}
@@ -309,9 +309,9 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                         <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
                             <AlertTriangle size={24} className="text-rose-600" />
                         </div>
-                        <h3 className="text-[17px] font-bold text-slate-900 mb-2">Delete this entry?</h3>
-                        <p className="text-[13px] text-slate-600">
-                            <span className="font-bold text-slate-900">{confirmEntry.payer_payee || confirmEntry.reference_number || 'Entry'}</span>
+                        <h3 className="text-[17px] font-bold text-[#0F1A2B] mb-2">Delete this entry?</h3>
+                        <p className="text-[13px] text-[#64748B]">
+                            <span className="font-bold text-[#0F1A2B]">{confirmEntry.payer_payee || confirmEntry.reference_number || 'Entry'}</span>
                             {' · '}{kind === 'inbound' ? '+' : '-'}{formatCurrency(confirmEntry.amount)}
                         </p>
                         {confirmEntry.is_auto && (
@@ -328,7 +328,7 @@ export default function LedgerView({ kind }: { kind: Kind }) {
                             <button
                                 onClick={() => setConfirmEntry(null)}
                                 disabled={deleting === confirmEntry.id}
-                                className="w-full text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline font-bold"
+                                className="w-full text-[13px] text-[#1877C2] hover:text-[#1567AB] hover:underline font-bold"
                             >
                                 Cancel
                             </button>
@@ -346,12 +346,12 @@ function StatCard({ label, val, icon: Icon, color, bg, bar, isCount = false }: a
             <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: bar }} />
             <div className="flex justify-between items-start">
                 <div>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+                    <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-1">{label}</p>
                     <p className={`text-[20px] font-bold tabular-nums ${color}`}>
                         {isCount ? Number(val).toLocaleString() : `Rs. ${Math.abs(Number(val)).toLocaleString()}`}
                     </p>
                 </div>
-                <div className="p-2.5 rounded-xl border border-slate-100" style={{ backgroundColor: bg }}>
+                <div className="p-2.5 rounded-xl border border-[#F1F5F9]" style={{ backgroundColor: bg }}>
                     <Icon size={18} className={color} />
                 </div>
             </div>
@@ -392,23 +392,23 @@ function ManualEntryForm({ kind, categories, onClose, onSuccess }: {
 
     return (
         <Card className="overflow-hidden text-left mb-6">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex justify-between items-center">
-                <h2 className="text-[16px] font-bold text-slate-900 tracking-tight">New {cfg.title}</h2>
-                <button onClick={onClose} className="text-slate-400 hover:text-slate-900"><X size={20} /></button>
+            <div className="px-6 py-4 border-b border-[#F1F5F9] bg-[#F8FAFC] flex justify-between items-center">
+                <h2 className="text-[16px] font-bold text-[#0F1A2B] tracking-tight">New {cfg.title}</h2>
+                <button onClick={onClose} className="text-[#94A3B8] hover:text-[#0F1A2B]"><X size={20} /></button>
             </div>
             <form onSubmit={submit}>
                 <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-6">
                     <div>
-                        <label className="block text-[13px] font-bold text-slate-900 mb-2">Amount (PKR)</label>
+                        <label className="block text-[13px] font-bold text-[#0F1A2B] mb-2">Amount (PKR)</label>
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rs.</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] font-bold text-sm">Rs.</span>
                             <input required type="number" step="0.01" min="0" value={form.amount}
                                 onChange={(e) => set('amount', e.target.value)} placeholder="0.00"
                                 className={ui.inputBase + ' pl-10 text-lg font-bold'} />
                         </div>
                     </div>
                     <div>
-                        <label className="block text-[13px] font-bold text-slate-900 mb-2">Method</label>
+                        <label className="block text-[13px] font-bold text-[#0F1A2B] mb-2">Method</label>
                         <select value={form.method} onChange={(e) => set('method', e.target.value)} className={ui.inputBase + ' cursor-pointer'}>
                             <option value="cash">Cash</option>
                             <option value="bank_transfer">Bank Transfer</option>
@@ -418,29 +418,29 @@ function ManualEntryForm({ kind, categories, onClose, onSuccess }: {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-[13px] font-bold text-slate-900 mb-2">Category</label>
+                        <label className="block text-[13px] font-bold text-[#0F1A2B] mb-2">Category</label>
                         <select required value={form.category} onChange={(e) => set('category', e.target.value)} className={ui.inputBase + ' cursor-pointer'}>
                             <option value="">Select...</option>
                             {relevant.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                     </div>
                     <div>
-                        <label className="block text-[13px] font-bold text-slate-900 mb-2">Name (Person / Company)</label>
+                        <label className="block text-[13px] font-bold text-[#0F1A2B] mb-2">Name (Person / Company)</label>
                         <input type="text" value={form.payer_payee} onChange={(e) => set('payer_payee', e.target.value)}
                             placeholder="Who paid / was paid" className={ui.inputBase} />
                     </div>
                     <div>
-                        <label className="block text-[13px] font-bold text-slate-900 mb-2">Reference #</label>
+                        <label className="block text-[13px] font-bold text-[#0F1A2B] mb-2">Reference #</label>
                         <input type="text" value={form.reference_number} onChange={(e) => set('reference_number', e.target.value)}
                             placeholder="Voucher or invoice #" className={ui.inputBase} />
                     </div>
                     <div>
-                        <label className="block text-[13px] font-bold text-slate-900 mb-2">Note</label>
+                        <label className="block text-[13px] font-bold text-[#0F1A2B] mb-2">Note</label>
                         <input type="text" value={form.description} onChange={(e) => set('description', e.target.value)}
                             placeholder="Extra details" className={ui.inputBase} />
                     </div>
                 </div>
-                <div className="px-8 py-5 bg-slate-50/60 border-t border-slate-100 flex items-center justify-end gap-3">
+                <div className="px-8 py-5 bg-[#F8FAFC] border-t border-[#F1F5F9] flex items-center justify-end gap-3">
                     <Button type="button" variant="ghost" onClick={onClose}>Discard</Button>
                     <Button type="submit" variant="primary" disabled={loading} className="w-[160px]">
                         {loading && <RefreshCw className="h-3.5 w-3.5 animate-spin" />} Save {cfg.title}

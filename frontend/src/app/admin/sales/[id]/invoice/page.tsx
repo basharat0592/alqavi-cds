@@ -102,7 +102,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
             : Math.max(0, totalAmount - paidAmount));
 
     return (
-        <div className="invoice-a5 pb-20 font-sans text-slate-900 text-left">
+        <div className="invoice-a5 pb-20 font-sans text-[#0F1A2B] text-left">
 
             {/* Integrated Action Bar */}
             <div className="max-w-[850px] mx-auto pt-2 px-4 print:hidden">
@@ -115,8 +115,8 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 value={(order.status || '').toLowerCase()}
                                 onChange={(e) => handleUpdateStatus(e.target.value)}
                                 disabled={updatingStatus || (order.status || '').toUpperCase() === 'DELIVERED'}
-                                className={`h-8 px-3 border border-slate-200 rounded-lg text-[12.5px] font-semibold outline-none cursor-pointer bg-white hover:border-slate-300 focus:ring-2 focus:ring-[#F59E0B]/10 focus:border-[#F59E0B] transition-all disabled:opacity-60
-                                    ${(order.status || '').toUpperCase() === 'DELIVERED' ? 'text-emerald-700' : 'text-slate-700'}`}
+                                className={`h-8 px-3 border border-[#E7ECF2] rounded-lg text-[12.5px] font-semibold outline-none cursor-pointer bg-white hover:border-[#CBD5E1] focus:ring-2 focus:ring-[#1877C2]/10 focus:border-[#1877C2] transition-all disabled:opacity-60
+                                    ${(order.status || '').toUpperCase() === 'DELIVERED' ? 'text-emerald-700' : 'text-[#334155]'}`}
                             >
                                 {['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'].map(s => (
                                     <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
@@ -149,26 +149,26 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                 {/* Customer & Metadata Grid — compact */}
                 <div className="grid grid-cols-3 gap-6 mb-4 px-1 items-start">
                     <div className="col-span-2">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Bill To</p>
-                        <p className="text-[15px] font-black text-slate-900 leading-tight">{customerName}</p>
-                        {customerCell && <p className="text-[12px] font-medium text-slate-600 mt-0.5">{customerCell}</p>}
+                        <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Bill To</p>
+                        <p className="text-[15px] font-black text-[#0F1A2B] leading-tight">{customerName}</p>
+                        {customerCell && <p className="text-[12px] font-medium text-[#64748B] mt-0.5">{customerCell}</p>}
                         {(order as any).salesperson_name && (
-                            <p className="text-[11px] font-medium text-slate-500 mt-1">Salesman: <span className="font-bold text-slate-700">{(order as any).salesperson_name}</span></p>
+                            <p className="text-[11px] font-medium text-[#64748B] mt-1">Salesman: <span className="font-bold text-[#334155]">{(order as any).salesperson_name}</span></p>
                         )}
                     </div>
                     <div className="text-right">
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Payment</p>
-                        <p className="text-[12px] font-black uppercase text-slate-900">{order.payment_method || 'Cash'}</p>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2 mb-1">Sale Date</p>
-                        <p className="text-[12px] font-bold text-slate-700 tabular-nums">{formatDate((order as any).sale_date || order.created_at)}</p>
+                        <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Payment</p>
+                        <p className="text-[12px] font-black uppercase text-[#0F1A2B]">{order.payment_method || 'Cash'}</p>
+                        <p className="text-[9px] font-black text-[#94A3B8] uppercase tracking-widest mt-2 mb-1">Sale Date</p>
+                        <p className="text-[12px] font-bold text-[#334155] tabular-nums">{formatDate((order as any).sale_date || order.created_at)}</p>
                     </div>
                 </div>
 
                 {/* Items Table */}
                 <div className="mb-6">
-                    <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
+                    <table className="w-full text-left border-collapse border border-[#CBD5E1] [&_th]:border [&_th]:border-[#CBD5E1] [&_td]:border [&_td]:border-[#E7ECF2]">
                         <thead>
-                            <tr className="border-b-2 border-slate-300 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
+                            <tr className="border-b-2 border-[#CBD5E1] text-[11px] font-bold uppercase tracking-wider text-[#94A3B8] bg-[#F8FAFC]">
                                 <SelectAllTh sel={sel} className="print:hidden" />
                                 <th className="py-1.5 px-2 w-12 text-center">#</th>
                                 <th className="py-1.5 px-3">Item Description</th>
@@ -187,15 +187,15 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 const disc = parseFloat(item.discount || 0) || 0;
                                 const net = item.line_net != null ? parseFloat(item.line_net) : (price * qty - disc);
                                 return (
-                                    <tr key={i} className="hover:bg-slate-50">
+                                    <tr key={i} className="hover:bg-[#F8FAFC]">
                                         <RowCheckboxTd sel={sel} id={String(i)} className="print:hidden" />
-                                        <td className="py-1.5 px-1 text-center text-slate-400 tabular-nums">{i + 1}</td>
-                                        <td className="py-1.5 px-3 font-bold text-slate-900 whitespace-nowrap">{item.product_name || item.name}</td>
+                                        <td className="py-1.5 px-1 text-center text-[#94A3B8] tabular-nums">{i + 1}</td>
+                                        <td className="py-1.5 px-3 font-bold text-[#0F1A2B] whitespace-nowrap">{item.product_name || item.name}</td>
                                         <td className="py-1.5 px-3 text-center tabular-nums">{qty}</td>
                                         <td className="py-1.5 px-3 text-center tabular-nums text-emerald-700 font-bold">{bonus > 0 ? `+${bonus}` : '—'}</td>
-                                        <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
+                                        <td className="py-1.5 px-3 text-right text-[#64748B] tabular-nums">{formatCurrency(price)}</td>
                                         <td className="py-1.5 px-3 text-right tabular-nums text-rose-600">{disc > 0 ? `-${formatCurrency(disc)}` : '—'}</td>
-                                        <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(net)}</td>
+                                        <td className="py-1.5 px-3 text-right font-black text-[#0F1A2B] tabular-nums">{formatCurrency(net)}</td>
                                     </tr>
                                 );
                             })}
@@ -206,41 +206,41 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                 {/* Summary: notes (left) + totals (right) */}
                 <div className="flex justify-between items-start gap-6 mb-6">
                     <div className="flex-1 pt-1">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Notes</p>
-                        <p className="text-[11px] text-slate-500 italic max-w-xs leading-relaxed">{(order as any).notes || 'Thank you for your business.'}</p>
+                        <p className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest mb-1">Notes</p>
+                        <p className="text-[11px] text-[#64748B] italic max-w-xs leading-relaxed">{(order as any).notes || 'Thank you for your business.'}</p>
                     </div>
                     <div className="w-[280px] text-[12px] space-y-2">
                         <div className="flex justify-between">
-                            <span className="text-slate-500 font-bold uppercase text-[11px]">Subtotal</span>
-                            <span className="font-bold text-slate-700 tabular-nums">{formatCurrency(items.reduce((s, i) => s + (i.line_net != null ? parseFloat(i.line_net) : (parseFloat(i.price || i.unit_price || 0) * (i.quantity || 1) - parseFloat(i.discount || 0))), 0))}</span>
+                            <span className="text-[#64748B] font-bold uppercase text-[11px]">Subtotal</span>
+                            <span className="font-bold text-[#334155] tabular-nums">{formatCurrency(items.reduce((s, i) => s + (i.line_net != null ? parseFloat(i.line_net) : (parseFloat(i.price || i.unit_price || 0) * (i.quantity || 1) - parseFloat(i.discount || 0))), 0))}</span>
                         </div>
                         {items.reduce((s, i) => s + (parseInt(i.bonus_quantity || 0) || 0), 0) > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Bonus Units</span>
+                                <span className="text-[#64748B] font-bold uppercase text-[11px]">Bonus Units</span>
                                 <span className="font-bold text-emerald-700 tabular-nums">+{items.reduce((s, i) => s + (parseInt(i.bonus_quantity || 0) || 0), 0)} free</span>
                             </div>
                         )}
                         {items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0) > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Line Discounts</span>
+                                <span className="text-[#64748B] font-bold uppercase text-[11px]">Line Discounts</span>
                                 <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0))}</span>
                             </div>
                         )}
                         {parseFloat((order as any).shipping_cost || '0') > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Delivery Charges</span>
-                                <span className="font-bold text-slate-700 tabular-nums">+{formatCurrency(parseFloat((order as any).shipping_cost))}</span>
+                                <span className="text-[#64748B] font-bold uppercase text-[11px]">Delivery Charges</span>
+                                <span className="font-bold text-[#334155] tabular-nums">+{formatCurrency(parseFloat((order as any).shipping_cost))}</span>
                             </div>
                         )}
                         {parseFloat((order as any).discount || '0') > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Discount</span>
+                                <span className="text-[#64748B] font-bold uppercase text-[11px]">Discount</span>
                                 <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(parseFloat((order as any).discount))}</span>
                             </div>
                         )}
-                        <div className="flex justify-between items-center pt-1 border-t border-slate-200">
-                            <span className="text-slate-900 font-black uppercase text-[12px]">Total Amount</span>
-                            <span className="font-black text-[#1A1A1A] text-[16px] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        <div className="flex justify-between items-center pt-1 border-t border-[#E7ECF2]">
+                            <span className="text-[#0F1A2B] font-black uppercase text-[12px]">Total Amount</span>
+                            <span className="font-black text-[#0F1A2B] text-[16px] tabular-nums">{formatCurrency(totalAmount)}</span>
                         </div>
                         {paidAmount > 0 && (
                             <div className="flex justify-between pt-1">
@@ -256,23 +256,23 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                         )}
                         {balance > 0 && (order as any).due_date && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Due Date</span>
-                                <span className="font-bold text-slate-700 tabular-nums">{formatDate((order as any).due_date)}</span>
+                                <span className="text-[#64748B] font-bold uppercase text-[11px]">Due Date</span>
+                                <span className="font-bold text-[#334155] tabular-nums">{formatDate((order as any).due_date)}</span>
                             </div>
                         )}
                         {prevBalance > 0 && (
                             <>
-                                <div className="flex justify-between pt-2 border-t border-slate-200">
+                                <div className="flex justify-between pt-2 border-t border-[#E7ECF2]">
                                     <span className="text-amber-600 font-bold uppercase text-[11px]">Previous Balance</span>
                                     <span className="font-bold text-amber-600 tabular-nums">{formatCurrency(prevBalance)}</span>
                                 </div>
                                 {prevDueDate && (
                                     <div className="flex justify-between">
-                                        <span className="text-slate-500 font-bold uppercase text-[11px]">Prev. Due Date</span>
-                                        <span className="font-bold text-slate-700 tabular-nums">{formatDate(prevDueDate)}</span>
+                                        <span className="text-[#64748B] font-bold uppercase text-[11px]">Prev. Due Date</span>
+                                        <span className="font-bold text-[#334155] tabular-nums">{formatDate(prevDueDate)}</span>
                                     </div>
                                 )}
-                                <div className="flex justify-between pt-1 border-t border-slate-200">
+                                <div className="flex justify-between pt-1 border-t border-[#E7ECF2]">
                                     <span className="text-rose-700 font-black uppercase text-[11px]">Net Balance</span>
                                     <span className="font-black text-rose-700 text-[15px] tabular-nums">{formatCurrency(prevBalance + balance)}</span>
                                 </div>

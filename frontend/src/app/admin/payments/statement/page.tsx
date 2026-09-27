@@ -39,7 +39,7 @@ export default function PaymentsStatementPage() {
     const net = income - expense;
 
     return (
-        <div className="pb-20 font-sans text-slate-900 text-left">
+        <div className="pb-20 font-sans text-[#0F1A2B] text-left">
             {/* Action bar (hidden on print) */}
             <div className="max-w-[850px] mx-auto pt-2 px-4 print:hidden">
                 <PageHeader
@@ -66,9 +66,9 @@ export default function PaymentsStatementPage() {
 
                 {/* Payments table */}
                 <div className="mb-6">
-                    <table className="w-full text-left border-collapse border border-slate-300 [&_th]:border [&_th]:border-slate-300 [&_td]:border [&_td]:border-slate-200">
+                    <table className="w-full text-left border-collapse border border-[#CBD5E1] [&_th]:border [&_th]:border-[#CBD5E1] [&_td]:border [&_td]:border-[#E7ECF2]">
                         <thead>
-                            <tr className="border-b-2 border-slate-300 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/60">
+                            <tr className="border-b-2 border-[#CBD5E1] text-[10px] font-bold uppercase tracking-wider text-[#94A3B8] bg-[#F8FAFC]">
                                 <th className="py-1.5 px-2 w-10 text-center">#</th>
                                 <th className="py-1.5 px-3">Voucher / Date</th>
                                 <th className="py-1.5 px-3">Source</th>
@@ -80,18 +80,18 @@ export default function PaymentsStatementPage() {
                         </thead>
                         <tbody className="text-[12px]">
                             {rows.length === 0 ? (
-                                <tr><td colSpan={7} className="py-8 text-center text-slate-400 italic">No payments selected.</td></tr>
+                                <tr><td colSpan={7} className="py-8 text-center text-[#94A3B8] italic">No payments selected.</td></tr>
                             ) : rows.map((p: any, i: number) => (
-                                <tr key={i} className="hover:bg-slate-50">
-                                    <td className="py-1.5 px-2 text-center text-slate-400 tabular-nums">{i + 1}</td>
+                                <tr key={i} className="hover:bg-[#F8FAFC]">
+                                    <td className="py-1.5 px-2 text-center text-[#94A3B8] tabular-nums">{i + 1}</td>
                                     <td className="py-1.5 px-3 whitespace-nowrap">
-                                        <span className="font-bold text-slate-900">#{p.id}</span>
-                                        <span className="block text-[9.5px] text-slate-400">{formatDate(p.date)}</span>
+                                        <span className="font-bold text-[#0F1A2B]">#{p.id}</span>
+                                        <span className="block text-[9.5px] text-[#94A3B8]">{formatDate(p.date)}</span>
                                     </td>
                                     <td className="py-1.5 px-3">{srcLabel(p)}</td>
                                     <td className="py-1.5 px-3 capitalize">{String(p.method || '').replace('_', ' ')}</td>
-                                    <td className="py-1.5 px-3 font-semibold text-slate-800">{p.payer_payee || 'Internal'}</td>
-                                    <td className="py-1.5 px-3 text-slate-600">{p.category_name || ''}</td>
+                                    <td className="py-1.5 px-3 font-semibold text-[#0F1A2B]">{p.payer_payee || 'Internal'}</td>
+                                    <td className="py-1.5 px-3 text-[#64748B]">{p.category_name || ''}</td>
                                     <td className={`py-1.5 px-3 text-right font-black tabular-nums whitespace-nowrap ${p.payment_type === 'inbound' ? 'text-emerald-700' : 'text-rose-600'}`}>
                                         {p.payment_type === 'inbound' ? '+' : '-'}{formatCurrency(Number(p.amount || 0))}
                                     </td>
@@ -112,9 +112,9 @@ export default function PaymentsStatementPage() {
                             <span className="text-rose-600 font-bold uppercase text-[11px]">Total Expense</span>
                             <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(expense)}</span>
                         </div>
-                        <div className="flex justify-between items-center pt-1 border-t border-slate-200">
-                            <span className="text-slate-900 font-black uppercase text-[12px]">Net Balance</span>
-                            <span className={`font-black text-[16px] tabular-nums ${net >= 0 ? 'text-[#1A1A1A]' : 'text-rose-600'}`}>{formatCurrency(net)}</span>
+                        <div className="flex justify-between items-center pt-1 border-t border-[#E7ECF2]">
+                            <span className="text-[#0F1A2B] font-black uppercase text-[12px]">Net Balance</span>
+                            <span className={`font-black text-[16px] tabular-nums ${net >= 0 ? 'text-[#0F1A2B]' : 'text-rose-600'}`}>{formatCurrency(net)}</span>
                         </div>
                     </div>
                 </div>

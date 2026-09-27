@@ -66,16 +66,16 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
     }, [rows]);
 
     if (loading && rows.length === 0) return (
-        <div className="py-32 flex items-center justify-center text-slate-400"><Loader2 className="w-6 h-6 animate-spin" /></div>
+        <div className="py-32 flex items-center justify-center text-[#94A3B8]"><Loader2 className="w-6 h-6 animate-spin" /></div>
     );
 
     const sorted = [...rows].sort((a, b) => (b.days_overdue || 0) - (a.days_overdue || 0) || b.remaining - a.remaining);
 
     const STATS = [
-        { label: `Total ${cfg.title}`, value: formatCurrency(totals.total), color: 'text-slate-900' },
-        { label: 'Overdue', value: `${totals.overdue} · ${formatCurrency(totals.overdueAmt)}`, color: totals.overdue ? 'text-rose-600' : 'text-slate-900' },
+        { label: `Total ${cfg.title}`, value: formatCurrency(totals.total), color: 'text-[#0F1A2B]' },
+        { label: 'Overdue', value: `${totals.overdue} · ${formatCurrency(totals.overdueAmt)}`, color: totals.overdue ? 'text-rose-600' : 'text-[#0F1A2B]' },
         { label: 'Due Soon', value: String(totals.dueSoon), color: 'text-amber-600' },
-        { label: 'Records', value: String(rows.length), color: 'text-slate-900' },
+        { label: 'Records', value: String(rows.length), color: 'text-[#0F1A2B]' },
     ];
 
     const AGING = [
@@ -120,7 +120,7 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {STATS.map((s, i) => (
                     <Card key={i} className="p-5">
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">{s.label}</p>
+                        <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider mb-2">{s.label}</p>
                         <p className={`text-[20px] font-bold tracking-tight tabular-nums ${s.color}`}>{s.value}</p>
                     </Card>
                 ))}
@@ -128,12 +128,12 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
 
             {/* Aging */}
             <Card className="p-5 mb-6">
-                <h3 className="text-[13px] font-bold text-slate-900 mb-4 flex items-center gap-2"><CalendarClock size={15} className="text-[#1A1A1A]" /> Aging</h3>
+                <h3 className="text-[13px] font-bold text-[#0F1A2B] mb-4 flex items-center gap-2"><CalendarClock size={15} className="text-[#0F1A2B]" /> Aging</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     {AGING.map(a => (
-                        <div key={a.k} className={`rounded-xl border p-3 ${a.k.startsWith('d9') || a.k.startsWith('d6') ? 'border-rose-100 bg-rose-50/50' : a.k.startsWith('d') ? 'border-amber-100 bg-amber-50/40' : 'border-slate-200 bg-slate-50/50'}`}>
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{a.label}</p>
-                            <p className="text-[15px] font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(totals.aging[a.k] || 0)}</p>
+                        <div key={a.k} className={`rounded-xl border p-3 ${a.k.startsWith('d9') || a.k.startsWith('d6') ? 'border-rose-100 bg-rose-50/50' : a.k.startsWith('d') ? 'border-amber-100 bg-amber-50/40' : 'border-[#E7ECF2] bg-[#F8FAFC]/50'}`}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">{a.label}</p>
+                            <p className="text-[15px] font-bold text-[#0F1A2B] tabular-nums mt-0.5">{formatCurrency(totals.aging[a.k] || 0)}</p>
                         </div>
                     ))}
                 </div>
@@ -143,7 +143,7 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
             <Card className="overflow-x-auto animate-in fade-in duration-700">
                 <table className="w-full text-left border-collapse min-w-[820px]">
                     <thead>
-                        <tr className="bg-slate-50/60 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                        <tr className="bg-[#F8FAFC] border-b border-[#F1F5F9] text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider">
                             <th className="px-6 py-3">Reference</th>
                             <th className="px-6 py-3">{cfg.partyLabel}</th>
                             <th className="px-6 py-3 text-right">Total</th>
@@ -155,28 +155,28 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {sorted.length === 0 ? (
-                            <tr><td colSpan={7} className="py-20 text-center text-[13px] text-slate-400">Nothing outstanding. All settled.</td></tr>
+                            <tr><td colSpan={7} className="py-20 text-center text-[13px] text-[#94A3B8]">Nothing outstanding. All settled.</td></tr>
                         ) : sorted.map((r, i) => (
-                            <tr key={i} className="hover:bg-slate-50 transition-colors text-[13px] group">
+                            <tr key={i} className="hover:bg-[#F8FAFC] transition-colors text-[13px] group">
                                 <td className="px-6 py-4">
-                                    <div className="font-bold text-slate-900">#{r.ref}</div>
-                                    <div className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">{r.type.replace('_', ' ')}</div>
+                                    <div className="font-bold text-[#0F1A2B]">#{r.ref}</div>
+                                    <div className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold">{r.type.replace('_', ' ')}</div>
                                 </td>
-                                <td className="px-6 py-4 font-medium text-slate-700">{r.party}</td>
-                                <td className="px-6 py-4 text-right text-slate-500 tabular-nums">{formatCurrency(r.total)}</td>
+                                <td className="px-6 py-4 font-medium text-[#334155]">{r.party}</td>
+                                <td className="px-6 py-4 text-right text-[#64748B] tabular-nums">{formatCurrency(r.total)}</td>
                                 <td className="px-6 py-4 text-right text-emerald-600 tabular-nums">{formatCurrency(r.paid)}</td>
-                                <td className="px-6 py-4 text-right font-bold text-slate-900 tabular-nums">{formatCurrency(r.remaining)}</td>
+                                <td className="px-6 py-4 text-right font-bold text-[#0F1A2B] tabular-nums">{formatCurrency(r.remaining)}</td>
                                 <td className="px-6 py-4">
                                     {r.is_overdue ? (
                                         <Badge tone="red"><AlertTriangle size={11} /> {r.days_overdue}d overdue</Badge>
                                     ) : r.bucket === 'due_soon' ? (
                                         <Badge tone="amber">Due {r.due_date}</Badge>
                                     ) : r.due_date ? (
-                                        <span className="text-[12px] text-slate-500 tabular-nums">{r.due_date}</span>
-                                    ) : <span className="text-[12px] text-slate-300">—</span>}
+                                        <span className="text-[12px] text-[#64748B] tabular-nums">{r.due_date}</span>
+                                    ) : <span className="text-[12px] text-[#CBD5E1]">—</span>}
                                 </td>
                                 <td className="px-6 py-4 text-right no-print">
-                                    <Link href={cfg.link(r.type)} className="inline-flex items-center gap-1 text-[12px] font-bold text-[#119AB8] hover:underline">
+                                    <Link href={cfg.link(r.type)} className="inline-flex items-center gap-1 text-[12px] font-bold text-[#1877C2] hover:underline">
                                         Open <ArrowRight size={12} />
                                     </Link>
                                 </td>

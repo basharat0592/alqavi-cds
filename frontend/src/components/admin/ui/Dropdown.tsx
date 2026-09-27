@@ -59,7 +59,7 @@ export function DropdownItem({
 }) {
     const cls = cn(
         'flex items-center gap-2.5 w-full px-3.5 py-2.5 text-[13.5px] font-medium tracking-[-0.01em] transition-colors text-left',
-        danger ? 'text-[#DC2626] hover:bg-[#FCE9E9]' : 'text-[#5B5B58] hover:bg-[#F5F5F3] hover:text-[#0E7F98]',
+        danger ? 'text-[#DC2626] hover:bg-[#FDECEC]' : 'text-[#64748B] hover:bg-[#F8FAFC] hover:text-[#1567AB]',
     );
     const inner = (
         <>

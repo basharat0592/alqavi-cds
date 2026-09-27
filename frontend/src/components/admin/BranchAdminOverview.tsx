@@ -19,14 +19,14 @@ import type { RevenueDataPoint } from '@/types';
    profit vs expenses and delivered sales by category. Both are scoped to the
    requesting admin's own branch server-side. */
 
-const AMBER = '#1A1A1A';
+const AMBER = '#0F1A2B';
 const TEAL = '#0F766E';
 const RED = '#DC2626';
 const GRID = '#eef2f7';
 const AXIS = '#94a3b8';
 
 // Donut slices, in the order categories are ranked.
-const SLICE = ['#0F766E', '#1A1A1A', '#0EA5E9', '#DC2626', '#7C3AED', '#DB2777', '#65A30D', '#64748B'];
+const SLICE = ['#0F766E', '#0F1A2B', '#0EA5E9', '#DC2626', '#7C3AED', '#DB2777', '#65A30D', '#64748B'];
 
 const dayFmt = (d: string) => {
     try { return new Date(d).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }); }
@@ -40,8 +40,8 @@ const kFmt = (n: number) =>
 function MoneyTip({ active, payload, label }: any) {
     if (!active || !payload?.length) return null;
     return (
-        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg text-left">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+        <div className="rounded-lg border border-[#E7ECF2] bg-white px-3 py-2 shadow-lg text-left">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#94A3B8]">{label}</p>
             {payload.map((p: any) => (
                 <p key={p.dataKey} className="text-[12px] font-bold tabular-nums" style={{ color: p.color || p.fill }}>
                     {p.name}: {formatCurrency(Number(p.value || 0))}
@@ -54,14 +54,14 @@ function MoneyTip({ active, payload, label }: any) {
 /** Card shell: round icon badge, title, subtitle, optional right-hand slot. */
 function Panel({ icon: Icon, title, subtitle, action, children, className = '' }: any) {
     return (
-        <div className={`bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_3px_rgba(15,23,42,0.05)] p-5 ${className}`}>
+        <div className={`bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_3px_rgba(15,23,42,0.05)] p-5 ${className}`}>
             <div className="flex items-start gap-3 mb-4">
-                <span className="w-9 h-9 rounded-full bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center shrink-0">
+                <span className="w-9 h-9 rounded-full bg-[#1877C2]/10 text-[#1877C2] flex items-center justify-center shrink-0">
                     <Icon size={17} />
                 </span>
                 <div className="min-w-0 flex-1">
-                    <h3 className="text-[15px] font-bold text-slate-900 tracking-[-0.01em] leading-tight">{title}</h3>
-                    {subtitle && <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">{subtitle}</p>}
+                    <h3 className="text-[15px] font-bold text-[#0F1A2B] tracking-[-0.01em] leading-tight">{title}</h3>
+                    {subtitle && <p className="text-[12px] text-[#64748B] mt-0.5 leading-snug">{subtitle}</p>}
                 </div>
                 {action && <div className="shrink-0 text-right">{action}</div>}
             </div>
@@ -75,28 +75,28 @@ export function StockRiskCard({ lowStock = [] }: { lowStock?: any[] }) {
     const rows = lowStock || [];
     if (!rows.length) return null;
     return (
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-[0_1px_3px_rgba(15,23,42,0.05)] p-5 mt-4">
+        <div className="bg-white border border-[#E7ECF2] rounded-2xl shadow-[0_1px_3px_rgba(15,23,42,0.05)] p-5 mt-4">
             <div className="flex items-start gap-3 mb-3">
-                <span className="w-9 h-9 rounded-full bg-[#F59E0B]/10 text-[#B4780B] flex items-center justify-center shrink-0">
+                <span className="w-9 h-9 rounded-full bg-[#1877C2]/10 text-[#1877C2] flex items-center justify-center shrink-0">
                     <PackageCheck size={17} />
                 </span>
                 <div className="min-w-0 flex-1">
-                    <h3 className="text-[15px] font-bold text-slate-900 leading-tight">Stock Risk</h3>
-                    <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">At or below the reorder point</p>
+                    <h3 className="text-[15px] font-bold text-[#0F1A2B] leading-tight">Stock Risk</h3>
+                    <p className="text-[12px] text-[#64748B] mt-0.5 leading-snug">At or below the reorder point</p>
                 </div>
-                <span className="text-[20px] font-bold text-[#1A1A1A] tabular-nums leading-none">{rows.length}</span>
+                <span className="text-[20px] font-bold text-[#0F1A2B] tabular-nums leading-none">{rows.length}</span>
             </div>
             <div className="divide-y divide-slate-100">
                 {rows.slice(0, 5).map((p: any, i: number) => {
                     const qty = Number(p.qty ?? p.total_quantity ?? 0);
                     return (
                         <div key={i} className="flex items-center gap-2 py-2">
-                            <AlertTriangle size={13} className={qty <= 0 ? 'text-rose-500 shrink-0' : 'text-[#1A1A1A] shrink-0'} />
-                            <span className="min-w-0 flex-1 text-[12.5px] text-slate-700 truncate">
+                            <AlertTriangle size={13} className={qty <= 0 ? 'text-rose-500 shrink-0' : 'text-[#0F1A2B] shrink-0'} />
+                            <span className="min-w-0 flex-1 text-[12.5px] text-[#334155] truncate">
                                 {p.product_name || p.name || 'Unnamed'}
                             </span>
-                            <span className="shrink-0 text-[11px] text-slate-400 tabular-nums">min {Number(p.min ?? 0)}</span>
-                            <span className={`shrink-0 w-6 text-right text-[13px] font-bold tabular-nums ${qty <= 0 ? 'text-rose-600' : 'text-[#1A1A1A]'}`}>
+                            <span className="shrink-0 text-[11px] text-[#94A3B8] tabular-nums">min {Number(p.min ?? 0)}</span>
+                            <span className={`shrink-0 w-6 text-right text-[13px] font-bold tabular-nums ${qty <= 0 ? 'text-rose-600' : 'text-[#0F1A2B]'}`}>
                                 {qty}
                             </span>
                         </div>
@@ -169,7 +169,7 @@ export default function BranchAdminOverview({
     const statusTone = (st: string) =>
         st === 'DELIVERED' ? 'bg-emerald-50 text-emerald-700'
             : st === 'CANCELLED' ? 'bg-rose-50 text-rose-600'
-                : 'bg-[#F59E0B]/12 text-[#1A1A1A]';
+                : 'bg-[#1877C2]/12 text-[#0F1A2B]';
 
     return (
         <div className="space-y-4">
@@ -183,10 +183,10 @@ export default function BranchAdminOverview({
                     subtitle="Delivered sales · last 7 days"
                     action={
                         <>
-                            <p className="text-[21px] font-bold text-slate-900 tabular-nums leading-[1.15] max-w-[92px]">
+                            <p className="text-[21px] font-bold text-[#0F1A2B] tabular-nums leading-[1.15] max-w-[92px]">
                                 {formatCurrency(weekTotal)}
                             </p>
-                            <p className="text-[11.5px] text-slate-400 mt-1.5">7-day total</p>
+                            <p className="text-[11.5px] text-[#94A3B8] mt-1.5">7-day total</p>
                         </>
                     }
                 >
@@ -208,11 +208,11 @@ export default function BranchAdminOverview({
                         </ResponsiveContainer>
                     ) : (
                         <div className="h-[190px] flex flex-col items-center justify-center text-center px-6">
-                            <p className="text-[14px] font-semibold text-slate-700">
+                            <p className="text-[14px] font-semibold text-[#334155]">
                                 {loading ? 'Loading…' : 'No delivered orders in the last 7 days.'}
                             </p>
                             {!loading && (
-                                <p className="text-[11.5px] text-slate-400 mt-1.5 leading-relaxed">
+                                <p className="text-[11.5px] text-[#94A3B8] mt-1.5 leading-relaxed">
                                     Only delivered sales count as revenue — mark orders delivered to see them here.
                                 </p>
                             )}
@@ -252,7 +252,7 @@ export default function BranchAdminOverview({
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
-                        <div className="h-[218px] flex items-center justify-center text-[12.5px] text-slate-400">
+                        <div className="h-[218px] flex items-center justify-center text-[12.5px] text-[#94A3B8]">
                             {seriesLoaded ? 'No delivered sales in the last 6 months.' : 'Loading…'}
                         </div>
                     )}
@@ -285,21 +285,21 @@ export default function BranchAdminOverview({
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                    <span className="text-[14px] font-bold text-slate-800 leading-none">Total</span>
-                                    <span className="text-[12.5px] text-slate-400 mt-1.5 tabular-nums">100%</span>
+                                    <span className="text-[14px] font-bold text-[#0F1A2B] leading-none">Total</span>
+                                    <span className="text-[12.5px] text-[#94A3B8] mt-1.5 tabular-nums">100%</span>
                                 </div>
                             </div>
-                            <div className="mt-3 pt-3 border-t border-slate-100 grid grid-cols-2 gap-x-4 gap-y-2">
+                            <div className="mt-3 pt-3 border-t border-[#F1F5F9] grid grid-cols-2 gap-x-4 gap-y-2">
                                 {cats.map((c, i) => (
                                     <div key={c.name} className="flex items-center gap-2 min-w-0">
                                         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: SLICE[i % SLICE.length] }} />
-                                        <span className="text-[12px] text-slate-600 truncate">{c.name}</span>
+                                        <span className="text-[12px] text-[#64748B] truncate">{c.name}</span>
                                     </div>
                                 ))}
                             </div>
                         </>
                     ) : (
-                        <div className="h-[240px] flex items-center justify-center text-[12.5px] text-slate-400">
+                        <div className="h-[240px] flex items-center justify-center text-[12.5px] text-[#94A3B8]">
                             {seriesLoaded ? 'No delivered sales yet.' : 'Loading…'}
                         </div>
                     )}
@@ -310,24 +310,24 @@ export default function BranchAdminOverview({
                         {pipeline.map(row => (
                             <div key={row.label}>
                                 <div className="flex items-baseline justify-between gap-2 mb-2">
-                                    <span className="text-[14px] font-semibold text-slate-800">{row.label}</span>
-                                    <span className="text-[14px] font-bold tabular-nums text-[#1A1A1A]">{row.value}</span>
+                                    <span className="text-[14px] font-semibold text-[#0F1A2B]">{row.label}</span>
+                                    <span className="text-[14px] font-bold tabular-nums text-[#0F1A2B]">{row.value}</span>
                                 </div>
-                                <div className="h-[3px] rounded-full bg-slate-100 overflow-hidden">
+                                <div className="h-[3px] rounded-full bg-[#F4F6F9] overflow-hidden">
                                     <div className="h-full rounded-full bg-[#0F766E] transition-[width] duration-500"
                                         style={{ width: `${(row.value / pipelineMax) * 100}%` }} />
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-start justify-between gap-4">
+                    <div className="mt-6 pt-4 border-t border-[#F1F5F9] flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400">Products</p>
-                            <p className="text-[26px] font-bold text-slate-900 tabular-nums leading-none mt-2">{productCount ?? 0}</p>
+                            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Products</p>
+                            <p className="text-[26px] font-bold text-[#0F1A2B] tabular-nums leading-none mt-2">{productCount ?? 0}</p>
                         </div>
                         <div className="text-right">
-                            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-400">Out of stock</p>
-                            <p className={`text-[26px] font-bold tabular-nums leading-none mt-2 ${outOfStock ? 'text-rose-600' : 'text-slate-900'}`}>
+                            <p className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">Out of stock</p>
+                            <p className={`text-[26px] font-bold tabular-nums leading-none mt-2 ${outOfStock ? 'text-rose-600' : 'text-[#0F1A2B]'}`}>
                                 {outOfStock}
                             </p>
                         </div>
@@ -341,7 +341,7 @@ export default function BranchAdminOverview({
                 title="Recent Orders"
                 subtitle="Latest sales from this organization"
                 action={
-                    <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-slate-800 hover:text-[#0E7F98] transition-colors">
+                    <Link href="/admin/orders" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#0F1A2B] hover:text-[#1567AB] transition-colors">
                         View all <ArrowRight size={14} />
                     </Link>
                 }
@@ -352,19 +352,19 @@ export default function BranchAdminOverview({
                             const st = String(o.status || 'PENDING').toUpperCase();
                             return (
                                 <Link key={o.id} href={`/admin/sales/${o.id}/invoice`}
-                                    className="flex items-center gap-3 py-3 hover:bg-slate-50/70 -mx-2 px-2 rounded-lg transition-colors">
+                                    className="flex items-center gap-3 py-3 hover:bg-[#F8FAFC] -mx-2 px-2 rounded-lg transition-colors">
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-[14px] font-semibold text-slate-900 truncate">
+                                        <p className="text-[14px] font-semibold text-[#0F1A2B] truncate">
                                             {o.customer_name || 'Walk-in'}
                                         </p>
-                                        <p className="text-[12px] text-slate-400 tabular-nums truncate">
+                                        <p className="text-[12px] text-[#94A3B8] tabular-nums truncate">
                                             {o.order_number || String(o.id).slice(0, 8)}
                                         </p>
                                     </div>
                                     <span className={`shrink-0 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${statusTone(st)}`}>
                                         {st}
                                     </span>
-                                    <span className="shrink-0 text-[14px] font-bold tabular-nums text-slate-900 w-[104px] text-right">
+                                    <span className="shrink-0 text-[14px] font-bold tabular-nums text-[#0F1A2B] w-[104px] text-right">
                                         {formatCurrency(Number(o.total_amount || 0))}
                                     </span>
                                 </Link>
@@ -372,7 +372,7 @@ export default function BranchAdminOverview({
                         })}
                     </div>
                 ) : (
-                    <div className="h-[160px] flex items-center justify-center text-[12.5px] text-slate-400">
+                    <div className="h-[160px] flex items-center justify-center text-[12.5px] text-[#94A3B8]">
                         {loading ? 'Loading…' : 'No orders yet.'}
                     </div>
                 )}

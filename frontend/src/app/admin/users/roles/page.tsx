@@ -96,7 +96,7 @@ export default function UserRolesPage() {
                 className="mb-6"
                 filters={
                 <div className="relative flex-1 w-full sm:max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9C9C98]" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
@@ -116,9 +116,9 @@ export default function UserRolesPage() {
                     />
                 }
             >
-                <div className="bg-[#FAFAF8] px-5 py-3 border-b border-[#F2F2F0] flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 text-[#1A1A1A]" />
-                    <span className="text-[13px] font-semibold text-[#1A1A1A]">Access Privileges Registry</span>
+                <div className="bg-[#F8FAFC] px-5 py-3 border-b border-[#F4F6F9] flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-[#0F1A2B]" />
+                    <span className="text-[13px] font-semibold text-[#0F1A2B]">Access Privileges Registry</span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className={ui.table}>
@@ -135,32 +135,32 @@ export default function UserRolesPage() {
                                 Array(3).fill(0).map((_, i) => (
                                     <tr key={i} className="animate-pulse">
                                         <td colSpan={4} className="px-2.5 sm:px-6 py-8">
-                                            <div className="h-4 bg-[#F2F2F0] rounded w-full" />
+                                            <div className="h-4 bg-[#F4F6F9] rounded w-full" />
                                         </td>
                                     </tr>
                                 ))
                             ) : filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-10 py-24 text-center text-[#3A3A38]">
-                                        <Layers className="w-10 h-10 text-[#DCDCD8] mx-auto mb-3" />
-                                        <h3 className="text-[13px] font-semibold text-[#1A1A1A]">No Tiers Configured</h3>
-                                        <p className="text-[11.5px] text-[#9C9C98] mt-1">Initialize a security role to begin.</p>
+                                    <td colSpan={4} className="px-10 py-24 text-center text-[#334155]">
+                                        <Layers className="w-10 h-10 text-[#E2E8F0] mx-auto mb-3" />
+                                        <h3 className="text-[13px] font-semibold text-[#0F1A2B]">No Tiers Configured</h3>
+                                        <p className="text-[11.5px] text-[#94A3B8] mt-1">Initialize a security role to begin.</p>
                                     </td>
                                 </tr>
                             ) : (
                                 paged.map(role => (
-                                    <tr key={role.id} className="hover:bg-[#FAFAF8] transition-colors group text-[13px]">
+                                    <tr key={role.id} className="hover:bg-[#F8FAFC] transition-colors group text-[13px]">
                                         <RowCheckboxTd sel={sel} id={role.id} />
                                         <td className={ui.td}>
                                             <div className="flex items-center gap-3">
-                                                <div className="h-9 w-9 bg-[#F2F2F0] border border-[#EDEDEA] rounded-lg flex items-center justify-center font-semibold text-[#8A8A86] group-hover:bg-[#F59E0B] group-hover:text-white group-hover:border-[#F59E0B] transition-all">
+                                                <div className="h-9 w-9 bg-[#F4F6F9] border border-[#E7ECF2] rounded-lg flex items-center justify-center font-semibold text-[#94A3B8] group-hover:bg-[#1877C2] group-hover:text-white group-hover:border-[#1877C2] transition-all">
                                                     {(role.name?.[0] || 'R').toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="font-semibold text-[#119AB8] hover:text-[#0E7F98] hover:underline cursor-pointer truncate">
+                                                    <Link href={`/admin/users/roles/${role.id}/edit`} className="font-semibold text-[#1877C2] hover:text-[#1567AB] hover:underline cursor-pointer truncate">
                                                         {role.name}
                                                     </Link>
-                                                    <p className="text-[11.5px] text-[#9C9C98] truncate max-w-[200px] sm:max-w-md mt-0.5">{role.description || 'Global system permissions profile'}</p>
+                                                    <p className="text-[11.5px] text-[#94A3B8] truncate max-w-[200px] sm:max-w-md mt-0.5">{role.description || 'Global system permissions profile'}</p>
                                                 </div>
                                             </div>
                                         </td>
@@ -219,8 +219,8 @@ export default function UserRolesPage() {
                     <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-rose-100">
                         <Trash2 size={24} className="text-rose-600" />
                     </div>
-                    <h3 className="text-[17px] font-semibold text-[#1A1A1A] mb-2">Delete Tier?</h3>
-                    <p className="text-[13px] text-[#3A3A38]">Confirm permanent removal of the security tier <span className="font-semibold text-[#1A1A1A]">"{deleteRole?.name}"</span>? This cannot be undone.</p>
+                    <h3 className="text-[17px] font-semibold text-[#0F1A2B] mb-2">Delete Tier?</h3>
+                    <p className="text-[13px] text-[#334155]">Confirm permanent removal of the security tier <span className="font-semibold text-[#0F1A2B]">"{deleteRole?.name}"</span>? This cannot be undone.</p>
                 </div>
             </Modal>
         </div>

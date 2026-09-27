@@ -63,8 +63,8 @@ export default function AddRolePage() {
             <Card className="overflow-hidden">
                 <form onSubmit={handleSubmit}>
                     <div className="p-6 md:p-8 space-y-6">
-                        <div className="flex items-center gap-2 text-slate-900">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F59E0B]/10 text-[#B4780B]">
+                        <div className="flex items-center gap-2 text-[#0F1A2B]">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1877C2]/10 text-[#1877C2]">
                                 <Shield className="h-5 w-5" />
                             </span>
                             <span className="text-[15px] font-bold tracking-tight">Role Details</span>
@@ -77,7 +77,7 @@ export default function AddRolePage() {
                         )}
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Role Name <span className="text-rose-500">*</span></label>
+                            <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-widest mb-2">Role Name <span className="text-rose-500">*</span></label>
                             <input
                                 type="text"
                                 value={formData.name}
@@ -89,18 +89,18 @@ export default function AddRolePage() {
                         </div>
 
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Description</label>
+                            <label className="block text-[11px] font-bold text-[#94A3B8] uppercase tracking-widest mb-2">Description</label>
                             <textarea
                                 value={formData.description}
                                 onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                                 placeholder="Provide a brief description of what this role entails..."
                                 rows={4}
-                                className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-slate-800 outline-none border border-slate-200 placeholder:text-slate-400 transition-all focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 resize-none"
+                                className="w-full px-3.5 py-3 bg-white rounded-lg text-[13.5px] text-[#0F1A2B] outline-none border border-[#E7ECF2] placeholder:text-[#94A3B8] transition-all focus:border-[#1877C2] focus:ring-4 focus:ring-[#1877C2]/10 resize-none"
                             />
                         </div>
                     </div>
 
-                    <div className="bg-slate-50/60 p-6 flex items-center justify-end gap-3 border-t border-slate-100">
+                    <div className="bg-[#F8FAFC] p-6 flex items-center justify-end gap-3 border-t border-[#F1F5F9]">
                         <Link href="/admin/users/roles">
                             <Button type="button" variant="outline">Cancel</Button>
                         </Link>

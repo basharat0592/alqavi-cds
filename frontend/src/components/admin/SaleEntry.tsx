@@ -23,8 +23,8 @@ import {
    ───────────────────────────────────────────────────────────────────────────── */
 const Btn = ({ children, onClick, loading, variant = 'primary', className = '', type = 'button', disabled = false }: any) => {
     const styles = {
-        primary: 'bg-[#F59E0B] border-[#F59E0B] hover:bg-[#D97706] hover:border-[#F59E0B] text-white shadow-sm shadow-[#F59E0B]/20',
-        secondary: 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 shadow-sm',
+        primary: 'bg-[#1877C2] border-[#1877C2] hover:bg-[#1567AB] hover:border-[#1877C2] text-white shadow-sm shadow-[#1877C2]/20',
+        secondary: 'bg-white border-[#E7ECF2] hover:border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#334155] shadow-sm',
     };
     return (
         <button type={type} onClick={onClick} disabled={loading || disabled}
@@ -37,7 +37,7 @@ const Btn = ({ children, onClick, loading, variant = 'primary', className = '', 
 
 const Field = ({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
     <div className="w-full">
-        <label className="block text-[13px] font-bold text-slate-700 mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
+        <label className="block text-[13px] font-bold text-[#334155] mb-1">{label}{required && <span className="text-rose-600 ml-0.5">*</span>}</label>
         {children}
     </div>
 );
@@ -102,9 +102,9 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0E7F98] transition-colors" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] group-focus-within:text-[#1567AB] transition-colors" />
                 <input
-                    className={inputCls + " h-[42px] pl-10 pr-24 bg-white font-bold group-hover:bg-slate-50 transition-all"}
+                    className={inputCls + " h-[42px] pl-10 pr-24 bg-white font-bold group-hover:bg-[#F8FAFC] transition-all"}
                     placeholder="Type product name or scan..."
                     value={open ? search : (selected ? ((selected.product_name || selected.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()) : '')}
                     onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
@@ -112,7 +112,7 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     {selected && !open && (
                         <div className="flex flex-col items-end leading-none">
-                            <span className="text-[8px] font-black uppercase text-slate-400">Available</span>
+                            <span className="text-[8px] font-black uppercase text-[#94A3B8]">Available</span>
                             <span className={`text-[12px] font-black ${(selected.total_quantity || selected.stock_quantity || (typeof selected.stock === 'number' ? selected.stock : 0)) > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {selected.total_quantity || selected.stock_quantity || (typeof selected.stock === 'number' ? selected.stock : 0)}
                             </span>
@@ -122,42 +122,42 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                     <button 
                         type="button" 
                         onClick={() => setOpen(!open)}
-                        className="p-1 hover:bg-slate-100 rounded-full transition-all cursor-pointer outline-none"
+                        className="p-1 hover:bg-[#F4F6F9] rounded-full transition-all cursor-pointer outline-none"
                     >
-                        <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={14} className={`text-[#94A3B8] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                     </button>
                 </div>
             </div>
 
             {open && (
-                <div className="absolute top-[calc(100%+4px)] left-0 w-[calc(100vw-32px)] sm:w-[400px] md:w-[550px] bg-white border border-slate-200 rounded-xl shadow-2xl z-[1000] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="absolute top-[calc(100%+4px)] left-0 w-[calc(100vw-32px)] sm:w-[400px] md:w-[550px] bg-white border border-[#E7ECF2] rounded-xl shadow-2xl z-[1000] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
                     <div className="max-h-[350px] overflow-y-auto scrollbar-thin">
                         {filtered.length === 0 ? (
-                            <div className="p-10 text-center bg-slate-50">
-                                <Package className="mx-auto h-8 w-8 text-slate-200 mb-2" />
-                                <p className="text-[13px] font-bold text-slate-400">No matching items in inventory</p>
+                            <div className="p-10 text-center bg-[#F8FAFC]">
+                                <Package className="mx-auto h-8 w-8 text-[#E2E8F0] mb-2" />
+                                <p className="text-[13px] font-bold text-[#94A3B8]">No matching items in inventory</p>
                             </div>
                         ) : (
                             filtered.map((p: any) => (
                                 <div
                                     key={p.id}
                                     onClick={() => { onSelect(p); setOpen(false); }}
-                                    className="flex items-center gap-4 p-3 hover:bg-[#F59E0B]/50 cursor-pointer transition-colors border-b last:border-0 border-slate-100 group"
+                                    className="flex items-center gap-4 p-3 hover:bg-[#1877C2]/50 cursor-pointer transition-colors border-b last:border-0 border-[#F1F5F9] group"
                                 >
-                                    <div className="w-10 h-10 bg-white flex items-center justify-center rounded border border-slate-200 shrink-0 overflow-hidden group-hover:border-[#F59E0B]/40 transition-colors">
+                                    <div className="w-10 h-10 bg-white flex items-center justify-center rounded border border-[#E7ECF2] shrink-0 overflow-hidden group-hover:border-[#1877C2]/40 transition-colors">
                                         {(p.image || p.catalog_image) ? (
                                             <img src={getImageUrl(p.image || p.catalog_image)} className="max-w-full max-h-full object-cover" alt="" />
                                         ) : (
-                                            <Package size={18} className="text-slate-200" />
+                                            <Package size={18} className="text-[#E2E8F0]" />
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between gap-4">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-bold text-slate-900 truncate group-hover:text-[#0E7F98] transition-colors">
+                                                <p className="text-[13px] font-bold text-[#0F1A2B] truncate group-hover:text-[#1567AB] transition-colors">
                                                     {(p.product_name || p.name || '').replace(/\s*\(.*?\)\s*$/, '').trim()}
                                                     {(p.weight || p.size) && (
-                                                        <span className="ml-1.5 text-[10px] text-slate-500 font-normal">
+                                                        <span className="ml-1.5 text-[10px] text-[#64748B] font-normal">
                                                             ({p.weight || 'N/A'} - {p.size || 'N/A'})
                                                         </span>
                                                     )}
@@ -165,10 +165,10 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                                                         ({p.total_quantity || p.stock_quantity || 0})
                                                     </span>
                                                 </p>
-                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter">SKU: {p.sku || 'N/A'}</p>
+                                                <p className="text-[9px] text-[#94A3B8] font-bold uppercase tracking-tighter">SKU: {p.sku || 'N/A'}</p>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <p className="text-[14px] font-black text-slate-900 tabular-nums">{formatCurrency(p.selling_price || p.price)}</p>
+                                                <p className="text-[14px] font-black text-[#0F1A2B] tabular-nums">{formatCurrency(p.selling_price || p.price)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -176,9 +176,9 @@ const ProductSelector = ({ selectedId, onSelect, products, inputCls }: any) => {
                             ))
                         )}
                     </div>
-                    <div className="p-2 bg-slate-50 border-t border-slate-100 flex justify-between items-center px-4">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase italic">Found {filtered.length} items</span>
-                         <button onClick={() => setOpen(false)} className="text-[11px] font-black text-[#119AB8] hover:text-[#0E7F98] hover:underline">Close List</button>
+                    <div className="p-2 bg-[#F8FAFC] border-t border-[#F1F5F9] flex justify-between items-center px-4">
+                         <span className="text-[10px] font-bold text-[#94A3B8] uppercase italic">Found {filtered.length} items</span>
+                         <button onClick={() => setOpen(false)} className="text-[11px] font-black text-[#1877C2] hover:text-[#1567AB] hover:underline">Close List</button>
                     </div>
                 </div>
             )}
@@ -215,7 +215,7 @@ const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) =>
     return (
         <div className="relative w-full" ref={containerRef}>
             <div className="relative group">
-                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0E7F98]" />
+                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] group-focus-within:text-[#1567AB]" />
                 <input
                     className={inputCls + " pl-10 pr-10 cursor-pointer"}
                     placeholder="Search customer account..."
@@ -224,35 +224,35 @@ const CustomerSelector = ({ selectedId, onSelect, customers, inputCls }: any) =>
                     onClick={() => setOpen(!open)}
                     readOnly={!open}
                 />
-                <ChevronDown size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] transition-transform ${open ? 'rotate-180' : ''}`} />
             </div>
 
             {open && (
-                <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-slate-200 rounded-xl shadow-2xl z-[1001] overflow-hidden">
+                <div className="absolute top-[calc(100%+4px)] left-0 w-full bg-white border border-[#E7ECF2] rounded-xl shadow-2xl z-[1001] overflow-hidden">
                     <div className="max-h-[300px] overflow-y-auto">
                         <div 
                             onClick={() => { onSelect(null); setOpen(false); }}
-                            className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex items-center gap-3"
+                            className="p-3 hover:bg-[#F8FAFC] cursor-pointer border-b border-[#F1F5F9] flex items-center gap-3"
                         >
-                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-400"><X size={14} /></div>
-                            <span className="text-[13px] font-bold text-slate-500 italic">Walk-in Customer (No Account)</span>
+                            <div className="w-8 h-8 bg-[#F4F6F9] rounded-full flex items-center justify-center text-[#94A3B8]"><X size={14} /></div>
+                            <span className="text-[13px] font-bold text-[#64748B] italic">Walk-in Customer (No Account)</span>
                         </div>
                         {filtered.map((c: any) => (
                             <div
                                 key={c.id}
                                 onClick={() => { onSelect(c); setOpen(false); }}
-                                className="flex items-center gap-3 p-3 hover:bg-[#F59E0B]/50 cursor-pointer border-b last:border-0 border-slate-100"
+                                className="flex items-center gap-3 p-3 hover:bg-[#1877C2]/50 cursor-pointer border-b last:border-0 border-[#F1F5F9]"
                             >
-                                <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
+                                <div className="w-9 h-9 bg-[#F4F6F9] rounded-full flex items-center justify-center overflow-hidden border border-[#E7ECF2] shrink-0">
                                     {c.avatar ? (
                                         <img src={getAvatarUrl(c.avatar)} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <span className="text-[12px] font-black text-slate-400">{c.first_name?.[0]}{c.last_name?.[0]}</span>
+                                        <span className="text-[12px] font-black text-[#94A3B8]">{c.first_name?.[0]}{c.last_name?.[0]}</span>
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[13px] font-bold text-slate-900 truncate">{c.first_name} {c.last_name}</p>
-                                    <p className="text-[10px] text-slate-500 font-medium">Ph: {c.phone || 'N/A'} | {c.email}</p>
+                                    <p className="text-[13px] font-bold text-[#0F1A2B] truncate">{c.first_name} {c.last_name}</p>
+                                    <p className="text-[10px] text-[#64748B] font-medium">Ph: {c.phone || 'N/A'} | {c.email}</p>
                                 </div>
                             </div>
                         ))}
@@ -949,12 +949,12 @@ const [warehouseId, setWarehouseId] = useState<string>('');
             <div className={(embedded ? 'min-h-[50vh]' : 'min-h-[70vh]') + ' flex items-center justify-center p-4 text-left'}>
                 <Card className="p-12 max-w-lg w-full text-center animate-in zoom-in-95 duration-300">
                     <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-8 text-emerald-600 border border-emerald-100 shadow-sm"><CheckCircle size={40} /></div>
-                    <h2 className="text-[28px] font-bold tracking-tight text-slate-900">Order Billed!</h2>
-                    <p className="text-[14px] text-slate-600 mt-2 mb-8">Reference <span className="font-bold text-slate-900">#{successOrder.order_number}</span> has been saved.</p>
-                    <div className="bg-slate-50 border border-slate-200/70 rounded-xl p-6 mb-8 text-left">
-                        <div className="flex justify-between items-center pb-4 border-b border-slate-100">
-                            <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">Total Received</span>
-                            <span className="text-[26px] font-black text-slate-900 tabular-nums">{formatCurrency(successOrder.total_amount)}</span>
+                    <h2 className="text-[28px] font-bold tracking-tight text-[#0F1A2B]">Order Billed!</h2>
+                    <p className="text-[14px] text-[#64748B] mt-2 mb-8">Reference <span className="font-bold text-[#0F1A2B]">#{successOrder.order_number}</span> has been saved.</p>
+                    <div className="bg-[#F8FAFC] border border-[#E7ECF2] rounded-xl p-6 mb-8 text-left">
+                        <div className="flex justify-between items-center pb-4 border-b border-[#F1F5F9]">
+                            <span className="text-[12px] font-bold text-[#64748B] uppercase tracking-wider">Total Received</span>
+                            <span className="text-[26px] font-black text-[#0F1A2B] tabular-nums">{formatCurrency(successOrder.total_amount)}</span>
                         </div>
                     </div>
                     {/* ?print=true makes the invoice route fire window.print() once loaded. */}
@@ -977,7 +977,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             setOrderNumber(`SAL-${Date.now().toString().slice(-6)}`);
                             setShowErrors(false);
                         }}
-                        className="mt-4 text-[13px] font-bold text-[#119AB8] hover:text-[#0E7F98] hover:underline"
+                        className="mt-4 text-[13px] font-bold text-[#1877C2] hover:text-[#1567AB] hover:underline"
                     >
                         + Start next sale
                     </button>
@@ -987,22 +987,22 @@ const [warehouseId, setWarehouseId] = useState<string>('');
     }
 
     return (
-        <div className={embedded ? 'text-left text-slate-800' : 'pb-20 text-left text-slate-800'}>
+        <div className={embedded ? 'text-left text-[#0F1A2B]' : 'pb-20 text-left text-[#0F1A2B]'}>
             <div className={embedded ? '' : 'max-w-[1400px] mx-auto px-0 sm:px-5 pt-1 sm:pt-4'}>
 
                 {/* Breadcrumb + record actions */}
                 <div className="flex items-center justify-between gap-4 mb-3">
                     {embedded ? <span /> : (
-                    <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-400 min-w-0">
+                    <nav className="flex items-center gap-1.5 text-[12px] font-semibold text-[#94A3B8] min-w-0">
                         <button
                             onClick={leaveToSales}
                             title="Back to Sales"
                             aria-label="Back to Sales"
-                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-[#0E7F98] hover:border-[#F59E0B]/50 hover:bg-[#F59E0B]/10 flex items-center justify-center transition-colors shadow-sm"
+                            className="w-7 h-7 mr-1 shrink-0 rounded-lg border border-[#E7ECF2] bg-white text-[#64748B] hover:text-[#1567AB] hover:border-[#1877C2]/50 hover:bg-[#1877C2]/10 flex items-center justify-center transition-colors shadow-sm"
                         >
                             <ArrowLeft size={15} />
                         </button>
-                        <span className="text-[15px] font-medium tracking-[-0.01em] text-[#1A1A1A] truncate">Sale Invoice</span>
+                        <span className="text-[15px] font-medium tracking-[-0.01em] text-[#0F1A2B] truncate">Sale Invoice</span>
                     </nav>
                     )}
                     <div className="flex items-center gap-2 shrink-0">
@@ -1014,8 +1014,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 </div>
 
                 {loading ? (
-                    <div className="text-center py-20 text-[13px] text-slate-500 font-medium animate-pulse flex flex-col items-center gap-4">
-                        <Loader2 size={32} className="animate-spin text-[#1A1A1A]" />
+                    <div className="text-center py-20 text-[13px] text-[#64748B] font-medium animate-pulse flex flex-col items-center gap-4">
+                        <Loader2 size={32} className="animate-spin text-[#0F1A2B]" />
                         Syncing Terminal Catalog...
                     </div>
                 ) : (
@@ -1023,25 +1023,25 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                         {/* ═══ CUSTOMER / PRODUCT STRIP ═══ */}
                         <Card className="overflow-hidden">
-                            <div className="px-3 sm:px-4 py-3 border-b border-slate-200 bg-slate-50/70 grid grid-cols-1 lg:grid-cols-[auto_minmax(180px,1fr)_minmax(240px,2fr)_150px] gap-2.5 items-end">
+                            <div className="px-3 sm:px-4 py-3 border-b border-[#E7ECF2] bg-[#F8FAFC] grid grid-cols-1 lg:grid-cols-[auto_minmax(180px,1fr)_minmax(240px,2fr)_150px] gap-2.5 items-end">
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Customer</label>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Customer</label>
                                     <Btn variant="secondary" onClick={() => setShowFindCustomer(true)} className="font-bold w-full lg:w-auto">
                                         <Search size={13} /> Find Customer
                                     </Btn>
                                 </div>
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Account</label>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Account</label>
                                     <input
                                         readOnly
                                         value={selectedCustomerLabel}
                                         placeholder="Walk-in"
                                         onClick={() => setShowFindCustomer(true)}
-                                        className={cellCls + ' cursor-pointer bg-[#F59E0B]/5 border-[#F59E0B]/30'}
+                                        className={cellCls + ' cursor-pointer bg-[#1877C2]/5 border-[#1877C2]/30'}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Product</label>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Product</label>
                                     <ProductSelector
                                         selectedId={entry.productId}
                                         products={branchProducts}
@@ -1050,8 +1050,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Stock</label>
-                                    <input readOnly value={entry.productId ? String(entry.stock) : ''} className={cellCls + ' text-right ' + (entry.productId && entry.stock <= 0 ? 'text-rose-600' : 'text-slate-700')} />
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Stock</label>
+                                    <input readOnly value={entry.productId ? String(entry.stock) : ''} className={cellCls + ' text-right ' + (entry.productId && entry.stock <= 0 ? 'text-rose-600' : 'text-[#334155]')} />
                                 </div>
                             </div>
 
@@ -1059,11 +1059,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             <div className="overflow-x-auto custom-scrollbar">
                                 <div className="min-w-[1150px] grid grid-cols-[86px_minmax(120px,1fr)_78px_78px_88px_78px_78px_92px_78px_96px_92px_104px] gap-1.5 px-3 sm:px-4 py-3 items-end">
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">&nbsp;</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">&nbsp;</label>
                                         <Btn variant="secondary" onClick={() => barcodeRef.current?.focus()} className="w-full font-bold">Find</Btn>
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Product Code</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Product Code</label>
                                         <input
                                             ref={barcodeRef}
                                             value={entry.code}
@@ -1076,55 +1076,55 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                                 else toast.error(`No product matches "${entry.code}"`, { id: 'code-miss' });
                                             }}
                                             placeholder="scan / code"
-                                            className={cellCls + ' bg-[#F59E0B]/5 border-[#F59E0B]/40'}
+                                            className={cellCls + ' bg-[#1877C2]/5 border-[#1877C2]/40'}
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Qty (P)</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Qty (P)</label>
                                         <input type="number" min="0" className={cellNum} value={entry.qtyP || ''} placeholder="0"
                                             onChange={e => setEntry(v => ({ ...v, qtyP: Math.max(0, parseInt(e.target.value) || 0) }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Qty (U)</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Qty (U)</label>
                                         <input type="number" min="0" className={cellNum} value={entry.qtyU || ''} placeholder="0"
                                             onChange={e => setEntry(v => ({ ...v, qtyU: Math.max(0, parseInt(e.target.value) || 0) }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Total Units</label>
-                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#1A1A1A]'} value={entryTotalUnits || ''} />
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Total Units</label>
+                                        <input readOnly className={cellNum + ' bg-[#F4F6F9] font-black text-[#0F1A2B]'} value={entryTotalUnits || ''} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Packing</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Packing</label>
                                         <input type="number" min="1" className={cellNum} value={entry.packing || ''} placeholder="1"
                                             onChange={e => setEntry(v => ({ ...v, packing: Math.max(1, parseInt(e.target.value) || 1) }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Bon (U)</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Bon (U)</label>
                                         <input type="number" min="0" className={cellNum + ' text-emerald-700'} value={entry.bonus || ''} placeholder="0"
                                             onChange={e => setEntry(v => ({ ...v, bonus: Math.max(0, parseInt(e.target.value) || 0) }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Unit TP</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Unit TP</label>
                                         <input type="number" min="0" step="0.01" className={cellNum} value={entry.tp || ''} placeholder="0.00"
                                             onChange={e => setEntry(v => ({ ...v, tp: Math.max(0, parseFloat(e.target.value) || 0) }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Disct %</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Disct %</label>
                                         <input type="number" min="0" max="100" className={cellNum} value={entry.discPct || ''} placeholder="0"
                                             onChange={e => setEntry(v => ({ ...v, discPct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Retail Rate</label>
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Retail Rate</label>
                                         <input type="number" min="0" step="0.01" className={cellNum} value={entry.retail || ''} placeholder="0.00"
                                             onChange={e => setEntry(v => ({ ...v, retail: Math.max(0, parseFloat(e.target.value) || 0) }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Disc Amt.</label>
-                                        <input readOnly className={cellNum + ' bg-slate-100 text-rose-600 font-bold'} value={entryDiscAmt ? entryDiscAmt.toFixed(2) : ''} />
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Disc Amt.</label>
+                                        <input readOnly className={cellNum + ' bg-[#F4F6F9] text-rose-600 font-bold'} value={entryDiscAmt ? entryDiscAmt.toFixed(2) : ''} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-slate-500 mb-1">Sub Total</label>
-                                        <input readOnly className={cellNum + ' bg-slate-100 font-black text-[#1A1A1A]'} value={entrySubTotal ? entrySubTotal.toFixed(2) : ''} />
+                                        <label className="block text-[10px] font-bold uppercase tracking-[0.04em] text-[#64748B] mb-1">Sub Total</label>
+                                        <input readOnly className={cellNum + ' bg-[#F4F6F9] font-black text-[#0F1A2B]'} value={entrySubTotal ? entrySubTotal.toFixed(2) : ''} />
                                     </div>
                                 </div>
                             </div>
@@ -1152,8 +1152,8 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     </div>
 
                                     {lineRows.length === 0 && (
-                                        <div className={LINE_MIN + ' py-14 text-center text-[12.5px] text-slate-400'}>
-                                            Pick a product above, fill the entry row, then press <b className="text-slate-600">Add</b>.
+                                        <div className={LINE_MIN + ' py-14 text-center text-[12.5px] text-[#94A3B8]'}>
+                                            Pick a product above, fill the entry row, then press <b className="text-[#64748B]">Add</b>.
                                         </div>
                                     )}
 
@@ -1161,26 +1161,26 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <div
                                             key={i}
                                             onClick={() => setSelectedLine(i)}
-                                            className={gridRow(i) + (selectedLine === i ? ' !bg-[#F59E0B]/15' : '') + ' cursor-pointer'}
+                                            className={gridRow(i) + (selectedLine === i ? ' !bg-[#1877C2]/15' : '') + ' cursor-pointer'}
                                         >
                                             <div className={LINE_COLS + ' ' + LINE_MIN}>
-                                                <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-500">{i + 1}</span></Cell>
-                                                <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{r.pid}</span></Cell>
-                                                <Cell><span className="px-1 text-[12.5px] font-semibold text-slate-800 truncate">{r.name}</span></Cell>
-                                                <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500">{r.expiry || '—'}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-bold tabular-nums text-[#1A1A1A]">{r.qty}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-[#64748B]">{i + 1}</span></Cell>
+                                                <Cell><span className="px-1 text-[11.5px] tabular-nums text-[#64748B] truncate">{r.pid}</span></Cell>
+                                                <Cell><span className="px-1 text-[12.5px] font-semibold text-[#0F1A2B] truncate">{r.name}</span></Cell>
+                                                <Cell><span className="px-1 text-[11.5px] tabular-nums text-[#64748B]">{r.expiry || '—'}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-bold tabular-nums text-[#0F1A2B]">{r.qty}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-emerald-700">{r.bonus || ''}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-700">{r.tp.toFixed(2)}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-500">{r.retail ? r.retail.toFixed(2) : '—'}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-700">{r.subTotal.toFixed(2)}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-slate-500">{r.discPct || ''}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-[#334155]">{r.tp.toFixed(2)}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-[#64748B]">{r.retail ? r.retail.toFixed(2) : '—'}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-[#334155]">{r.subTotal.toFixed(2)}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-[#64748B]">{r.discPct || ''}</span></Cell>
                                                 <Cell className="justify-end"><span className="px-1 text-[12.5px] tabular-nums text-rose-600">{r.discAmt ? r.discAmt.toFixed(2) : ''}</span></Cell>
-                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-black tabular-nums text-[#1A1A1A]">{r.netAmt.toFixed(2)}</span></Cell>
+                                                <Cell className="justify-end"><span className="px-1 text-[12.5px] font-black tabular-nums text-[#0F1A2B]">{r.netAmt.toFixed(2)}</span></Cell>
                                                 <Cell className="justify-center">
                                                     <button
                                                         onClick={(ev) => { ev.stopPropagation(); removeLine(i); }}
                                                         title="Remove line"
-                                                        className="w-7 h-7 flex items-center justify-center rounded-md text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                                        className="w-7 h-7 flex items-center justify-center rounded-md text-[#CBD5E1] hover:text-rose-600 hover:bg-rose-50 transition-colors"
                                                     >
                                                         <Trash2 size={14} />
                                                     </button>
@@ -1191,13 +1191,13 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                                     {lineRows.length > 0 && (
                                         <div className={LINE_COLS + ' ' + LINE_MIN + ' ' + gridFoot}>
-                                            <div className="px-2 py-2 text-[11px] font-bold uppercase tracking-[0.04em] text-slate-600 border-r border-slate-200/80 col-span-4">Totals</div>
-                                            <div className="px-2 py-2 text-[12px] font-black text-slate-800 tabular-nums text-right border-r border-slate-200/80">{totalUnitsSold}</div>
-                                            <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-slate-200/80">{totalBonusUnits || ''}</div>
-                                            <div className="border-r border-slate-200/80 col-span-3" />
-                                            <div className="border-r border-slate-200/80" />
-                                            <div className="px-2 py-2 text-[12px] font-black text-rose-600 tabular-nums text-right border-r border-slate-200/80">{lineDiscTotal ? lineDiscTotal.toFixed(2) : ''}</div>
-                                            <div className="px-2 py-2 text-[12.5px] font-black text-[#1A1A1A] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalBill)}</div>
+                                            <div className="px-2 py-2 text-[11px] font-bold uppercase tracking-[0.04em] text-[#64748B] border-r border-[#E7ECF2] col-span-4">Totals</div>
+                                            <div className="px-2 py-2 text-[12px] font-black text-[#0F1A2B] tabular-nums text-right border-r border-[#E7ECF2]">{totalUnitsSold}</div>
+                                            <div className="px-2 py-2 text-[12px] font-black text-emerald-700 tabular-nums text-right border-r border-[#E7ECF2]">{totalBonusUnits || ''}</div>
+                                            <div className="border-r border-[#E7ECF2] col-span-3" />
+                                            <div className="border-r border-[#E7ECF2]" />
+                                            <div className="px-2 py-2 text-[12px] font-black text-rose-600 tabular-nums text-right border-r border-[#E7ECF2]">{lineDiscTotal ? lineDiscTotal.toFixed(2) : ''}</div>
+                                            <div className="px-2 py-2 text-[12.5px] font-black text-[#0F1A2B] tabular-nums text-right whitespace-nowrap col-span-2">{formatCurrency(totalBill)}</div>
                                         </div>
                                     )}
                                 </div>
@@ -1207,21 +1207,21 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             <Card className="w-full xl:w-[320px] shrink-0 overflow-hidden">
                                 <div className="p-3.5 space-y-2.5">
                                     <div className="flex items-center justify-between gap-2">
-                                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Net Amount</span>
-                                        <span className="text-[15px] font-black tabular-nums text-[#1A1A1A]">{formatCurrency(entrySubTotal)}</span>
+                                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B]">Net Amount</span>
+                                        <span className="text-[15px] font-black tabular-nums text-[#0F1A2B]">{formatCurrency(entrySubTotal)}</span>
                                     </div>
                                     <div>
-                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Expiry Date</label>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Expiry Date</label>
                                         <input type="date" className={cellCls + ' tabular-nums'} value={entry.expiry}
                                             onChange={e => setEntry(v => ({ ...v, expiry: e.target.value }))} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Company</label>
-                                        <input readOnly className={cellCls + ' bg-slate-100'} value={entry.company} placeholder="—" />
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Company</label>
+                                        <input readOnly className={cellCls + ' bg-[#F4F6F9]'} value={entry.company} placeholder="—" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Invoice No.</label>
-                                        <input readOnly className={cellCls + ' bg-[#F59E0B]/10 border-[#F59E0B]/30 font-black text-[#B4780B] tabular-nums'} value={orderNumber} />
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Invoice No.</label>
+                                        <input readOnly className={cellCls + ' bg-[#1877C2]/10 border-[#1877C2]/30 font-black text-[#1877C2] tabular-nums'} value={orderNumber} />
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-2 pt-1">
@@ -1229,36 +1229,36 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <Btn variant="secondary" onClick={() => removeLine(selectedLine)} disabled={selectedLine < 0} className="justify-center font-bold">Remove</Btn>
                                     </div>
 
-                                    <div className="pt-2 mt-1 border-t border-slate-200 space-y-2">
-                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500">Product PR</div>
+                                    <div className="pt-2 mt-1 border-t border-[#E7ECF2] space-y-2">
+                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]">Product PR</div>
                                         <div className="grid grid-cols-3 gap-1.5">
                                             <div>
-                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Pur. Rate</span>
-                                                <input readOnly className={cellNum + ' bg-slate-100'} value={entry.cost ? entry.cost.toFixed(2) : ''} />
+                                                <span className="block text-[9.5px] font-bold uppercase text-[#94A3B8] mb-0.5">Pur. Rate</span>
+                                                <input readOnly className={cellNum + ' bg-[#F4F6F9]'} value={entry.cost ? entry.cost.toFixed(2) : ''} />
                                             </div>
                                             <div>
-                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit</span>
-                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (entryProfit >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={entry.productId ? entryProfit.toFixed(2) : ''} />
+                                                <span className="block text-[9.5px] font-bold uppercase text-[#94A3B8] mb-0.5">Profit</span>
+                                                <input readOnly className={cellNum + ' bg-[#F4F6F9] ' + (entryProfit >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={entry.productId ? entryProfit.toFixed(2) : ''} />
                                             </div>
                                             <div>
-                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit %</span>
-                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (entryProfitPct >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={entry.productId && entry.cost > 0 ? entryProfitPct.toFixed(1) : ''} />
+                                                <span className="block text-[9.5px] font-bold uppercase text-[#94A3B8] mb-0.5">Profit %</span>
+                                                <input readOnly className={cellNum + ' bg-[#F4F6F9] ' + (entryProfitPct >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={entry.productId && entry.cost > 0 ? entryProfitPct.toFixed(1) : ''} />
                                             </div>
                                         </div>
 
-                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 pt-1">Invoice PV</div>
+                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] pt-1">Invoice PV</div>
                                         <div className="grid grid-cols-3 gap-1.5">
                                             <div>
-                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Pur. Value</span>
-                                                <input readOnly className={cellNum + ' bg-slate-100'} value={totalCost ? totalCost.toFixed(2) : '0'} />
+                                                <span className="block text-[9.5px] font-bold uppercase text-[#94A3B8] mb-0.5">Pur. Value</span>
+                                                <input readOnly className={cellNum + ' bg-[#F4F6F9]'} value={totalCost ? totalCost.toFixed(2) : '0'} />
                                             </div>
                                             <div>
-                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit</span>
-                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (invoiceProfit >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={invoiceProfit.toFixed(2)} />
+                                                <span className="block text-[9.5px] font-bold uppercase text-[#94A3B8] mb-0.5">Profit</span>
+                                                <input readOnly className={cellNum + ' bg-[#F4F6F9] ' + (invoiceProfit >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={invoiceProfit.toFixed(2)} />
                                             </div>
                                             <div>
-                                                <span className="block text-[9.5px] font-bold uppercase text-slate-400 mb-0.5">Profit %</span>
-                                                <input readOnly className={cellNum + ' bg-slate-100 ' + (profitPct >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={totalCost > 0 ? profitPct.toFixed(1) : ''} />
+                                                <span className="block text-[9.5px] font-bold uppercase text-[#94A3B8] mb-0.5">Profit %</span>
+                                                <input readOnly className={cellNum + ' bg-[#F4F6F9] ' + (profitPct >= 0 ? 'text-emerald-700' : 'text-rose-600')} value={totalCost > 0 ? profitPct.toFixed(1) : ''} />
                                             </div>
                                         </div>
                                     </div>
@@ -1274,49 +1274,49 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         <Card className="overflow-hidden">
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-px bg-slate-200">
                                 {[
-                                    { label: 'Amount Billed', value: totalBill, tone: 'text-slate-900' },
+                                    { label: 'Amount Billed', value: totalBill, tone: 'text-[#0F1A2B]' },
                                     { label: 'Total Disc By%', value: discountAmount, tone: 'text-rose-600' },
-                                    { label: 'Net Amount', value: grandTotal, tone: 'text-[#1A1A1A]' },
-                                    { label: 'Prev. Bal', value: prevBalance, tone: 'text-slate-700' },
+                                    { label: 'Net Amount', value: grandTotal, tone: 'text-[#0F1A2B]' },
+                                    { label: 'Prev. Bal', value: prevBalance, tone: 'text-[#334155]' },
                                     { label: 'Net Balance', value: grandTotal + prevBalance - paidNow, tone: 'text-emerald-700' },
                                 ].map(c => (
                                     <div key={c.label} className="bg-white px-3 py-2.5">
-                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500">{c.label}</div>
+                                        <div className="text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B]">{c.label}</div>
                                         <div className={`text-[16px] font-black tabular-nums ${c.tone}`}>{formatCurrency(c.value)}</div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="px-3 sm:px-4 py-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[150px_150px_minmax(160px,1fr)_150px_1fr] gap-2.5 items-end">
+                            <div className="px-3 sm:px-4 py-3 border-t border-[#E7ECF2] grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[150px_150px_minmax(160px,1fr)_150px_1fr] gap-2.5 items-end">
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Paid Cash</label>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Paid Cash</label>
                                     <input type="number" min="0" className={cellNum} placeholder="0.00"
                                         value={payMode === 'full' ? String(grandTotal || '') : amountPaidNow}
                                         onChange={e => { setPayMode('partial'); setAmountPaidNow(e.target.value); }} />
                                 </div>
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Discount</label>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Discount</label>
                                     <div className="flex gap-1">
                                         <input type="number" min="0" className={cellNum} placeholder="0" value={discountVal}
                                             onChange={e => setDiscountVal(e.target.value)} />
                                         <button
                                             onClick={() => setDiscountType(discountType === 'flat' ? 'percent' : 'flat')}
                                             title="Toggle flat / percent"
-                                            className="shrink-0 w-9 h-9 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-black text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#0E7F98] transition-colors"
+                                            className="shrink-0 w-9 h-9 rounded-md border border-[#E7ECF2] bg-[#F8FAFC] text-[11px] font-black text-[#64748B] hover:border-[#1877C2]/50 hover:text-[#1567AB] transition-colors"
                                         >
                                             {discountType === 'percent' ? '%' : 'Rs'}
                                         </button>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Saleman</label>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Saleman</label>
                                     <select className={cellCls + ' cursor-pointer'} value={salesperson} onChange={e => setSalesperson(e.target.value)}>
                                         <option value="">Select any one</option>
                                         {staffList.map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Sale Date</label>
+                                    <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Sale Date</label>
                                     <input type="date" className={cellCls + ' tabular-nums'} value={orderDate} onChange={e => setOrderDate(e.target.value)} />
                                 </div>
                                 <div className="flex flex-wrap items-end justify-end gap-2">
@@ -1345,15 +1345,15 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             {!customerId && (
                                 <div className="px-3 sm:px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
                                     <div>
-                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Walk-in Name</label>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Walk-in Name</label>
                                         <input className={cellCls} value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="e.g. Adnan Ali" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Walk-in Contact</label>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Walk-in Contact</label>
                                         <input className={cellCls} value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="e.g. 03xx-xxxxxxx" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Payment Method</label>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Payment Method</label>
                                         <select className={cellCls + ' cursor-pointer'} value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
                                             <option value="cash">Cash</option>
                                             <option value="online">Online Transfer</option>
@@ -1361,7 +1361,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                     </div>
                                     {payMode !== 'full' && (
                                         <div>
-                                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Balance Due Date</label>
+                                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Balance Due Date</label>
                                             <input type="date" className={cellCls + ' tabular-nums'} value={dueDate} onChange={e => setDueDate(e.target.value)} />
                                         </div>
                                     )}
@@ -1372,16 +1372,16 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             {paymentMethod === 'cash' && amountCollectable > 0 && (
                                 <div className="px-3 sm:px-4 pb-3.5 flex flex-wrap items-end gap-2.5">
                                     <div className="w-[160px]">
-                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Cash Received</label>
+                                        <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Cash Received</label>
                                         <input type="number" min={0} className={cellNum} value={amountTendered} placeholder="0.00"
                                             onChange={e => setAmountTendered(e.target.value)} />
                                     </div>
                                     <div className="flex gap-1.5 pb-0.5">
                                         <button type="button" onClick={() => setAmountTendered(String(amountCollectable))}
-                                            className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#0E7F98] transition-colors">Exact</button>
+                                            className="px-2 py-1.5 rounded-md border border-[#E7ECF2] bg-white text-[11px] font-bold text-[#64748B] hover:border-[#1877C2]/50 hover:text-[#1567AB] transition-colors">Exact</button>
                                         {[500, 1000, 5000].map(d => (
                                             <button key={d} type="button" onClick={() => setAmountTendered(String(d))}
-                                                className="px-2 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 hover:border-[#F59E0B]/50 hover:text-[#0E7F98] transition-colors tabular-nums">{d}</button>
+                                                className="px-2 py-1.5 rounded-md border border-[#E7ECF2] bg-white text-[11px] font-bold text-[#64748B] hover:border-[#1877C2]/50 hover:text-[#1567AB] transition-colors tabular-nums">{d}</button>
                                         ))}
                                     </div>
                                     {tendered > 0 && (
@@ -1400,11 +1400,11 @@ const [warehouseId, setWarehouseId] = useState<string>('');
 
                         {heldSales.length > 0 && (
                             <div className="flex flex-wrap items-center gap-2 px-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Held</span>
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">Held</span>
                                 {heldSales.map((h: any) => (
                                     <button key={h.id} onClick={() => resumeSale(h)}
                                         title={`Resume sale held at ${h.heldAtLabel}`}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#F59E0B]/40 bg-[#F59E0B]/10 text-[11.5px] font-bold text-[#B4780B] hover:bg-[#F59E0B]/20 transition-colors">
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#1877C2]/40 bg-[#1877C2]/10 text-[11.5px] font-bold text-[#1877C2] hover:bg-[#1877C2]/20 transition-colors">
                                         {h.heldAtLabel} · {formatCurrency(h.total)}
                                     </button>
                                 ))}
@@ -1419,20 +1419,20 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 <div className="space-y-3">
                     <div className="flex flex-wrap items-end gap-2">
                         <div className="flex-1 min-w-[220px]">
-                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Account Name</label>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Account Name</label>
                             <input
                                 autoFocus
                                 value={custSearch}
                                 onChange={e => setCustSearch(e.target.value)}
                                 placeholder="Type to filter accounts…"
-                                className={cellCls + ' bg-[#F59E0B]/5 border-[#F59E0B]/30'}
+                                className={cellCls + ' bg-[#1877C2]/5 border-[#1877C2]/30'}
                             />
                         </div>
                         <Btn variant="secondary" onClick={() => router.push('/admin/company/customers/add')} className="font-bold">Add New</Btn>
                     </div>
 
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                        <div className="grid grid-cols-[110px_minmax(160px,1.6fr)_minmax(110px,1fr)_110px_110px] bg-slate-100 border-b border-slate-300">
+                    <div className="border border-[#E7ECF2] rounded-lg overflow-hidden">
+                        <div className="grid grid-cols-[110px_minmax(160px,1.6fr)_minmax(110px,1fr)_110px_110px] bg-[#F4F6F9] border-b border-[#CBD5E1]">
                             <Th>Account ID</Th>
                             <Th>Account Name</Th>
                             <Th>Area</Th>
@@ -1441,20 +1441,20 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         </div>
                         <div className="max-h-[320px] overflow-y-auto custom-scrollbar">
                             {filteredCustomers.length === 0 && (
-                                <div className="py-10 text-center text-[12.5px] text-slate-400">No accounts match.</div>
+                                <div className="py-10 text-center text-[12.5px] text-[#94A3B8]">No accounts match.</div>
                             )}
                             {filteredCustomers.map((c: any, i: number) => (
                                 <div
                                     key={c.id}
                                     onDoubleClick={() => pickCustomer(c)}
                                     onClick={() => pickCustomer(c)}
-                                    className={'grid grid-cols-[110px_minmax(160px,1.6fr)_minmax(110px,1fr)_110px_110px] cursor-pointer border-b border-slate-100 last:border-b-0 ' + (i % 2 ? 'bg-slate-50/40 ' : 'bg-white ') + 'hover:bg-[#F59E0B]/10'}
+                                    className={'grid grid-cols-[110px_minmax(160px,1.6fr)_minmax(110px,1fr)_110px_110px] cursor-pointer border-b border-[#F1F5F9] last:border-b-0 ' + (i % 2 ? 'bg-[#F8FAFC]/40 ' : 'bg-white ') + 'hover:bg-[#1877C2]/10'}
                                 >
-                                    <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{String(c.id).slice(0, 8)}</span></Cell>
-                                    <Cell><span className="px-1 text-[12.5px] font-semibold text-slate-800 truncate">{customerLabel(c)}</span></Cell>
-                                    <Cell><span className="px-1 text-[12px] text-slate-600 truncate">{c.area_name || c.city || '—'}</span></Cell>
-                                    <Cell><span className="px-1 text-[12px] text-slate-400">—</span></Cell>
-                                    <Cell><span className="px-1 text-[12px] text-slate-400">—</span></Cell>
+                                    <Cell><span className="px-1 text-[11.5px] tabular-nums text-[#64748B] truncate">{String(c.id).slice(0, 8)}</span></Cell>
+                                    <Cell><span className="px-1 text-[12.5px] font-semibold text-[#0F1A2B] truncate">{customerLabel(c)}</span></Cell>
+                                    <Cell><span className="px-1 text-[12px] text-[#64748B] truncate">{c.area_name || c.city || '—'}</span></Cell>
+                                    <Cell><span className="px-1 text-[12px] text-[#94A3B8]">—</span></Cell>
+                                    <Cell><span className="px-1 text-[12px] text-[#94A3B8]">—</span></Cell>
                                 </div>
                             ))}
                         </div>
@@ -1463,7 +1463,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     <div className="flex justify-between items-center pt-1">
                         <button
                             onClick={() => { setCustomerId(''); setShowFindCustomer(false); }}
-                            className="text-[12.5px] font-bold text-slate-500 hover:text-slate-800 hover:underline"
+                            className="text-[12.5px] font-bold text-[#64748B] hover:text-[#0F1A2B] hover:underline"
                         >
                             Clear (walk-in)
                         </button>
@@ -1477,22 +1477,22 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 <div className="space-y-3">
                     <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-2.5 items-end">
                         <div>
-                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">From Sale Date</label>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">From Sale Date</label>
                             <input type="date" className={cellCls + ' tabular-nums'} value={recFrom} onChange={e => setRecFrom(e.target.value)} />
                         </div>
                         <div>
-                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">To Sale Date</label>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">To Sale Date</label>
                             <input type="date" className={cellCls + ' tabular-nums'} value={recTo} onChange={e => setRecTo(e.target.value)} />
                         </div>
                         <div>
-                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Staff</label>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Staff</label>
                             <select className={cellCls + ' cursor-pointer'} value={recStaff} onChange={e => setRecStaff(e.target.value)}>
                                 <option value="">Select any one</option>
                                 {staffList.map(s => (<option key={s.id} value={s.id}>{s.name}</option>))}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-slate-500 mb-1">Sale / Sale Return</label>
+                            <label className="block text-[10.5px] font-bold uppercase tracking-[0.05em] text-[#64748B] mb-1">Sale / Sale Return</label>
                             <select className={cellCls + ' cursor-pointer'} value={recType} onChange={e => setRecType(e.target.value)}>
                                 <option value="">Select any one</option>
                                 <option value="sale">Sale</option>
@@ -1505,9 +1505,9 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         </div>
                     </div>
 
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <div className="border border-[#E7ECF2] rounded-lg overflow-hidden">
                         <div className="overflow-x-auto custom-scrollbar">
-                            <div className={REC_COLS + ' bg-slate-100 border-b border-slate-300'}>
+                            <div className={REC_COLS + ' bg-[#F4F6F9] border-b border-[#CBD5E1]'}>
                                 <Th>SaleID</Th>
                                 <Th>Date Sale</Th>
                                 <Th>Staff</Th>
@@ -1523,7 +1523,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             </div>
                             <div className="max-h-[340px] overflow-y-auto custom-scrollbar">
                                 {recRows.length === 0 && (
-                                    <div className="py-10 text-center text-[12.5px] text-slate-400">
+                                    <div className="py-10 text-center text-[12.5px] text-[#94A3B8]">
                                         {recLoading ? 'Searching…' : 'No records — pick a date range and press Search.'}
                                     </div>
                                 )}
@@ -1535,18 +1535,18 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                                         <div
                                             key={r.id}
                                             onClick={() => router.push(`/admin/sales/${r.id}/invoice`)}
-                                            className={REC_COLS + ' cursor-pointer border-b border-slate-100 last:border-b-0 ' + (i % 2 ? 'bg-slate-50/40 ' : 'bg-white ') + 'hover:bg-[#F59E0B]/10'}
+                                            className={REC_COLS + ' cursor-pointer border-b border-[#F1F5F9] last:border-b-0 ' + (i % 2 ? 'bg-[#F8FAFC]/40 ' : 'bg-white ') + 'hover:bg-[#1877C2]/10'}
                                         >
-                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{r.order_number || String(r.id).slice(0, 8)}</span></Cell>
-                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-600">{(r.sale_date || r.created_at || '').slice(0, 10)}</span></Cell>
-                                            <Cell><span className="px-1 text-[12px] text-slate-600 truncate">{r.salesperson_name || '—'}</span></Cell>
-                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-slate-500 truncate">{r.customer ? String(r.customer).slice(0, 8) : '—'}</span></Cell>
-                                            <Cell><span className="px-1 text-[12px] font-semibold text-slate-800 truncate">{r.customer_name || 'Walk-in'}</span></Cell>
-                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-700">{amount.toFixed(2)}</span></Cell>
+                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-[#64748B] truncate">{r.order_number || String(r.id).slice(0, 8)}</span></Cell>
+                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-[#64748B]">{(r.sale_date || r.created_at || '').slice(0, 10)}</span></Cell>
+                                            <Cell><span className="px-1 text-[12px] text-[#64748B] truncate">{r.salesperson_name || '—'}</span></Cell>
+                                            <Cell><span className="px-1 text-[11.5px] tabular-nums text-[#64748B] truncate">{r.customer ? String(r.customer).slice(0, 8) : '—'}</span></Cell>
+                                            <Cell><span className="px-1 text-[12px] font-semibold text-[#0F1A2B] truncate">{r.customer_name || 'Walk-in'}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-[#334155]">{amount.toFixed(2)}</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-rose-600">{disc ? disc.toFixed(2) : ''}</span></Cell>
-                                            <Cell className="justify-end"><span className="px-1 text-[12px] font-bold tabular-nums text-[#1A1A1A]">{amount.toFixed(2)}</span></Cell>
-                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-400">—</span></Cell>
-                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-slate-700">{amount.toFixed(2)}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] font-bold tabular-nums text-[#0F1A2B]">{amount.toFixed(2)}</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-[#94A3B8]">—</span></Cell>
+                                            <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-[#334155]">{amount.toFixed(2)}</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] tabular-nums text-emerald-700">{paid.toFixed(2)}</span></Cell>
                                             <Cell className="justify-end"><span className="px-1 text-[12px] font-bold tabular-nums text-rose-600">{Math.max(0, amount - paid).toFixed(2)}</span></Cell>
                                         </div>
@@ -1571,7 +1571,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                         </Button>
                         <button
                             onClick={() => setShowConfirm(false)}
-                            className="w-full text-[13px] text-[#119AB8] hover:text-[#0E7F98] hover:underline font-bold"
+                            className="w-full text-[13px] text-[#1877C2] hover:text-[#1567AB] hover:underline font-bold"
                         >
                             Cancel & Review
                         </button>
@@ -1579,18 +1579,18 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                 }
             >
                 <div className="text-left space-y-4">
-                    <p className="text-[13px] text-slate-600">
-                        Processing <span className="font-bold text-slate-900 tabular-nums">{formatCurrency(grandTotal)}</span> for {items.length} item{items.length === 1 ? '' : 's'}.
+                    <p className="text-[13px] text-[#64748B]">
+                        Processing <span className="font-bold text-[#0F1A2B] tabular-nums">{formatCurrency(grandTotal)}</span> for {items.length} item{items.length === 1 ? '' : 's'}.
                     </p>
 
                     {/* Top toggle: Shipped (dispatch) vs Mark as Delivered (done now) */}
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">How is this fulfilled?</label>
+                        <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">How is this fulfilled?</label>
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => setFinalizeMode('shipped')}
-                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'shipped' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Shipped</button>
+                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'shipped' ? 'border-[#1877C2] bg-[#1877C2]/10 text-[#1877C2] ring-1 ring-[#1877C2]/25' : 'border-[#E7ECF2] bg-white text-[#64748B] hover:bg-[#F8FAFC]'}`}>Shipped</button>
                             <button type="button" onClick={() => setFinalizeMode('delivered')}
-                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'delivered' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Mark as Delivered</button>
+                                className={`h-10 rounded-lg border text-[12.5px] font-bold transition-all ${finalizeMode === 'delivered' ? 'border-[#1877C2] bg-[#1877C2]/10 text-[#1877C2] ring-1 ring-[#1877C2]/25' : 'border-[#E7ECF2] bg-white text-[#64748B] hover:bg-[#F8FAFC]'}`}>Mark as Delivered</button>
                         </div>
                     </div>
 
@@ -1599,55 +1599,55 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             {/* Auto pickup (branch) + delivery (customer) */}
                             {(() => { const wh = warehouses.find((w: any) => String(w.id) === String(warehouseId)); return (
                                 <div className="grid grid-cols-1 gap-2">
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                                    <div className="rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] p-3">
                                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1"><MapPin size={12} /> Pickup</div>
-                                        <p className="text-[12.5px] font-semibold text-slate-800">{wh?.name || 'Organization'}</p>
-                                        {wh?.location && <p className="text-[11px] text-slate-500">{wh.location}</p>}
+                                        <p className="text-[12.5px] font-semibold text-[#0F1A2B]">{wh?.name || 'Organization'}</p>
+                                        {wh?.location && <p className="text-[11px] text-[#64748B]">{wh.location}</p>}
                                     </div>
-                                    <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3 space-y-2">
-                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#5B5B58] uppercase tracking-widest"><MapPin size={12} /> Delivery</div>
+                                    <div className="rounded-xl border border-[#E7ECF2] bg-[#F8FAFC] p-3 space-y-2">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#64748B] uppercase tracking-widest"><MapPin size={12} /> Delivery</div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <input value={deliveryCustomerName} onChange={e => setDeliveryCustomerName(e.target.value)} placeholder="Customer name"
-                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] bg-white" />
+                                                className="h-9 px-2.5 rounded-lg border border-[#E7ECF2] text-[12.5px] outline-none focus:border-[#1877C2] bg-white" />
                                             <input value={deliveryCustomerPhone} onChange={e => setDeliveryCustomerPhone(e.target.value)} placeholder="Phone"
-                                                className="h-9 px-2.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] bg-white" />
+                                                className="h-9 px-2.5 rounded-lg border border-[#E7ECF2] text-[12.5px] outline-none focus:border-[#1877C2] bg-white" />
                                         </div>
                                         <textarea rows={2} value={deliveryCustomerAddress} onChange={e => setDeliveryCustomerAddress(e.target.value)} placeholder="Delivery address"
-                                            className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 text-[12.5px] outline-none focus:border-[#F59E0B] bg-white resize-none" />
+                                            className="w-full px-2.5 py-1.5 rounded-lg border border-[#E7ECF2] text-[12.5px] outline-none focus:border-[#1877C2] bg-white resize-none" />
                                     </div>
                                 </div>
                             ); })()}
 
                             {/* Who delivers: specific rider vs all riders */}
                             <div>
-                                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Who delivers this?</label>
+                                <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Who delivers this?</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     <button type="button" onClick={() => setShipMode('specific')}
-                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>Specific rider</button>
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'specific' ? 'border-[#1877C2] bg-[#1877C2]/10 text-[#1877C2] ring-1 ring-[#1877C2]/25' : 'border-[#E7ECF2] bg-white text-[#64748B] hover:bg-[#F8FAFC]'}`}>Specific rider</button>
                                     <button type="button" onClick={() => setShipMode('all')}
-                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-[#F59E0B] bg-[#F59E0B]/10 text-[#B4780B] ring-1 ring-[#F59E0B]/25' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}`}>All riders</button>
+                                        className={`h-10 rounded-lg border text-[12px] font-bold transition-all ${shipMode === 'all' ? 'border-[#1877C2] bg-[#1877C2]/10 text-[#1877C2] ring-1 ring-[#1877C2]/25' : 'border-[#E7ECF2] bg-white text-[#64748B] hover:bg-[#F8FAFC]'}`}>All riders</button>
                                 </div>
                             </div>
                             {shipMode === 'specific' ? (
                                 <select value={selectedRider} onChange={e => setSelectedRider(e.target.value)}
-                                    className="w-full h-10 px-3 rounded-lg border border-slate-200 text-[13px] font-semibold text-slate-800 outline-none focus:border-[#F59E0B] bg-white">
+                                    className="w-full h-10 px-3 rounded-lg border border-[#E7ECF2] text-[13px] font-semibold text-[#0F1A2B] outline-none focus:border-[#1877C2] bg-white">
                                     <option value="">— Select a rider —</option>
                                     {[...riders].sort((a: any, b: any) => (b.is_system ? 1 : 0) - (a.is_system ? 1 : 0)).map((r: any) => (
                                         <option key={r.id} value={r.id}>{r.is_system ? '★ ' : ''}{r.name}{r.is_system ? ' · system' : ''}{r.phone ? ` · ${r.phone}` : ''}</option>
                                     ))}
                                 </select>
                             ) : (
-                                <p className="text-[11px] text-slate-500 bg-[#FAFAF8] border border-[#F2F2F0] rounded-lg px-3 py-2 leading-snug">Offered to every organization rider — the first to accept gets the delivery.</p>
+                                <p className="text-[11px] text-[#64748B] bg-[#F8FAFC] border border-[#F4F6F9] rounded-lg px-3 py-2 leading-snug">Offered to every organization rider — the first to accept gets the delivery.</p>
                             )}
 
                             {/* Delivery price offered — hidden for a System (salaried) rider */}
                             {!(shipMode === 'specific' && riders.find((r: any) => String(r.id) === selectedRider)?.is_system) && (
                                 <div>
-                                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Delivery price you offer (Rs)</label>
+                                    <label className="block text-[11px] font-bold text-[#64748B] uppercase tracking-wider mb-1.5">Delivery price you offer (Rs)</label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[13px]">Rs</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#94A3B8] text-[13px]">Rs</span>
                                         <input type="number" min="0" step="0.01" value={shipFee} onChange={e => setShipFee(e.target.value)} placeholder="0.00"
-                                            className="w-full h-10 pl-9 pr-3 rounded-lg border border-slate-200 text-[13px] outline-none focus:border-[#F59E0B] bg-white" />
+                                            className="w-full h-10 pl-9 pr-3 rounded-lg border border-[#E7ECF2] text-[13px] outline-none focus:border-[#1877C2] bg-white" />
                                     </div>
                                 </div>
                             )}
@@ -1672,7 +1672,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     <div className="w-12 h-12 bg-rose-50 rounded-full flex items-center justify-center text-rose-600 shrink-0">
                         <AlertTriangle size={24} />
                     </div>
-                    <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">Stock unavailable</h3>
+                    <h3 className="text-[18px] font-bold text-[#0F1A2B] tracking-tight">Stock unavailable</h3>
                 </div>
 
                 <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-6">
@@ -1681,7 +1681,7 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                     </p>
                 </div>
 
-                <p className="text-[13px] text-slate-600">
+                <p className="text-[13px] text-[#64748B]">
                     This organization doesn't have enough units for this order. Please adjust the quantities.
                 </p>
             </Modal>
