@@ -241,6 +241,26 @@ class ProductImage(BaseModel):
         return f"Image for {self.product.product_name}"
 
 
+class ProductBatch(BaseModel):
+    """One stock batch of a product with its own expiry date and quantity
+    (legacy Trade 2.1 CompBatchStock). Powers the dashboard Expiry List, which
+    lists batches — a product with two batches shows twice."""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='batches')
+    expiry_date = models.DateField(null=True, blank=True)
+    quantity = models.IntegerField(default=0)
+    cost_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    selling_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    retail_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'product_batches'
+        verbose_name = 'Product Batch'
+        verbose_name_plural = 'Product Batches'
+
+    def __str__(self):
+        return f"{self.product.product_name} — exp {self.expiry_date} ({self.quantity})"
+
+
 class StoreProduct(BaseModel):
     """Super-admin master store catalog.
 

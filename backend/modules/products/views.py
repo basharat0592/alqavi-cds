@@ -4,7 +4,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import F, ExpressionWrapper, DecimalField, Q, Sum
-from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage, StoreProduct
+from .models import Product, Wishlist, Category, SupplierProduct, MainCategory, ProductImage, StoreProduct, ProductBatch
 from .serializers import (
     ProductSerializer, WishlistSerializer, CategorySerializer,
     SupplierProductSerializer, MainCategorySerializer, StoreProductSerializer
@@ -194,23 +194,34 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         serialization), so it stays fast even with thousands of products."""
         qs = (self.get_queryset()
               .select_related('stock__product__company')
-              .only('id', 'sku', 'product_name', 'total_quantity', 'min_count', 'expiry_date',
+              .only('id', 'sku', 'product_name', 'total_quantity', 'min_count',
                     'stock__product__company__name'))
         expiry, low = [], []
+        info = {}  # product id -> (pid, name, company)
+        # Like legacy Trade 2.1, only products that have stock batches are
+        # tracked against their minimum (never-stocked items are not "low").
+        batched = set(ProductBatch.objects.filter(product__in=qs)
+                      .values_list('product_id', flat=True).distinct())
         for p in qs:
             sp = getattr(getattr(p, 'stock', None), 'product', None)
             company = sp.company.name if (sp and sp.company_id) else None
             pid = p.sku or str(p.id)
+            info[p.id] = (pid, p.product_name, company)
             qty = int(p.total_quantity or 0)
             mn = int(p.min_count or 0)
-            if p.expiry_date:
-                expiry.append({'pid': pid, 'name': p.product_name, 'qty': qty,
-                               'exp': p.expiry_date, 'company': company})
-            if qty <= mn:
+            if p.id in batched and qty <= mn:
                 low.append({'pid': pid, 'name': p.product_name, 'company': company,
                             'min': mn, 'qty': qty})
-        expiry.sort(key=lambda x: x['exp'])
-        low.sort(key=lambda x: x['qty'])
+        # Expiry List = in-stock batches (like legacy Trade 2.1): a product with
+        # two live batches shows twice, empty batches are skipped.
+        batches = (ProductBatch.objects
+                   .filter(product_id__in=list(info), quantity__gt=0, expiry_date__isnull=False)
+                   .values_list('product_id', 'quantity', 'expiry_date'))
+        for product_id, qty, exp in batches:
+            pid, name, company = info[product_id]
+            expiry.append({'pid': pid, 'name': name, 'qty': qty, 'exp': exp, 'company': company})
+        expiry.sort(key=lambda x: ((x['name'] or '').lower(), x['exp']))
+        low.sort(key=lambda x: ((x['company'] or '').lower(), (x['name'] or '').lower()))
         return Response({'expiry': expiry, 'low_stock': low})
 
     def paginate_queryset(self, queryset):

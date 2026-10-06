@@ -188,7 +188,20 @@ function parseExpiry(v: any): Date | null {
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
 }
-const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+// Legacy Trade 2.1 formats: table cells as YYYYMMDD, the picker as 14-Apr-2027.
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const fmtYmd = (d: Date) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const fmtPicker = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return y && m && d ? `${pad2(d)}-${MONTHS[m - 1]}-${y}` : '—';
+};
+
+/* Dense, single-line grid in the legacy style: ~22px rows, cell borders, cream rows. */
+const GRID_TABLE = 'w-full table-fixed border-collapse text-left text-[11.5px] leading-tight';
+const GRID_TH = 'sticky top-0 z-10 border-b border-r border-slate-300 bg-slate-100 px-1.5 py-1 font-bold text-slate-700 last:border-r-0';
+const GRID_TD = 'truncate whitespace-nowrap border-b border-r border-[#e6e2c4] px-1.5 py-[3px] last:border-r-0';
+const GRID_ROW = 'bg-[#fffde8] hover:bg-[#fff6c2]';
 const toInputValue = (d: Date) => d.toISOString().slice(0, 10);
 const pid = (p: any) => p.sku || p.product_code || p.id || '—';
 const pname = (p: any) => p.product_name || p.name || 'Unnamed';
@@ -212,14 +225,14 @@ export default function AdminDashboard() {
     const defaultBefore = useMemo(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; }, []);
     const [before, setBefore] = useState<string>(() => toInputValue(defaultBefore));
 
-    // Expiry rows (filtered client-side by the date picker). Each item:
+    // Expiry rows: one per in-stock batch, already sorted by product name on the
+    // server (like legacy); filtered here by the date picker. Each item:
     // { pid, name, qty, exp (ISO string), company }.
     const expiryRows = useMemo(() => {
         const beforeDate = new Date(before); beforeDate.setHours(23, 59, 59, 999);
         return (lists.expiry || [])
             .map((it: any) => ({ it, exp: parseExpiry(it.exp) }))
-            .filter((r) => r.exp && r.exp.getTime() <= beforeDate.getTime())
-            .sort((a, b) => a.exp!.getTime() - b.exp!.getTime());
+            .filter((r) => r.exp && r.exp.getTime() <= beforeDate.getTime());
     }, [lists, before]);
 
     // Low-stock rows. Each item: { pid, name, company, min, qty }.
@@ -229,7 +242,7 @@ export default function AdminDashboard() {
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white font-sans text-slate-800">
             <MenuBar />
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-3 md:p-4 lg:grid-cols-[1fr_420px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-3 md:p-4 lg:grid-cols-[1fr_480px]">
                         {/* ─── Left: brand + action grid ─── */}
                         <div className="flex min-h-0 flex-col overflow-hidden">
                             <div className="mb-3 flex shrink-0 items-center gap-3">
@@ -268,89 +281,103 @@ export default function AdminDashboard() {
                         <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
                             {/* Expiry list */}
                             <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-rose-50/60 px-4 py-2.5">
+                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-rose-50/60 px-3 py-1.5">
                                     <h3 className="flex items-center gap-2 text-[14px] font-black text-rose-700">
                                         <CalendarClock size={16} /> Expiry List on / Before
                                     </h3>
-                                    <input
-                                        type="date"
-                                        value={before}
-                                        onChange={(e) => setBefore(e.target.value)}
-                                        className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[12.5px] font-semibold text-slate-700 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
-                                    />
+                                    <label className="relative flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[12.5px] font-semibold tabular-nums text-slate-700 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-100">
+                                        {fmtPicker(before)}
+                                        <ChevronDown size={14} className="text-slate-500" />
+                                        {/* Native picker sits invisibly on top so the label can show the legacy format. */}
+                                        <input
+                                            type="date"
+                                            value={before}
+                                            onChange={(e) => e.target.value && setBefore(e.target.value)}
+                                            onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* older browsers */ } }}
+                                            className="absolute inset-0 cursor-pointer opacity-0"
+                                            aria-label="Expiry on or before"
+                                        />
+                                    </label>
                                 </div>
                                 <div className="min-h-0 flex-1 overflow-auto">
-                                    <table className="w-full text-left text-[12px]">
-                                        <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                                    <table className={GRID_TABLE}>
+                                        <colgroup>
+                                            <col className="w-[46px]" /><col /><col className="w-[50px]" /><col className="w-[66px]" /><col className="w-[118px]" />
+                                        </colgroup>
+                                        <thead>
                                             <tr>
-                                                <th className="px-3 py-2 font-bold">P ID</th>
-                                                <th className="px-3 py-2 font-bold">Product</th>
-                                                <th className="px-3 py-2 text-right font-bold">Qty</th>
-                                                <th className="px-3 py-2 font-bold">Exp Date</th>
-                                                <th className="px-3 py-2 font-bold">Company</th>
+                                                <th className={GRID_TH}>P ID</th>
+                                                <th className={GRID_TH}>Product Name</th>
+                                                <th className={GRID_TH}>Qty(U)</th>
+                                                <th className={GRID_TH}>Exp Date</th>
+                                                <th className={GRID_TH}>Company</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-50">
+                                        <tbody>
                                             {loading ? (
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Loading…</td></tr>
                                             ) : expiryRows.length === 0 ? (
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">No items expiring on or before this date.</td></tr>
                                             ) : expiryRows.map(({ it, exp }, i) => {
-                                                const soon = exp!.getTime() <= Date.now() + 30 * 86400000;
+                                                const expired = exp!.getTime() < Date.now();
                                                 return (
-                                                    <tr key={i} className="hover:bg-rose-50/40">
-                                                        <td className="px-3 py-1.5 font-mono text-slate-500">{it.pid}</td>
-                                                        <td className="px-3 py-1.5 font-medium text-slate-800">{it.name}</td>
-                                                        <td className="px-3 py-1.5 text-right tabular-nums text-slate-600">{it.qty}</td>
-                                                        <td className={`px-3 py-1.5 font-semibold ${soon ? 'text-rose-600' : 'text-slate-600'}`}>{fmtDate(exp!)}</td>
-                                                        <td className="px-3 py-1.5 text-slate-500">{it.company || '—'}</td>
+                                                    <tr key={i} className={GRID_ROW}>
+                                                        <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.pid}</td>
+                                                        <td className={`${GRID_TD} text-slate-900`} title={it.name}>{it.name}</td>
+                                                        <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.qty}</td>
+                                                        <td className={`${GRID_TD} tabular-nums ${expired ? 'font-semibold text-rose-600' : 'text-slate-700'}`}
+                                                            title={expired ? 'Already expired' : undefined}>{fmtYmd(exp!)}</td>
+                                                        <td className={`${GRID_TD} text-slate-700`} title={it.company || ''}>{it.company || '—'}</td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-2 text-[12px] font-bold text-slate-600">
+                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#1d3c8f]">
                                     Total Records = {expiryRows.length}
                                 </div>
                             </section>
 
                             {/* Stock minimum range */}
                             <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                <div className="shrink-0 border-b border-slate-100 bg-amber-50/60 px-4 py-2.5">
+                                <div className="shrink-0 border-b border-slate-100 bg-amber-50/60 px-3 py-2">
                                     <h3 className="flex items-center gap-2 text-[14px] font-black text-amber-700">
                                         <Boxes size={16} /> Stock Minimum Range List
                                     </h3>
                                 </div>
                                 <div className="min-h-0 flex-1 overflow-auto">
-                                    <table className="w-full text-left text-[12px]">
-                                        <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
+                                    <table className={GRID_TABLE}>
+                                        <colgroup>
+                                            <col className="w-[46px]" /><col /><col className="w-[118px]" /><col className="w-[62px]" /><col className="w-[50px]" />
+                                        </colgroup>
+                                        <thead>
                                             <tr>
-                                                <th className="px-3 py-2 font-bold">P ID</th>
-                                                <th className="px-3 py-2 font-bold">Product</th>
-                                                <th className="px-3 py-2 font-bold">Company</th>
-                                                <th className="px-3 py-2 text-right font-bold">Min</th>
-                                                <th className="px-3 py-2 text-right font-bold">Stock</th>
+                                                <th className={GRID_TH}>P ID</th>
+                                                <th className={GRID_TH}>Product Name</th>
+                                                <th className={GRID_TH}>Company</th>
+                                                <th className={GRID_TH}>Min Limit</th>
+                                                <th className={GRID_TH}>Stock</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-50">
+                                        <tbody>
                                             {loading ? (
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Loading…</td></tr>
                                             ) : lowStockRows.length === 0 ? (
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">All stock above minimum. 🎉</td></tr>
                                             ) : lowStockRows.map((it: any, i: number) => (
-                                                <tr key={i} className="hover:bg-amber-50/40">
-                                                    <td className="px-3 py-1.5 font-mono text-slate-500">{it.pid}</td>
-                                                    <td className="px-3 py-1.5 font-medium text-slate-800">{it.name}</td>
-                                                    <td className="px-3 py-1.5 text-slate-500">{it.company || '—'}</td>
-                                                    <td className="px-3 py-1.5 text-right tabular-nums text-slate-600">{it.min}</td>
-                                                    <td className={`px-3 py-1.5 text-right font-bold tabular-nums ${it.qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>{it.qty}</td>
+                                                <tr key={i} className={GRID_ROW}>
+                                                    <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.pid}</td>
+                                                    <td className={`${GRID_TD} text-slate-900`} title={it.name}>{it.name}</td>
+                                                    <td className={`${GRID_TD} text-slate-700`} title={it.company || ''}>{it.company || '—'}</td>
+                                                    <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.min}</td>
+                                                    <td className={`${GRID_TD} tabular-nums ${it.qty <= 0 ? 'font-semibold text-rose-600' : 'text-slate-700'}`}>{it.qty}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-2 text-[12px] font-bold text-slate-600">
+                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#1d3c8f]">
                                     Total Records = {lowStockRows.length}
                                 </div>
                             </section>

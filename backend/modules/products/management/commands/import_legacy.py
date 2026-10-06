@@ -25,7 +25,7 @@ from modules.company.models import Company, Area
 from modules.customer.models import Customer
 from modules.supplier.models import Supplier
 from modules.inventory.models import Warehouse, Stock
-from modules.products.models import Category, Product, SupplierProduct
+from modules.products.models import Category, Product, ProductBatch, SupplierProduct
 
 User = get_user_model()
 
@@ -153,6 +153,7 @@ class Command(BaseCommand):
 
         # ── CompBatchStock → per-product qty / expiry / prices ──
         batch = {}  # PID -> dict(qty, exp, cost, sale, retail, createdt)
+        batch_rows = {}  # PID -> [ProductBatch kwargs] (one per legacy batch)
         for r in rows(d, 'CompBatchStock'):
             pid = clean(r.get('PID'))
             if not pid:
@@ -164,6 +165,10 @@ class Command(BaseCommand):
                                        'cost': Decimal('0'), 'sale': Decimal('0'),
                                        'retail': Decimal('0'), 'cdt': -1})
             b['qty'] += qty
+            batch_rows.setdefault(pid, []).append(dict(
+                expiry_date=exp, quantity=int(qty),
+                cost_price=to_dec(r.get('UPRate')), selling_price=to_dec(r.get('USRate')),
+                retail_price=to_dec(r.get('URRate'))))
             if exp and (b['exp'] is None or exp < b['exp']):
                 b['exp'] = exp
             # Latest batch row wins for the representative prices.
@@ -175,7 +180,7 @@ class Command(BaseCommand):
         self.stdout.write(f'Batches aggregated for {len(batch)} products')
 
         # ── Products (SupplierProduct + Stock + Product) ──
-        n_prod = 0
+        n_prod = n_batch = 0
         seen_barcodes = set()  # legacy barcodes aren't unique; keep first, null dupes
         for r in rows(d, 'Product'):
             pid = clean(r.get('PID'))
@@ -217,7 +222,7 @@ class Command(BaseCommand):
                     category=category, purchase_type='single', total_quantity=qty,
                     price_per_item=cost, date=date.today(), created_by=tenant)
 
-            Product.objects.update_or_create(
+            product, _ = Product.objects.update_or_create(
                 tenant=tenant, warehouse=warehouse, sku=pid,
                 defaults=dict(stock=stock, product_name=name, category=category,
                               cost_price=cost, selling_price=sale or 0,
@@ -225,8 +230,13 @@ class Command(BaseCommand):
                               total_quantity=qty, barcode=barcode, status=status,
                               expiry_date=exp),
             )
+            # Batches are replaced wholesale so re-runs stay idempotent.
+            product.batches.all().delete()
+            ProductBatch.objects.bulk_create(
+                [ProductBatch(product=product, **kw) for kw in batch_rows.get(pid, [])])
+            n_batch += len(batch_rows.get(pid, []))
             n_prod += 1
-        self.stdout.write(f'Products: {n_prod}')
+        self.stdout.write(f'Products: {n_prod}  Batches: {n_batch}')
 
         # ── Parties from Accounts ──
         n_cust = n_sup = 0
