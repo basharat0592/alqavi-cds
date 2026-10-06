@@ -15,6 +15,7 @@ Usage (from the repo root):
   python deploy_old.py --backend       # backend only (+ migrations)
   python deploy_old.py --frontend      # frontend bundle only
   python deploy_old.py --push          # git push origin alqavi_old first, then deploy
+  python deploy_old.py --watch         # follow a deploy that is already running
   python deploy_old.py --status        # just show old-stack containers + last log lines
   python deploy_old.py --allow-dirty   # deploy committed code even with local uncommitted edits
 
@@ -118,7 +119,7 @@ def deploy(s, mode):
 
     code, out = run(s, f'pgrep -f "bash deploy-[o]ld.sh" >/dev/null && echo BUSY || echo FREE')
     if 'BUSY' in out:
-        fail('a deploy is already running on the server. Use --status to watch it.')
+        fail('a deploy is already running on the server. Use --watch to follow it.')
 
     print('>> Updating code on the server...')
     code, out = run(s, f'cd {REMOTE} && git fetch origin {BRANCH} 2>&1'
@@ -128,8 +129,14 @@ def deploy(s, mode):
         fail('git update on the server failed.')
 
     print(f'>> Launching deploy-old.sh {mode} (log: {LOG})...')
-    run(s, f'cd {REMOTE} && nohup bash deploy-old.sh {mode} > {LOG} 2>&1 < /dev/null &', to=30)
+    # setsid + full redirection so the background job holds no fd of this SSH
+    # channel - otherwise the channel never reaches EOF and the read blocks.
+    run(s, f'cd {REMOTE} && setsid nohup bash deploy-old.sh {mode} > {LOG} 2>&1 < /dev/null & echo started',
+        to=30)
+    return watch(s)
 
+
+def watch(s):
     # Poll the log on the SAME connection; print only new lines.
     seen, start = 0, time.time()
     while time.time() - start < 40 * 60:
@@ -167,13 +174,14 @@ def main():
     g = ap.add_mutually_exclusive_group()
     g.add_argument('--backend', action='store_true', help='backend only (+ migrations)')
     g.add_argument('--frontend', action='store_true', help='frontend bundle only')
+    g.add_argument('--watch', action='store_true', help='follow a deploy already running')
     g.add_argument('--status', action='store_true', help='show container status + log tail')
     ap.add_argument('--push', action='store_true', help='git push origin alqavi_old first')
     ap.add_argument('--allow-dirty', action='store_true',
                     help='deploy committed code even if there are local uncommitted edits')
     a = ap.parse_args()
 
-    if not a.status:
+    if not (a.status or a.watch):
         local_checks(a.push, a.allow_dirty)
 
     s = connect(password())
@@ -181,8 +189,11 @@ def main():
         if a.status:
             status(s)
             return
-        mode = 'backend' if a.backend else 'frontend' if a.frontend else 'all'
-        ok = deploy(s, mode)
+        if a.watch:
+            ok = watch(s)
+        else:
+            mode = 'backend' if a.backend else 'frontend' if a.frontend else 'all'
+            ok = deploy(s, mode)
         print()
         status(s)
     finally:
