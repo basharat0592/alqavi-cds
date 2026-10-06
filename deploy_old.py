@@ -131,7 +131,7 @@ def deploy(s, mode):
     print(f'>> Launching deploy-old.sh {mode} (log: {LOG})...')
     # setsid + full redirection so the background job holds no fd of this SSH
     # channel - otherwise the channel never reaches EOF and the read blocks.
-    run(s, f'cd {REMOTE} && setsid nohup bash deploy-old.sh {mode} > {LOG} 2>&1 < /dev/null & echo started',
+    run(s, f'cd {REMOTE} && (setsid nohup bash deploy-old.sh {mode} > {LOG} 2>&1 < /dev/null &) && echo started',
         to=30)
     return watch(s)
 
