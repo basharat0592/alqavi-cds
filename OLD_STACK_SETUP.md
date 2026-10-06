@@ -102,6 +102,22 @@ Enter an email/username and password you choose — this is the login for the ol
 
 ---
 
+## Deploying new code from your PC (one command)
+Commit your work on `alqavi_old`, then from the repo root in PowerShell:
+```
+.\deploy-old.ps1 -Push        # push alqavi_old to GitHub, then full deploy
+.\deploy-old.ps1              # full deploy (already pushed)
+.\deploy-old.ps1 -Backend     # backend only (+ migrations) - faster
+.\deploy-old.ps1 -Frontend    # frontend bundle only
+.\deploy-old.ps1 -Status      # container status + last log lines
+```
+It refuses to run unless you're on `alqavi_old` with everything committed and pushed,
+then pulls the branch into `/opt/alqavi-old` on the server, runs `deploy-old.sh`, and
+streams the log until `DEPLOY_OLD_OK`. It never touches the live stack.
+
+SSH password: put `SSH_PASSWORD=...` in a `.env.deploy` file in the repo root
+(gitignored), or set `ALQAVI_SSH_PASSWORD`, or type it when prompted.
+
 ## Everyday commands (old stack)
 ```
 $ cd /opt/alqavi-old
