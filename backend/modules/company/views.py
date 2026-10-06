@@ -129,3 +129,132 @@ class SupplierViewSet(viewsets.ModelViewSet):
         if _is_portal_login(request.user):
             return Response({'detail': 'Not allowed.'}, status=status.HTTP_403_FORBIDDEN)
         return super().create(request, *args, **kwargs)
+
+
+# ───────────────────────── Chart of Accounts (legacy Trade 2.1) ─────────────────────────
+from django.db import transaction
+from django.db.models import Q
+from rest_framework.decorators import action
+from .models import AccountGroup, LedgerAccount
+
+CUSTOMER_GROUP = 1202   # Accounts Receivables
+SUPPLIER_GROUP = 2201   # Account Payables
+
+
+def _ledger_row(a):
+    g = a.group
+    return {
+        'id': a.id, 'acc_id': a.acc_id, 'name': a.name,
+        'group': g.code, 'group_name': g.name,
+        'area': a.area_id, 'area_name': a.area.name if a.area_id else None,
+        'cell_no': a.cell_no, 'contact_person': a.contact_person, 'status': a.status,
+        'customer': a.customer_id, 'supplier': str(a.supplier_id) if a.supplier_id else None,
+    }
+
+
+class AccountGroupViewSet(viewsets.ReadOnlyModelViewSet):
+    """Chart of Accounts headings (levels 1-3) for the account dropdowns."""
+    permission_classes = [permissions.IsAdminUser]
+    pagination_class = None
+
+    def get_queryset(self):
+        return scope_to_tenant(self.request.user, AccountGroup.objects.all(), 'tenant')
+
+    def list(self, request, *args, **kwargs):
+        rows = [{'id': g.id, 'code': g.code, 'name': g.name, 'level': g.level,
+                 'parent': g.parent.code if g.parent_id else None}
+                for g in self.get_queryset().select_related('parent')]
+        return Response(rows)
+
+
+class LedgerAccountViewSet(viewsets.ViewSet):
+    """Chart of Accounts entries. ?group=1202 filters by level-3 group, ?q= searches."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def _qs(self):
+        return scope_to_tenant(self.request.user, LedgerAccount.objects.all(), 'tenant') \
+            .select_related('group', 'area')
+
+    def _group(self, code):
+        try:
+            code = int(code)
+        except (TypeError, ValueError):
+            return None
+        return scope_to_tenant(self.request.user, AccountGroup.objects.filter(code=code, level=3), 'tenant').first()
+
+    @staticmethod
+    def _next_acc_id(group, qs):
+        """Level-3 code + next 4-digit sequence. Customer usernames (cust<acc_id>)
+        are globally unique, so receivables also skip any code already taken there."""
+        prefix = str(group.code)
+        taken = list(qs.filter(group=group).values_list('acc_id', flat=True))
+        if group.code == CUSTOMER_GROUP:
+            from modules.customer.models import Customer
+            taken += [u[4:] for u in Customer.objects.filter(username__startswith=f'cust{prefix}')
+                      .values_list('username', flat=True)]
+        seq = max([int(t[len(prefix):]) for t in taken if t.startswith(prefix) and t[len(prefix):].isdigit()] or [0])
+        return f"{prefix}{seq + 1:04d}"
+
+    def list(self, request):
+        qs = self._qs()
+        if request.query_params.get('group'):
+            qs = qs.filter(group__code=request.query_params['group'])
+        q = (request.query_params.get('q') or '').strip()
+        if q:
+            qs = qs.filter(Q(name__icontains=q) | Q(acc_id__icontains=q))
+        return Response([_ledger_row(a) for a in qs[:2000]])
+
+    @action(detail=False, methods=['get'])
+    def next_id(self, request):
+        group = self._group(request.query_params.get('group'))
+        if not group:
+            return Response({'acc_id': None})
+        return Response({'acc_id': self._next_acc_id(group, self._qs())})
+
+    def create(self, request):
+        d = request.data
+        group = self._group(d.get('group'))
+        name = (d.get('name') or '').strip()
+        if not group:
+            return Response({'detail': 'Select the Acc 3rd Level.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not name:
+            return Response({'detail': 'Enter the account name.'}, status=status.HTTP_400_BAD_REQUEST)
+        area = None
+        if d.get('area'):
+            area = Area.objects.filter(id=d.get('area')).first()
+        st = 'inactive' if str(d.get('status', '')).lower() == 'inactive' else 'active'
+        cell = (d.get('cell_no') or '').strip()[:40]
+        contact = (d.get('contact_person') or '').strip()[:150]
+        # New accounts belong to the actor's tenant; a platform operator adds to
+        # the tenant that owns the chosen group.
+        tenant_id = tenant_id_for(request.user) or group.tenant_id
+
+        with transaction.atomic():
+            acc_id = self._next_acc_id(group, self._qs())
+            customer = supplier = None
+            if group.code == CUSTOMER_GROUP:
+                import secrets
+                from django.contrib.auth.hashers import make_password
+                from modules.customer.models import Customer
+                customer = Customer.objects.create(
+                    username=f'cust{acc_id}', email=f'cust{acc_id}@legacy.local',
+                    password=make_password(secrets.token_urlsafe(12)),
+                    first_name=name[:100], phone=cell[:20], area=area,
+                    tenant_id=tenant_id, created_by=request.user if request.user.is_staff else None,
+                    status=st, is_active=st == 'active',
+                )
+            elif group.code == SUPPLIER_GROUP:
+                supplier = Supplier.objects.create(
+                    name=name, contact_person=contact or None, phone=cell or None,
+                    tenant_id=tenant_id, status=st, is_active=st == 'active',
+                )
+            acc = LedgerAccount.objects.create(
+                acc_id=acc_id, name=name, group=group, area=area, cell_no=cell,
+                contact_person=contact, status=st, customer=customer, supplier=supplier,
+                tenant_id=tenant_id,
+            )
+        out = _ledger_row(acc)
+        if customer:
+            from modules.customer.serializers import CustomerSerializer
+            out['customer_record'] = CustomerSerializer(customer, context={'request': request}).data
+        return Response(out, status=status.HTTP_201_CREATED)

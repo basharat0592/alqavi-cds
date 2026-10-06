@@ -21,7 +21,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.db import transaction
 
-from modules.company.models import Company, Area
+from modules.company.models import Company, Area, AccountGroup, LedgerAccount
 from modules.customer.models import Customer
 from modules.supplier.models import Supplier
 from modules.inventory.models import Warehouse, Stock
@@ -83,6 +83,10 @@ class Command(BaseCommand):
         parser.add_argument('--dir', default='/tmp/legacy_dump')
         parser.add_argument('--tenant', default=None, help='Username of the owning admin (default: first superuser)')
         parser.add_argument('--warehouse', default='Main Store')
+        parser.add_argument('--accounts-only', action='store_true',
+                            help='Only import the Chart of Accounts (MainAccount/Accounts2L/Accounts3L/'
+                                 'Accounts) and link existing customers/suppliers; products, stock '
+                                 'and parties are left untouched.')
 
     @transaction.atomic
     def handle(self, *args, **opts):
@@ -150,6 +154,11 @@ class Command(BaseCommand):
                 defaults={'code': f"A{clean(r.get('AreaID'))}", 'parent': parent})
             area_map[clean(r.get('AreaID'))] = obj
         self.stdout.write(f'Areas: districts={len(dist_map)} main={len(marea_map)} areas={len(area_map)}')
+
+        if opts['accounts_only']:
+            self._import_chart(d, tenant, area_map)
+            self.stdout.write(self.style.SUCCESS('IMPORT_OK'))
+            return
 
         # ── CompBatchStock → per-product qty / expiry / prices ──
         batch = {}  # PID -> dict(qty, exp, cost, sale, retail, createdt)
@@ -274,4 +283,51 @@ class Command(BaseCommand):
                 n_sup += 1
         self.stdout.write(f'Customers: {n_cust}  Suppliers: {n_sup}')
 
+        self._import_chart(d, tenant, area_map)
         self.stdout.write(self.style.SUCCESS('IMPORT_OK'))
+
+    def _import_chart(self, d, tenant, area_map):
+        """Chart of Accounts: the three heading levels, then every legacy account,
+        linked to its Customer (1202) / Supplier (2201) record when one exists."""
+        groups = {}
+        for level, name, code_col, name_col, parent_col in (
+                (1, 'MainAccount', 'MainAccID', 'MainAccName', None),
+                (2, 'Accounts2L', 'SubAccID', 'SubAccName', 'MainAccID'),
+                (3, 'Accounts3L', 'Acc3LID', 'Acc3LName', 'SubAccID')):
+            for r in rows(d, name):
+                code = to_int(r.get(code_col), None)
+                if code is None:
+                    continue
+                parent = groups.get(to_int(r.get(parent_col), None)) if parent_col else None
+                obj, _ = AccountGroup.objects.update_or_create(
+                    tenant=tenant, code=code,
+                    defaults=dict(name=clean(r.get(name_col))[:150], level=level, parent=parent))
+                groups[code] = obj
+
+        n_acc = 0
+        for r in rows(d, 'Accounts'):
+            acc = clean(r.get('AccID'))
+            name = clean(r.get('AccName'))
+            group = groups.get(to_int(r.get('Acc3LID'), None))
+            if not acc or not name or not group:
+                continue
+            cell = clean(r.get('CellNo'))
+            cell = '' if cell in ('-', '0') else cell
+            contact = clean(r.get('ContactPerson'))
+            contact = '' if contact in ('-', '0') else contact
+            active = clean(r.get('AccStatus')).lower().startswith('activ')
+            customer = (Customer.objects.filter(username=f'cust{acc}').first()
+                        if group.code == int(CUSTOMER_GROUP) else None)
+            supplier = (Supplier.objects.filter(tenant=tenant, name=name).first()
+                        if group.code == int(SUPPLIER_GROUP) else None)
+            # Supplier links are one-to-one; legacy can repeat a supplier name.
+            if supplier and LedgerAccount.objects.filter(supplier=supplier).exclude(tenant=tenant, acc_id=acc).exists():
+                supplier = None
+            LedgerAccount.objects.update_or_create(
+                tenant=tenant, acc_id=acc,
+                defaults=dict(name=name[:255], group=group, area=area_map.get(clean(r.get('AreaID'))),
+                              cell_no=cell[:40], contact_person=contact[:150],
+                              status='active' if active else 'inactive',
+                              customer=customer, supplier=supplier))
+            n_acc += 1
+        self.stdout.write(f'Chart of Accounts: groups={len(groups)} accounts={n_acc}')

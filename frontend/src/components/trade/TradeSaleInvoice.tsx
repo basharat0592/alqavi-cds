@@ -68,6 +68,9 @@ const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-m
 const STAGE_W = 1240;
 const STAGE_H = 760;
 
+const COA_SELECT = `${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:opacity-60`;
+const COA_VIEW_COLS = ['Account ID', 'Account Name', 'Acc 3rd Level', 'Area', 'Cell No', 'Status'];
+
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
     ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
@@ -194,64 +197,98 @@ export default function TradeSaleInvoice() {
         custRef.current?.focus();
     }, [loadInvoiceNo]);
 
-    /* ── Add New customer (from the Find Customer window) ── */
+    /* ── Add New → Chart of Accounts (legacy Trade 1.0 "Chart of Account" window) ──
+       Opened from Find Customer with Assets › Current assets › Accounts
+       Receivables preselected, so a new account is a customer by default. */
+    const CUSTOMER_GROUP = 1202;
+    const EMPTY_COA = { main: '', l2: '', l3: '', name: '', cell: '', contact: '', area: '', status: '' };
     const [addingCust, setAddingCust] = useState(false);
-    const [newCust, setNewCust] = useState({ name: '', phone: '', area: '', address: '' });
+    const [coa, setCoa] = useState({ ...EMPTY_COA });
+    const [groups, setGroups] = useState<{ code: number; name: string; level: number; parent: number | null }[]>([]);
     const [areas, setAreas] = useState<any[]>([]);
+    const [nextAccId, setNextAccId] = useState('');
     const [savingCust, setSavingCust] = useState(false);
+    const [coaList, setCoaList] = useState<any[] | null>(null);
 
-    // Next legacy account code in the receivables series (1202xxxx), so a new
-    // customer can be found by code like every imported one.
-    const nextCustCode = useMemo(() => {
-        const nums = customers.map((c) => custCode(c)).filter((c) => /^1202\d+$/.test(c)).map(Number);
-        return String(nums.length ? Math.max(...nums) + 1 : 12020001);
-    }, [customers]);
+    const groupsAt = (level: number, parent: string) =>
+        groups.filter((g) => g.level === level && (level === 1 || String(g.parent) === parent));
+
+    const loadAreas = async () => {
+        const all: any[] = [];
+        try {
+            for (let page = 1; page <= 50; page++) {
+                const { data } = await api.get('v1/company/areas/', { params: { page, page_size: 100 } });
+                if (Array.isArray(data)) { all.push(...data); break; }
+                all.push(...(data.results || []));
+                if (!data.next) break;
+            }
+        } catch { /* area is optional */ }
+        setAreas(all.filter((a) => a.is_active !== false).sort((a, b) => String(a.name).localeCompare(String(b.name))));
+    };
 
     const openAddCustomer = () => {
-        setNewCust({ name: custQuery.trim() && !/^\d+$/.test(custQuery.trim()) ? custQuery.trim() : '', phone: '', area: '', address: '' });
+        const q = custQuery.trim();
+        setCoa({ ...EMPTY_COA, main: '1', l2: '12', l3: String(CUSTOMER_GROUP), name: q && !/^\d+$/.test(q) ? q : '' });
+        setCoaList(null);
         setAddingCust(true);
-        if (!areas.length) {
-            (async () => {
-                const all: any[] = [];
-                try {
-                    for (let page = 1; page <= 50; page++) {
-                        const { data } = await api.get('v1/company/areas/', { params: { page, page_size: 100, is_active: true } });
-                        if (Array.isArray(data)) { all.push(...data); break; }
-                        all.push(...(data.results || []));
-                        if (!data.next) break;
-                    }
-                } catch { /* area is optional */ }
-                setAreas(all.filter((a) => a.is_active !== false).sort((a, b) => String(a.name).localeCompare(String(b.name))));
-            })();
+        if (!groups.length) api.get('v1/company/account-groups/').then(({ data }) => setGroups(data)).catch(() => setGroups([]));
+        if (!areas.length) loadAreas();
+    };
+
+    // Account ID preview follows the chosen 3rd level.
+    useEffect(() => {
+        if (!addingCust || !coa.l3) { setNextAccId(''); return; }
+        api.get('v1/company/ledger-accounts/next_id/', { params: { group: coa.l3 } })
+            .then(({ data }) => setNextAccId(data.acc_id || ''))
+            .catch(() => setNextAccId(''));
+    }, [addingCust, coa.l3]);
+
+    const addArea = async () => {
+        const name = window.prompt('New area name:')?.trim();
+        if (!name) return;
+        try {
+            const { data } = await api.post('v1/company/areas/', { name, code: `A${Date.now().toString().slice(-6)}`, is_active: true });
+            await loadAreas();
+            setCoa((c) => ({ ...c, area: String(data.id) }));
+            toast.success(`Area "${name}" added.`);
+        } catch (err: any) {
+            const d = err?.response?.data;
+            toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not add the area.'));
         }
+    };
+
+    const viewAccounts = async () => {
+        try {
+            const { data } = await api.get('v1/company/ledger-accounts/', { params: coa.l3 ? { group: coa.l3 } : {} });
+            setCoaList(data);
+        } catch { toast.error('Could not load accounts.'); }
     };
 
     const saveNewCustomer = async () => {
         if (savingCust) return;
-        const name = newCust.name.trim();
-        if (!name) { toast.error('Enter the account name.'); return; }
+        const name = coa.name.trim();
+        if (!coa.l3) { toast.error('Select the Acc 3rd Level.'); return; }
+        if (!name) { toast.error('Enter the Acc. Name.'); return; }
         setSavingCust(true);
         try {
-            const code = nextCustCode;
-            const { data } = await api.post('/v1/company/customers/', {
-                username: `cust${code}`,
-                email: `cust${code}@legacy.local`,
-                password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
-                first_name: name.slice(0, 100),
-                phone: newCust.phone.trim().slice(0, 20),
-                address: newCust.address.trim(),
-                area: newCust.area || null,
-                status: 'active',
-                is_active: true,
+            const { data } = await api.post('v1/company/ledger-accounts/', {
+                group: coa.l3, name, cell_no: coa.cell.trim(), contact_person: coa.contact.trim(),
+                area: coa.area || null, status: coa.status || 'active',
             });
-            setCustomers((cs) => [data, ...cs]);
-            setAddingCust(false);
-            toast.success(`Customer ${code} — ${name} added.`);
-            pickCustomer(data);
+            toast.success(`Account ${data.acc_id} — ${name} saved.`);
+            if (data.customer_record) {
+                // A receivables account is a customer: put it straight on the invoice.
+                setCustomers((cs) => [data.customer_record, ...cs]);
+                setAddingCust(false);
+                pickCustomer(data.customer_record);
+            } else {
+                setCoa((c) => ({ ...c, name: '', cell: '', contact: '' }));
+                api.get('v1/company/ledger-accounts/next_id/', { params: { group: coa.l3 } })
+                    .then(({ data: n }) => setNextAccId(n.acc_id || '')).catch(() => {});
+            }
         } catch (err: any) {
             const d = err?.response?.data;
-            const msg = typeof d === 'string' ? d : (d?.detail || (d && Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`)[0]) || 'Could not add the customer.');
-            toast.error(String(msg), { duration: 6000 });
+            toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not save the account.'), { duration: 6000 });
         } finally { setSavingCust(false); }
     };
 
@@ -763,35 +800,95 @@ export default function TradeSaleInvoice() {
 
             {/* ─── Find Customer ─── */}
             {showFindCust && (
-                <Modal title={addingCust ? 'Add New Customer' : 'Find Customer'} onClose={closeFindCustomer}>
+                <Modal title={addingCust ? 'Chart of Accounts' : 'Find Customer'} onClose={closeFindCustomer} wide>
                     {addingCust ? (
                         <>
-                            <div className="grid grid-cols-[130px_1fr] items-center gap-x-3 gap-y-3 p-5">
-                                <span className={LABEL}>Account ID</span>
-                                <ReadBox value={<span className="font-mono">{nextCustCode}</span>} className="w-[160px]" />
-                                <span className={LABEL}>Account Name *</span>
-                                <input autoFocus value={newCust.name} onChange={(e) => setNewCust((c) => ({ ...c, name: e.target.value }))}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') saveNewCustomer(); }}
-                                    placeholder="Shop / customer name" className={`${EDIT} w-full`} />
-                                <span className={LABEL}>Phone</span>
-                                <input value={newCust.phone} onChange={(e) => setNewCust((c) => ({ ...c, phone: e.target.value }))}
-                                    inputMode="tel" placeholder="03xxxxxxxxx" className={`${EDIT} w-full`} />
-                                <span className={LABEL}>Area</span>
-                                <select value={newCust.area} onChange={(e) => setNewCust((c) => ({ ...c, area: e.target.value }))}
-                                    className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200`}>
-                                    <option value="">— Select area —</option>
-                                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}{a.parent_name ? `  (${a.parent_name})` : ''}</option>)}
-                                </select>
-                                <span className={LABEL}>Address</span>
-                                <input value={newCust.address} onChange={(e) => setNewCust((c) => ({ ...c, address: e.target.value }))}
-                                    placeholder="Optional" className={`${EDIT} w-full`} />
+                            <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
+                                <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1">
+                                    <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Chart of Accounts</legend>
+                                    <div className="grid grid-cols-[112px_1fr_98px_1fr_96px_1fr] items-center gap-x-2.5 gap-y-3">
+                                        {/* Row 1 — account levels */}
+                                        <span className={LABEL}>Main Account</span>
+                                        <select value={coa.main} onChange={(e) => setCoa((c) => ({ ...c, main: e.target.value, l2: '', l3: '' }))} className={COA_SELECT}>
+                                            <option value="">Select any one</option>
+                                            {groupsAt(1, '').map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
+                                        </select>
+                                        <span className={LABEL}>Acc.2nd Level</span>
+                                        <select value={coa.l2} onChange={(e) => setCoa((c) => ({ ...c, l2: e.target.value, l3: '' }))} disabled={!coa.main} className={COA_SELECT}>
+                                            <option value="">Select any one</option>
+                                            {groupsAt(2, coa.main).map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
+                                        </select>
+                                        <span className={LABEL}>Acc 3rd Level</span>
+                                        <select value={coa.l3} onChange={(e) => setCoa((c) => ({ ...c, l3: e.target.value }))} disabled={!coa.l2} className={COA_SELECT}>
+                                            <option value="">Select any one</option>
+                                            {groupsAt(3, coa.l2).map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
+                                        </select>
+
+                                        {/* Row 2 — id / cell / area */}
+                                        <span className={LABEL}>Account ID</span>
+                                        <ReadBox value={<span className="font-mono">{nextAccId}</span>} />
+                                        <span className={LABEL}>Cell No</span>
+                                        <input value={coa.cell} onChange={(e) => setCoa((c) => ({ ...c, cell: e.target.value }))} inputMode="tel" className={`${EDIT} w-full`} />
+                                        <span className={`${LABEL} flex items-center justify-between gap-1`}>
+                                            Area
+                                            <button type="button" onClick={addArea}
+                                                className="h-7 rounded border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-2 text-[12px] font-bold text-slate-800 hover:to-[#ffcf9a]">Add</button>
+                                        </span>
+                                        <select value={coa.area} onChange={(e) => setCoa((c) => ({ ...c, area: e.target.value }))} className={COA_SELECT}>
+                                            <option value="">Select any one</option>
+                                            {areas.map((a) => <option key={a.id} value={a.id}>{a.name}{a.parent_name ? `  (${a.parent_name})` : ''}</option>)}
+                                        </select>
+
+                                        {/* Row 3 — name */}
+                                        <span className={LABEL}>Acc. Name</span>
+                                        <input autoFocus value={coa.name} onChange={(e) => setCoa((c) => ({ ...c, name: e.target.value }))}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') saveNewCustomer(); }}
+                                            className={`${EDIT} col-span-3 w-full`} />
+                                        <span className="col-span-2" />
+
+                                        {/* Row 4 — contact / status */}
+                                        <span className={LABEL}>Contact Person</span>
+                                        <input value={coa.contact} onChange={(e) => setCoa((c) => ({ ...c, contact: e.target.value }))} className={`${EDIT} w-full`} />
+                                        <span className={LABEL}>Status</span>
+                                        <select value={coa.status} onChange={(e) => setCoa((c) => ({ ...c, status: e.target.value }))} className={COA_SELECT}>
+                                            <option value="">Select any One</option>
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                        <span className="col-span-2" />
+                                    </div>
+                                </fieldset>
+
+                                {/* View — accounts under the chosen 3rd level */}
+                                {coaList && (
+                                    <div className="mt-3 max-h-[240px] overflow-auto rounded-lg border border-slate-400 bg-white">
+                                        <table className="w-full border-collapse text-[12.5px]">
+                                            <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                                <tr>{COA_VIEW_COLS.map((h) => <th key={h} className="border-b border-r border-slate-300 px-2 py-1.5">{h}</th>)}</tr>
+                                            </thead>
+                                            <tbody>
+                                                {coaList.map((a) => (
+                                                    <tr key={a.id} className="border-b border-slate-200 hover:bg-indigo-50">
+                                                        <td className="border-r border-slate-200 px-2 py-1 font-mono">{a.acc_id}</td>
+                                                        <td className="border-r border-slate-200 px-2 py-1 font-semibold">{a.name}</td>
+                                                        <td className="border-r border-slate-200 px-2 py-1">{a.group_name}</td>
+                                                        <td className="border-r border-slate-200 px-2 py-1">{a.area_name || '—'}</td>
+                                                        <td className="border-r border-slate-200 px-2 py-1">{a.cell_no || '—'}</td>
+                                                        <td className="px-2 py-1 capitalize">{a.status}</td>
+                                                    </tr>
+                                                ))}
+                                                {!coaList.length && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No accounts.</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
-                                <button type="button" onClick={() => setAddingCust(false)} disabled={savingCust} className={ACTION_BTN}>Back</button>
-                                <button type="button" onClick={saveNewCustomer} disabled={savingCust}
-                                    className="flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600 px-4 text-[14px] font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60">
-                                    {savingCust ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save &amp; Select
+                            <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                                <button type="button" onClick={saveNewCustomer} disabled={savingCust} className={ACTION_BTN}>
+                                    {savingCust ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                                 </button>
+                                <button type="button" onClick={viewAccounts} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                                <button type="button" onClick={() => setAddingCust(false)} disabled={savingCust} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                             </div>
                         </>
                     ) : (
