@@ -560,7 +560,7 @@ export default function TradeSaleInvoice() {
                         <div className="min-h-0 flex-1 overflow-auto">
                             {/* Widths are inline on <col> AND the header cells so the
                                 fixed layout can never collapse Product Name. */}
-                            <table className="w-full table-fixed border-collapse text-[13px]">
+                            <table className="w-full table-fixed border-collapse border-b border-slate-500 text-[13px]">
                                 <colgroup>
                                     {GRID_COLS.map((c) => <col key={c.h} style={c.w ? { width: c.w } : undefined} />)}
                                 </colgroup>
@@ -568,7 +568,7 @@ export default function TradeSaleInvoice() {
                                     <tr className="bg-gradient-to-b from-white to-[#e9e9f1] text-left text-[13px] font-bold text-slate-800">
                                         {GRID_COLS.map((c) => (
                                             <th key={c.h} style={c.w ? { width: c.w } : undefined}
-                                                className={`overflow-hidden whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1.5 last:border-r-0 ${c.right ? 'text-right' : ''}`}>{c.h}</th>
+                                                className={`overflow-hidden whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 ${c.right ? 'text-right' : ''}`}>{c.h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -579,12 +579,15 @@ export default function TradeSaleInvoice() {
                                             {[i + 1, l.code, l.name, ymd(l.expiry), fmt(l.qty), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
                                               fmt(lineGross(l)), l.discPct ? fmt(l.discPct) : '', lineDisc(l) ? fmt(lineDisc(l)) : '', fmt(lineNet(l))].map((v, k) => (
                                                 <td key={k} title={k === 2 ? String(v) : undefined}
-                                                    className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-200 px-1.5 py-1 last:border-r-0 ${k === 2 ? 'font-semibold' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
+                                                    className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
+                                    {/* Blank entry row with column dividers, like the legacy grid. */}
                                     {!lines.length && (
-                                        <tr className="bg-white"><td colSpan={GRID_COLS.length} className="px-2 py-1.5 text-[12.5px] italic text-slate-400">No items yet — enter a product code and press Add.</td></tr>
+                                        <tr className="bg-white">
+                                            {GRID_COLS.map((c) => <td key={c.h} className="border-b border-r border-slate-300 px-1.5 py-1">&nbsp;</td>)}
+                                        </tr>
                                     )}
                                 </tbody>
                             </table>
