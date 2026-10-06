@@ -309,7 +309,9 @@ class SupplierProductViewSet(viewsets.ModelViewSet):
         
         # Admins can filter by supplier; Suppliers only see their own
         if getattr(user, 'is_staff', False):
-            queryset = SupplierProduct.objects.exclude(status='ARCHIVED').order_by('-created_at')
+            queryset = (SupplierProduct.objects
+                        .select_related('category', 'supplier', 'company')
+                        .exclude(status='ARCHIVED').order_by('-created_at'))
             supplier_id = self.request.query_params.get('supplier')
             
             if supplier_id and supplier_id != 'undefined' and supplier_id != 'null':
