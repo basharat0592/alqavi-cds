@@ -16,6 +16,7 @@ Usage (from the repo root):
   python deploy_old.py --frontend      # frontend bundle only
   python deploy_old.py --push          # git push origin alqavi_old first, then deploy
   python deploy_old.py --status        # just show old-stack containers + last log lines
+  python deploy_old.py --allow-dirty   # deploy committed code even with local uncommitted edits
 
 SSH password: read from ALQAVI_SSH_PASSWORD, else from .env.deploy
 (SSH_PASSWORD=...; gitignored), else prompted.
@@ -61,7 +62,7 @@ def password():
     return getpass.getpass(f'SSH password for {USER}@{HOST}: ')
 
 
-def local_checks(push):
+def local_checks(push, allow_dirty):
     branch = git('rev-parse', '--abbrev-ref', 'HEAD')
     if branch != BRANCH:
         fail(f"you are on '{branch}'. Switch to '{BRANCH}' first (git checkout {BRANCH}).")
@@ -69,7 +70,9 @@ def local_checks(push):
     # next-env.d.ts is rewritten by every `next dev` run - ignore it.
     dirty = [l for l in git('status', '--porcelain', '--untracked-files=no').splitlines()
              if not l.endswith('frontend/next-env.d.ts')]
-    if dirty:
+    if dirty and allow_dirty:
+        print('>> WARNING: uncommitted changes are NOT deployed:\n  ' + '\n  '.join(dirty))
+    elif dirty:
         fail('uncommitted changes - commit them first:\n  ' + '\n  '.join(dirty))
 
     if push:
@@ -166,10 +169,12 @@ def main():
     g.add_argument('--frontend', action='store_true', help='frontend bundle only')
     g.add_argument('--status', action='store_true', help='show container status + log tail')
     ap.add_argument('--push', action='store_true', help='git push origin alqavi_old first')
+    ap.add_argument('--allow-dirty', action='store_true',
+                    help='deploy committed code even if there are local uncommitted edits')
     a = ap.parse_args()
 
     if not a.status:
-        local_checks(a.push)
+        local_checks(a.push, a.allow_dirty)
 
     s = connect(password())
     try:
