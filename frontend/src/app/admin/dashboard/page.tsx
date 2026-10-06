@@ -182,12 +182,12 @@ function ActionTile({ b, theme, big }: { b: Btn; theme: Theme; big?: boolean }) 
                 e.preventDefault();
                 openPopup(b.href);
             }}
-            className={`group flex items-center gap-2.5 rounded-lg border ${theme.tile} ${theme.ring} px-2.5 ${big ? 'py-2.5' : 'py-2'} shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}
+            className={`group flex items-center gap-3 rounded-xl border ${theme.tile} ${theme.ring} px-3.5 ${big ? 'py-3' : 'py-2.5'} lg:h-full shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}
         >
-            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${theme.icon} shadow-sm transition-transform duration-200 group-hover:scale-105`}>
-                <Icon size={16} strokeWidth={1.9} />
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.icon} shadow-sm transition-transform duration-200 group-hover:scale-105`}>
+                <Icon size={20} strokeWidth={1.9} />
             </span>
-            <span className="min-w-0 flex-1 text-[12.5px] font-bold leading-tight tracking-tight">{b.name}</span>
+            <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-tight tracking-tight">{b.name}</span>
         </Link>
     );
 }
@@ -215,7 +215,7 @@ const fmtPicker = (iso: string) => {
 };
 
 /* Dense, single-line grid in the legacy style: ~22px rows, cell borders, cream rows. */
-const GRID_TABLE = 'w-full table-fixed border-collapse text-left text-[11.5px] leading-tight';
+const GRID_TABLE = 'w-full table-fixed border-collapse text-left text-[12.5px] leading-tight';
 const GRID_TH = 'sticky top-0 z-10 whitespace-nowrap border-b border-r border-slate-300 bg-slate-100 px-1.5 py-1 font-bold text-slate-700 last:border-r-0';
 const GRID_TD = 'truncate whitespace-nowrap border-b border-r border-[#e6e2c4] px-1.5 py-[3px] last:border-r-0';
 const GRID_ROW = 'bg-[#fffde8] hover:bg-[#fff6c2]';
@@ -263,7 +263,7 @@ export default function AdminDashboard() {
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white font-sans text-slate-800">
             <MenuBar />
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-3 md:p-4 lg:grid-cols-[1fr_480px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-3 md:p-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
                         {/* ─── Left: brand + action grid ─── */}
                         <div className="flex min-h-0 flex-col overflow-hidden">
                             <div className="mb-3 flex shrink-0 items-center gap-3">
@@ -277,9 +277,9 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Colour-coded button columns (matches the legacy layout) */}
-                            <div className="grid shrink-0 grid-cols-2 gap-2.5 md:grid-cols-4">
+                            <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-4 lg:min-h-0 lg:flex-[4]">
                                 {COLUMNS.map((g, gi) => (
-                                    <div key={gi} className="flex flex-col gap-2.5">
+                                    <div key={gi} className="flex flex-col gap-3 lg:grid lg:grid-rows-4">
                                         {g.buttons.map((b) => (
                                             <ActionTile key={b.name + b.href} b={b} theme={g.theme} />
                                         ))}
@@ -288,10 +288,10 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Reports row */}
-                            <h2 className="mb-2 mt-4 flex shrink-0 items-center gap-2 text-[12px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                                <BarChart3 size={14} /> Reports
+                            <h2 className="mb-2 mt-4 flex shrink-0 items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                <BarChart3 size={15} /> Reports
                             </h2>
-                            <div className="grid shrink-0 grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:min-h-0 lg:flex-[2] lg:grid-cols-3 lg:grid-rows-2">
                                 {REPORTS.map((b) => (
                                     <ActionTile key={b.name} b={b} theme={THEMES.report} big />
                                 ))}
@@ -323,7 +323,7 @@ export default function AdminDashboard() {
                                 <div className="min-h-0 flex-1 overflow-auto">
                                     <table className={GRID_TABLE}>
                                         <colgroup>
-                                            <col style={chw(5.5)} /><col /><col style={chw(6.5)} /><col style={chw(10.5)} /><col style={{ width: 96 }} />
+                                            <col style={chw(5.5)} /><col /><col style={chw(6.5)} /><col style={chw(10.5)} /><col style={{ width: 170 }} />
                                         </colgroup>
                                         <thead>
                                             <tr>
@@ -370,7 +370,7 @@ export default function AdminDashboard() {
                                 <div className="min-h-0 flex-1 overflow-auto">
                                     <table className={GRID_TABLE}>
                                         <colgroup>
-                                            <col style={chw(5.5)} /><col /><col style={{ width: 100 }} /><col style={chw(8.5)} /><col style={chw(5.5)} />
+                                            <col style={chw(5.5)} /><col /><col style={{ width: 170 }} /><col style={chw(8.5)} /><col style={chw(5.5)} />
                                         </colgroup>
                                         <thead>
                                             <tr>
