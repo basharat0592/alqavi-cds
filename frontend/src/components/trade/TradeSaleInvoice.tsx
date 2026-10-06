@@ -68,6 +68,12 @@ const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-m
 const STAGE_W = 1240;
 const STAGE_H = 760;
 
+/* Keyboard shortcuts shown in the grid footer. */
+const SHORTCUTS: [string, string][] = [
+    ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
+    ['Dbl-click', 'Edit line'], ['F9', 'Invoice PV'], ['Ctrl+S', 'Save'],
+];
+
 /* Sale grid columns (legacy order). Product Name takes the remaining width. */
 const GRID_COLS: { h: string; w?: number; right?: boolean }[] = [
     { h: 'SNo', w: 48 }, { h: 'PID', w: 62 }, { h: 'Product Name' }, { h: 'Expiry', w: 84 },
@@ -137,7 +143,8 @@ export default function TradeSaleInvoice() {
     const [showPR, setShowPR] = useState(false);
     const [showPV, setShowPV] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [status, setStatus] = useState('F2 Find Customer · F3 Find Product · Enter = next field · F9 Invoice PV · Ctrl+S Save');
+    // Black status bar: live messages only (shortcuts live in the grid footer).
+    const [status, setStatus] = useState('');
 
     // Bottom bar: Paid Cash / Saleman / Sale Date
     const [paidCash, setPaidCash] = useState('');
@@ -580,6 +587,15 @@ export default function TradeSaleInvoice() {
                                     )}
                                 </tbody>
                             </table>
+                        </div>
+                        {/* Keyboard shortcuts — a quiet strip in the grid's background. */}
+                        <div className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-1 border-t border-slate-400/40 px-3 py-1.5 text-[12px] font-medium text-slate-600/90">
+                            {SHORTCUTS.map(([k, label]) => (
+                                <span key={k} className="flex items-center gap-1.5">
+                                    <kbd className="rounded border border-slate-400/70 bg-white/60 px-1.5 py-px font-sans text-[11px] font-bold text-slate-700 shadow-[0_1px_0_rgba(0,0,0,0.15)]">{k}</kbd>
+                                    {label}
+                                </span>
+                            ))}
                         </div>
                     </div>
 
