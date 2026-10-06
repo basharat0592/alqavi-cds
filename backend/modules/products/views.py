@@ -187,6 +187,32 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
         return queryset
 
+    @action(detail=False, methods=['get'])
+    def dashboard_lists(self, request):
+        """Lightweight feed for the admin dashboard: the Expiry List and the
+        Stock Minimum Range list, computed in one scoped query (no per-row
+        serialization), so it stays fast even with thousands of products."""
+        qs = (self.get_queryset()
+              .select_related('stock__product__company')
+              .only('id', 'sku', 'product_name', 'total_quantity', 'min_count', 'expiry_date',
+                    'stock__product__company__name'))
+        expiry, low = [], []
+        for p in qs:
+            sp = getattr(getattr(p, 'stock', None), 'product', None)
+            company = sp.company.name if (sp and sp.company_id) else None
+            pid = p.sku or str(p.id)
+            qty = int(p.total_quantity or 0)
+            mn = int(p.min_count or 0)
+            if p.expiry_date:
+                expiry.append({'pid': pid, 'name': p.product_name, 'qty': qty,
+                               'exp': p.expiry_date, 'company': company})
+            if qty <= mn:
+                low.append({'pid': pid, 'name': p.product_name, 'company': company,
+                            'min': mn, 'qty': qty})
+        expiry.sort(key=lambda x: x['exp'])
+        low.sort(key=lambda x: x['qty'])
+        return Response({'expiry': expiry, 'low_stock': low})
+
     def paginate_queryset(self, queryset):
         if self.request.query_params.get('no_pagination') == 'true':
             return None

@@ -32,6 +32,16 @@ export const productService = {
             return [];
         }
     },
+    // Fast feed for the admin dashboard: { expiry: [...], low_stock: [...] }.
+    getDashboardLists: async (): Promise<{ expiry: any[]; low_stock: any[] }> => {
+        try {
+            const { data } = await api.get('v1/products/items/dashboard_lists/');
+            return { expiry: data?.expiry || [], low_stock: data?.low_stock || [] };
+        } catch (error) {
+            console.error('Failed to fetch dashboard lists', error);
+            return { expiry: [], low_stock: [] };
+        }
+    },
     getById: async (id: string | number): Promise<any> => {
         const { data } = await api.get(`v1/products/items/${id}/`, { params: withCity() });
         return data;

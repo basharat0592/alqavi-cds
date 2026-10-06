@@ -19,7 +19,7 @@ import {
     ChevronDown,
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
-import { useAdminDashboard } from '@/hooks';
+import { productService } from '@/lib/api';
 
 /* ───────────────────────── Top menu bar (File / Product / …) ───────────────────────── */
 type MenuLink = { label: string; href?: string; action?: 'logout' };
@@ -198,31 +198,32 @@ const pcompany = (p: any) => p.company_name || p.brand || (typeof p.company === 
 
 /* ───────────────────────── Page ───────────────────────── */
 export default function AdminDashboard() {
-    const { products, lowStock: serverLowStock, loading } = useAdminDashboard();
+    const [lists, setLists] = useState<{ expiry: any[]; low_stock: any[] }>({ expiry: [], low_stock: [] });
+    const [loading, setLoading] = useState(true);
+    useEffect(() => {
+        let cancelled = false;
+        productService.getDashboardLists()
+            .then((d) => { if (!cancelled) setLists({ expiry: d.expiry || [], low_stock: d.low_stock || [] }); })
+            .finally(() => { if (!cancelled) setLoading(false); });
+        return () => { cancelled = true; };
+    }, []);
 
     // Default the expiry filter to 6 months out so near-term expiries show by default.
     const defaultBefore = useMemo(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; }, []);
     const [before, setBefore] = useState<string>(() => toInputValue(defaultBefore));
 
+    // Expiry rows (filtered client-side by the date picker). Each item:
+    // { pid, name, qty, exp (ISO string), company }.
     const expiryRows = useMemo(() => {
         const beforeDate = new Date(before); beforeDate.setHours(23, 59, 59, 999);
-        return (products || [])
-            .map((p: any) => ({ p, exp: parseExpiry(p.expiry_date) }))
+        return (lists.expiry || [])
+            .map((it: any) => ({ it, exp: parseExpiry(it.exp) }))
             .filter((r) => r.exp && r.exp.getTime() <= beforeDate.getTime())
             .sort((a, b) => a.exp!.getTime() - b.exp!.getTime());
-    }, [products, before]);
+    }, [lists, before]);
 
-    const lowStockRows = useMemo(() => {
-        if (Array.isArray(serverLowStock) && serverLowStock.length > 0) {
-            return serverLowStock
-                .map((p: any) => ({ p, qty: Number(p.qty ?? pqty(p)), min: Number(p.min ?? pmin(p)) }))
-                .sort((a, b) => a.qty - b.qty);
-        }
-        return (products || [])
-            .map((p: any) => ({ p, qty: pqty(p), min: pmin(p) }))
-            .filter((r) => r.qty <= r.min)
-            .sort((a, b) => a.qty - b.qty);
-    }, [serverLowStock, products]);
+    // Low-stock rows. Each item: { pid, name, company, min, qty }.
+    const lowStockRows = useMemo(() => (lists.low_stock || []), [lists]);
 
     return (
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white font-sans text-slate-800">
@@ -294,15 +295,15 @@ export default function AdminDashboard() {
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Loading…</td></tr>
                                             ) : expiryRows.length === 0 ? (
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">No items expiring on or before this date.</td></tr>
-                                            ) : expiryRows.map(({ p, exp }, i) => {
+                                            ) : expiryRows.map(({ it, exp }, i) => {
                                                 const soon = exp!.getTime() <= Date.now() + 30 * 86400000;
                                                 return (
                                                     <tr key={i} className="hover:bg-rose-50/40">
-                                                        <td className="px-3 py-1.5 font-mono text-slate-500">{pid(p)}</td>
-                                                        <td className="px-3 py-1.5 font-medium text-slate-800">{pname(p)}</td>
-                                                        <td className="px-3 py-1.5 text-right tabular-nums text-slate-600">{pqty(p)}</td>
+                                                        <td className="px-3 py-1.5 font-mono text-slate-500">{it.pid}</td>
+                                                        <td className="px-3 py-1.5 font-medium text-slate-800">{it.name}</td>
+                                                        <td className="px-3 py-1.5 text-right tabular-nums text-slate-600">{it.qty}</td>
                                                         <td className={`px-3 py-1.5 font-semibold ${soon ? 'text-rose-600' : 'text-slate-600'}`}>{fmtDate(exp!)}</td>
-                                                        <td className="px-3 py-1.5 text-slate-500">{pcompany(p)}</td>
+                                                        <td className="px-3 py-1.5 text-slate-500">{it.company || '—'}</td>
                                                     </tr>
                                                 );
                                             })}
@@ -337,13 +338,13 @@ export default function AdminDashboard() {
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Loading…</td></tr>
                                             ) : lowStockRows.length === 0 ? (
                                                 <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">All stock above minimum. 🎉</td></tr>
-                                            ) : lowStockRows.map(({ p, qty, min }, i) => (
+                                            ) : lowStockRows.map((it: any, i: number) => (
                                                 <tr key={i} className="hover:bg-amber-50/40">
-                                                    <td className="px-3 py-1.5 font-mono text-slate-500">{pid(p)}</td>
-                                                    <td className="px-3 py-1.5 font-medium text-slate-800">{pname(p)}</td>
-                                                    <td className="px-3 py-1.5 text-slate-500">{pcompany(p)}</td>
-                                                    <td className="px-3 py-1.5 text-right tabular-nums text-slate-600">{min}</td>
-                                                    <td className={`px-3 py-1.5 text-right font-bold tabular-nums ${qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>{qty}</td>
+                                                    <td className="px-3 py-1.5 font-mono text-slate-500">{it.pid}</td>
+                                                    <td className="px-3 py-1.5 font-medium text-slate-800">{it.name}</td>
+                                                    <td className="px-3 py-1.5 text-slate-500">{it.company || '—'}</td>
+                                                    <td className="px-3 py-1.5 text-right tabular-nums text-slate-600">{it.min}</td>
+                                                    <td className={`px-3 py-1.5 text-right font-bold tabular-nums ${it.qty <= 0 ? 'text-rose-600' : 'text-amber-600'}`}>{it.qty}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
