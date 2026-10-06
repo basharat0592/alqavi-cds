@@ -144,8 +144,6 @@ export default function TradeSaleInvoice() {
     const [showPR, setShowPR] = useState(false);
     const [showPV, setShowPV] = useState(false);
     const [saving, setSaving] = useState(false);
-    // Black status bar: live messages only (shortcuts live in the grid footer).
-    const [status, setStatus] = useState('');
 
     // Bottom bar: Paid Cash / Saleman / Sale Date
     const [paidCash, setPaidCash] = useState('');
@@ -233,7 +231,6 @@ export default function TradeSaleInvoice() {
         setCustInput(custCode(c));
         setShowFindCust(false);
         setCustQuery('');
-        setStatus(`Customer: ${custName(c)}${c.area_name ? ` — ${c.area_name}` : ''}`);
         setTimeout(() => codeRef.current?.focus(), 0);
     };
 
@@ -274,9 +271,7 @@ export default function TradeSaleInvoice() {
         setEntry({ ...EMPTY_ENTRY });
         applyBatch(p, first?.id || '');
         setShowFindProd(false);
-        setStatus(p.batches.length
-            ? `${p.name} — ${p.batches.length} batch(es) in stock`
-            : `${p.name} has no stock batches.`);
+        if (!p.batches.length) toast.error(`${p.name} has no stock to sell.`);
         setTimeout(() => qtyPRef.current?.focus(), 0);
     };
 
@@ -335,7 +330,6 @@ export default function TradeSaleInvoice() {
             qty: totalUnits, bonus, tp, retail: num(batch.retail_price) || num(p.retail_price),
             discPct, cost: purRate,
         }]);
-        setStatus(`Added ${p.name} × ${totalUnits}${bonus ? ` + ${bonus} bonus` : ''}`);
         setEntry({ ...EMPTY_ENTRY });
         setSelected(-1);
         codeRef.current?.focus();
@@ -343,7 +337,6 @@ export default function TradeSaleInvoice() {
 
     const removeLine = () => {
         if (selected < 0 || selected >= lines.length) { toast.error('Select a line in the grid to remove.'); return; }
-        setStatus(`Removed ${lines[selected].name}`);
         setLines((ls) => ls.filter((_, i) => i !== selected));
         setSelected(-1);
     };
@@ -360,7 +353,6 @@ export default function TradeSaleInvoice() {
             setEntry({ ...EMPTY_ENTRY });
             applyBatch(prod, l.batchId, { qtyU: String(l.qty), bonus: l.bonus ? String(l.bonus) : '', discPct: l.discPct ? String(l.discPct) : '' });
             setEntry((e) => ({ ...e, tp: String(l.tp) }));
-            setStatus(`Editing ${l.name} — press Add to put it back`);
             setTimeout(() => qtyURef.current?.focus(), 0);
         } catch { toast.error('Could not load that line.'); }
     };
@@ -387,7 +379,6 @@ export default function TradeSaleInvoice() {
     const newInvoice = () => {
         if (lines.length && !window.confirm('Discard this invoice and start a new one?')) return;
         resetInvoice();
-        setStatus('New invoice.');
     };
 
     const closeWindow = () => {
@@ -452,7 +443,6 @@ export default function TradeSaleInvoice() {
                 }
             }
             toast.success(`Invoice ${no} saved.`);
-            setStatus(`Saved invoice ${no} — ${custName(customer)} — ${fmt(netAmount)}`);
             if (print) {
                 setInvoiceNo(no);
                 setTimeout(() => { window.print(); setShowPV(false); resetInvoice(); }, 150);
@@ -464,7 +454,6 @@ export default function TradeSaleInvoice() {
             const d = err?.response?.data;
             const msg = typeof d === 'string' ? d : (d?.detail || d?.error || (Array.isArray(d) ? d[0] : Object.values(d || {})[0]) || 'Could not save the invoice.');
             toast.error(String(msg), { duration: 6000 });
-            setStatus(String(msg));
         } finally { setSaving(false); }
     };
 
@@ -659,7 +648,6 @@ export default function TradeSaleInvoice() {
                         </div>
 
                         <div className="rounded-md bg-black px-3 py-1.5 font-mono text-[13.5px] font-bold text-white">LabItems = {lines.length}</div>
-                        <div className="min-h-0 flex-1 overflow-hidden rounded-md bg-black px-3 py-1.5 text-[12px] font-semibold leading-snug text-[#9cf7ff]">{status}</div>
                     </div>
                 </div>
 
