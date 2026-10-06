@@ -414,6 +414,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const unreadCount = activities.filter(a => !a.read).length;
 
+    // Dashboard runs chrome-free: the Trade 2.1 page has its own top menu bar for
+    // navigation, so we drop the admin sidebar, top navbar and bottom tab bar and
+    // render it full-screen. AuthGuard + the hidden SessionTimer (24h auto sign-out)
+    // are kept so access control and the session clock still work.
+    if (isDashboardRoute) {
+        return (
+            <AuthGuard allowedRoles={['admin', 'staff']}>
+                <div className={cn("min-h-screen bg-[#F7F7F5] font-sans text-[#1A1A1A]", theme)}>
+                    <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
+                    <ReadOnlyController />
+                    {children}
+                </div>
+            </AuthGuard>
+        );
+    }
+
     return (
         <AuthGuard allowedRoles={['admin', 'staff']}>
             <div className={cn("h-screen print:h-auto bg-[#F7F7F5] font-sans overflow-hidden print:overflow-visible print:bg-white text-[#1A1A1A]", theme)}>
