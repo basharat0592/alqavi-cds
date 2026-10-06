@@ -68,7 +68,7 @@ export const useAdminDashboard = (filters: { date?: string; payment_method?: str
             const [statsData, usersRes, productsRes, activityRes] = await Promise.all([
                 orderService.getStats(stableFilters),
                 userService.getAll?.() ?? Promise.resolve([]),
-                productService.getAll?.({ all_items: 'true' } as any) ?? Promise.resolve([]),
+                productService.getAll?.({ no_pagination: 'true' } as any) ?? Promise.resolve([]),
                 userService.getAllActivityLogs?.(10) ?? Promise.resolve([]),
             ]);
 
