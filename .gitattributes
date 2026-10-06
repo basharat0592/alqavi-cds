@@ -1,0 +1,5 @@
+*.sh text eol=lf
+deploy-old.sh text eol=lf
+*.conf text eol=lf
+*.yml text eol=lf
+.env.old.example text eol=lf

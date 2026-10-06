@@ -23,7 +23,12 @@ USE_X_FORWARDED_HOST = True
 CSRF_TRUSTED_ORIGINS = [
     'https://alqavitraders.com',
     'https://www.alqavitraders.com',
+    'https://old.alqavitraders.com',
     'http://74.208.242.204',
+]
+# Allow extra trusted origins via env (comma-separated), e.g. for the "old" stack.
+CSRF_TRUSTED_ORIGINS += [
+    o.strip() for o in os.environ.get('EXTRA_CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
 ]
 
 # Application definition
