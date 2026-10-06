@@ -194,6 +194,69 @@ export default function TradeSaleInvoice() {
         custRef.current?.focus();
     }, [loadInvoiceNo]);
 
+    /* ── Add New customer (from the Find Customer window) ── */
+    const [addingCust, setAddingCust] = useState(false);
+    const [newCust, setNewCust] = useState({ name: '', phone: '', area: '', address: '' });
+    const [areas, setAreas] = useState<any[]>([]);
+    const [savingCust, setSavingCust] = useState(false);
+
+    // Next legacy account code in the receivables series (1202xxxx), so a new
+    // customer can be found by code like every imported one.
+    const nextCustCode = useMemo(() => {
+        const nums = customers.map((c) => custCode(c)).filter((c) => /^1202\d+$/.test(c)).map(Number);
+        return String(nums.length ? Math.max(...nums) + 1 : 12020001);
+    }, [customers]);
+
+    const openAddCustomer = () => {
+        setNewCust({ name: custQuery.trim() && !/^\d+$/.test(custQuery.trim()) ? custQuery.trim() : '', phone: '', area: '', address: '' });
+        setAddingCust(true);
+        if (!areas.length) {
+            (async () => {
+                const all: any[] = [];
+                try {
+                    for (let page = 1; page <= 50; page++) {
+                        const { data } = await api.get('v1/company/areas/', { params: { page, page_size: 100, is_active: true } });
+                        if (Array.isArray(data)) { all.push(...data); break; }
+                        all.push(...(data.results || []));
+                        if (!data.next) break;
+                    }
+                } catch { /* area is optional */ }
+                setAreas(all.filter((a) => a.is_active !== false).sort((a, b) => String(a.name).localeCompare(String(b.name))));
+            })();
+        }
+    };
+
+    const saveNewCustomer = async () => {
+        if (savingCust) return;
+        const name = newCust.name.trim();
+        if (!name) { toast.error('Enter the account name.'); return; }
+        setSavingCust(true);
+        try {
+            const code = nextCustCode;
+            const { data } = await api.post('/v1/company/customers/', {
+                username: `cust${code}`,
+                email: `cust${code}@legacy.local`,
+                password: Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+                first_name: name.slice(0, 100),
+                phone: newCust.phone.trim().slice(0, 20),
+                address: newCust.address.trim(),
+                area: newCust.area || null,
+                status: 'active',
+                is_active: true,
+            });
+            setCustomers((cs) => [data, ...cs]);
+            setAddingCust(false);
+            toast.success(`Customer ${code} — ${name} added.`);
+            pickCustomer(data);
+        } catch (err: any) {
+            const d = err?.response?.data;
+            const msg = typeof d === 'string' ? d : (d?.detail || (d && Object.entries(d).map(([k, v]) => `${k}: ${Array.isArray(v) ? v[0] : v}`)[0]) || 'Could not add the customer.');
+            toast.error(String(msg), { duration: 6000 });
+        } finally { setSavingCust(false); }
+    };
+
+    const closeFindCustomer = () => { setShowFindCust(false); setAddingCust(false); };
+
     // Saleman options — internal staff (not suppliers / customers / riders).
     useEffect(() => {
         userService.getAll().then((all: any) => {
@@ -700,14 +763,49 @@ export default function TradeSaleInvoice() {
 
             {/* ─── Find Customer ─── */}
             {showFindCust && (
-                <Modal title="Find Customer" onClose={() => setShowFindCust(false)}>
-                    <div className="border-b border-slate-200 p-3">
-                        <div className="relative">
-                            <Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" />
+                <Modal title={addingCust ? 'Add New Customer' : 'Find Customer'} onClose={closeFindCustomer}>
+                    {addingCust ? (
+                        <>
+                            <div className="grid grid-cols-[130px_1fr] items-center gap-x-3 gap-y-3 p-5">
+                                <span className={LABEL}>Account ID</span>
+                                <ReadBox value={<span className="font-mono">{nextCustCode}</span>} className="w-[160px]" />
+                                <span className={LABEL}>Account Name *</span>
+                                <input autoFocus value={newCust.name} onChange={(e) => setNewCust((c) => ({ ...c, name: e.target.value }))}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') saveNewCustomer(); }}
+                                    placeholder="Shop / customer name" className={`${EDIT} w-full`} />
+                                <span className={LABEL}>Phone</span>
+                                <input value={newCust.phone} onChange={(e) => setNewCust((c) => ({ ...c, phone: e.target.value }))}
+                                    inputMode="tel" placeholder="03xxxxxxxxx" className={`${EDIT} w-full`} />
+                                <span className={LABEL}>Area</span>
+                                <select value={newCust.area} onChange={(e) => setNewCust((c) => ({ ...c, area: e.target.value }))}
+                                    className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200`}>
+                                    <option value="">— Select area —</option>
+                                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}{a.parent_name ? `  (${a.parent_name})` : ''}</option>)}
+                                </select>
+                                <span className={LABEL}>Address</span>
+                                <input value={newCust.address} onChange={(e) => setNewCust((c) => ({ ...c, address: e.target.value }))}
+                                    placeholder="Optional" className={`${EDIT} w-full`} />
+                            </div>
+                            <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
+                                <button type="button" onClick={() => setAddingCust(false)} disabled={savingCust} className={ACTION_BTN}>Back</button>
+                                <button type="button" onClick={saveNewCustomer} disabled={savingCust}
+                                    className="flex h-9 min-w-[150px] items-center justify-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600 px-4 text-[14px] font-bold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60">
+                                    {savingCust ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save &amp; Select
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                    <>
+                    <div className="flex items-center gap-2 border-b border-slate-200 p-3">
+                        <div className="relative flex-1">
+                            <Search size={15} className="absolute left-2.5 top-2 text-slate-400" />
                             <input autoFocus value={custQuery} onChange={(e) => setCustQuery(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && custMatches[0]) pickCustomer(custMatches[0]); }}
                                 placeholder="Code, name, area or phone…" className={`${EDIT} w-full pl-8`} />
                         </div>
+                        <button type="button" onClick={openAddCustomer} className={`${ACTION_BTN} shrink-0`}>
+                            <span className="underline">A</span>dd New
+                        </button>
                     </div>
                     <div className="min-h-0 flex-1 overflow-auto">
                         <table className="w-full text-[13px]">
@@ -727,6 +825,12 @@ export default function TradeSaleInvoice() {
                             </tbody>
                         </table>
                     </div>
+                    <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-2.5">
+                        <ReadBox value={`${custMatches.length}${custMatches.length === 200 ? '+' : ''} of ${customers.length} customers`} className="w-[280px] !text-[12.5px]" />
+                        <button type="button" onClick={closeFindCustomer} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                    </div>
+                    </>
+                    )}
                 </Modal>
             )}
 
