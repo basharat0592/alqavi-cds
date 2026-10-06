@@ -97,6 +97,9 @@ class Product(BaseModel):
     weight = models.CharField(max_length=50, null=True, blank=True)
     size = models.CharField(max_length=50, null=True, blank=True)
     status = models.CharField(max_length=20, default='ACTIVE')
+    # Nearest batch expiry date (populated from the legacy CompBatchStock on import,
+    # and from the earliest live batch going forward). Powers the dashboard Expiry List.
+    expiry_date = models.DateField(null=True, blank=True)
     # Owning Admin (tenant) — per-Admin product isolation. NULL = legacy/shared.
     tenant = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,

@@ -1,0 +1,264 @@
+"""
+Import master data from the legacy "Trade 2.1" Access DB (dumped to CSV).
+
+Reads CSVs produced by `mdb-export` (headers included) and loads:
+  Company, Category, District/AreaMain/Area, Products (+ Stock + expiry/qty from
+  CompBatchStock), Customers (Accounts 3L=1202), Suppliers (Accounts 3L=2201).
+
+Idempotent: re-running updates existing rows (matched on natural keys), so it is
+safe to run repeatedly. Everything is scoped to one tenant + one warehouse.
+
+Usage:
+  python manage.py import_legacy --dir /tmp/legacy_dump [--tenant admin] [--warehouse "Main Store"]
+"""
+import csv
+import os
+from datetime import date
+from decimal import Decimal, InvalidOperation
+
+from django.core.management.base import BaseCommand, CommandError
+from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import make_password
+from django.db import transaction
+
+from modules.company.models import Company, Area
+from modules.customer.models import Customer
+from modules.supplier.models import Supplier
+from modules.inventory.models import Warehouse, Stock
+from modules.products.models import Category, Product, SupplierProduct
+
+User = get_user_model()
+
+CUSTOMER_GROUP = '1202'   # Accounts Receivables
+SUPPLIER_GROUP = '2201'   # Account Payables
+
+
+def rows(dir_path, name):
+    path = os.path.join(dir_path, f'{name}.csv')
+    if not os.path.exists(path):
+        return []
+    with open(path, newline='', encoding='utf-8', errors='replace') as f:
+        return list(csv.DictReader(f))
+
+
+def clean(v):
+    return (v or '').strip()
+
+
+def to_int(v, default=0):
+    try:
+        return int(float(clean(v)))
+    except (ValueError, TypeError):
+        return default
+
+
+def to_dec(v, default=Decimal('0')):
+    try:
+        return Decimal(str(clean(v) or '0'))
+    except (InvalidOperation, ValueError, TypeError):
+        return default
+
+
+def to_date(v):
+    """Legacy dates are YYYYMMDD integers (e.g. 20261230). 0/blank -> None."""
+    s = clean(v)
+    if not s or s in ('0', '00000000'):
+        return None
+    try:
+        n = int(float(s))
+    except (ValueError, TypeError):
+        return None
+    if n < 19000101 or n > 29991231:
+        return None
+    try:
+        return date(n // 10000, (n // 100) % 100, n % 100)
+    except ValueError:
+        return None
+
+
+class Command(BaseCommand):
+    help = 'Import legacy Trade 2.1 master data from mdb-export CSVs.'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--dir', default='/tmp/legacy_dump')
+        parser.add_argument('--tenant', default=None, help='Username of the owning admin (default: first superuser)')
+        parser.add_argument('--warehouse', default='Main Store')
+
+    @transaction.atomic
+    def handle(self, *args, **opts):
+        d = opts['dir']
+        if not os.path.isdir(d):
+            raise CommandError(f'Dump dir not found: {d}')
+
+        tenant = (User.objects.filter(username=opts['tenant']).first() if opts['tenant']
+                  else User.objects.filter(is_superuser=True).order_by('id').first())
+        if not tenant:
+            raise CommandError('No tenant user found (need a superuser or --tenant).')
+        self.stdout.write(f'Tenant: {tenant.username} (id={tenant.id})')
+
+        warehouse, _ = Warehouse.objects.get_or_create(
+            tenant=tenant, name=opts['warehouse'],
+            defaults={'location': 'Imported', 'is_active': True},
+        )
+
+        # ── Companies ──
+        comp_map = {}
+        for r in rows(d, 'Company'):
+            name = clean(r.get('CompName'))
+            if not name:
+                continue
+            obj, _ = Company.objects.get_or_create(tenant=tenant, name=name)
+            comp_map[clean(r.get('CompID'))] = obj
+        self.stdout.write(f'Companies: {len(comp_map)}')
+
+        # ── Categories ──
+        cat_map = {}
+        for r in rows(d, 'Category'):
+            name = clean(r.get('CategName'))
+            if not name:
+                continue
+            obj, _ = Category.objects.get_or_create(tenant=tenant, name=name)
+            cat_map[clean(r.get('CategID'))] = obj
+        self.stdout.write(f'Categories: {len(cat_map)}')
+
+        # ── Areas (District > AreaMain > Area) ──
+        dist_map, marea_map, area_map = {}, {}, {}
+        for r in rows(d, 'District'):
+            name = clean(r.get('DistName'))
+            if not name:
+                continue
+            obj, _ = Area.objects.get_or_create(
+                tenant=tenant, name=name,
+                defaults={'code': f"D{clean(r.get('DistID'))}"})
+            dist_map[clean(r.get('DistID'))] = obj
+        for r in rows(d, 'AreaMain'):
+            name = clean(r.get('MAreaName'))
+            if not name:
+                continue
+            parent = dist_map.get(clean(r.get('DistID')))
+            obj, _ = Area.objects.get_or_create(
+                tenant=tenant, name=name,
+                defaults={'code': f"M{clean(r.get('MAreaID'))}", 'parent': parent})
+            marea_map[clean(r.get('MAreaID'))] = obj
+        for r in rows(d, 'Area'):
+            name = clean(r.get('AreaName'))
+            if not name:
+                continue
+            parent = marea_map.get(clean(r.get('MAreaID')))
+            obj, _ = Area.objects.get_or_create(
+                tenant=tenant, name=name,
+                defaults={'code': f"A{clean(r.get('AreaID'))}", 'parent': parent})
+            area_map[clean(r.get('AreaID'))] = obj
+        self.stdout.write(f'Areas: districts={len(dist_map)} main={len(marea_map)} areas={len(area_map)}')
+
+        # ── CompBatchStock → per-product qty / expiry / prices ──
+        batch = {}  # PID -> dict(qty, exp, cost, sale, retail, createdt)
+        for r in rows(d, 'CompBatchStock'):
+            pid = clean(r.get('PID'))
+            if not pid:
+                continue
+            qty = to_dec(r.get('Qty'))
+            exp = to_date(r.get('ExpDate'))
+            cdt = to_int(r.get('CreateDt'))
+            b = batch.setdefault(pid, {'qty': Decimal('0'), 'exp': None,
+                                       'cost': Decimal('0'), 'sale': Decimal('0'),
+                                       'retail': Decimal('0'), 'cdt': -1})
+            b['qty'] += qty
+            if exp and (b['exp'] is None or exp < b['exp']):
+                b['exp'] = exp
+            # Latest batch row wins for the representative prices.
+            if cdt >= b['cdt']:
+                b['cdt'] = cdt
+                b['cost'] = to_dec(r.get('UPRate'))
+                b['sale'] = to_dec(r.get('USRate'))
+                b['retail'] = to_dec(r.get('URRate'))
+        self.stdout.write(f'Batches aggregated for {len(batch)} products')
+
+        # ── Products (SupplierProduct + Stock + Product) ──
+        n_prod = 0
+        seen_barcodes = set()  # legacy barcodes aren't unique; keep first, null dupes
+        for r in rows(d, 'Product'):
+            pid = clean(r.get('PID'))
+            name = clean(r.get('ProdName'))
+            if not pid or not name:
+                continue
+            company = comp_map.get(clean(r.get('CompID')))
+            category = cat_map.get(clean(r.get('CategID')))
+            barcode = clean(r.get('BarCode'))
+            barcode = barcode if barcode and barcode != '-' else None
+            if barcode and barcode in seen_barcodes:
+                barcode = None
+            if barcode:
+                seen_barcodes.add(barcode)
+            min_qty = to_int(r.get('MinQty'), 10)
+            status = 'ACTIVE' if clean(r.get('ProdStatus')).lower().startswith('activ') else 'INACTIVE'
+            b = batch.get(pid, {})
+            qty = int(b.get('qty') or 0)
+            cost = b.get('cost') or Decimal('0')
+            sale = b.get('sale') or Decimal('0')
+            retail = b.get('retail') or None
+            exp = b.get('exp')
+
+            sp, _ = SupplierProduct.objects.update_or_create(
+                sku=pid,
+                defaults=dict(name=name, barcode=barcode, company=company, category=category,
+                              price=sale, cost_price=cost, retail_price=retail or 0,
+                              quantity=qty, status=status, is_approved=True),
+            )
+            stock = (Stock.objects.filter(tenant=tenant, warehouse=warehouse, product=sp).first())
+            if stock:
+                stock.total_quantity = qty
+                stock.price_per_item = cost
+                stock.category = category
+                stock.save()
+            else:
+                stock = Stock.objects.create(
+                    tenant=tenant, warehouse=warehouse, product=sp, product_name=name,
+                    category=category, purchase_type='single', total_quantity=qty,
+                    price_per_item=cost, date=date.today(), created_by=tenant)
+
+            Product.objects.update_or_create(
+                tenant=tenant, warehouse=warehouse, sku=pid,
+                defaults=dict(stock=stock, product_name=name, category=category,
+                              cost_price=cost, selling_price=sale or 0,
+                              original_price=retail, min_count=min_qty,
+                              total_quantity=qty, barcode=barcode, status=status,
+                              expiry_date=exp),
+            )
+            n_prod += 1
+        self.stdout.write(f'Products: {n_prod}')
+
+        # ── Parties from Accounts ──
+        n_cust = n_sup = 0
+        for r in rows(d, 'Accounts'):
+            grp = clean(r.get('Acc3LID'))
+            name = clean(r.get('AccName'))
+            acc = clean(r.get('AccID'))
+            if not name or not acc:
+                continue
+            phone = clean(r.get('CellNo'))
+            phone = '' if phone in ('-', '0') else phone
+            active = clean(r.get('AccStatus')).lower().startswith('activ')
+            if grp == CUSTOMER_GROUP:
+                Customer.objects.update_or_create(
+                    username=f'cust{acc}',
+                    defaults=dict(email=f'cust{acc}@legacy.local', password=make_password(None),
+                                  first_name=name[:100], phone=phone[:20],
+                                  area=area_map.get(clean(r.get('AreaID'))),
+                                  tenant=tenant, created_by=tenant,
+                                  status='active' if active else 'inactive',
+                                  is_active=active),
+                )
+                n_cust += 1
+            elif grp == SUPPLIER_GROUP:
+                Supplier.objects.update_or_create(
+                    tenant=tenant, name=name,
+                    defaults=dict(contact_person=clean(r.get('ContactPerson')) or None,
+                                  phone=phone or None,
+                                  status='active' if active else 'inactive',
+                                  is_active=active),
+                )
+                n_sup += 1
+        self.stdout.write(f'Customers: {n_cust}  Suppliers: {n_sup}')
+
+        self.stdout.write(self.style.SUCCESS('IMPORT_OK'))
