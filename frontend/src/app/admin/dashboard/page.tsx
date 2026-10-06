@@ -212,7 +212,7 @@ const fmtPicker = (iso: string) => {
 
 /* Dense, single-line grid in the legacy style: ~22px rows, cell borders, cream rows. */
 const GRID_TABLE = 'w-full table-fixed border-collapse text-left text-[11.5px] leading-tight';
-const GRID_TH = 'sticky top-0 z-10 border-b border-r border-slate-300 bg-slate-100 px-1.5 py-1 font-bold text-slate-700 last:border-r-0';
+const GRID_TH = 'sticky top-0 z-10 whitespace-nowrap border-b border-r border-slate-300 bg-slate-100 px-1.5 py-1 font-bold text-slate-700 last:border-r-0';
 const GRID_TD = 'truncate whitespace-nowrap border-b border-r border-[#e6e2c4] px-1.5 py-[3px] last:border-r-0';
 const GRID_ROW = 'bg-[#fffde8] hover:bg-[#fff6c2]';
 const toInputValue = (d: Date) => d.toISOString().slice(0, 10);
@@ -315,7 +315,7 @@ export default function AdminDashboard() {
                                 <div className="min-h-0 flex-1 overflow-auto">
                                     <table className={GRID_TABLE}>
                                         <colgroup>
-                                            <col className="w-[46px]" /><col /><col className="w-[50px]" /><col className="w-[66px]" /><col className="w-[118px]" />
+                                            <col style={{ width: 54 }} /><col /><col style={{ width: 56 }} /><col style={{ width: 76 }} /><col style={{ width: 104 }} />
                                         </colgroup>
                                         <thead>
                                             <tr>
@@ -362,7 +362,7 @@ export default function AdminDashboard() {
                                 <div className="min-h-0 flex-1 overflow-auto">
                                     <table className={GRID_TABLE}>
                                         <colgroup>
-                                            <col className="w-[46px]" /><col /><col className="w-[118px]" /><col className="w-[62px]" /><col className="w-[50px]" />
+                                            <col style={{ width: 54 }} /><col /><col style={{ width: 104 }} /><col style={{ width: 70 }} /><col style={{ width: 52 }} />
                                         </colgroup>
                                         <thead>
                                             <tr>
