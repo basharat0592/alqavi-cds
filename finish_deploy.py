@@ -12,7 +12,20 @@ import paramiko, time, sys
 
 HOST = '74.208.242.204'
 USER = 'root'
-PASSWORD = 'od1stQGtxan1P'
+def _ssh_password():
+    # From ALQAVI_SSH_PASSWORD, else SSH_PASSWORD=... in the gitignored .env.deploy.
+    import os
+    pw = os.environ.get('ALQAVI_SSH_PASSWORD')
+    if pw:
+        return pw
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env.deploy')
+    for line in open(path, encoding='utf-8'):
+        if line.strip().startswith('SSH_PASSWORD='):
+            return line.split('=', 1)[1].strip()
+    raise SystemExit('No SSH password: set ALQAVI_SSH_PASSWORD or add SSH_PASSWORD=... to .env.deploy')
+
+
+PASSWORD = _ssh_password()
 REMOTE = '/opt/alqavi-cds'
 ENV = '--env-file .env'
 

@@ -11,7 +11,13 @@ param(
 $SERVER = "74.208.242.204"
 $USER = "root"
 $REMOTE_DIR = "/opt/alqavi-cds"
-$PASSWORD = "od1stQGtxan1P"
+# SSH password: from $env:ALQAVI_SSH_PASSWORD, else SSH_PASSWORD=... in the gitignored .env.deploy
+$PASSWORD = $env:ALQAVI_SSH_PASSWORD
+if (-not $PASSWORD -and (Test-Path "$PSScriptRoot\.env.deploy")) {
+    $line = Get-Content "$PSScriptRoot\.env.deploy" | Where-Object { $_ -match '^\s*SSH_PASSWORD=' } | Select-Object -First 1
+    if ($line) { $PASSWORD = ($line -split '=', 2)[1].Trim() }
+}
+if (-not $PASSWORD) { Write-Host "No SSH password: set ALQAVI_SSH_PASSWORD or add SSH_PASSWORD=... to .env.deploy" -ForegroundColor Red; exit 1 }
 $INCLUDE_MEDIA = if ($IncludeMedia) { "True" } else { "False" }
 
 Write-Host "=== AlQavi CDS Deployment ===" -ForegroundColor Cyan
