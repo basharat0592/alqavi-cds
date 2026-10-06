@@ -52,12 +52,15 @@ const lineCost = (l: Line) => (l.qty + l.bonus) * l.cost;
 
 /* ───────────────────────── small styled pieces ───────────────────────── */
 const LABEL = 'text-[13px] font-bold tracking-tight text-[#1b1f4b] whitespace-nowrap';
-const FIELD = 'h-9 w-full rounded-md border px-2.5 text-[13.5px] font-semibold tabular-nums outline-none transition-shadow';
+// No width here: callers size each field (w-full in grids, fixed px in rows) so
+// two width utilities never fight over the same element.
+const FIELD = 'h-9 min-w-0 rounded-md border px-2.5 text-[13.5px] font-semibold tabular-nums outline-none transition-shadow';
 const EDIT = `${FIELD} border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200`;
 const READ = `${FIELD} border-slate-300 bg-[#ececf3] text-slate-700`;
 
 function ReadBox({ value, className = '' }: { value: React.ReactNode; className?: string }) {
-    return <div className={`${READ} flex items-center overflow-hidden whitespace-nowrap ${className}`}>{value}</div>;
+    const sized = /(^|\s)(w-|flex-)/.test(className);
+    return <div className={`${READ} ${sized ? '' : 'w-full'} flex items-center overflow-hidden whitespace-nowrap ${className}`}>{value}</div>;
 }
 
 function Led({ label, value, tone = 'green' }: { label: string; value: string; tone?: 'green' | 'yellow' }) {
@@ -434,14 +437,14 @@ export default function TradeSaleInvoice() {
                         className="h-9 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13.5px] font-bold text-slate-800 shadow-sm hover:to-[#d9d9e6] active:translate-y-px">
                         Find
                     </button>
-                    <input ref={codeRef} value={entry.code} onChange={setE('code')} onKeyDown={onEnter(resolveCode)} className={EDIT} aria-label="Product code" />
-                    <input ref={qtyPRef} value={entry.qtyP} onChange={setE('qtyP')} onKeyDown={onEnter(() => qtyURef.current?.focus())} inputMode="numeric" className={EDIT} aria-label="Quantity in packs" />
-                    <input ref={qtyURef} value={entry.qtyU} onChange={setE('qtyU')} onKeyDown={onEnter(() => bonRef.current?.focus())} inputMode="numeric" className={EDIT} aria-label="Quantity in units" />
+                    <input ref={codeRef} value={entry.code} onChange={setE('code')} onKeyDown={onEnter(resolveCode)} className={`${EDIT} w-full`} aria-label="Product code" />
+                    <input ref={qtyPRef} value={entry.qtyP} onChange={setE('qtyP')} onKeyDown={onEnter(() => qtyURef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Quantity in packs" />
+                    <input ref={qtyURef} value={entry.qtyU} onChange={setE('qtyU')} onKeyDown={onEnter(() => bonRef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Quantity in units" />
                     <ReadBox value={totalUnits ? fmt(totalUnits) : ''} className="justify-end" />
                     <ReadBox value={p ? packing : ''} className="justify-end" />
-                    <input ref={bonRef} value={entry.bonus} onChange={setE('bonus')} onKeyDown={onEnter(() => tpRef.current?.focus())} inputMode="numeric" className={EDIT} aria-label="Bonus units" />
-                    <input ref={tpRef} value={entry.tp} onChange={setE('tp')} onKeyDown={onEnter(() => discRef.current?.focus())} inputMode="decimal" className={EDIT} aria-label="Unit trade price" />
-                    <input ref={discRef} value={entry.discPct} onChange={setE('discPct')} onKeyDown={onEnter(addLine)} inputMode="decimal" className={EDIT} aria-label="Discount percent" />
+                    <input ref={bonRef} value={entry.bonus} onChange={setE('bonus')} onKeyDown={onEnter(() => tpRef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Bonus units" />
+                    <input ref={tpRef} value={entry.tp} onChange={setE('tp')} onKeyDown={onEnter(() => discRef.current?.focus())} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Unit trade price" />
+                    <input ref={discRef} value={entry.discPct} onChange={setE('discPct')} onKeyDown={onEnter(addLine)} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Discount percent" />
                     <ReadBox value={p ? fmt(num(batch?.retail_price) || num(p.retail_price)) : ''} className="justify-end" />
                     <ReadBox value={discAmt ? fmt(discAmt) : ''} className="justify-end" />
                     <ReadBox value={subTotal ? fmt(subTotal) : ''} className="justify-end" />
@@ -491,7 +494,7 @@ export default function TradeSaleInvoice() {
                             <span className={`${LABEL} text-[14px]`}>Expiry Date</span>
                             <select value={entry.batchId} disabled={!p || !p.batches.length}
                                 onChange={(e) => p && applyBatch(p, e.target.value, { qtyP: entry.qtyP, qtyU: entry.qtyU, bonus: entry.bonus, discPct: entry.discPct })}
-                                className={`${FIELD} border-cyan-300 bg-[#d5fbff] text-slate-900 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 disabled:opacity-70`}
+                                className={`${FIELD} w-full border-cyan-300 bg-[#d5fbff] text-slate-900 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 disabled:opacity-70`}
                                 aria-label="Batch expiry date">
                                 {!p && <option value="" />}
                                 {p && !p.batches.length && <option value="">No stock batch</option>}
@@ -564,7 +567,7 @@ export default function TradeSaleInvoice() {
                             <Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" />
                             <input autoFocus value={custQuery} onChange={(e) => setCustQuery(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && custMatches[0]) pickCustomer(custMatches[0]); }}
-                                placeholder="Code, name, area or phone…" className={`${EDIT} pl-8`} />
+                                placeholder="Code, name, area or phone…" className={`${EDIT} w-full pl-8`} />
                         </div>
                     </div>
                     <div className="min-h-0 flex-1 overflow-auto">
@@ -596,7 +599,7 @@ export default function TradeSaleInvoice() {
                             <Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" />
                             <input autoFocus value={prodQuery} onChange={(e) => setProdQuery(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && prodResults[0]) loadProduct(prodResults[0]); }}
-                                placeholder="Product name or code (2+ letters)…" className={`${EDIT} pl-8`} />
+                                placeholder="Product name or code (2+ letters)…" className={`${EDIT} w-full pl-8`} />
                             {prodSearching && <Loader2 size={15} className="absolute right-2.5 top-2.5 animate-spin text-slate-400" />}
                         </div>
                     </div>
