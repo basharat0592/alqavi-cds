@@ -168,12 +168,12 @@ function ActionTile({ b, theme, big }: { b: Btn; theme: Theme; big?: boolean }) 
     return (
         <Link
             href={b.href}
-            className={`group flex items-center gap-3 rounded-xl border ${theme.tile} ${theme.ring} px-3.5 ${big ? 'py-3.5' : 'py-3'} shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}
+            className={`group flex items-center gap-2.5 rounded-lg border ${theme.tile} ${theme.ring} px-2.5 ${big ? 'py-2.5' : 'py-2'} shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}
         >
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${theme.icon} shadow-sm transition-transform duration-200 group-hover:scale-105`}>
-                <Icon size={18} strokeWidth={1.9} />
+            <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${theme.icon} shadow-sm transition-transform duration-200 group-hover:scale-105`}>
+                <Icon size={16} strokeWidth={1.9} />
             </span>
-            <span className="min-w-0 flex-1 text-[13.5px] font-bold leading-tight tracking-tight">{b.name}</span>
+            <span className="min-w-0 flex-1 text-[12.5px] font-bold leading-tight tracking-tight">{b.name}</span>
         </Link>
     );
 }
@@ -225,26 +225,26 @@ export default function AdminDashboard() {
     }, [serverLowStock, products]);
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-800">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white font-sans text-slate-800">
             <MenuBar />
 
-            <div className="grid grid-cols-1 gap-6 p-4 md:p-6 lg:grid-cols-[1fr_440px]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-3 md:p-4 lg:grid-cols-[1fr_420px]">
                         {/* ─── Left: brand + action grid ─── */}
-                        <div>
-                            <div className="mb-5 flex items-center gap-3">
-                                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#7A1420] to-[#C0392B] text-lg font-black text-white shadow-md">AQ</span>
+                        <div className="flex min-h-0 flex-col overflow-hidden">
+                            <div className="mb-3 flex shrink-0 items-center gap-3">
+                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#7A1420] to-[#C0392B] text-[15px] font-black text-white shadow-md">AQ</span>
                                 <div>
-                                    <h1 className="bg-gradient-to-r from-[#7A1420] to-[#C0392B] bg-clip-text text-[30px] font-black leading-none tracking-tight text-transparent md:text-[38px]">
+                                    <h1 className="bg-gradient-to-r from-[#7A1420] to-[#C0392B] bg-clip-text text-[24px] font-black leading-none tracking-tight text-transparent md:text-[30px]">
                                         AL-QAVI TRADER&apos;S
                                     </h1>
-                                    <p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.2em] text-slate-400">Trade 2.1 · Management Console</p>
+                                    <p className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">Trade 2.1 · Management Console</p>
                                 </div>
                             </div>
 
                             {/* Colour-coded button columns (matches the legacy layout) */}
-                            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                            <div className="grid shrink-0 grid-cols-2 gap-2.5 md:grid-cols-4">
                                 {COLUMNS.map((g, gi) => (
-                                    <div key={gi} className="flex flex-col gap-3">
+                                    <div key={gi} className="flex flex-col gap-2.5">
                                         {g.buttons.map((b) => (
                                             <ActionTile key={b.name + b.href} b={b} theme={g.theme} />
                                         ))}
@@ -253,10 +253,10 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Reports row */}
-                            <h2 className="mb-3 mt-6 flex items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                                <BarChart3 size={15} /> Reports
+                            <h2 className="mb-2 mt-4 flex shrink-0 items-center gap-2 text-[12px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                                <BarChart3 size={14} /> Reports
                             </h2>
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid shrink-0 grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
                                 {REPORTS.map((b) => (
                                     <ActionTile key={b.name} b={b} theme={THEMES.report} big />
                                 ))}
@@ -264,12 +264,12 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* ─── Right rail: Expiry + Low stock ─── */}
-                        <div className="flex flex-col gap-5">
+                        <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
                             {/* Expiry list */}
-                            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-rose-50/60 px-4 py-3">
-                                    <h3 className="flex items-center gap-2 text-[15px] font-black text-rose-700">
-                                        <CalendarClock size={17} /> Expiry List on / Before
+                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-rose-50/60 px-4 py-2.5">
+                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-rose-700">
+                                        <CalendarClock size={16} /> Expiry List on / Before
                                     </h3>
                                     <input
                                         type="date"
@@ -278,7 +278,7 @@ export default function AdminDashboard() {
                                         className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[12.5px] font-semibold text-slate-700 outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
                                     />
                                 </div>
-                                <div className="max-h-[340px] overflow-auto">
+                                <div className="min-h-0 flex-1 overflow-auto">
                                     <table className="w-full text-left text-[12px]">
                                         <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                                             <tr>
@@ -309,19 +309,19 @@ export default function AdminDashboard() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="border-t border-slate-100 bg-slate-50 px-4 py-2 text-[12px] font-bold text-slate-600">
+                                <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-2 text-[12px] font-bold text-slate-600">
                                     Total Records = {expiryRows.length}
                                 </div>
                             </section>
 
                             {/* Stock minimum range */}
-                            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                <div className="border-b border-slate-100 bg-amber-50/60 px-4 py-3">
-                                    <h3 className="flex items-center gap-2 text-[15px] font-black text-amber-700">
-                                        <Boxes size={17} /> Stock Minimum Range List
+                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                <div className="shrink-0 border-b border-slate-100 bg-amber-50/60 px-4 py-2.5">
+                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-amber-700">
+                                        <Boxes size={16} /> Stock Minimum Range List
                                     </h3>
                                 </div>
-                                <div className="max-h-[320px] overflow-auto">
+                                <div className="min-h-0 flex-1 overflow-auto">
                                     <table className="w-full text-left text-[12px]">
                                         <thead className="sticky top-0 bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
                                             <tr>
@@ -349,7 +349,7 @@ export default function AdminDashboard() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="border-t border-slate-100 bg-slate-50 px-4 py-2 text-[12px] font-bold text-slate-600">
+                                <div className="shrink-0 border-t border-slate-100 bg-slate-50 px-4 py-2 text-[12px] font-bold text-slate-600">
                                     Total Records = {lowStockRows.length}
                                 </div>
                             </section>

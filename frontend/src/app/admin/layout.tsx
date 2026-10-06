@@ -421,7 +421,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (isDashboardRoute) {
         return (
             <AuthGuard allowedRoles={['admin', 'staff']}>
-                <div className={cn("min-h-screen bg-[#F7F7F5] font-sans text-[#1A1A1A]", theme)}>
+                <div className={cn("h-screen overflow-hidden bg-[#F7F7F5] font-sans text-[#1A1A1A]", theme)}>
                     <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
                     <ReadOnlyController />
                     {children}
