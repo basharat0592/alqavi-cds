@@ -7,6 +7,16 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    // On HTTPS deployments, have the browser upgrade any stray http:// sub-request
+    // (e.g. an old absolute media URL) to https, so it can't trigger "Not secure".
+    // Skipped when the API is plain http (local dev), where upgrading would break it.
+    async headers() {
+        if (!(process.env.NEXT_PUBLIC_API_URL || '').startsWith('https://')) return [];
+        return [{
+            source: '/:path*',
+            headers: [{ key: 'Content-Security-Policy', value: 'upgrade-insecure-requests' }],
+        }];
+    },
     images: {
         remotePatterns: [
             {
