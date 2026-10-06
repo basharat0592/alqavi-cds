@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, Loader2, Printer, Save } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import api from '@/lib/axios';
-import { companyService, orderService } from '@/lib/api';
+import { orderService } from '@/lib/api';
 
 /* ───────────────────────── types & helpers ───────────────────────── */
 type Batch = {
@@ -136,7 +136,20 @@ export default function TradeSaleInvoice() {
 
     useEffect(() => {
         loadInvoiceNo();
-        companyService.getCustomers().then(setCustomers).catch(() => setCustomers([]));
+        // The customers API pages at most 100 rows, so walk every page — the
+        // code lookup and Find Customer need the whole list.
+        (async () => {
+            const all: any[] = [];
+            try {
+                for (let page = 1; page <= 100; page++) {
+                    const { data } = await api.get('/v1/company/customers/', { params: { page, page_size: 100 } });
+                    if (Array.isArray(data)) { all.push(...data); break; }
+                    all.push(...(data.results || []));
+                    if (!data.next) break;
+                }
+            } catch { /* keep whatever loaded */ }
+            setCustomers(all);
+        })();
         custRef.current?.focus();
     }, [loadInvoiceNo]);
 
