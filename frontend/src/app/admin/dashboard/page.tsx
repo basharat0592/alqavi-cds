@@ -90,25 +90,25 @@ function MenuBar() {
         else openPopup(it.href);
     };
     return (
-        <div ref={ref} className="sticky top-0 z-30 flex flex-wrap items-center gap-0.5 border-b border-slate-200 bg-white/95 px-2 py-1 backdrop-blur">
+        <div ref={ref} className="sticky top-0 z-30 flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur">
             {MENUS.map((m) => (
                 <div key={m.title} className="relative">
                     <button
                         type="button"
                         onClick={() => setOpen(open === m.title ? null : m.title)}
-                        className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-[13.5px] font-semibold transition-colors ${open === m.title ? 'bg-[#7A1420] text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                        className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-[16px] font-semibold transition-colors ${open === m.title ? 'bg-[#7A1420] text-white' : 'text-slate-700 hover:bg-slate-100'}`}
                     >
                         {m.title}
-                        <ChevronDown size={13} className={`transition-transform ${open === m.title ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={15} className={`transition-transform ${open === m.title ? 'rotate-180' : ''}`} />
                     </button>
                     {open === m.title && (
-                        <div className="absolute left-0 top-full mt-1 w-56 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-150">
+                        <div className="absolute left-0 top-full mt-1 w-64 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-150">
                             {m.items.map((it) => (
                                 <button
                                     key={it.label}
                                     type="button"
                                     onClick={() => go(it)}
-                                    className="block w-full px-4 py-2 text-left text-[13px] font-medium text-slate-600 hover:bg-[#7A1420]/5 hover:text-[#7A1420]"
+                                    className="block w-full px-4 py-2.5 text-left text-[15px] font-medium text-slate-600 hover:bg-[#7A1420]/5 hover:text-[#7A1420]"
                                 >
                                     {it.label}
                                 </button>
