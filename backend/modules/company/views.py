@@ -89,7 +89,13 @@ class AreaViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # tenant is a FK — assign via *_id so an int/None binds correctly (a bare
         # `tenant=<int>` raises ValueError on save for non-super creators).
-        serializer.save(tenant_id=tenant_id_for(self.request.user))
+        # A platform operator has no tenant of their own; a new sub-area then
+        # belongs to the same tenant as its parent area.
+        tid = tenant_id_for(self.request.user)
+        parent = serializer.validated_data.get('parent')
+        if tid is None and parent is not None:
+            tid = parent.tenant_id
+        serializer.save(tenant_id=tid)
 
 
 class SupplierViewSet(viewsets.ModelViewSet):

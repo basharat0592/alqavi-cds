@@ -102,12 +102,26 @@ function Led({ label, value, tone = 'green' }: { label: string; value: string; t
     );
 }
 
+// Open modals, oldest first — Esc closes only the topmost one (windows can stack,
+// e.g. Find Customer › Chart of Accounts › Sub Area).
+const modalStack: number[] = [];
+let modalSeq = 0;
+
 function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+    const closeRef = useRef(onClose);
+    closeRef.current = onClose;
     useEffect(() => {
-        const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+        const id = ++modalSeq;
+        modalStack.push(id);
+        const h = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && modalStack[modalStack.length - 1] === id) closeRef.current();
+        };
         window.addEventListener('keydown', h);
-        return () => window.removeEventListener('keydown', h);
-    }, [onClose]);
+        return () => {
+            window.removeEventListener('keydown', h);
+            modalStack.splice(modalStack.indexOf(id), 1);
+        };
+    }, []);
     return (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-6 pt-16 backdrop-blur-[1px] print:static print:bg-white print:p-0" onMouseDown={onClose}>
             <div className={`flex max-h-[80vh] w-full ${wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl print:max-h-none print:border-0 print:shadow-none`} onMouseDown={(e) => e.stopPropagation()}>
@@ -243,18 +257,44 @@ export default function TradeSaleInvoice() {
             .catch(() => setNextAccId(''));
     }, [addingCust, coa.l3]);
 
-    const addArea = async () => {
-        const name = window.prompt('New area name:')?.trim();
-        if (!name) return;
+    /* ── Sub Area window (Area › Add) — legacy District › Main Area › Sub Area.
+       Area codes follow the import: D# district, M# main area, A# sub area. */
+    const [showSubArea, setShowSubArea] = useState(false);
+    const [subArea, setSubArea] = useState({ name: '', district: '', main: '' });
+    const [savingArea, setSavingArea] = useState(false);
+    const [subAreaList, setSubAreaList] = useState(false);
+    const areaKind = (a: any) => String(a.code || '').charAt(0).toUpperCase();
+    const districts = areas.filter((a) => areaKind(a) === 'D');
+    const mainAreas = areas.filter((a) => areaKind(a) === 'M' && (!subArea.district || String(a.parent) === subArea.district));
+    const nextSubAreaId = useMemo(() => {
+        const nums = areas.filter((a) => areaKind(a) === 'A').map((a) => parseInt(String(a.code).slice(1), 10)).filter((n) => !isNaN(n));
+        return nums.length ? Math.max(...nums) + 1 : 1;
+    }, [areas]);
+
+    const addArea = () => {
+        setSubArea({ name: '', district: '', main: '' });
+        setSubAreaList(false);
+        setShowSubArea(true);
+    };
+
+    const saveSubArea = async () => {
+        if (savingArea) return;
+        const name = subArea.name.trim();
+        if (!name) { toast.error('Enter the Sub Area Name.'); return; }
+        if (!subArea.main) { toast.error('Select the Main Area.'); return; }
+        setSavingArea(true);
         try {
-            const { data } = await api.post('v1/company/areas/', { name, code: `A${Date.now().toString().slice(-6)}`, is_active: true });
+            const { data } = await api.post('v1/company/areas/', {
+                name, code: `A${nextSubAreaId}`, parent: Number(subArea.main), is_active: true,
+            });
             await loadAreas();
             setCoa((c) => ({ ...c, area: String(data.id) }));
-            toast.success(`Area "${name}" added.`);
+            setShowSubArea(false);
+            toast.success(`Sub area ${nextSubAreaId} — ${name} added.`);
         } catch (err: any) {
             const d = err?.response?.data;
-            toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not add the area.'));
-        }
+            toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not add the sub area.'));
+        } finally { setSavingArea(false); }
     };
 
     const viewAccounts = async () => {
@@ -928,6 +968,66 @@ export default function TradeSaleInvoice() {
                     </div>
                     </>
                     )}
+                </Modal>
+            )}
+
+            {/* ─── Sub Area (opened from Chart of Accounts › Area › Add) ─── */}
+            {showSubArea && (
+                <Modal title="Sub Area" onClose={() => !savingArea && setShowSubArea(false)}>
+                    <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
+                        <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1">
+                            <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sub Area</legend>
+                            <div className="grid grid-cols-[124px_1fr_92px_1fr] items-center gap-x-3 gap-y-3">
+                                <span className={LABEL}>Sub Area ID</span>
+                                <ReadBox value={nextSubAreaId} className="justify-center font-mono" />
+                                <span className="col-span-2" />
+                                <span className={LABEL}>Sub Area Name</span>
+                                <input autoFocus value={subArea.name} onChange={(e) => setSubArea((a) => ({ ...a, name: e.target.value }))}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') saveSubArea(); }} className={`${EDIT} w-full`} />
+                                <span className="col-span-2" />
+                                <span className={LABEL}>District</span>
+                                <select value={subArea.district} onChange={(e) => setSubArea((a) => ({ ...a, district: e.target.value, main: '' }))} className={COA_SELECT}>
+                                    <option value="">Select any one</option>
+                                    {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                </select>
+                                <span className={LABEL}>Main Area</span>
+                                <select value={subArea.main} onChange={(e) => setSubArea((a) => ({ ...a, main: e.target.value }))} className={COA_SELECT}>
+                                    <option value="">Select any one</option>
+                                    {mainAreas.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                            </div>
+                        </fieldset>
+
+                        {/* View — existing sub areas */}
+                        {subAreaList && (
+                            <div className="mt-3 max-h-[220px] overflow-auto rounded-lg border border-slate-400 bg-white">
+                                <table className="w-full border-collapse text-[12.5px]">
+                                    <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                        <tr>{['ID', 'Sub Area Name', 'Main Area'].map((h) => <th key={h} className="border-b border-r border-slate-300 px-2 py-1.5">{h}</th>)}</tr>
+                                    </thead>
+                                    <tbody>
+                                        {areas.filter((a) => areaKind(a) === 'A')
+                                            .filter((a) => !subArea.main || String(a.parent) === subArea.main)
+                                            .sort((a, b) => parseInt(String(a.code).slice(1), 10) - parseInt(String(b.code).slice(1), 10))
+                                            .map((a) => (
+                                                <tr key={a.id} className="border-b border-slate-200 hover:bg-indigo-50">
+                                                    <td className="border-r border-slate-200 px-2 py-1 font-mono">{String(a.code).slice(1)}</td>
+                                                    <td className="border-r border-slate-200 px-2 py-1 font-semibold">{a.name}</td>
+                                                    <td className="px-2 py-1">{a.parent_name || '—'}</td>
+                                                </tr>
+                                            ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                        <button type="button" onClick={saveSubArea} disabled={savingArea} className={ACTION_BTN}>
+                            {savingArea ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                        </button>
+                        <button type="button" onClick={() => setSubAreaList((v) => !v)} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                        <button type="button" onClick={() => setShowSubArea(false)} disabled={savingArea} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                    </div>
                 </Modal>
             )}
 
