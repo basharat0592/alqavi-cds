@@ -15,7 +15,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, Loader2, Printer, Save } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import api from '@/lib/axios';
-import { orderService } from '@/lib/api';
+import { orderService, userService, installmentService } from '@/lib/api';
+import { openPopup } from '@/lib/popup';
 
 /* ───────────────────────── types & helpers ───────────────────────── */
 type Batch = {
@@ -54,9 +55,20 @@ const lineCost = (l: Line) => (l.qty + l.bonus) * l.cost;
 const LABEL = 'text-[13px] font-bold tracking-tight text-[#1b1f4b] whitespace-nowrap';
 // No width here: callers size each field (w-full in grids, fixed px in rows) so
 // two width utilities never fight over the same element.
-const FIELD = 'h-9 min-w-0 rounded-md border px-2.5 text-[13.5px] font-semibold tabular-nums outline-none transition-shadow';
+const FIELD = 'h-8 min-w-0 rounded-md border px-2.5 text-[13.5px] font-semibold tabular-nums outline-none transition-shadow';
 const EDIT = `${FIELD} border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200`;
 const READ = `${FIELD} border-slate-300 bg-[#ececf3] text-slate-700`;
+
+const PANEL_BTN = 'h-9 rounded-md border bg-gradient-to-b text-[14.5px] font-bold shadow-sm active:translate-y-px';
+const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-md border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-4 text-[14px] font-bold text-slate-800 shadow-sm hover:to-[#ffcf9a] active:translate-y-px disabled:opacity-60';
+
+/* Sale grid columns (legacy order). Product Name takes the remaining width. */
+const GRID_COLS: { h: string; w?: number; right?: boolean }[] = [
+    { h: 'SNo', w: 48 }, { h: 'PID', w: 62 }, { h: 'Product Name' }, { h: 'Expiry', w: 84 },
+    { h: 'Qty', w: 58, right: true }, { h: 'Bonus', w: 60, right: true }, { h: 'TP', w: 74, right: true },
+    { h: 'Retail', w: 74, right: true }, { h: 'SubTotal', w: 92, right: true }, { h: 'Disc%', w: 58, right: true },
+    { h: 'Dis.Amt', w: 80, right: true }, { h: 'Net Amt', w: 96, right: true },
+];
 
 function ReadBox({ value, className = '' }: { value: React.ReactNode; className?: string }) {
     const sized = /(^|\s)(w-|flex-)/.test(className);
@@ -66,8 +78,8 @@ function ReadBox({ value, className = '' }: { value: React.ReactNode; className?
 function Led({ label, value, tone = 'green' }: { label: string; value: string; tone?: 'green' | 'yellow' }) {
     return (
         <div className="min-w-0">
-            <div className="mb-1 text-[17px] font-black tracking-tight text-[#1b1f4b]">{label}</div>
-            <div className={`flex h-12 items-center justify-end overflow-hidden rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 font-mono text-[24px] font-black tabular-nums shadow-inner ${tone === 'yellow' ? 'text-[#ffe14d]' : 'text-[#3cff5a]'}`}>
+            <div className="mb-0.5 text-[16px] font-black tracking-tight text-[#1b1f4b]">{label}</div>
+            <div className={`flex h-10 items-center justify-end overflow-hidden rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 font-mono text-[22px] font-black tabular-nums shadow-inner ${tone === 'yellow' ? 'text-[#ffe14d]' : 'text-[#3cff5a]'}`}>
                 {value}
             </div>
         </div>
@@ -119,7 +131,21 @@ export default function TradeSaleInvoice() {
     const [showPR, setShowPR] = useState(false);
     const [showPV, setShowPV] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [status, setStatus] = useState('F2 Find Customer · F3 Find Product · Enter moves to the next field · F9 Invoice PV');
+    const [status, setStatus] = useState('F2 Find Customer · F3 Find Product · Enter = next field · F9 Invoice PV · Ctrl+S Save');
+
+    // Bottom bar: Paid Cash / Saleman / Sale Date
+    const [paidCash, setPaidCash] = useState('');
+    const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
+    const [salesman, setSalesman] = useState('');
+    const [backDate, setBackDate] = useState(false);
+    const today = () => new Date().toISOString().slice(0, 10);
+    const [saleDate, setSaleDate] = useState(today);
+
+    // View: saved sale invoices
+    const [showView, setShowView] = useState(false);
+    const [viewRows, setViewRows] = useState<any[]>([]);
+    const [viewLoading, setViewLoading] = useState(false);
+    const [viewQuery, setViewQuery] = useState('');
 
     const custRef = useRef<HTMLInputElement>(null);
     const codeRef = useRef<HTMLInputElement>(null);
@@ -155,6 +181,22 @@ export default function TradeSaleInvoice() {
         })();
         custRef.current?.focus();
     }, [loadInvoiceNo]);
+
+    // Saleman options — internal staff (not suppliers / customers / riders).
+    useEffect(() => {
+        userService.getAll().then((all: any) => {
+            const list = (Array.isArray(all) ? all : all?.results || [])
+                .filter((u: any) => {
+                    const r = String(u.role_name || '').toLowerCase();
+                    return !r.includes('supplier') && !r.includes('customer') && !r.includes('delivery');
+                })
+                .map((u: any) => ({
+                    id: String(u.id),
+                    name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
+                }));
+            setStaff(list);
+        }).catch(() => setStaff([]));
+    }, []);
 
     useEffect(() => {
         if (!customer) { setPrevBal(0); return; }
@@ -313,7 +355,8 @@ export default function TradeSaleInvoice() {
     const amountBilled = lines.reduce((s, l) => s + lineGross(l), 0);
     const totalDisc = lines.reduce((s, l) => s + lineDisc(l), 0);
     const netAmount = amountBilled - totalDisc;
-    const netBalance = prevBal + netAmount;
+    const paid = Math.max(0, num(paidCash));
+    const netBalance = prevBal + netAmount - paid;
     const invPurValue = lines.reduce((s, l) => s + lineCost(l), 0);
     const invProfit = netAmount - invPurValue;
     const invProfitPct = invPurValue > 0 ? (invProfit / invPurValue) * 100 : 0;
@@ -322,16 +365,41 @@ export default function TradeSaleInvoice() {
     const resetInvoice = () => {
         setLines([]); setSelected(-1); setEntry({ ...EMPTY_ENTRY });
         setCustomer(null); setCustInput(''); setPrevBal(0);
+        setPaidCash(''); setBackDate(false); setSaleDate(today());
         loadInvoiceNo();
         setTimeout(() => custRef.current?.focus(), 0);
+    };
+
+    const newInvoice = () => {
+        if (lines.length && !window.confirm('Discard this invoice and start a new one?')) return;
+        resetInvoice();
+        setStatus('New invoice.');
+    };
+
+    const closeWindow = () => {
+        if (lines.length && !window.confirm('Close without saving this invoice?')) return;
+        setLines([]);
+        window.close();
+    };
+
+    const loadSavedInvoices = async () => {
+        setViewLoading(true);
+        try {
+            const rows: any[] = await orderService.getAll();
+            setViewRows(rows.filter((o: any) => /^S\d{8}$/.test(String(o.order_number || o.tracking_id || ''))));
+        } catch { toast.error('Could not load saved invoices.'); setViewRows([]); }
+        finally { setViewLoading(false); }
     };
 
     const saveInvoice = async (print: boolean) => {
         if (saving) return;
         if (!customer) { toast.error('Find a customer first.'); return; }
         if (!lines.length) { toast.error('Add at least one product.'); return; }
+        if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
         setSaving(true);
         try {
+            // Paid Cash settles the invoice fully, partly, or not at all (credit).
+            const payStatus = paid <= 0 ? 'UNPAID' : paid + 0.001 >= netAmount ? 'PAID' : 'PARTIAL';
             const order: any = await orderService.create({
                 customer: customer.id,
                 customer_name: custName(customer),
@@ -340,13 +408,14 @@ export default function TradeSaleInvoice() {
                 notes: 'Trade 1.0 Sale Invoice',
                 status: 'DELIVERED',
                 payment_method: 'SHOP',
-                // Booked on credit: it adds to the customer's balance and is
+                // Whatever isn't paid now stays on the customer's balance and is
                 // settled later through receipts.
-                payment_status: 'UNPAID',
-                amount_paid: 0,
+                payment_status: payStatus,
+                amount_paid: round2(paid),
                 discount: 0,
                 shipping_cost: 0,
-                sale_date: new Date().toISOString().slice(0, 10),
+                salesperson: salesman || null,
+                sale_date: backDate ? saleDate : today(),
                 sale_invoice: true,
                 items: lines.map((l) => ({
                     id: l.productId, batch_id: l.batchId,
@@ -355,6 +424,19 @@ export default function TradeSaleInvoice() {
                 })),
             } as any);
             const no = order?.order_number || order?.tracking_id || invoiceNo;
+            // A part-payment is recorded as an installment so it shows in the
+            // payment history (same as the POS screen does).
+            if (payStatus === 'PARTIAL' && order?.id) {
+                try {
+                    await installmentService.create({
+                        source_type: 'order', source_id: String(order.id), amount: round2(paid),
+                        method: 'cash', status: 'confirmed', direction: 'inbound',
+                        paid_at: new Date().toISOString(), reference: no,
+                    });
+                } catch {
+                    toast.error('Invoice saved, but recording the cash paid failed — add it from Sale Records.', { duration: 7000 });
+                }
+            }
             toast.success(`Invoice ${no} saved.`);
             setStatus(`Saved invoice ${no} — ${custName(customer)} — ${fmt(netAmount)}`);
             if (print) {
@@ -378,10 +460,14 @@ export default function TradeSaleInvoice() {
             if (e.key === 'F2') { e.preventDefault(); setShowFindCust(true); }
             else if (e.key === 'F3') { e.preventDefault(); setShowFindProd(true); }
             else if (e.key === 'F9') { e.preventDefault(); setShowPV(true); }
+            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveRef.current(false); }
         };
         window.addEventListener('keydown', h);
         return () => window.removeEventListener('keydown', h);
     }, []);
+    // Keyboard handler is bound once; route Ctrl+S to the latest saveInvoice.
+    const saveRef = useRef(saveInvoice);
+    saveRef.current = saveInvoice;
 
     const onEnter = (next: () => void) => (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') { e.preventDefault(); next(); }
@@ -395,31 +481,32 @@ export default function TradeSaleInvoice() {
             <Toaster position="top-center" />
 
             {/* Window caption */}
-            <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1.5 print:hidden">
+            <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1 print:hidden">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[10px] font-black text-white">AQ</span>
                 <span className="text-[13px] font-semibold text-slate-800">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( Sale Invoice )</span>
             </div>
 
-            <div className="flex min-h-0 min-w-[1180px] flex-1 flex-col gap-2 p-3 print:hidden">
-                <h1 className="-mb-1 text-[26px] font-black leading-none tracking-tight text-[#1f2bd6]">Sale</h1>
+            {/* min-h keeps everything on one screen; only a very small window scrolls. */}
+            <div className="flex min-h-[720px] min-w-[1180px] flex-1 flex-col gap-1.5 px-3 pb-2 pt-1.5 print:hidden">
+                <h1 className="text-[24px] font-black leading-none tracking-tight text-[#1f2bd6]">Sale</h1>
 
                 {/* Row 1 — customer / product / stock */}
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                     <button type="button" onClick={() => setShowFindCust(true)}
-                        className="h-9 shrink-0 rounded-md border-2 border-[#5c4a2a] bg-gradient-to-b from-[#fff1d6] to-[#f3d9a8] px-3 text-[13.5px] font-black text-[#3b2a10] shadow-sm hover:from-[#ffe7bd] active:translate-y-px">
+                        className="h-8 shrink-0 rounded-md border-2 border-[#5c4a2a] bg-gradient-to-b from-[#fff1d6] to-[#f3d9a8] px-3 text-[13px] font-black text-[#3b2a10] shadow-sm hover:from-[#ffe7bd] active:translate-y-px">
                         Find Customer
                     </button>
                     <input ref={custRef} value={custInput} onChange={(e) => { setCustInput(e.target.value); if (customer) setCustomer(null); }}
                         onKeyDown={onEnter(resolveCustomer)} placeholder="Code" className={`${EDIT} w-[150px] shrink-0`} aria-label="Customer code" />
                     <ReadBox value={customer ? `${custName(customer)}${customer.area_name ? `  ·  ${customer.area_name}` : ''}` : ''} className="min-w-0 flex-[1.15]" />
-                    <span className={`${LABEL} ml-2 text-[15px]`}>Product</span>
+                    <span className={`${LABEL} ml-2 text-[14.5px]`}>Product</span>
                     <ReadBox value={p?.name || ''} className="min-w-0 flex-1" />
-                    <span className={`${LABEL} ml-2 text-[15px]`}>Stock</span>
+                    <span className={`${LABEL} ml-2 text-[14.5px]`}>Stock</span>
                     <ReadBox value={p ? fmt(p.stock) : ''} className="w-[130px] shrink-0 justify-end" />
                 </div>
 
                 {/* Row 2/3 — entry labels + fields */}
-                <div className="grid grid-cols-[72px_2.1fr_1.05fr_1.05fr_1.25fr_0.85fr_0.85fr_1.2fr_0.95fr_1.3fr_1.35fr_1.7fr] items-end gap-x-1.5 gap-y-1">
+                <div className="grid shrink-0 grid-cols-[72px_2.1fr_1.05fr_1.05fr_1.25fr_0.85fr_0.85fr_1.2fr_0.95fr_1.3fr_1.35fr_1.7fr] items-end gap-x-1.5 gap-y-0.5">
                     <span />
                     <span className={LABEL}>Product Code</span>
                     <span className={LABEL}>Qty(P)</span>
@@ -434,7 +521,7 @@ export default function TradeSaleInvoice() {
                     <span className={LABEL}>Sub Total</span>
 
                     <button type="button" onClick={() => setShowFindProd(true)}
-                        className="h-9 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13.5px] font-bold text-slate-800 shadow-sm hover:to-[#d9d9e6] active:translate-y-px">
+                        className="h-8 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-bold text-slate-800 shadow-sm hover:to-[#d9d9e6] active:translate-y-px">
                         Find
                     </button>
                     <input ref={codeRef} value={entry.code} onChange={setE('code')} onKeyDown={onEnter(resolveCode)} className={`${EDIT} w-full`} aria-label="Product code" />
@@ -451,19 +538,20 @@ export default function TradeSaleInvoice() {
                 </div>
 
                 {/* Grid + right panel */}
-                <div className="grid min-h-[300px] flex-1 grid-cols-[1fr_390px] gap-3">
+                <div className="grid min-h-0 flex-1 grid-cols-[1fr_380px] gap-3">
                     <div className="flex min-h-0 flex-col overflow-hidden rounded-lg border border-slate-400 bg-[#b9bccb] shadow-inner">
                         <div className="min-h-0 flex-1 overflow-auto">
-                            <table className="w-full table-fixed border-collapse text-[13px]">
+                            {/* Widths are inline on <col> AND the header cells so the
+                                fixed layout can never collapse Product Name. */}
+                            <table className="w-full min-w-[900px] table-fixed border-collapse text-[13px]">
                                 <colgroup>
-                                    <col className="w-[52px]" /><col className="w-[64px]" /><col /><col className="w-[86px]" />
-                                    <col className="w-[60px]" /><col className="w-[62px]" /><col className="w-[78px]" /><col className="w-[78px]" />
-                                    <col className="w-[96px]" /><col className="w-[58px]" /><col className="w-[84px]" /><col className="w-[100px]" />
+                                    {GRID_COLS.map((c) => <col key={c.h} style={c.w ? { width: c.w } : undefined} />)}
                                 </colgroup>
                                 <thead className="sticky top-0 z-10">
                                     <tr className="bg-gradient-to-b from-white to-[#e9e9f1] text-left text-[13px] font-bold text-slate-800">
-                                        {['SNo', 'PID', 'Product Name', 'Expiry', 'Qty', 'Bonus', 'TP', 'Retail', 'SubTotal', 'Disc%', 'Dis.Amt', 'Net Amt'].map((h) => (
-                                            <th key={h} className="border-b border-r border-slate-300 px-1.5 py-1.5 last:border-r-0">{h}</th>
+                                        {GRID_COLS.map((c) => (
+                                            <th key={c.h} style={c.w ? { width: c.w } : undefined}
+                                                className={`overflow-hidden whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1.5 last:border-r-0 ${c.right ? 'text-right' : ''}`}>{c.h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -474,24 +562,24 @@ export default function TradeSaleInvoice() {
                                             {[i + 1, l.code, l.name, ymd(l.expiry), fmt(l.qty), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
                                               fmt(lineGross(l)), l.discPct ? fmt(l.discPct) : '', lineDisc(l) ? fmt(lineDisc(l)) : '', fmt(lineNet(l))].map((v, k) => (
                                                 <td key={k} title={k === 2 ? String(v) : undefined}
-                                                    className={`truncate border-b border-r border-slate-200 px-1.5 py-1 last:border-r-0 ${k === 2 ? 'font-semibold' : ''} ${k >= 4 && k !== 9 ? 'text-right' : ''}`}>{v}</td>
+                                                    className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-200 px-1.5 py-1 last:border-r-0 ${k === 2 ? 'font-semibold' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
                                     {!lines.length && (
-                                        <tr className="bg-white"><td colSpan={12} className="px-2 py-1.5 text-[12.5px] italic text-slate-400">No items yet — enter a product code and press Add.</td></tr>
+                                        <tr className="bg-white"><td colSpan={GRID_COLS.length} className="px-2 py-1.5 text-[12.5px] italic text-slate-400">No items yet — enter a product code and press Add.</td></tr>
                                     )}
                                 </tbody>
                             </table>
                         </div>
                     </div>
 
-                    {/* Right panel */}
-                    <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-0.5">
-                        <div className="grid grid-cols-[118px_1fr] items-center gap-x-2 gap-y-2">
-                            <span className={`${LABEL} text-[14px]`}>Net Amount</span>
+                    {/* Right panel — compact so it always fits without scrolling */}
+                    <div className="flex min-h-0 flex-col gap-1.5 overflow-hidden">
+                        <div className="grid grid-cols-[104px_1fr] items-center gap-x-2 gap-y-1.5">
+                            <span className={LABEL}>Net Amount</span>
                             <ReadBox value={entryNet ? fmt(entryNet) : ''} className="justify-end" />
-                            <span className={`${LABEL} text-[14px]`}>Expiry Date</span>
+                            <span className={LABEL}>Expiry Date</span>
                             <select value={entry.batchId} disabled={!p || !p.batches.length}
                                 onChange={(e) => p && applyBatch(p, e.target.value, { qtyP: entry.qtyP, qtyU: entry.qtyU, bonus: entry.bonus, discPct: entry.discPct })}
                                 className={`${FIELD} w-full border-cyan-300 bg-[#d5fbff] text-slate-900 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 disabled:opacity-70`}
@@ -502,34 +590,31 @@ export default function TradeSaleInvoice() {
                                     <option key={b.id} value={b.id}>{ymd(b.expiry_date)}  —  {b.quantity - usedInBatch(b.id)} left</option>
                                 ))}
                             </select>
-                            <span className={`${LABEL} text-[14px]`}>Company</span>
+                            <span className={LABEL}>Company</span>
                             <ReadBox value={p?.company || ''} />
-                            <span className={`${LABEL} text-[14px]`}>Invoice No.</span>
-                            <div className="flex h-11 items-center justify-center rounded-md border border-emerald-400 bg-[#c8fbc8] font-mono text-[20px] font-black tracking-wide text-[#1f2bd6]">
+                            <span className={LABEL}>Invoice No.</span>
+                            <div className="flex h-9 items-center justify-center rounded-md border border-emerald-400 bg-[#c8fbc8] font-mono text-[18px] font-black tracking-wide text-[#1f2bd6]">
                                 {invoiceNo}
                             </div>
                         </div>
 
-                        <div className="mt-1 grid grid-cols-2 gap-x-6 gap-y-2.5">
-                            <button type="button" onClick={addLine}
-                                className="h-11 rounded-md border border-amber-300 bg-gradient-to-b from-[#fffbd1] to-[#fff09a] text-[15px] font-bold text-slate-600 shadow-sm hover:to-[#ffe86a] active:translate-y-px">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                            <button type="button" onClick={addLine} className={`${PANEL_BTN} border-amber-300 from-[#fffbd1] to-[#fff09a] text-slate-600 hover:to-[#ffe86a]`}>
                                 <span className="underline">A</span>dd
                             </button>
-                            <button type="button" onClick={removeLine}
-                                className="h-11 rounded-md border border-amber-200 bg-gradient-to-b from-[#fffde8] to-[#f6f0c4] text-[15px] font-bold text-slate-500 shadow-sm hover:to-[#efe6ad] active:translate-y-px">
+                            <button type="button" onClick={removeLine} className={`${PANEL_BTN} border-amber-200 from-[#fffde8] to-[#f6f0c4] text-slate-500 hover:to-[#efe6ad]`}>
                                 <span className="underline">R</span>emove
                             </button>
                             <button type="button" onClick={() => p ? setShowPR(true) : toast.error('Enter a product code first.')}
-                                className="h-11 rounded-md border border-orange-300 bg-gradient-to-b from-[#ffe8d1] to-[#ffd0a3] text-[15px] font-bold text-slate-800 shadow-sm hover:to-[#ffc287] active:translate-y-px">
+                                className={`${PANEL_BTN} border-orange-300 from-[#ffe8d1] to-[#ffd0a3] text-slate-800 hover:to-[#ffc287]`}>
                                 Product&nbsp;&nbsp;PR
                             </button>
-                            <button type="button" onClick={() => setShowPV(true)}
-                                className="h-11 rounded-md border border-slate-300 bg-gradient-to-b from-white to-[#e8e8ee] text-[15px] font-bold text-slate-800 shadow-sm hover:to-[#dadae4] active:translate-y-px">
+                            <button type="button" onClick={() => setShowPV(true)} className={`${PANEL_BTN} border-slate-300 from-white to-[#e8e8ee] text-slate-800 hover:to-[#dadae4]`}>
                                 Invoice PV
                             </button>
                         </div>
 
-                        <div className="mt-1 grid grid-cols-[1.6fr_1fr_1fr] items-end gap-x-2 gap-y-1">
+                        <div className="grid grid-cols-[1.5fr_1fr_1fr] items-end gap-x-1.5 gap-y-0.5">
                             <span className={LABEL}>Product Pur. Rate</span>
                             <span className={LABEL}>Profit</span>
                             <span className={LABEL}>Profit %</span>
@@ -544,18 +629,53 @@ export default function TradeSaleInvoice() {
                             <ReadBox value={invPurValue ? `${fmt(invProfitPct)}%` : ''} className="justify-center !bg-white" />
                         </div>
 
-                        <div className="mt-1 rounded-md bg-black px-3 py-2 font-mono text-[14px] font-bold text-white">LabItems = {lines.length}</div>
-                        <div className="min-h-[38px] rounded-md bg-black px-3 py-2 text-[12.5px] font-semibold text-[#9cf7ff]">{status}</div>
+                        <div className="rounded-md bg-black px-3 py-1.5 font-mono text-[13.5px] font-bold text-white">LabItems = {lines.length}</div>
+                        <div className="min-h-0 flex-1 overflow-hidden rounded-md bg-black px-3 py-1.5 text-[12px] font-semibold leading-snug text-[#9cf7ff]">{status}</div>
                     </div>
                 </div>
 
                 {/* Totals */}
-                <div className="grid shrink-0 grid-cols-[1fr_1fr_0.95fr_1.1fr_1.5fr] gap-3 pt-1">
+                <div className="grid shrink-0 grid-cols-[1fr_1fr_0.95fr_1.1fr_1.5fr] gap-3">
                     <Led label="Amount Billed" value={fmt(amountBilled)} />
                     <Led label="Total Disc By%" value={fmt(totalDisc)} />
                     <Led label="Net Amount" value={fmt(netAmount)} />
                     <Led label="Prev. Bal" value={customer ? fmt(prevBal) : ''} />
                     <Led label="Net Balance" value={fmt(netBalance)} tone="yellow" />
+                </div>
+
+                {/* Bottom bar — Paid Cash / Saleman / Sale Date / actions */}
+                <div className="grid shrink-0 grid-cols-[1fr_1.2fr_1.1fr_auto] items-end gap-3">
+                    <label className="flex flex-col gap-0.5">
+                        <span className={`${LABEL} text-[15px]`}>Paid Cash</span>
+                        <input value={paidCash} onChange={(e) => setPaidCash(e.target.value)} inputMode="decimal" placeholder="0"
+                            className={`${EDIT} w-full text-right text-[15px]`} aria-label="Paid cash" />
+                    </label>
+                    <label className="flex flex-col gap-0.5">
+                        <span className={`${LABEL} text-[15px]`}>Saleman</span>
+                        <select value={salesman} onChange={(e) => setSalesman(e.target.value)}
+                            className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200`}>
+                            <option value="">Select any one</option>
+                            {staff.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                    </label>
+                    <div className="flex flex-col gap-0.5">
+                        <label className={`${LABEL} flex cursor-pointer items-center gap-1.5 text-[15px]`}>
+                            <input type="checkbox" checked={backDate} onChange={(e) => { setBackDate(e.target.checked); if (!e.target.checked) setSaleDate(today()); }}
+                                className="h-4 w-4 accent-[#3b3f8f]" />
+                            Sale Date
+                        </label>
+                        <input type="date" value={saleDate} disabled={!backDate} max={today()} onChange={(e) => e.target.value && setSaleDate(e.target.value)}
+                            className={`${FIELD} w-full ${backDate ? 'border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:ring-2 focus:ring-emerald-200' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`}
+                            aria-label="Sale date" />
+                    </div>
+                    <div className="flex gap-2">
+                        <button type="button" onClick={newInvoice} className={ACTION_BTN}><span className="underline">N</span>ew Invoice</button>
+                        <button type="button" onClick={() => saveInvoice(false)} disabled={saving} className={ACTION_BTN}>
+                            {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                        </button>
+                        <button type="button" onClick={() => { setShowView(true); loadSavedInvoices(); }} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                        <button type="button" onClick={closeWindow} className={ACTION_BTN}><span className="underline">C</span>lose</button>
+                    </div>
                 </div>
             </div>
 
@@ -696,7 +816,7 @@ export default function TradeSaleInvoice() {
                             </tbody>
                         </table>
                         <div className="ml-auto mt-3 w-72 space-y-0.5 text-[13px] tabular-nums">
-                            {[['Amount Billed', amountBilled], ['Total Discount', totalDisc], ['Net Amount', netAmount], ['Prev. Balance', prevBal]].map(([k, v]) => (
+                            {[['Amount Billed', amountBilled], ['Total Discount', totalDisc], ['Net Amount', netAmount], ['Prev. Balance', prevBal], ['Paid Cash', paid]].map(([k, v]) => (
                                 <div key={k as string} className="flex justify-between"><span className="text-slate-500">{k}</span><span>{fmt(v as number)}</span></div>
                             ))}
                             <div className="flex justify-between border-t border-slate-800 pt-1 text-[15px] font-black"><span>Net Balance</span><span>{fmt(netBalance)}</span></div>
@@ -713,6 +833,48 @@ export default function TradeSaleInvoice() {
                             className="flex h-9 items-center gap-1.5 rounded-md border border-[#3b3f8f] bg-[#3b3f8f] px-4 text-[13px] font-bold text-white hover:bg-[#2f3278] disabled:opacity-50">
                             <Printer size={14} /> Save &amp; Print
                         </button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* ─── View: saved sale invoices ─── */}
+            {showView && (
+                <Modal title="Sale Invoices" onClose={() => setShowView(false)} wide>
+                    <div className="border-b border-slate-200 p-3">
+                        <div className="relative">
+                            <Search size={15} className="absolute left-2.5 top-2 text-slate-400" />
+                            <input autoFocus value={viewQuery} onChange={(e) => setViewQuery(e.target.value)}
+                                placeholder="Invoice no. or customer…" className={`${EDIT} w-full pl-8`} />
+                        </div>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-auto">
+                        <table className="w-full text-[13px] tabular-nums">
+                            <thead className="sticky top-0 bg-slate-100 text-left text-slate-600">
+                                <tr><th className="px-3 py-1.5">Invoice No.</th><th className="px-3 py-1.5">Date</th><th className="px-3 py-1.5">Customer</th><th className="px-3 py-1.5 text-right">Net Amount</th><th className="px-3 py-1.5 text-right">Paid</th><th className="px-3 py-1.5">Status</th></tr>
+                            </thead>
+                            <tbody>
+                                {viewRows
+                                    .filter((o) => {
+                                        const q = viewQuery.trim().toLowerCase();
+                                        return !q || String(o.order_number || '').toLowerCase().includes(q)
+                                            || String(o.customer_display_name || o.customer_name || '').toLowerCase().includes(q);
+                                    })
+                                    .map((o) => (
+                                        <tr key={o.id} onClick={() => openPopup(`/admin/sales/${o.id}/invoice`)}
+                                            className="cursor-pointer border-t border-slate-100 hover:bg-indigo-50" title="Open invoice">
+                                            <td className="px-3 py-1.5 font-mono font-bold text-[#1f2bd6]">{o.order_number}</td>
+                                            <td className="px-3 py-1.5">{String(o.sale_date || o.created_at || '').slice(0, 10)}</td>
+                                            <td className="px-3 py-1.5 font-semibold">{o.customer_display_name || o.customer_name}</td>
+                                            <td className="px-3 py-1.5 text-right">{fmt(num(o.total_amount))}</td>
+                                            <td className="px-3 py-1.5 text-right">{fmt(num(o.amount_paid))}</td>
+                                            <td className="px-3 py-1.5">{o.payment_status}</td>
+                                        </tr>
+                                    ))}
+                                {!viewRows.length && (
+                                    <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">{viewLoading ? 'Loading…' : 'No sale invoices saved yet.'}</td></tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </Modal>
             )}
