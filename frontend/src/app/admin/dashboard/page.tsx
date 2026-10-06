@@ -201,10 +201,11 @@ function parseExpiry(v: any): Date | null {
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
 }
-// Legacy Trade 2.1 formats: table cells as YYYYMMDD, the picker as 14-Apr-2027.
+// Dates read as 14-Apr-2027 (table cells and picker alike) — day and month
+// can't be confused the way they can in 14/04/2027.
 const pad2 = (n: number) => String(n).padStart(2, '0');
-const fmtYmd = (d: Date) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const fmtDmy = (d: Date) => `${pad2(d.getDate())}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
 const fmtPicker = (iso: string) => {
     const [y, m, d] = iso.split('-').map(Number);
     return y && m && d ? `${pad2(d)}-${MONTHS[m - 1]}-${y}` : '—';
@@ -315,7 +316,7 @@ export default function AdminDashboard() {
                                 <div className="min-h-0 flex-1 overflow-auto">
                                     <table className={GRID_TABLE}>
                                         <colgroup>
-                                            <col style={{ width: 54 }} /><col /><col style={{ width: 56 }} /><col style={{ width: 76 }} /><col style={{ width: 104 }} />
+                                            <col style={{ width: 54 }} /><col /><col style={{ width: 56 }} /><col style={{ width: 90 }} /><col style={{ width: 96 }} />
                                         </colgroup>
                                         <thead>
                                             <tr>
@@ -339,7 +340,7 @@ export default function AdminDashboard() {
                                                         <td className={`${GRID_TD} text-slate-900`} title={it.name}>{it.name}</td>
                                                         <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.qty}</td>
                                                         <td className={`${GRID_TD} tabular-nums ${expired ? 'font-semibold text-rose-600' : 'text-slate-700'}`}
-                                                            title={expired ? 'Already expired' : undefined}>{fmtYmd(exp!)}</td>
+                                                            title={expired ? 'Already expired' : undefined}>{fmtDmy(exp!)}</td>
                                                         <td className={`${GRID_TD} text-slate-700`} title={it.company || ''}>{it.company || '—'}</td>
                                                     </tr>
                                                 );
