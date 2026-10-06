@@ -17,6 +17,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import api from '@/lib/axios';
 import { orderService, userService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
+import FitStage from '@/components/trade/FitStage';
 
 /* ───────────────────────── types & helpers ───────────────────────── */
 type Batch = {
@@ -62,11 +63,10 @@ const READ = `${FIELD} border-slate-300 bg-[#ececf3] text-slate-700`;
 const PANEL_BTN = 'h-9 rounded-md border bg-gradient-to-b text-[14.5px] font-bold shadow-sm active:translate-y-px';
 const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-md border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-4 text-[14px] font-bold text-slate-800 shadow-sm hover:to-[#ffcf9a] active:translate-y-px disabled:opacity-60';
 
-/* Design size of the form; it is scaled to fill the window (see the stage in
-   the component). The minimum height is what the whole form needs to fit. */
-const STAGE_MIN_W = 1240;
-const STAGE_MIN_H = 760;
-const STAGE_MAX_SCALE = 1.35;
+/* Design size of the form. FitStage scales it to fill the window in proportion
+   to the screen; this is the smallest area the whole form needs. */
+const STAGE_W = 1240;
+const STAGE_H = 760;
 
 /* Sale grid columns (legacy order). Product Name takes the remaining width. */
 const GRID_COLS: { h: string; w?: number; right?: boolean }[] = [
@@ -481,29 +481,15 @@ export default function TradeSaleInvoice() {
     const setE = (k: keyof Entry) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setEntry((x) => ({ ...x, [k]: e.target.value }));
 
-    /* ── fit-to-window stage ──
-       The form is laid out on a stage at least STAGE_MIN_W × STAGE_MIN_H design
-       pixels and scaled to exactly fill the window, so everything is visible at
-       one glance with no scrollbars, whatever the window size or OS zoom. */
-    const [stage, setStage] = useState({ s: 1, w: STAGE_MIN_W, h: STAGE_MIN_H });
-    useEffect(() => {
-        const fit = () => {
-            const vw = window.innerWidth, vh = window.innerHeight;
-            const s = Math.min(vh / STAGE_MIN_H, vw / STAGE_MIN_W, STAGE_MAX_SCALE);
-            setStage({ s, w: vw / s, h: vh / s });
-        };
-        fit();
-        window.addEventListener('resize', fit);
-        return () => window.removeEventListener('resize', fit);
-    }, []);
-
     /* ───────────────────────── render ───────────────────────── */
     return (
         <div className="h-screen w-screen overflow-hidden bg-[#dcdcf7] font-sans text-slate-900 print:h-auto print:w-auto print:overflow-visible print:bg-white">
             <Toaster position="top-center" />
 
-            <div className="flex flex-col overflow-hidden print:hidden"
-                style={{ width: stage.w, height: stage.h, transform: `scale(${stage.s})`, transformOrigin: '0 0' }}>
+            {/* The whole form scales to fill the window (bigger on big screens,
+                smaller on small ones) — always one glance, never a scrollbar. */}
+            <div className="print:hidden">
+            <FitStage width={STAGE_W} height={STAGE_H} className="flex flex-col overflow-hidden">
             {/* Window caption */}
             <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1 print:hidden">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[10px] font-black text-white">AQ</span>
@@ -701,6 +687,7 @@ export default function TradeSaleInvoice() {
                     </div>
                 </div>
             </div>
+            </FitStage>
             </div>
 
             {/* ─── Find Customer ─── */}

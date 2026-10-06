@@ -21,6 +21,7 @@ import {
 import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
+import FitStage from '@/components/trade/FitStage';
 
 /* ───────────────────────── Top menu bar (File / Product / …) ───────────────────────── */
 // `inPlace` links navigate this window; every other item opens its screen in a
@@ -201,11 +202,13 @@ function parseExpiry(v: any): Date | null {
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
 }
-// Dates read as 14-Apr-2027 (table cells and picker alike) — day and month
-// can't be confused the way they can in 14/04/2027.
+// Table dates as DD-MM-YYYY (compact, fully visible); the picker as 14-Apr-2027.
 const pad2 = (n: number) => String(n).padStart(2, '0');
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const fmtDmy = (d: Date) => `${pad2(d.getDate())}-${MONTHS[d.getMonth()]}-${d.getFullYear()}`;
+const fmtDmy = (d: Date) => `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`;
+// Column widths in `ch` (one digit's width in the table font) + cell padding, so
+// IDs and dates always fit whatever font/zoom the browser renders with.
+const chw = (chars: number) => ({ width: `calc(${chars}ch + 14px)` });
 const fmtPicker = (iso: string) => {
     const [y, m, d] = iso.split('-').map(Number);
     return y && m && d ? `${pad2(d)}-${MONTHS[m - 1]}-${y}` : '—';
@@ -253,6 +256,10 @@ export default function AdminDashboard() {
     const lowStockRows = useMemo(() => (lists.low_stock || []), [lists]);
 
     return (
+        // Desktop: scale the whole dashboard to the window in proportion to the
+        // screen (same look on a laptop and a big monitor). Phones keep the
+        // normal responsive layout.
+        <FitStage width={1440} height={810} minViewport={1024}>
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white font-sans text-slate-800">
             <MenuBar />
 
@@ -316,7 +323,7 @@ export default function AdminDashboard() {
                                 <div className="min-h-0 flex-1 overflow-auto">
                                     <table className={GRID_TABLE}>
                                         <colgroup>
-                                            <col style={{ width: 54 }} /><col /><col style={{ width: 56 }} /><col style={{ width: 90 }} /><col style={{ width: 96 }} />
+                                            <col style={chw(5.5)} /><col /><col style={chw(6.5)} /><col style={chw(10.5)} /><col style={{ width: 96 }} />
                                         </colgroup>
                                         <thead>
                                             <tr>
@@ -363,7 +370,7 @@ export default function AdminDashboard() {
                                 <div className="min-h-0 flex-1 overflow-auto">
                                     <table className={GRID_TABLE}>
                                         <colgroup>
-                                            <col style={{ width: 54 }} /><col /><col style={{ width: 104 }} /><col style={{ width: 70 }} /><col style={{ width: 52 }} />
+                                            <col style={chw(5.5)} /><col /><col style={{ width: 100 }} /><col style={chw(8.5)} /><col style={chw(5.5)} />
                                         </colgroup>
                                         <thead>
                                             <tr>
@@ -398,5 +405,6 @@ export default function AdminDashboard() {
                         </div>
                     </div>
         </div>
+        </FitStage>
     );
 }
