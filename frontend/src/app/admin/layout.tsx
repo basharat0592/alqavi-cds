@@ -20,6 +20,7 @@ import { ADMIN_PAGES, SUPER_ADMIN_HIDDEN_HREFS, SUPER_ONLY_HREFS } from '@/lib/a
 import { getImageUrl, cn } from '@/lib/utils';
 import { gradientFor, gradientCss } from '@/lib/tileTheme';
 import PageLoader from '@/components/ui/PageLoader';
+import { isPopupWindow } from '@/lib/popup';
 import toast from 'react-hot-toast';
 
 /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -214,6 +215,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // The top bar belongs to the dashboard only; every other admin page runs
     // full-bleed under the sidebar.
     const isDashboardRoute = pathname === '/admin' || pathname === '/admin/dashboard';
+    // Trade 1.0 forms (/admin/trade/*) and any screen opened as a pop-up window from
+    // the dashboard run chrome-free too. Pop-up detection needs `window`, so it is
+    // resolved after mount (see lib/popup).
+    const [isPopup, setIsPopup] = useState(false);
+    useEffect(() => { setIsPopup(isPopupWindow()); }, [pathname]);
+    const isChromeFree = isDashboardRoute || isPopup || !!pathname?.startsWith('/admin/trade/');
     const [isNavigating, setIsNavigating] = useState(false);
     // Desktop sidebar collapse, remembered across visits. Mobile keeps using the
     // bottom tab bar, so the sidebar is desktop-only.
@@ -418,10 +425,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // navigation, so we drop the admin sidebar, top navbar and bottom tab bar and
     // render it full-screen. AuthGuard + the hidden SessionTimer (24h auto sign-out)
     // are kept so access control and the session clock still work.
-    if (isDashboardRoute) {
+    if (isChromeFree) {
         return (
             <AuthGuard allowedRoles={['admin', 'staff']}>
-                <div className={cn("h-screen overflow-hidden bg-[#F7F7F5] font-sans text-[#1A1A1A]", theme)}>
+                <div className={cn("h-screen bg-[#F7F7F5] font-sans text-[#1A1A1A] print:h-auto",
+                    isDashboardRoute ? "overflow-hidden" : "overflow-auto print:overflow-visible", theme)}>
                     <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
                     <ReadOnlyController />
                     {children}

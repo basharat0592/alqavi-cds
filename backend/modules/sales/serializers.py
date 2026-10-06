@@ -19,7 +19,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'bonus_quantity', 'price', 'discount', 'line_net', 'profit', 'cost_price', 'weight', 'size']
+        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'bonus_quantity', 'price', 'discount', 'line_net', 'profit', 'cost_price', 'weight', 'size', 'batch', 'expiry_date']
 
     def get_product_name(self, obj):
         return obj.product.product_name if obj.product else 'Deleted Product'
@@ -127,16 +127,20 @@ class OrderSerializer(serializers.ModelSerializer):
 class CreateOrderSerializer(serializers.ModelSerializer):
     items = serializers.JSONField()
     warehouse_id = serializers.CharField(required=False, write_only=True)
+    # Trade 1.0 Sale Invoice: number the order S26000912-style instead of the
+    # plain numeric tracking id.
+    sale_invoice = serializers.BooleanField(required=False, default=False, write_only=True)
 
     class Meta:
         model = Order
-        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date', 'discount', 'shipping_cost', 'salesperson', 'sale_date']
+        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date', 'discount', 'shipping_cost', 'salesperson', 'sale_date', 'sale_invoice']
 
     def create(self, validated_data):
         from django.db import transaction, IntegrityError
         from rest_framework import serializers as drf_serializers
         
         items_data = validated_data.pop('items')
+        sale_invoice = validated_data.pop('sale_invoice', False)
         status_val = validated_data.get('status', 'PENDING').upper()
         
         request = self.context.get('request')
@@ -237,8 +241,10 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                 elif user_obj:
                     params['user'] = user_obj
                 
+                if sale_invoice:
+                    params['tracking_id'] = Order.next_sale_invoice_no(params.get('sale_date'))
                 order = Order.objects.create(**params)
-                
+
                 total_amount = 0
                 from django.db.models import F
                 
@@ -252,6 +258,22 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         # Physical units that leave stock = paid qty + free bonus.
                         deduct_units = quantity + bonus
 
+                        # Optional stock batch (Trade 1.0 Sale Invoice): its own cost
+                        # and expiry are snapshotted, and its quantity is drawn down
+                        # when the sale is DELIVERED.
+                        batch = None
+                        if item.get('batch_id'):
+                            from modules.products.models import ProductBatch
+                            batch = (ProductBatch.objects.select_for_update()
+                                     .filter(id=item['batch_id'], product=product).first())
+                            if not batch:
+                                raise drf_serializers.ValidationError(
+                                    f"Selected batch for '{product.product_name}' was not found.")
+                            if status_val == 'DELIVERED' and batch.quantity < deduct_units:
+                                raise drf_serializers.ValidationError(
+                                    f"Insufficient stock in batch (exp {batch.expiry_date or '—'}) for "
+                                    f"'{product.product_name}'. (Available: {batch.quantity}, Required: {deduct_units})")
+
                         OrderItem.objects.create(
                             order=order,
                             product=product,
@@ -259,8 +281,13 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                             bonus_quantity=bonus,
                             price=price,
                             discount=line_discount,
-                            cost_price=product.cost_price or 0
+                            cost_price=(batch.cost_price if batch and batch.cost_price else product.cost_price) or 0,
+                            batch=batch,
+                            expiry_date=batch.expiry_date if batch else None,
                         )
+                        if batch and status_val == 'DELIVERED':
+                            batch.quantity = F('quantity') - deduct_units
+                            batch.save(update_fields=['quantity'])
                         # Charge the line net of its own discount; bonus units are free.
                         total_amount += (price * quantity) - line_discount
                         

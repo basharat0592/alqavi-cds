@@ -406,6 +406,12 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             
         return Response(results)
 
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def next_invoice_no(self, request):
+        """Preview of the next Trade 1.0 sale invoice number (e.g. S26000912).
+        The number is only reserved when the sale is saved."""
+        return Response({'invoice_no': Order.next_sale_invoice_no()})
+
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def customer_balance(self, request):
         """Outstanding balance (previous unpaid dues) for a registered customer, so

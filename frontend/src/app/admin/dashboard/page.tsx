@@ -20,15 +20,18 @@ import {
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
+import { openPopup } from '@/lib/popup';
 
 /* ───────────────────────── Top menu bar (File / Product / …) ───────────────────────── */
-type MenuLink = { label: string; href?: string; action?: 'logout' };
+// `inPlace` links navigate this window; every other item opens its screen in a
+// pop-up window, like the legacy desktop app.
+type MenuLink = { label: string; href?: string; action?: 'logout'; inPlace?: boolean };
 type Menu = { title: string; items: MenuLink[] };
 
 const MENUS: Menu[] = [
     { title: 'File', items: [
-        { label: 'Dashboard', href: '/admin/dashboard' },
-        { label: 'Full Admin View', href: '/admin/products' },
+        { label: 'Dashboard', href: '/admin/dashboard', inPlace: true },
+        { label: 'Full Admin View', href: '/admin/products', inPlace: true },
         { label: 'Backup Database', href: '/admin/settings' },
         { label: 'Logout', action: 'logout' },
     ] },
@@ -39,6 +42,7 @@ const MENUS: Menu[] = [
         { label: 'Update Rates / Expiry', href: '/admin/products' },
     ] },
     { title: 'Sale', items: [
+        { label: 'Sale Invoice', href: '/admin/trade/sale-invoice' },
         { label: 'Sale (POS)', href: '/admin/sale' },
         { label: 'Sale Records', href: '/admin/sales' },
         { label: 'Sale Return', href: '/admin/sale-returns' },
@@ -64,7 +68,7 @@ const MENUS: Menu[] = [
         { label: 'Expense', href: '/admin/expense' },
     ] },
     { title: 'About', items: [
-        { label: "AL-QAVI TRADER'S — Trade 2.1", href: '/admin/dashboard' },
+        { label: "AL-QAVI TRADER'S — Trade 2.1", href: '/admin/dashboard', inPlace: true },
     ] },
 ];
 
@@ -80,7 +84,9 @@ function MenuBar() {
     const go = (it: MenuLink) => {
         setOpen(null);
         if (it.action === 'logout') { authService.logout(); router.push('/login'); return; }
-        if (it.href) router.push(it.href);
+        if (!it.href) return;
+        if (it.inPlace) router.push(it.href);
+        else openPopup(it.href);
     };
     return (
         <div ref={ref} className="sticky top-0 z-30 flex flex-wrap items-center gap-0.5 border-b border-slate-200 bg-white/95 px-2 py-1 backdrop-blur">
@@ -141,7 +147,7 @@ const COLUMNS: Group[] = [
         { name: 'Change Password', href: '/admin/settings', icon: KeyRound },
     ] },
     { theme: THEMES.sale, buttons: [
-        { name: 'Sale', href: '/admin/sale', icon: ScanLine },
+        { name: 'Sale', href: '/admin/trade/sale-invoice', icon: ScanLine },
         { name: 'Sale Records', href: '/admin/sales', icon: TrendingUp },
         { name: 'Sale Return', href: '/admin/sale-returns', icon: RotateCcw },
         { name: 'Orders', href: '/admin/orders', icon: History },
@@ -168,6 +174,13 @@ function ActionTile({ b, theme, big }: { b: Btn; theme: Theme; big?: boolean }) 
     return (
         <Link
             href={b.href}
+            // Open in a pop-up window (legacy desktop behaviour); a modifier/middle
+            // click still opens a normal tab via the href.
+            onClick={(e) => {
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                openPopup(b.href);
+            }}
             className={`group flex items-center gap-2.5 rounded-lg border ${theme.tile} ${theme.ring} px-2.5 ${big ? 'py-2.5' : 'py-2'} shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}
         >
             <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${theme.icon} shadow-sm transition-transform duration-200 group-hover:scale-105`}>

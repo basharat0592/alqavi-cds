@@ -217,6 +217,19 @@ class Order(models.Model):
                 
         super().save(*args, **kwargs)
 
+    @staticmethod
+    def next_sale_invoice_no(on_date=None):
+        """Next Trade 1.0 sale invoice number: 'S' + 2-digit year + 6-digit
+        sequence, e.g. S26000912. The sequence restarts each year."""
+        import datetime
+        prefix = f"S{(on_date or datetime.date.today()).year % 100:02d}"
+        last = 0
+        for tid in Order.objects.filter(tracking_id__startswith=prefix).values_list('tracking_id', flat=True):
+            tail = tid[len(prefix):]
+            if tail.isdigit():
+                last = max(last, int(tail))
+        return f"{prefix}{last + 1:06d}"
+
     class Meta:
         ordering = ['-created_at']
 
@@ -234,6 +247,11 @@ class OrderItem(models.Model):
     # Per-line discount AMOUNT (desktop "Disc.Amt"); the % is a UI convenience.
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Snapshotted purchase cost
+    # Stock batch the units were taken from (Trade 1.0 Sale Invoice picks a batch by
+    # expiry). Its quantity is drawn down on a DELIVERED sale.
+    batch = models.ForeignKey('products.ProductBatch', on_delete=models.SET_NULL,
+                              null=True, blank=True, related_name='order_items')
+    expiry_date = models.DateField(null=True, blank=True)
 
     @property
     def line_net(self):

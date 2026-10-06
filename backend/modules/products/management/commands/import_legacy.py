@@ -196,6 +196,7 @@ class Command(BaseCommand):
             if barcode:
                 seen_barcodes.add(barcode)
             min_qty = to_int(r.get('MinQty'), 10)
+            packing = max(1, to_int(r.get('Packing'), 1))
             status = 'ACTIVE' if clean(r.get('ProdStatus')).lower().startswith('activ') else 'INACTIVE'
             b = batch.get(pid, {})
             qty = int(b.get('qty') or 0)
@@ -213,6 +214,7 @@ class Command(BaseCommand):
             stock = (Stock.objects.filter(tenant=tenant, warehouse=warehouse, product=sp).first())
             if stock:
                 stock.total_quantity = qty
+                stock.items_per_carton = packing
                 stock.price_per_item = cost
                 stock.category = category
                 stock.save()
@@ -220,6 +222,7 @@ class Command(BaseCommand):
                 stock = Stock.objects.create(
                     tenant=tenant, warehouse=warehouse, product=sp, product_name=name,
                     category=category, purchase_type='single', total_quantity=qty,
+                    items_per_carton=packing,
                     price_per_item=cost, date=date.today(), created_by=tenant)
 
             product, _ = Product.objects.update_or_create(

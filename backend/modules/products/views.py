@@ -188,6 +188,47 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         return queryset
 
     @action(detail=False, methods=['get'])
+    def sale_lookup(self, request):
+        """Product lookup for the Trade 1.0 Sale Invoice window.
+        ?code=10816 -> exact match on product code (PID/sku) or barcode;
+        ?q=cream    -> name/code search (max 50).
+        Each result carries company, packing, stock and its in-stock batches
+        (expiry + per-batch rates), nearest expiry first."""
+        code = (request.query_params.get('code') or '').strip()
+        q = (request.query_params.get('q') or '').strip()
+        qs = (self.get_queryset().filter(status='ACTIVE')
+              .select_related('stock__product__company'))
+        if code:
+            qs = qs.filter(Q(sku__iexact=code) | Q(barcode__iexact=code))
+        elif q:
+            qs = qs.filter(Q(product_name__icontains=q) | Q(sku__icontains=q)).order_by('product_name')
+        else:
+            return Response([])
+        products = list(qs[:50])
+        batches = {}
+        for b in (ProductBatch.objects.filter(product__in=products, quantity__gt=0)
+                  .order_by('expiry_date')):
+            batches.setdefault(b.product_id, []).append({
+                'id': str(b.id), 'expiry_date': b.expiry_date, 'quantity': b.quantity,
+                'cost_price': b.cost_price, 'selling_price': b.selling_price,
+                'retail_price': b.retail_price,
+            })
+        out = []
+        for p in products:
+            stock = getattr(p, 'stock', None)
+            sp = getattr(stock, 'product', None)
+            out.append({
+                'id': str(p.id), 'code': p.sku or '', 'name': p.product_name,
+                'company': sp.company.name if (sp and sp.company_id) else '',
+                'packing': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
+                'stock': int(p.total_quantity or 0),
+                'cost_price': p.cost_price or 0, 'selling_price': p.selling_price or 0,
+                'retail_price': p.original_price or 0,
+                'batches': batches.get(p.id, []),
+            })
+        return Response(out)
+
+    @action(detail=False, methods=['get'])
     def dashboard_lists(self, request):
         """Lightweight feed for the admin dashboard: the Expiry List and the
         Stock Minimum Range list, computed in one scoped query (no per-row
