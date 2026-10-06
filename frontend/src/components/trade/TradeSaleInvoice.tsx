@@ -74,12 +74,13 @@ const SHORTCUTS: [string, string][] = [
     ['Dbl-click', 'Edit line'], ['F9', 'Invoice PV'], ['Ctrl+S', 'Save'],
 ];
 
-/* Sale grid columns (legacy order). Product Name takes the remaining width. */
-const GRID_COLS: { h: string; w?: number; right?: boolean }[] = [
-    { h: 'SNo', w: 48 }, { h: 'PID', w: 62 }, { h: 'Product Name' }, { h: 'Expiry', w: 84 },
-    { h: 'Qty', w: 58, right: true }, { h: 'Bonus', w: 60, right: true }, { h: 'TP', w: 74, right: true },
-    { h: 'Retail', w: 74, right: true }, { h: 'SubTotal', w: 92, right: true }, { h: 'Disc%', w: 58, right: true },
-    { h: 'Dis.Amt', w: 80, right: true }, { h: 'Net Amt', w: 96, right: true },
+/* Sale grid columns — legacy order and proportions (as % of the grid width, so
+   they scale with the window); headers and values left-aligned like Trade 1.0. */
+const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
+    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6%' }, { h: 'Product Name', w: '24%' }, { h: 'Expiry', w: '8.5%' },
+    { h: 'Qty', w: '5.5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '7%' },
+    { h: 'Retail', w: '7%' }, { h: 'SubTotal', w: '8.5%' }, { h: 'Disc%', w: '5.5%' },
+    { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
 ];
 
 function ReadBox({ value, className = '' }: { value: React.ReactNode; className?: string }) {
