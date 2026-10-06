@@ -28,6 +28,7 @@ type Menu = { title: string; items: MenuLink[] };
 const MENUS: Menu[] = [
     { title: 'File', items: [
         { label: 'Dashboard', href: '/admin/dashboard' },
+        { label: 'Full Admin View', href: '/admin/products' },
         { label: 'Backup Database', href: '/admin/settings' },
         { label: 'Logout', action: 'logout' },
     ] },
