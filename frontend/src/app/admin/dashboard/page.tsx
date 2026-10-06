@@ -83,7 +83,7 @@ function MenuBar() {
         if (it.href) router.push(it.href);
     };
     return (
-        <div ref={ref} className="relative z-30 flex flex-wrap items-center gap-0.5 border-b border-slate-200 bg-white/90 px-2 py-1 backdrop-blur">
+        <div ref={ref} className="sticky top-0 z-30 flex flex-wrap items-center gap-0.5 border-b border-slate-200 bg-white/95 px-2 py-1 backdrop-blur">
             {MENUS.map((m) => (
                 <div key={m.title} className="relative">
                     <button
@@ -225,12 +225,10 @@ export default function AdminDashboard() {
     }, [serverLowStock, products]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-sky-50 to-slate-100 font-sans text-slate-800">
-            <div className="mx-auto max-w-[1500px] px-3 py-3 md:px-6 md:py-4">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)]">
-                    <MenuBar />
+        <div className="min-h-screen bg-white font-sans text-slate-800">
+            <MenuBar />
 
-                    <div className="grid grid-cols-1 gap-6 p-4 md:p-6 lg:grid-cols-[1fr_440px]">
+            <div className="grid grid-cols-1 gap-6 p-4 md:p-6 lg:grid-cols-[1fr_440px]">
                         {/* ─── Left: brand + action grid ─── */}
                         <div>
                             <div className="mb-5 flex items-center gap-3">
@@ -357,8 +355,6 @@ export default function AdminDashboard() {
                             </section>
                         </div>
                     </div>
-                </div>
-            </div>
         </div>
     );
 }
