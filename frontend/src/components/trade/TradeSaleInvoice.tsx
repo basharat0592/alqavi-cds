@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, Loader2, Printer, Save } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import * as XLSX from 'xlsx';
 import { orderService, userService, installmentService } from '@/lib/api';
@@ -1053,7 +1053,6 @@ export default function TradeSaleInvoice() {
     /* ───────────────────────── render ───────────────────────── */
     return (
         <div className="h-screen w-screen overflow-hidden bg-[#dcdcf7] font-sans text-slate-900 print:h-auto print:w-auto print:overflow-visible print:bg-white">
-            <Toaster position="top-center" />
 
             {/* The whole form scales to fill the window (bigger on big screens,
                 smaller on small ones) — always one glance, never a scrollbar. */}
