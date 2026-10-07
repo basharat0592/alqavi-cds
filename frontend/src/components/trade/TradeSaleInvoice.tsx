@@ -113,7 +113,7 @@ const SR_COLS = [
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
     ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
-    ['Dbl-click', 'Edit line'], ['F9', 'Invoice PV'], ['Ctrl+S', 'Save'],
+    ['Dbl-click', 'Edit line'], ['F9', 'Preview / Print'], ['Ctrl+S', 'Save'],
 ];
 
 /* Sale grid columns — legacy order and proportions (as % of the grid width, so
@@ -243,7 +243,23 @@ export default function TradeSaleInvoice() {
 
     // Invoice
     const [invoiceNo, setInvoiceNo] = useState('…');
-    const [showPR, setShowPR] = useState(false);
+    // Product PR / Invoice PV are show-hide switches for the two profit rows
+    // (legacy behaviour); the choice is remembered in this browser.
+    const [prRow, setPrRow] = useState(true);
+    const [pvRow, setPvRow] = useState(true);
+    useEffect(() => {
+        try {
+            setPrRow(localStorage.getItem('trade.sale.prRow') !== '0');
+            setPvRow(localStorage.getItem('trade.sale.pvRow') !== '0');
+        } catch { /* storage unavailable: keep both shown */ }
+    }, []);
+    const toggleRow = (key: 'prRow' | 'pvRow') => {
+        const set = key === 'prRow' ? setPrRow : setPvRow;
+        set((v) => {
+            try { localStorage.setItem(`trade.sale.${key}`, v ? '0' : '1'); } catch { /* ignore */ }
+            return !v;
+        });
+    };
     const [showPV, setShowPV] = useState(false);
     const [saving, setSaving] = useState(false);
 
@@ -1236,31 +1252,40 @@ export default function TradeSaleInvoice() {
                             <button type="button" onClick={removeLine} className={`${PANEL_BTN} border-amber-200 from-[#fffde8] to-[#f6f0c4] text-slate-500 hover:to-[#efe6ad]`}>
                                 <span className="underline">R</span>emove
                             </button>
-                            <button type="button" onClick={() => p ? setShowPR(true) : toast.error('Enter a product code first.')}
-                                className={`${PANEL_BTN} border-orange-300 from-[#ffe8d1] to-[#ffd0a3] text-slate-800 hover:to-[#ffc287]`}>
+                            <button type="button" onClick={() => toggleRow('prRow')} aria-pressed={!prRow}
+                                title={prRow ? 'Hide Product Pur. Rate / Profit' : 'Show Product Pur. Rate / Profit'}
+                                className={`${PANEL_BTN} border-orange-300 from-[#ffe8d1] to-[#ffd0a3] text-slate-800 hover:to-[#ffc287] ${prRow ? '' : 'translate-y-px opacity-70 shadow-inner'}`}>
                                 Product&nbsp;&nbsp;PR
                             </button>
-                            <button type="button" onClick={() => setShowPV(true)} className={`${PANEL_BTN} border-slate-300 from-white to-[#e8e8ee] text-slate-800 hover:to-[#dadae4]`}>
+                            <button type="button" onClick={() => toggleRow('pvRow')} aria-pressed={!pvRow}
+                                title={pvRow ? 'Hide Invoice Pur.Value / Profit' : 'Show Invoice Pur.Value / Profit'}
+                                className={`${PANEL_BTN} border-slate-300 from-white to-[#e8e8ee] text-slate-800 hover:to-[#dadae4] ${pvRow ? '' : 'translate-y-px opacity-70 shadow-inner'}`}>
                                 Invoice PV
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-[1.5fr_1fr_1fr] items-end gap-x-1.5 gap-y-0.5">
-                            <span className={LABEL}>Product Pur. Rate</span>
-                            <span className={LABEL}>Profit</span>
-                            <span className={LABEL}>Profit %</span>
-                            <ReadBox value={p ? fmt(purRate) : ''} className="justify-end !border-orange-200 !bg-[#ffe3c7]" />
-                            <ReadBox value={totalUnits ? fmt(entryProfit) : ''} className={`justify-end !border-orange-200 !bg-[#ffe3c7] ${entryProfit < 0 ? '!text-rose-600' : ''}`} />
-                            <ReadBox value={totalUnits && purRate ? `${fmt(entryProfitPct)}%` : ''} className="justify-end !border-orange-200 !bg-[#ffe3c7]" />
-                            <span className={`${LABEL} mt-1`}>Invoice Pur.Value</span>
-                            <span className={`${LABEL} mt-1`}>Profit</span>
-                            <span className={`${LABEL} mt-1`}>Profit %</span>
-                            <ReadBox value={fmt(invPurValue)} className="justify-center !bg-white" />
-                            <ReadBox value={fmt(invProfit)} className={`justify-center !bg-white ${invProfit < 0 ? '!text-rose-600' : ''}`} />
-                            <ReadBox value={invPurValue ? `${fmt(invProfitPct)}%` : ''} className="justify-center !bg-white" />
-                        </div>
+                        {prRow && (
+                            <div className="grid grid-cols-[1.5fr_1fr_1fr] items-end gap-x-1.5 gap-y-0.5">
+                                <span className={LABEL}>Product Pur. Rate</span>
+                                <span className={LABEL}>Profit</span>
+                                <span className={LABEL}>Profit %</span>
+                                <ReadBox value={p ? fmt(purRate) : ''} className="justify-end !border-orange-200 !bg-[#ffe3c7]" />
+                                <ReadBox value={totalUnits ? fmt(entryProfit) : ''} className={`justify-end !border-orange-200 !bg-[#ffe3c7] ${entryProfit < 0 ? '!text-rose-600' : ''}`} />
+                                <ReadBox value={totalUnits && purRate ? `${fmt(entryProfitPct)}%` : ''} className="justify-end !border-orange-200 !bg-[#ffe3c7]" />
+                            </div>
+                        )}
+                        {pvRow && (
+                            <div className="grid grid-cols-[1.5fr_1fr_1fr] items-end gap-x-1.5 gap-y-0.5">
+                                <span className={LABEL}>Invoice Pur.Value</span>
+                                <span className={LABEL}>Profit</span>
+                                <span className={LABEL}>Profit %</span>
+                                <ReadBox value={fmt(invPurValue)} className="justify-center !bg-white" />
+                                <ReadBox value={fmt(invProfit)} className={`justify-center !bg-white ${invProfit < 0 ? '!text-rose-600' : ''}`} />
+                                <ReadBox value={invPurValue ? `${fmt(invProfitPct)}%` : ''} className="justify-center !bg-white" />
+                            </div>
+                        )}
 
-                        <div className="rounded-md bg-black px-3 py-1.5 font-mono text-[13.5px] font-bold text-white">LabItems = {lines.length}</div>
+                        <div className="rounded-md bg-black px-3 py-1.5 font-mono text-[13.5px] font-bold text-white">Total Products = {lines.length}</div>
                     </div>
                 </div>
 
@@ -1566,38 +1591,9 @@ export default function TradeSaleInvoice() {
                 </Modal>
             )}
 
-            {/* ─── Product PR (batch-wise purchase rates) ─── */}
-            {showPR && p && (
-                <Modal title={`Product PR — ${p.name}`} onClose={() => askClose(() => setShowPR(false))}>
-                    <div className="min-h-0 flex-1 overflow-auto p-3">
-                        <table className="w-full text-[13px] tabular-nums">
-                            <thead className="bg-slate-100 text-left text-slate-600">
-                                <tr><th className="px-3 py-1.5">Expiry</th><th className="px-3 py-1.5 text-right">Qty</th><th className="px-3 py-1.5 text-right">Pur. Rate</th><th className="px-3 py-1.5 text-right">TP</th><th className="px-3 py-1.5 text-right">Retail</th><th className="px-3 py-1.5 text-right">Margin</th></tr>
-                            </thead>
-                            <tbody>
-                                {p.batches.map((b) => {
-                                    const cost = num(b.cost_price), sale = num(b.selling_price);
-                                    return (
-                                        <tr key={b.id} className={`border-t border-slate-100 ${b.id === entry.batchId ? 'bg-cyan-50 font-semibold' : ''}`}>
-                                            <td className="px-3 py-1.5">{ymd(b.expiry_date)}</td>
-                                            <td className="px-3 py-1.5 text-right">{fmt(b.quantity)}</td>
-                                            <td className="px-3 py-1.5 text-right">{fmt(cost)}</td>
-                                            <td className="px-3 py-1.5 text-right">{fmt(sale)}</td>
-                                            <td className="px-3 py-1.5 text-right">{fmt(num(b.retail_price))}</td>
-                                            <td className="px-3 py-1.5 text-right">{cost > 0 ? `${fmt(((sale - cost) / cost) * 100)}%` : '—'}</td>
-                                        </tr>
-                                    );
-                                })}
-                                {!p.batches.length && <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">No stock batches.</td></tr>}
-                            </tbody>
-                        </table>
-                    </div>
-                </Modal>
-            )}
-
-            {/* ─── Invoice PV (preview → save / print) ─── */}
+            {/* ─── Invoice preview (F9) → save / print ─── */}
             {showPV && (
-                <Modal title={`Invoice PV — ${invoiceNo}`} onClose={() => !saving && askClose(() => setShowPV(false))} wide>
+                <Modal title={`Invoice Preview — ${invoiceNo}`} onClose={() => !saving && askClose(() => setShowPV(false))} wide>
                     <div className="min-h-0 flex-1 overflow-auto p-5 print:overflow-visible print:p-0" id="invoice-print">
                         <div className="flex items-start justify-between border-b-2 border-slate-800 pb-2">
                             <div>
