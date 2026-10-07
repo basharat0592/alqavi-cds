@@ -44,7 +44,8 @@ const EMPTY_ENTRY: Entry = { product: null, batchId: '', code: '', qtyP: '', qty
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const fmt = (n: number) => round2(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
-const ymd = (iso: string | null) => (iso ? iso.slice(0, 10).replace(/-/g, '') : '—');
+// Dates read as dd-mm-yyyy (e.g. 17-10-2029), like the dashboard lists.
+const ymd = (iso: string | null) => (iso ? iso.slice(0, 10).split('-').reverse().join('-') : '—');
 const custCode = (c: any) => String(c?.username || '').replace(/^cust/i, '');
 const custName = (c: any) => `${c?.first_name || ''} ${c?.last_name || ''}`.trim() || c?.username || '';
 
@@ -112,15 +113,41 @@ const SR_COLS = [
 
 /* Sale return grids (legacy column order). */
 const RET_COLS = [
-    { h: 'SNo', w: '5%' }, { h: 'PID', w: '7%' }, { h: 'Product Name', w: '24%' }, { h: 'Expiry', w: '9%' },
-    { h: 'Qty', w: '5.5%' }, { h: 'Bons', w: '5.5%' }, { h: 'TP', w: '7%' }, { h: 'Retail', w: '7%' },
-    { h: 'Sub Total', w: '8%' }, { h: 'Dis %', w: '5.5%' }, { h: 'Dis.Amt', w: '7%' }, { h: 'Net Amt', w: '9.5%' },
-];
+    { h: 'SNo', w: '4.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '23%' }, { h: 'Expiry', w: '9.5%' },
+    { h: 'Qty', w: '5%' }, { h: 'Bons', w: '5%' }, { h: 'TP', w: '7%' }, { h: 'Retail', w: '7%' },
+    { h: 'Sub Total', w: '8.5%' }, { h: 'Dis %', w: '5.5%' }, { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
+]
 const RR_HIST_COLS = [
-    { h: 'Sale Inv.', w: '10%' }, { h: 'Date', w: '8.5%' }, { h: 'PID', w: '7%' }, { h: 'Product Name', w: '25%' },
-    { h: 'Expiry', w: '8.5%' }, { h: 'Qty', w: '5.5%' }, { h: 'Bonus', w: '6%' }, { h: 'Returned', w: '7.5%' },
+    { h: 'Sale Inv.', w: '11%' }, { h: 'Date', w: '9.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '23%' },
+    { h: 'Expiry', w: '9.5%' }, { h: 'Qty', w: '5%' }, { h: 'Bonus', w: '6%' }, { h: 'Returned', w: '7.5%' },
     { h: 'TP', w: '7%' }, { h: 'Disc%', w: '6%' }, { h: 'Retail', w: '9%' },
-];
+]
+
+/* Lays a window body out at a design size (w x h) and scales it to exactly fit
+   the space it is given — everything in one view, never a scrollbar. */
+function FitBox({ w, h, children }: { w: number; h: number; children: React.ReactNode }) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [box, setBox] = useState({ s: 1, x: 0 });
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const fit = () => {
+            const s = Math.min(el.clientWidth / w, el.clientHeight / h);
+            setBox({ s, x: Math.max(0, (el.clientWidth - w * s) / 2) });
+        };
+        fit();
+        const ro = new ResizeObserver(fit);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [w, h]);
+    return (
+        <div ref={ref} className="relative min-h-0 w-full flex-1 overflow-hidden bg-[#e4e4fb]">
+            <div style={{ width: w, height: h, transform: `translate(${box.x}px, 0) scale(${box.s})`, transformOrigin: '0 0' }}>
+                {children}
+            </div>
+        </div>
+    );
+}
 
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
@@ -131,7 +158,7 @@ const SHORTCUTS: [string, string][] = [
 /* Sale grid columns — legacy order and proportions (as % of the grid width, so
    they scale with the window); headers and values left-aligned like Trade 1.0. */
 const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
-    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6%' }, { h: 'Product Name', w: '24%' }, { h: 'Expiry', w: '8.5%' },
+    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6%' }, { h: 'Product Name', w: '21.5%' }, { h: 'Expiry', w: '11%' },
     { h: 'Qty', w: '5.5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '7%' },
     { h: 'Retail', w: '7%' }, { h: 'SubTotal', w: '8.5%' }, { h: 'Disc%', w: '5.5%' },
     { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
@@ -198,7 +225,7 @@ function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo
     );
 }
 
-function Modal({ title, onClose, children, wide = false, xl = false, small = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean; small?: boolean }) {
+function Modal({ title, onClose, children, wide = false, xl = false, small = false, full = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean; small?: boolean; full?: boolean }) {
     // How many windows are already open (the first one dims the screen; windows
     // behind a newer one dim a little more).
     const [depth] = useState(() => modalStack.length);
@@ -224,7 +251,7 @@ function Modal({ title, onClose, children, wide = false, xl = false, small = fal
         // Stacked by opening order, so the newest window is always on top.
         <div style={{ zIndex: 50 + depth }}
             className={`fixed inset-0 flex items-center justify-center p-4 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : 'bg-slate-900/25'}`}>
-            <div className={`flex max-h-[calc(100vh-2rem)] w-full ${xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : wide ? 'max-w-4xl' : small ? 'max-w-lg' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
+            <div className={`flex max-h-[calc(100vh-2rem)] w-full ${full ? 'h-[calc(100vh-2rem)] max-w-[min(96vw,1600px)]' : xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : wide ? 'max-w-4xl' : small ? 'max-w-lg' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
                 <div className="flex items-center justify-between bg-gradient-to-r from-[#3b3f8f] to-[#5a5fc4] px-4 py-2 text-white print:hidden">
                     <span className="text-[13.5px] font-semibold">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( {title} )</span>
                     <button type="button" onClick={onClose} className="rounded p-1 hover:bg-white/20" aria-label="Close"><X size={16} /></button>
@@ -1162,7 +1189,7 @@ export default function TradeSaleInvoice() {
         setRrLess(''); setRrCash(''); setRrDate(today()); setRrStaff('');
         setRrProduct(''); setRrFromOn(false); setRrToOn(false);
         setRrInvoice(r?.sale_id || '');
-        setRrNo(await loadNextReturnNo());
+        setRrNo('');
         const c = r?.customer_id ? customers.find((x) => String(x.id) === String(r.customer_id)) : null;
         if (c) setRrCustomer(c, r?.sale_id || '');
         else { setRrCust(null); setRrCustInput(''); setRrPrev(0); }
@@ -1229,7 +1256,7 @@ export default function TradeSaleInvoice() {
                     });
                     toast.success(`Sale return ${data.return_no} saved — ${fmt(num(data.credit))} credited.`);
                     setRrLines([]); setRrSel(-1); setRrLess(''); setRrCash(''); setRrPick(null); setRrQty('');
-                    setRrNo(await loadNextReturnNo());
+                    setRrNo(data.return_no);
                     setRrPrev(await loadBalance(rrCust.id));
                     loadRrHistory(rrCust);
                 } catch (err) { saveErr(err, 'Could not save the return.'); }
@@ -2012,8 +2039,9 @@ export default function TradeSaleInvoice() {
 
             {/* ─── Sale Return Complete Bill (legacy) ─── */}
             {rb && (
-                <Modal title="Sale Return Complete Invoice" onClose={() => !rbSaving && askClose(() => setRb(null))} xl>
-                    <div className="flex min-h-0 flex-1 gap-3 overflow-hidden bg-[#e4e4fb] p-3">
+                <Modal title="Sale Return Complete Invoice" onClose={() => !rbSaving && askClose(() => setRb(null))} full>
+                    <FitBox w={1440} h={700}>
+                    <div className="flex h-full gap-3 p-3">
                         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                             <h2 className="text-[22px] font-black leading-none tracking-tight text-[#1f2bd6]">Sale Return Complete Bill</h2>
                             <div className="flex shrink-0 items-center gap-2">
@@ -2023,7 +2051,7 @@ export default function TradeSaleInvoice() {
                                 <span className="shrink-0 text-[12.5px] font-semibold text-slate-600">from invoice <b className="font-mono">{rb.saleId}</b></span>
                             </div>
                             <div className="min-h-0 flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
-                                <table className="w-full min-w-[860px] table-fixed border-collapse bg-white text-[13px]">
+                                <table className="w-full table-fixed border-collapse bg-white text-[13px]">
                                     <colgroup>{RET_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
                                         <tr>{RET_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
@@ -2063,7 +2091,7 @@ export default function TradeSaleInvoice() {
                             </div>
                         </div>
 
-                        <div className="flex w-[330px] shrink-0 flex-col gap-2 overflow-y-auto">
+                        <div className="flex w-[330px] shrink-0 flex-col gap-2 overflow-hidden">
                             {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['Disc Amt', fmt(rbTotals.disc), 'green'],
                               ['Net Amount', fmt(rbTotals.net), 'yellow'], ['Prev.Bal', fmt(rbPrev), 'yellow']].map(([label, value, tone]) => (
                                 <div key={label} className="grid grid-cols-[118px_1fr] items-center gap-2">
@@ -2090,13 +2118,15 @@ export default function TradeSaleInvoice() {
                             </div>
                         </div>
                     </div>
+                    </FitBox>
                 </Modal>
             )}
 
             {/* ─── Sale Return (Random) (legacy) ─── */}
             {rrOpen && (
-                <Modal title="Sale Return" onClose={() => !rrSaving && askClose(() => setRrOpen(false))} xl>
-                    <div className="flex min-h-0 flex-1 gap-3 overflow-hidden bg-[#e4e4fb] p-3">
+                <Modal title="Sale Return" onClose={() => !rrSaving && askClose(() => setRrOpen(false))} full>
+                    <FitBox w={1440} h={780}>
+                    <div className="flex h-full gap-3 p-3">
                         {/* Left: entry + grids */}
                         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                             <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-3 pb-2 pt-0">
@@ -2139,7 +2169,7 @@ export default function TradeSaleInvoice() {
 
                             {/* Products being returned */}
                             <div className="min-h-[90px] flex-[1.1] overflow-auto border border-slate-500 bg-[#9ea1ad]">
-                                <table className="w-full min-w-[860px] table-fixed border-collapse bg-white text-[13px]">
+                                <table className="w-full table-fixed border-collapse bg-white text-[13px]">
                                     <colgroup>{RET_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
                                         <tr>{RET_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
@@ -2164,7 +2194,7 @@ export default function TradeSaleInvoice() {
                             {/* The customer's sale history — click a line to return from it */}
                             <div className="flex min-h-[110px] flex-[1.4] flex-col overflow-hidden border border-slate-500 bg-[#9ea1ad]">
                                 <div className="min-h-0 flex-1 overflow-auto">
-                                    <table className="w-full min-w-[860px] table-fixed border-collapse bg-white text-[13px]">
+                                    <table className="w-full table-fixed border-collapse bg-white text-[13px]">
                                         <colgroup>{RR_HIST_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                         <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
                                             <tr>{RR_HIST_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
@@ -2195,7 +2225,7 @@ export default function TradeSaleInvoice() {
                         </div>
 
                         {/* Right: totals, actions, history filters */}
-                        <div className="flex w-[380px] shrink-0 flex-col gap-2 overflow-y-auto">
+                        <div className="flex w-[380px] shrink-0 flex-col gap-2 overflow-hidden">
                             <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-[#9da1d8] bg-[#ececfd] p-2.5">
                                 {[['Sale Amount', fmt(rrTotals.sale)], ['Disc. Amount', fmt(rrTotals.disc)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
                                     <div key={label} className="flex flex-col gap-0.5">
@@ -2270,6 +2300,7 @@ export default function TradeSaleInvoice() {
                             </div>
                         </div>
                     </div>
+                    </FitBox>
                 </Modal>
             )}
 
