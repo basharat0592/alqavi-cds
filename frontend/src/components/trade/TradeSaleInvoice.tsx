@@ -69,7 +69,11 @@ const STAGE_W = 1240;
 const STAGE_H = 760;
 
 const COA_SELECT = `${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:opacity-60`;
-const COA_VIEW_COLS = ['Account ID', 'Account Name', 'Acc 3rd Level', 'Area', 'Cell No', 'Status'];
+const COA_VIEW_COLS = [
+    { h: 'Main Account', w: '9%' }, { h: '2nd Level Acc.', w: '15%' }, { h: '3rd Level Acc.', w: '13%' },
+    { h: 'Account ID', w: '9%' }, { h: 'Acc. Name', w: '20%' }, { h: 'Area', w: '12%' },
+    { h: 'Cell No', w: '11%' }, { h: 'Contact Person', w: '11%' },
+];
 
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
@@ -107,7 +111,47 @@ function Led({ label, value, tone = 'green' }: { label: string; value: string; t
 const modalStack: number[] = [];
 let modalSeq = 0;
 
-function Modal({ title, onClose, children, wide = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
+/* Legacy-style Yes/No confirmation ("Conformation" box). Esc = No, Enter = Yes. */
+function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo: () => void }) {
+    const yesRef = useRef(onYes); yesRef.current = onYes;
+    const noRef = useRef(onNo); noRef.current = onNo;
+    useEffect(() => {
+        const id = ++modalSeq;
+        modalStack.push(id);
+        const h = (e: KeyboardEvent) => {
+            if (modalStack[modalStack.length - 1] !== id) return;
+            if (e.key === 'Escape') { e.preventDefault(); noRef.current(); }
+            else if (e.key === 'Enter') { e.preventDefault(); yesRef.current(); }
+        };
+        window.addEventListener('keydown', h);
+        return () => {
+            window.removeEventListener('keydown', h);
+            modalStack.splice(modalStack.indexOf(id), 1);
+        };
+    }, []);
+    return (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/30 p-6 print:hidden">
+            <div className="w-full max-w-md overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl" role="alertdialog" aria-label="Confirmation">
+                <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2 text-[13px] font-semibold text-slate-700">
+                    <span className="flex h-4 w-4 items-center justify-center rounded-sm bg-[#3b3f8f] text-[9px] font-black text-white">AQ</span>
+                    Confirmation
+                </div>
+                <div className="flex items-center gap-4 px-6 py-6">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#4f7be8] to-[#2347b8] text-[22px] font-black text-white shadow-md">?</span>
+                    <p className="text-[15px] font-medium text-slate-800">{msg}</p>
+                </div>
+                <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
+                    <button type="button" autoFocus onClick={onYes}
+                        className="h-9 min-w-[96px] rounded-md border border-[#3b3f8f] bg-[#3b3f8f] px-4 text-[14px] font-bold text-white hover:bg-[#2f3278]">Yes</button>
+                    <button type="button" onClick={onNo}
+                        className="h-9 min-w-[96px] rounded-md border border-slate-300 bg-white px-4 text-[14px] font-bold text-slate-700 hover:bg-slate-100">No</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function Modal({ title, onClose, children, wide = false, xl = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean }) {
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
     useEffect(() => {
@@ -123,8 +167,10 @@ function Modal({ title, onClose, children, wide = false }: { title: string; onCl
         };
     }, []);
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-6 pt-16 backdrop-blur-[1px] print:static print:bg-white print:p-0" onMouseDown={onClose}>
-            <div className={`flex max-h-[80vh] w-full ${wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl print:max-h-none print:border-0 print:shadow-none`} onMouseDown={(e) => e.stopPropagation()}>
+        // Like the legacy windows, clicking outside does not close it — only X,
+        // Esc or the window's own Cancel/Close (which ask for confirmation).
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-6 pt-12 backdrop-blur-[1px] print:static print:bg-white print:p-0">
+            <div className={`flex max-h-[86vh] w-full ${xl ? 'max-w-6xl' : wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl print:max-h-none print:border-0 print:shadow-none`}>
                 <div className="flex items-center justify-between bg-gradient-to-r from-[#3b3f8f] to-[#5a5fc4] px-4 py-2 text-white print:hidden">
                     <span className="text-[14px] font-bold">{title}</span>
                     <button type="button" onClick={onClose} className="rounded p-1 hover:bg-white/20" aria-label="Close"><X size={16} /></button>
@@ -211,6 +257,11 @@ export default function TradeSaleInvoice() {
         custRef.current?.focus();
     }, [loadInvoiceNo]);
 
+    /* ── "Do you want to Close the Form ?" — every window asks before closing
+       (programmatic closes after a save/pick don't). */
+    const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
+    const askClose = (fn: () => void, msg = 'Do you want to Close the Form ?') => setAsk({ msg, yes: fn });
+
     /* ── Add New → Chart of Accounts (legacy Trade 1.0 "Chart of Account" window) ──
        Opened from Find Customer with Assets › Current assets › Accounts
        Receivables preselected, so a new account is a customer by default. */
@@ -244,6 +295,7 @@ export default function TradeSaleInvoice() {
         const q = custQuery.trim();
         setCoa({ ...EMPTY_COA, main: '1', l2: '12', l3: String(CUSTOMER_GROUP), name: q && !/^\d+$/.test(q) ? q : '' });
         setCoaList(null);
+        setCoaSel(null);
         setAddingCust(true);
         if (!groups.length) api.get('v1/company/account-groups/').then(({ data }) => setGroups(data)).catch(() => setGroups([]));
         if (!areas.length) loadAreas();
@@ -297,11 +349,104 @@ export default function TradeSaleInvoice() {
         } finally { setSavingArea(false); }
     };
 
+    /* ── Chart of Accounts › View: every account in a grid (legacy view screen).
+       Picking a row loads it into the form for Update / Delete. */
+    const [coaSearch, setCoaSearch] = useState('');
+    const [coaSel, setCoaSel] = useState<any | null>(null);
+    const [coaBusy, setCoaBusy] = useState(false);
+
     const viewAccounts = async () => {
         try {
-            const { data } = await api.get('v1/company/ledger-accounts/', { params: coa.l3 ? { group: coa.l3 } : {} });
+            const { data } = await api.get('v1/company/ledger-accounts/');
             setCoaList(data);
+            setCoaSel(null);
+            setCoaSearch('');
         } catch { toast.error('Could not load accounts.'); }
+    };
+
+    // Grid narrows by the level dropdowns and the Search Account box. While a row
+    // is selected its levels fill the dropdowns, so they don't filter then.
+    const coaRows = useMemo(() => {
+        if (!coaList) return [];
+        const q = coaSearch.trim().toLowerCase();
+        const byLevel = !coaSel;
+        return coaList.filter((a) =>
+            (!byLevel || !coa.main || String(a.main) === coa.main) &&
+            (!byLevel || !coa.l2 || String(a.level2) === coa.l2) &&
+            (!byLevel || !coa.l3 || String(a.group) === coa.l3) &&
+            (!q || String(a.acc_id).includes(q) || String(a.name).toLowerCase().includes(q)
+                || String(a.area_name || '').toLowerCase().includes(q)));
+    }, [coaList, coa.main, coa.l2, coa.l3, coaSearch, coaSel]);
+
+    const pickCoaRow = (a: any) => {
+        setCoaSel(a);
+        setCoa({
+            main: String(a.main ?? ''), l2: String(a.level2 ?? ''), l3: String(a.group ?? ''),
+            name: a.name || '', cell: a.cell_no || '', contact: a.contact_person || '',
+            area: a.area ? String(a.area) : '', status: a.status || '',
+        });
+    };
+
+    const coaAddNew = () => {
+        setCoaSel(null);
+        setCoaList(null);
+        setCoa((c) => ({ ...EMPTY_COA, main: c.main, l2: c.l2, l3: c.l3 }));
+    };
+
+    const updateAccount = async () => {
+        if (!coaSel || coaBusy) return;
+        if (!coa.name.trim()) { toast.error('Enter the Acc. Name.'); return; }
+        setCoaBusy(true);
+        try {
+            const { data } = await api.patch(`v1/company/ledger-accounts/${coaSel.id}/`, {
+                name: coa.name.trim(), cell_no: coa.cell.trim(), contact_person: coa.contact.trim(),
+                area: coa.area || null, status: coa.status || coaSel.status,
+            });
+            setCoaList((l) => (l || []).map((x) => (x.id === data.id ? data : x)));
+            setCoaSel(data);
+            if (data.customer) {
+                setCustomers((cs) => cs.map((c) => (c.id === data.customer
+                    ? { ...c, first_name: data.name, last_name: '', phone: data.cell_no, area: data.area, area_name: data.area_name, is_active: data.status === 'active' }
+                    : c)));
+            }
+            toast.success(`Account ${data.acc_id} updated.`);
+        } catch (err: any) {
+            const d = err?.response?.data;
+            toast.error(String(d?.detail || 'Could not update the account.'));
+        } finally { setCoaBusy(false); }
+    };
+
+    const deleteAccount = () => {
+        if (!coaSel) return;
+        const sel = coaSel;
+        setAsk({
+            msg: `Do you want to Delete account ${sel.acc_id} — ${sel.name} ?`,
+            yes: async () => {
+                setCoaBusy(true);
+                try {
+                    await api.delete(`v1/company/ledger-accounts/${sel.id}/`);
+                    setCoaList((l) => (l || []).filter((x) => x.id !== sel.id));
+                    if (sel.customer) setCustomers((cs) => cs.filter((c) => c.id !== sel.customer));
+                    setCoaSel(null);
+                    setCoa((c) => ({ ...EMPTY_COA, main: c.main, l2: c.l2, l3: c.l3 }));
+                    toast.success(`Account ${sel.acc_id} deleted.`);
+                } catch (err: any) {
+                    toast.error(String(err?.response?.data?.detail || 'Could not delete the account.'), { duration: 7000 });
+                } finally { setCoaBusy(false); }
+            },
+        });
+    };
+
+    const exportAccounts = () => {
+        const head = ['Main Account', '2nd Level Acc.', '3rd Level Acc.', 'Account ID', 'Acc. Name', 'Area', 'Cell No', 'Contact Person', 'Status'];
+        const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const csv = [head, ...coaRows.map((a) => [a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no, a.contact_person, a.status])]
+            .map((r) => r.map(esc).join(',')).join('\r\n');
+        const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        link.href = url; link.download = `chart-of-accounts-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
     };
 
     const saveNewCustomer = async () => {
@@ -522,9 +667,11 @@ export default function TradeSaleInvoice() {
     };
 
     const closeWindow = () => {
-        if (lines.length && !window.confirm('Close without saving this invoice?')) return;
-        setLines([]);
-        window.close();
+        askClose(() => {
+            setLines([]);
+            // Defer so the cleared lines drop the unsaved-invoice guard first.
+            setTimeout(() => window.close(), 0);
+        }, lines.length ? 'The invoice is not saved. Do you want to Close the Form ?' : undefined);
     };
 
     const loadSavedInvoices = async () => {
@@ -838,9 +985,12 @@ export default function TradeSaleInvoice() {
             </FitStage>
             </div>
 
+            {/* ─── Close / delete confirmation ─── */}
+            {ask && <ConfirmBox msg={ask.msg} onNo={() => setAsk(null)} onYes={() => { const fn = ask.yes; setAsk(null); fn(); }} />}
+
             {/* ─── Find Customer ─── */}
             {showFindCust && (
-                <Modal title={addingCust ? 'Chart of Accounts' : 'Find Customer'} onClose={closeFindCustomer} wide>
+                <Modal title={addingCust ? 'Chart of Accounts' : 'Find Customer'} onClose={() => askClose(closeFindCustomer)} wide={!coaList} xl={addingCust && !!coaList}>
                     {addingCust ? (
                         <>
                             <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
@@ -866,7 +1016,7 @@ export default function TradeSaleInvoice() {
 
                                         {/* Row 2 — id / cell / area */}
                                         <span className={LABEL}>Account ID</span>
-                                        <ReadBox value={<span className="font-mono">{nextAccId}</span>} />
+                                        <ReadBox value={<span className="font-mono">{coaSel ? coaSel.acc_id : nextAccId}</span>} />
                                         <span className={LABEL}>Cell No</span>
                                         <input value={coa.cell} onChange={(e) => setCoa((c) => ({ ...c, cell: e.target.value }))} inputMode="tel" className={`${EDIT} w-full`} />
                                         <span className={`${LABEL} flex items-center justify-between gap-1`}>
@@ -899,37 +1049,53 @@ export default function TradeSaleInvoice() {
                                     </div>
                                 </fieldset>
 
-                                {/* View — accounts under the chosen 3rd level */}
+                                {/* View — every account in a legacy grid; click a row to Update / Delete it. */}
                                 {coaList && (
-                                    <div className="mt-3 max-h-[240px] overflow-auto rounded-lg border border-slate-400 bg-white">
-                                        <table className="w-full border-collapse text-[12.5px]">
-                                            <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                                <tr>{COA_VIEW_COLS.map((h) => <th key={h} className="border-b border-r border-slate-300 px-2 py-1.5">{h}</th>)}</tr>
+                                    <div className="mt-3 h-[300px] overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                                        <table className="w-full min-w-[980px] table-fixed border-collapse bg-white text-[13px]">
+                                            <colgroup>
+                                                {COA_VIEW_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}
+                                            </colgroup>
+                                            <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                                <tr>{COA_VIEW_COLS.map((c) => <th key={c.h} className="overflow-hidden whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
                                             </thead>
                                             <tbody>
-                                                {coaList.map((a) => (
-                                                    <tr key={a.id} className="border-b border-slate-200 hover:bg-indigo-50">
-                                                        <td className="border-r border-slate-200 px-2 py-1 font-mono">{a.acc_id}</td>
-                                                        <td className="border-r border-slate-200 px-2 py-1 font-semibold">{a.name}</td>
-                                                        <td className="border-r border-slate-200 px-2 py-1">{a.group_name}</td>
-                                                        <td className="border-r border-slate-200 px-2 py-1">{a.area_name || '—'}</td>
-                                                        <td className="border-r border-slate-200 px-2 py-1">{a.cell_no || '—'}</td>
-                                                        <td className="px-2 py-1 capitalize">{a.status}</td>
+                                                {coaRows.map((a) => (
+                                                    <tr key={a.id} onClick={() => pickCoaRow(a)}
+                                                        className={`cursor-pointer ${coaSel?.id === a.id ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
+                                                        {[a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no || '-', a.contact_person || '0'].map((v, k) => (
+                                                            <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 3 ? 'font-mono' : ''}`}>{v}</td>
+                                                        ))}
                                                     </tr>
                                                 ))}
-                                                {!coaList.length && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No accounts.</td></tr>}
+                                                {!coaRows.length && <tr><td colSpan={COA_VIEW_COLS.length} className="px-3 py-4 text-center text-slate-400">No accounts.</td></tr>}
                                             </tbody>
                                         </table>
                                     </div>
                                 )}
                             </div>
-                            <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
-                                <button type="button" onClick={saveNewCustomer} disabled={savingCust} className={ACTION_BTN}>
-                                    {savingCust ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
-                                </button>
-                                <button type="button" onClick={viewAccounts} className={ACTION_BTN}><span className="underline">V</span>iew</button>
-                                <button type="button" onClick={() => setAddingCust(false)} disabled={savingCust} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
-                            </div>
+                            {coaList ? (
+                                <div className="flex items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                                    <span className={`${LABEL} text-[14px]`}>Search Account</span>
+                                    <input value={coaSearch} onChange={(e) => setCoaSearch(e.target.value)} placeholder="ID, name or area"
+                                        className={`${FIELD} w-[200px] border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
+                                    <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {coaRows.length}</span>} className="w-[200px]" />
+                                    <span className="flex-1" />
+                                    <button type="button" onClick={exportAccounts} className={ACTION_BTN}>Export</button>
+                                    <button type="button" onClick={coaAddNew} className={ACTION_BTN}><span className="underline">A</span>dd New</button>
+                                    <button type="button" onClick={updateAccount} disabled={!coaSel || coaBusy} className={ACTION_BTN}><span className="underline">U</span>pdate</button>
+                                    <button type="button" onClick={deleteAccount} disabled={!coaSel || coaBusy} className={ACTION_BTN}><span className="underline">D</span>elete</button>
+                                    <button type="button" onClick={() => askClose(() => setAddingCust(false))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                                </div>
+                            ) : (
+                                <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                                    <button type="button" onClick={saveNewCustomer} disabled={savingCust} className={ACTION_BTN}>
+                                        {savingCust ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                                    </button>
+                                    <button type="button" onClick={viewAccounts} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                                    <button type="button" onClick={() => askClose(() => setAddingCust(false))} disabled={savingCust} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                                </div>
+                            )}
                         </>
                     ) : (
                     <>
@@ -964,7 +1130,7 @@ export default function TradeSaleInvoice() {
                     </div>
                     <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-2.5">
                         <ReadBox value={`${custMatches.length}${custMatches.length === 200 ? '+' : ''} of ${customers.length} customers`} className="w-[280px] !text-[12.5px]" />
-                        <button type="button" onClick={closeFindCustomer} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                        <button type="button" onClick={() => askClose(closeFindCustomer)} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                     </div>
                     </>
                     )}
@@ -973,7 +1139,7 @@ export default function TradeSaleInvoice() {
 
             {/* ─── Sub Area (opened from Chart of Accounts › Area › Add) ─── */}
             {showSubArea && (
-                <Modal title="Sub Area" onClose={() => !savingArea && setShowSubArea(false)}>
+                <Modal title="Sub Area" onClose={() => !savingArea && askClose(() => setShowSubArea(false))}>
                     <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
                         <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1">
                             <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sub Area</legend>
@@ -1026,14 +1192,14 @@ export default function TradeSaleInvoice() {
                             {savingArea ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
                         <button type="button" onClick={() => setSubAreaList((v) => !v)} className={ACTION_BTN}><span className="underline">V</span>iew</button>
-                        <button type="button" onClick={() => setShowSubArea(false)} disabled={savingArea} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                        <button type="button" onClick={() => askClose(() => setShowSubArea(false))} disabled={savingArea} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                     </div>
                 </Modal>
             )}
 
             {/* ─── Find Product ─── */}
             {showFindProd && (
-                <Modal title="Find Product" onClose={() => setShowFindProd(false)} wide>
+                <Modal title="Find Product" onClose={() => askClose(() => setShowFindProd(false))} wide>
                     <div className="border-b border-slate-200 p-3">
                         <div className="relative">
                             <Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" />
@@ -1070,7 +1236,7 @@ export default function TradeSaleInvoice() {
 
             {/* ─── Product PR (batch-wise purchase rates) ─── */}
             {showPR && p && (
-                <Modal title={`Product PR — ${p.name}`} onClose={() => setShowPR(false)}>
+                <Modal title={`Product PR — ${p.name}`} onClose={() => askClose(() => setShowPR(false))}>
                     <div className="min-h-0 flex-1 overflow-auto p-3">
                         <table className="w-full text-[13px] tabular-nums">
                             <thead className="bg-slate-100 text-left text-slate-600">
@@ -1099,7 +1265,7 @@ export default function TradeSaleInvoice() {
 
             {/* ─── Invoice PV (preview → save / print) ─── */}
             {showPV && (
-                <Modal title={`Invoice PV — ${invoiceNo}`} onClose={() => !saving && setShowPV(false)} wide>
+                <Modal title={`Invoice PV — ${invoiceNo}`} onClose={() => !saving && askClose(() => setShowPV(false))} wide>
                     <div className="min-h-0 flex-1 overflow-auto p-5 print:overflow-visible print:p-0" id="invoice-print">
                         <div className="flex items-start justify-between border-b-2 border-slate-800 pb-2">
                             <div>
@@ -1143,7 +1309,7 @@ export default function TradeSaleInvoice() {
                         </div>
                     </div>
                     <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 print:hidden">
-                        <button type="button" onClick={() => setShowPV(false)} disabled={saving}
+                        <button type="button" onClick={() => askClose(() => setShowPV(false))} disabled={saving}
                             className="h-9 rounded-md border border-slate-300 bg-white px-4 text-[13px] font-semibold text-slate-700 hover:bg-slate-100">Close</button>
                         <button type="button" onClick={() => saveInvoice(false)} disabled={saving || !lines.length || !customer}
                             className="flex h-9 items-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600 px-4 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
@@ -1159,7 +1325,7 @@ export default function TradeSaleInvoice() {
 
             {/* ─── View: saved sale invoices ─── */}
             {showView && (
-                <Modal title="Sale Invoices" onClose={() => setShowView(false)} wide>
+                <Modal title="Sale Invoices" onClose={() => askClose(() => setShowView(false))} wide>
                     <div className="border-b border-slate-200 p-3">
                         <div className="relative">
                             <Search size={15} className="absolute left-2.5 top-2 text-slate-400" />

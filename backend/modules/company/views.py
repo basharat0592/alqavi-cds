@@ -149,9 +149,13 @@ SUPPLIER_GROUP = 2201   # Account Payables
 
 def _ledger_row(a):
     g = a.group
+    l2 = g.parent
+    l1 = l2.parent if l2 else None
     return {
         'id': a.id, 'acc_id': a.acc_id, 'name': a.name,
         'group': g.code, 'group_name': g.name,
+        'level2': l2.code if l2 else None, 'level2_name': l2.name if l2 else '',
+        'main': l1.code if l1 else None, 'main_name': l1.name if l1 else '',
         'area': a.area_id, 'area_name': a.area.name if a.area_id else None,
         'cell_no': a.cell_no, 'contact_person': a.contact_person, 'status': a.status,
         'customer': a.customer_id, 'supplier': str(a.supplier_id) if a.supplier_id else None,
@@ -179,7 +183,7 @@ class LedgerAccountViewSet(viewsets.ViewSet):
 
     def _qs(self):
         return scope_to_tenant(self.request.user, LedgerAccount.objects.all(), 'tenant') \
-            .select_related('group', 'area')
+            .select_related('group__parent__parent', 'area')
 
     def _group(self, code):
         try:
@@ -264,3 +268,63 @@ class LedgerAccountViewSet(viewsets.ViewSet):
             from modules.customer.serializers import CustomerSerializer
             out['customer_record'] = CustomerSerializer(customer, context={'request': request}).data
         return Response(out, status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk=None):
+        """Update an account (legacy "Update"). The account ID and its group stay
+        fixed; the linked customer / supplier record is kept in step."""
+        acc = self._qs().filter(pk=pk).first()
+        if not acc:
+            return Response({'detail': 'Account not found.'}, status=status.HTTP_404_NOT_FOUND)
+        d = request.data
+        if 'name' in d:
+            name = (d.get('name') or '').strip()
+            if not name:
+                return Response({'detail': 'Enter the account name.'}, status=status.HTTP_400_BAD_REQUEST)
+            acc.name = name[:255]
+        if 'cell_no' in d:
+            acc.cell_no = (d.get('cell_no') or '').strip()[:40]
+        if 'contact_person' in d:
+            acc.contact_person = (d.get('contact_person') or '').strip()[:150]
+        if 'area' in d:
+            acc.area = Area.objects.filter(id=d.get('area')).first() if d.get('area') else None
+        if d.get('status'):
+            acc.status = 'inactive' if str(d.get('status')).lower() == 'inactive' else 'active'
+        with transaction.atomic():
+            acc.save()
+            active = acc.status == 'active'
+            if acc.customer_id:
+                c = acc.customer
+                c.first_name = acc.name[:100]
+                c.phone = acc.cell_no[:20]
+                c.area = acc.area
+                c.status, c.is_active = acc.status, active
+                c.save(update_fields=['first_name', 'phone', 'area', 'status', 'is_active'])
+            if acc.supplier_id:
+                sp = acc.supplier
+                sp.name = acc.name
+                sp.phone = acc.cell_no or None
+                sp.contact_person = acc.contact_person or None
+                sp.status, sp.is_active = acc.status, active
+                sp.save(update_fields=['name', 'phone', 'contact_person', 'status', 'is_active'])
+        return Response(_ledger_row(acc))
+
+    def destroy(self, request, pk=None):
+        """Delete an account (legacy "Delete"). Refused while its customer has
+        sales or its supplier has purchases — make it Inactive instead."""
+        acc = self._qs().filter(pk=pk).first()
+        if not acc:
+            return Response({'detail': 'Account not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if acc.customer_id and acc.customer.orders.exists():
+            return Response({'detail': 'This customer has sales, so the account cannot be deleted. '
+                                       'Set its Status to Inactive instead.'}, status=status.HTTP_400_BAD_REQUEST)
+        if acc.supplier_id and acc.supplier.purchase_orders.exists():
+            return Response({'detail': 'This supplier has purchases, so the account cannot be deleted. '
+                                       'Set its Status to Inactive instead.'}, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            customer, supplier = acc.customer, acc.supplier
+            acc.delete()
+            if customer:
+                customer.delete()
+            if supplier:
+                supplier.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
