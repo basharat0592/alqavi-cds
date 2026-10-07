@@ -41,6 +41,26 @@ def _settlement_alert(due_date, remaining):
     return False, 0, (0 <= (due_date - today).days <= 3)
 
 
+class SalesStaff(models.Model):
+    """Saleman / order-booker (legacy Trade 2.1 Staff table). Not a login user —
+    just who booked the sale, chosen on the Sale Invoice."""
+    name = models.CharField(max_length=120)
+    cell = models.CharField(max_length=40, blank=True, default='')
+    status = models.CharField(max_length=10, default='active')
+    legacy_id = models.PositiveIntegerField(null=True, blank=True)
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_sales_staff'
+    )
+
+    class Meta:
+        db_table = 'sales_staff'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
@@ -154,6 +174,13 @@ class Order(models.Model):
     # Optional back-dated sale date (desktop "Sale Date" checkbox). Falls back to
     # created_at for display when unset.
     sale_date = models.DateField(null=True, blank=True)
+    # Trade 1.0 Sale Invoice: the saleman (legacy Staff list), and the customer's
+    # previous balance + cash paid as they stood when the invoice was made —
+    # shown in Sale Records (Pre. Bal / Paid / Balance).
+    staff = models.ForeignKey('sales.SalesStaff', on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='orders')
+    prev_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    paid_at_sale = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
 
     # Shipping info
     shipping_address = models.TextField()

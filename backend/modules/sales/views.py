@@ -407,6 +407,87 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         return Response(results)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def staff_list(self, request):
+        """Salemen (legacy Staff) for the Sale Invoice / Sale Records dropdowns."""
+        from .models import SalesStaff
+        qs = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant')
+        return Response([{'id': s.id, 'name': s.name, 'status': s.status} for s in qs])
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def sale_records(self, request):
+        """Trade 1.0 'Sale / Sale-Return Records'. Filters: date_from, date_to
+        (sale date), staff (SalesStaff id), customer (id), type=sale|return.
+        Columns: SaleID, Date, Staff, Acc.ID, Acc.Name, Amount (gross), Disc.,
+        Net Amount, Pre. Bal., Total, Paid, Balance."""
+        from decimal import Decimal
+        from django.db.models import Sum, F, Q, DecimalField as DField, ExpressionWrapper
+        from django.db.models.functions import Coalesce
+        from .models import SaleReturn
+        p = request.query_params
+        date_from, date_to = p.get('date_from'), p.get('date_to')
+        staff, customer = p.get('staff'), p.get('customer')
+        z = Decimal('0')
+
+        def cust_cols(c, fallback_name):
+            code = c.username[4:] if (c and str(c.username).startswith('cust')) else ''
+            return code, (f"{c.first_name or ''} {c.last_name or ''}".strip() if c else '') or fallback_name
+
+        if p.get('type') == 'return':
+            qs = scope_to_tenant(request.user, SaleReturn.objects.all(), 'tenant') \
+                .select_related('customer', 'order__staff')
+            if date_from:
+                qs = qs.filter(created_at__date__gte=date_from)
+            if date_to:
+                qs = qs.filter(created_at__date__lte=date_to)
+            if customer:
+                qs = qs.filter(customer_id=customer)
+            if staff:
+                qs = qs.filter(order__staff_id=staff)
+            rows = []
+            for r in qs.order_by('-created_at')[:3000]:
+                amount = Decimal(str(r.items_total or 0))
+                code, name = cust_cols(r.customer, r.order.customer_name if r.order_id else '')
+                paid = Decimal(str(r.refund_amount or 0)) - Decimal(str(r.refund_remaining or 0))
+                rows.append({
+                    'id': None, 'sale_id': r.return_number, 'date': r.created_at.date(),
+                    'staff': r.order.staff.name if (r.order_id and r.order.staff_id) else '',
+                    'acc_id': code, 'acc_name': name, 'amount': amount, 'disc': z, 'net': amount,
+                    'pre_bal': z, 'total': amount, 'paid': paid, 'balance': amount - paid,
+                })
+            return Response(rows)
+
+        qs = scope_to_tenant(request.user, Order.objects.exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant') \
+            .filter(tracking_id__startswith='S').select_related('customer', 'staff', 'salesperson')
+        if date_from:
+            qs = qs.filter(Q(sale_date__gte=date_from) | Q(sale_date__isnull=True, created_at__date__gte=date_from))
+        if date_to:
+            qs = qs.filter(Q(sale_date__lte=date_to) | Q(sale_date__isnull=True, created_at__date__lte=date_to))
+        if staff:
+            qs = qs.filter(staff_id=staff)
+        if customer:
+            qs = qs.filter(customer_id=customer)
+        money = DField(max_digits=14, decimal_places=2)
+        qs = qs.annotate(
+            gross=Coalesce(Sum(ExpressionWrapper(F('items__price') * F('items__quantity'), output_field=money)), z, output_field=money),
+            line_disc=Coalesce(Sum('items__discount'), z, output_field=money),
+        ).order_by('-sale_date', '-created_at')
+        rows = []
+        for o in qs[:3000]:
+            net = Decimal(str(o.total_amount or 0))
+            pre = Decimal(str(o.prev_balance or 0))
+            paid = Decimal(str(o.paid_at_sale if o.paid_at_sale is not None else (o.amount_paid or 0)))
+            code, name = cust_cols(o.customer, o.customer_name)
+            staff_name = o.staff.name if o.staff_id else (
+                (o.salesperson.get_full_name() or o.salesperson.username) if o.salesperson_id else '')
+            rows.append({
+                'id': str(o.id), 'sale_id': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
+                'staff': staff_name, 'acc_id': code, 'acc_name': name,
+                'amount': o.gross, 'disc': o.line_disc + Decimal(str(o.discount or 0)), 'net': net,
+                'pre_bal': pre, 'total': pre + net, 'paid': paid, 'balance': pre + net - paid,
+            })
+        return Response(rows)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def customer_items(self, request):
         """What a customer has bought from us (Trade 1.0 Find Product, bottom
         grid): one row per sale line, newest first — PID, Category, Product,

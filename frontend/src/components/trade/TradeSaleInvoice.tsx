@@ -16,7 +16,7 @@ import { Search, X, Loader2, Printer, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import * as XLSX from 'xlsx';
-import { orderService, userService, installmentService } from '@/lib/api';
+import { orderService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
 import FitStage from '@/components/trade/FitStage';
 
@@ -101,6 +101,13 @@ const FP_HIST_COLS = [
     { h: 'PID', w: '7%' }, { h: 'Category', w: '10%' }, { h: 'Product', w: '27%' }, { h: 'Pack', w: '6%' },
     { h: 'Expiry Date', w: '10%' }, { h: 'Qty(U)', w: '7%' }, { h: 'Qty(B)', w: '7%' }, { h: 'T.P', w: '9%' },
     { h: 'TP %', w: '7%' }, { h: 'Retail Rate', w: '10%' },
+];
+
+/* Sale / Sale-Return Records grid (legacy column order). */
+const SR_COLS = [
+    { h: 'SaleID', w: '9%' }, { h: 'Date Sale', w: '8%' }, { h: 'Staff', w: '10%' }, { h: 'Acc.ID', w: '8%' },
+    { h: 'Acc.Name', w: '19%' }, { h: 'Amount', w: '7.5%' }, { h: 'Disc.', w: '6%' }, { h: 'Net.Amount', w: '7.5%' },
+    { h: 'Pre. Bal.', w: '7%' }, { h: 'Total', w: '6.5%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '6%' },
 ];
 
 /* Keyboard shortcuts shown in the grid footer. */
@@ -202,7 +209,9 @@ function Modal({ title, onClose, children, wide = false, xl = false }: { title: 
         // Esc or the window's own Cancel/Close (which ask for confirmation).
         // Every window opens centred straight on top of the previous one and is
         // sized to fit the screen, so nothing in it is ever cut off.
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : 'bg-slate-900/25'}`}>
+        // Stacked by opening order, so the newest window is always on top.
+        <div style={{ zIndex: 50 + depth }}
+            className={`fixed inset-0 flex items-center justify-center p-4 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : 'bg-slate-900/25'}`}>
             <div className={`flex max-h-[calc(100vh-2rem)] w-full ${xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
                 <div className="flex items-center justify-between bg-gradient-to-r from-[#3b3f8f] to-[#5a5fc4] px-4 py-2 text-white print:hidden">
                     <span className="text-[13.5px] font-semibold">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( {title} )</span>
@@ -248,9 +257,6 @@ export default function TradeSaleInvoice() {
 
     // View: saved sale invoices
     const [showView, setShowView] = useState(false);
-    const [viewRows, setViewRows] = useState<any[]>([]);
-    const [viewLoading, setViewLoading] = useState(false);
-    const [viewQuery, setViewQuery] = useState('');
 
     const custRef = useRef<HTMLInputElement>(null);
     const codeRef = useRef<HTMLInputElement>(null);
@@ -674,22 +680,19 @@ export default function TradeSaleInvoice() {
         } finally { setSavingCust(false); }
     };
 
-    const closeFindCustomer = () => { setShowFindCust(false); setAddingCust(false); };
+    // Find Account serves the invoice and the Sale Records filter.
+    const custTarget = useRef<'invoice' | 'records'>('invoice');
+    const closeFindCustomer = () => { setShowFindCust(false); setAddingCust(false); custTarget.current = 'invoice'; };
 
-    // Saleman options — internal staff (not suppliers / customers / riders).
+    // Saleman options — the legacy Staff list (all kept for Sale Records;
+    // only active ones are offered on a new invoice).
+    const [allStaff, setAllStaff] = useState<{ id: string; name: string; status: string }[]>([]);
     useEffect(() => {
-        userService.getAll().then((all: any) => {
-            const list = (Array.isArray(all) ? all : all?.results || [])
-                .filter((u: any) => {
-                    const r = String(u.role_name || '').toLowerCase();
-                    return !r.includes('supplier') && !r.includes('customer') && !r.includes('delivery');
-                })
-                .map((u: any) => ({
-                    id: String(u.id),
-                    name: u.full_name || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username,
-                }));
-            setStaff(list);
-        }).catch(() => setStaff([]));
+        api.get('v1/sales/orders/staff_list/').then(({ data }) => {
+            const list = (data || []).map((x: any) => ({ id: String(x.id), name: x.name, status: x.status }));
+            setAllStaff(list);
+            setStaff(list.filter((x: any) => x.status === 'active'));
+        }).catch(() => { setAllStaff([]); setStaff([]); });
     }, []);
 
     useEffect(() => {
@@ -709,6 +712,12 @@ export default function TradeSaleInvoice() {
 
     /* ── customer ── */
     const pickCustomer = (c: any) => {
+        if (custTarget.current === 'records') {
+            custTarget.current = 'invoice';
+            setSrCust(c); setSrCustInput(custCode(c));
+            setShowFindCust(false); setCustQuery('');
+            return;
+        }
         setCustomer(c);
         setCustInput(custCode(c));
         setShowFindCust(false);
@@ -959,13 +968,44 @@ export default function TradeSaleInvoice() {
         }, lines.length ? 'The invoice is not saved. Do you want to Close the Form ?' : undefined);
     };
 
-    const loadSavedInvoices = async () => {
-        setViewLoading(true);
+    /* ── View → Sale / Sale-Return Records (legacy Trade 1.0 window) ── */
+    const [srFrom, setSrFrom] = useState(today);
+    const [srTo, setSrTo] = useState(today);
+    const [srStaff, setSrStaff] = useState('');
+    const [srType, setSrType] = useState('');
+    const [srCust, setSrCust] = useState<any | null>(null);
+    const [srCustInput, setSrCustInput] = useState('');
+    const [srRows, setSrRows] = useState<any[] | null>(null);
+    const [srLoading, setSrLoading] = useState(false);
+    const [srSel, setSrSel] = useState('');
+
+    const openSaleRecords = () => {
+        setSrFrom(today()); setSrTo(today()); setSrStaff(''); setSrType('');
+        setSrCust(null); setSrCustInput(''); setSrRows(null); setSrSel('');
+        setShowView(true);
+    };
+
+    const searchSaleRecords = async () => {
+        setSrLoading(true);
         try {
-            const rows: any[] = await orderService.getAll();
-            setViewRows(rows.filter((o: any) => /^S\d{8}$/.test(String(o.order_number || o.tracking_id || ''))));
-        } catch { toast.error('Could not load saved invoices.'); setViewRows([]); }
-        finally { setViewLoading(false); }
+            const params: any = { date_from: srFrom, date_to: srTo };
+            if (srStaff) params.staff = srStaff;
+            if (srCust) params.customer = srCust.id;
+            if (srType) params.type = srType;
+            const { data } = await api.get('v1/sales/orders/sale_records/', { params });
+            setSrRows(data);
+            setSrSel('');
+        } catch { toast.error('Could not load the records.'); setSrRows([]); }
+        finally { setSrLoading(false); }
+    };
+
+    const findRecordsCustomer = () => {
+        const q = srCustInput.trim().toLowerCase();
+        const hit = q ? customers.find((c) => custCode(c).toLowerCase() === q) : null;
+        if (hit) { setSrCust(hit); setSrCustInput(custCode(hit)); return; }
+        custTarget.current = 'records';
+        setCustQuery(srCustInput.trim());
+        setShowFindCust(true);
     };
 
     const saveInvoice = async (print: boolean) => {
@@ -991,7 +1031,9 @@ export default function TradeSaleInvoice() {
                 amount_paid: round2(paid),
                 discount: 0,
                 shipping_cost: 0,
-                salesperson: salesman || null,
+                staff: salesman || null,
+                prev_balance: round2(prevBal),
+                paid_at_sale: round2(paid),
                 sale_date: backDate ? saleDate : today(),
                 sale_invoice: true,
                 items: lines.map((l) => ({
@@ -1261,7 +1303,7 @@ export default function TradeSaleInvoice() {
                         <button type="button" onClick={() => saveInvoice(false)} disabled={saving} className={ACTION_BTN}>
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
-                        <button type="button" onClick={() => { setShowView(true); loadSavedInvoices(); }} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                        <button type="button" onClick={openSaleRecords} className={ACTION_BTN}><span className="underline">V</span>iew</button>
                         <button type="button" onClick={closeWindow} className={ACTION_BTN}><span className="underline">C</span>lose</button>
                     </div>
                 </div>
@@ -1613,44 +1655,95 @@ export default function TradeSaleInvoice() {
                 </Modal>
             )}
 
-            {/* ─── View: saved sale invoices ─── */}
+            {/* ─── View: Sale / Sale-Return Records (legacy Trade 1.0) ─── */}
             {showView && (
-                <Modal title="Sale Invoices" onClose={() => askClose(() => setShowView(false))} wide>
-                    <div className="border-b border-slate-200 p-3">
-                        <div className="relative">
-                            <Search size={15} className="absolute left-2.5 top-2 text-slate-400" />
-                            <input autoFocus value={viewQuery} onChange={(e) => setViewQuery(e.target.value)}
-                                placeholder="Invoice no. or customer…" className={`${EDIT} w-full pl-8`} />
-                        </div>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-auto">
-                        <table className="w-full text-[13px] tabular-nums">
-                            <thead className="sticky top-0 bg-slate-100 text-left text-slate-600">
-                                <tr><th className="px-3 py-1.5">Invoice No.</th><th className="px-3 py-1.5">Date</th><th className="px-3 py-1.5">Customer</th><th className="px-3 py-1.5 text-right">Net Amount</th><th className="px-3 py-1.5 text-right">Paid</th><th className="px-3 py-1.5">Status</th></tr>
-                            </thead>
-                            <tbody>
-                                {viewRows
-                                    .filter((o) => {
-                                        const q = viewQuery.trim().toLowerCase();
-                                        return !q || String(o.order_number || '').toLowerCase().includes(q)
-                                            || String(o.customer_display_name || o.customer_name || '').toLowerCase().includes(q);
-                                    })
-                                    .map((o) => (
-                                        <tr key={o.id} onClick={() => openPopup(`/admin/sales/${o.id}/invoice`)}
-                                            className="cursor-pointer border-t border-slate-100 hover:bg-indigo-50" title="Open invoice">
-                                            <td className="px-3 py-1.5 font-mono font-bold text-[#1f2bd6]">{o.order_number}</td>
-                                            <td className="px-3 py-1.5">{String(o.sale_date || o.created_at || '').slice(0, 10)}</td>
-                                            <td className="px-3 py-1.5 font-semibold">{o.customer_display_name || o.customer_name}</td>
-                                            <td className="px-3 py-1.5 text-right">{fmt(num(o.total_amount))}</td>
-                                            <td className="px-3 py-1.5 text-right">{fmt(num(o.amount_paid))}</td>
-                                            <td className="px-3 py-1.5">{o.payment_status}</td>
+                <Modal title="Sale Records" onClose={() => askClose(() => setShowView(false))} xl>
+                    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#e4e4fb] p-3">
+                        <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-3 pt-1">
+                            <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sale / Sale-Return Records</legend>
+                            <div className="grid grid-cols-[1fr_1fr_auto_auto_1.3fr] items-end gap-x-3 gap-y-2">
+                                <label className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>From Sale Date</span>
+                                    <input type="date" value={srFrom} onChange={(e) => e.target.value && setSrFrom(e.target.value)} className={`${EDIT} w-full`} />
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>To Sale Date</span>
+                                    <input type="date" value={srTo} onChange={(e) => e.target.value && setSrTo(e.target.value)} className={`${EDIT} w-full`} />
+                                </label>
+                                <button type="button" onClick={searchSaleRecords} disabled={srLoading} className={ACTION_BTN}>
+                                    {srLoading ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>earch</>}
+                                </button>
+                                <button type="button" onClick={() => askClose(() => setShowView(false))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                                <ReadBox value={srRows ? <span className="text-[#1f2bd6]">Total Records = {srRows.length}</span> : ''} />
+
+                                <label className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>Staff</span>
+                                    <select value={srStaff} onChange={(e) => setSrStaff(e.target.value)} className={COA_SELECT}>
+                                        <option value="">Select any one</option>
+                                        {allStaff.map((x) => <option key={x.id} value={x.id}>{x.name}{x.status !== 'active' ? ' (inactive)' : ''}</option>)}
+                                    </select>
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>Sale/Sale Return</span>
+                                    <select value={srType} onChange={(e) => setSrType(e.target.value)}
+                                        className={`${FIELD} w-full border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`}>
+                                        <option value="">Select any one</option>
+                                        <option value="sale">Sale</option>
+                                        <option value="return">Sale Return</option>
+                                    </select>
+                                </label>
+                                <button type="button" onClick={findRecordsCustomer}
+                                    className="h-8 shrink-0 rounded-md border-2 border-[#5c4a2a] bg-gradient-to-b from-[#fff1d6] to-[#f3d9a8] px-3 text-[13px] font-black text-[#3b2a10] shadow-sm hover:from-[#ffe7bd]">
+                                    <span className="underline">F</span>ind Customer
+                                </button>
+                                <input value={srCustInput} placeholder="Code"
+                                    onChange={(e) => { setSrCustInput(e.target.value); if (srCust) setSrCust(null); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') findRecordsCustomer(); }}
+                                    className={`${FIELD} w-[130px] border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
+                                <ReadBox value={srCust ? `${custName(srCust)}${srCust.area_name ? `  ·  ${srCust.area_name}` : ''}` : ''} />
+                            </div>
+                        </fieldset>
+
+                        <div className="min-h-[120px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                            <table className="w-full min-w-[1080px] table-fixed border-collapse bg-white text-[13px]">
+                                <colgroup>{SR_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                                <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                    <tr>{SR_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
+                                </thead>
+                                <tbody>
+                                    {(srRows || []).map((r, i) => (
+                                        <tr key={r.sale_id + i} onClick={() => setSrSel(r.sale_id)}
+                                            onDoubleClick={() => r.id && openPopup(`/admin/sales/${r.id}/invoice`)}
+                                            className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
+                                            title={r.id ? 'Double-click to open the invoice' : undefined}>
+                                            {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0',
+                                              fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
+                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 4 ? 'font-semibold' : ''}`}>{v}</td>
+                                            ))}
                                         </tr>
                                     ))}
-                                {!viewRows.length && (
-                                    <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">{viewLoading ? 'Loading…' : 'No sale invoices saved yet.'}</td></tr>
+                                    {(!srRows || !srRows.length) && (
+                                        <tr><td colSpan={SR_COLS.length} className="px-3 py-4 text-center text-slate-500">
+                                            {srLoading ? 'Loading…' : srRows ? 'No records for this search.' : 'Choose the dates (and optionally staff, type or customer), then press Search.'}
+                                        </td></tr>
+                                    )}
+                                </tbody>
+                                {srRows && srRows.length > 0 && (
+                                    <tfoot className="sticky bottom-0 bg-[#ececfd] font-bold tabular-nums">
+                                        <tr>
+                                            <td colSpan={5} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">Totals</td>
+                                            {(['amount', 'disc', 'net'] as const).map((k) => (
+                                                <td key={k} className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r[k]), 0))}</td>
+                                            ))}
+                                            <td className="border-t border-r border-slate-300" />
+                                            <td className="border-t border-r border-slate-300" />
+                                            <td className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r.paid), 0))}</td>
+                                            <td className="border-t border-slate-300" />
+                                        </tr>
+                                    </tfoot>
                                 )}
-                            </tbody>
-                        </table>
+                            </table>
+                        </div>
                     </div>
                 </Modal>
             )}

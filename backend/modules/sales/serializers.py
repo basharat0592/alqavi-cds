@@ -133,7 +133,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date', 'discount', 'shipping_cost', 'salesperson', 'sale_date', 'sale_invoice']
+        fields = ['customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes', 'items', 'payment_method', 'status', 'warehouse_id', 'payment_status', 'amount_paid', 'due_date', 'discount', 'shipping_cost', 'salesperson', 'sale_date', 'sale_invoice', 'staff', 'prev_balance', 'paid_at_sale']
 
     def create(self, validated_data):
         from django.db import transaction, IntegrityError
@@ -209,6 +209,9 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                     'shipping_cost': validated_data.get('shipping_cost', 0) or 0,
                     'salesperson': validated_data.get('salesperson'),
                     'sale_date': validated_data.get('sale_date'),
+                    'staff': validated_data.get('staff'),
+                    'prev_balance': validated_data.get('prev_balance'),
+                    'paid_at_sale': validated_data.get('paid_at_sale'),
                 }
 
                 # Stamp the staff member who rang up this sale (POS) so a branch

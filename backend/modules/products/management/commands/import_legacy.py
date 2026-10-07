@@ -306,7 +306,23 @@ class Command(BaseCommand):
         from datetime import datetime, time
         from decimal import Decimal
         from django.utils import timezone
-        from modules.sales.models import Order, OrderItem
+        from modules.sales.models import Order, OrderItem, SalesStaff
+
+        # Salemen (legacy Staff) — matched on their legacy id.
+        staff = {}
+        for r in rows(d, 'Staff'):
+            sid_ = to_int(r.get('StaffID'), None)
+            name = clean(r.get('StaffName'))
+            if sid_ is None or not name:
+                continue
+            cell = clean(r.get('StaffCell'))
+            obj, _ = SalesStaff.objects.update_or_create(
+                tenant=tenant, legacy_id=sid_,
+                defaults=dict(name=name[:120], cell='' if cell in ('0', '-') else cell[:40],
+                              status='active' if clean(r.get('StaffStatus')).lower().startswith('activ') else 'inactive'))
+            staff[str(sid_)] = obj
+        if staff:
+            self.stdout.write(f'Staff: {len(staff)}')
 
         headers = rows(d, 'SaleAmount')
         if not headers:
@@ -346,6 +362,8 @@ class Command(BaseCommand):
                 notes=LEGACY_SALE_NOTE, status='DELIVERED', payment_method='SHOP',
                 payment_status='PAID', total_amount=money(net), amount_paid=money(net),
                 discount=money(h.get('DiscAAmt')), sale_date=sd, delivered_at=when, tenant=tenant,
+                staff=staff.get(clean(h.get('StaffID'))),
+                prev_balance=money(h.get('PreBal')), paid_at_sale=money(h.get('PaidCash')),
             ))
             dates[sid] = when
         Order.objects.bulk_create(orders, batch_size=500)
