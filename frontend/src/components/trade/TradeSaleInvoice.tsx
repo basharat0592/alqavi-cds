@@ -75,6 +75,17 @@ const COA_VIEW_COLS = [
     { h: 'Cell No', w: '11%' }, { h: 'Contact Person', w: '11%' },
 ];
 
+/* Download rows as a CSV file (Excel opens it). */
+function downloadCsv(name: string, head: string[], rows: any[][]) {
+    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [head, ...rows].map((r) => r.map(esc).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
     ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
@@ -152,6 +163,9 @@ function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo
 }
 
 function Modal({ title, onClose, children, wide = false, xl = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean }) {
+    // How many windows are already open: each new one cascades down-right like
+    // separate desktop windows, and only the first dims the screen behind.
+    const [depth] = useState(() => modalStack.length);
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
     useEffect(() => {
@@ -169,10 +183,11 @@ function Modal({ title, onClose, children, wide = false, xl = false }: { title: 
     return (
         // Like the legacy windows, clicking outside does not close it — only X,
         // Esc or the window's own Cancel/Close (which ask for confirmation).
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 p-6 pt-12 backdrop-blur-[1px] print:static print:bg-white print:p-0">
-            <div className={`flex max-h-[86vh] w-full ${xl ? 'max-w-6xl' : wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl print:max-h-none print:border-0 print:shadow-none`}>
+        <div className={`fixed inset-0 z-50 flex items-start justify-center p-6 pt-12 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : ''}`}>
+            <div style={depth ? { transform: `translate(${depth * 28}px, ${depth * 26}px)` } : undefined}
+                className={`flex max-h-[86vh] w-full ${xl ? 'h-[86vh] max-w-6xl' : wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
                 <div className="flex items-center justify-between bg-gradient-to-r from-[#3b3f8f] to-[#5a5fc4] px-4 py-2 text-white print:hidden">
-                    <span className="text-[14px] font-bold">{title}</span>
+                    <span className="text-[13.5px] font-semibold">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( {title} )</span>
                     <button type="button" onClick={onClose} className="rounded p-1 hover:bg-white/20" aria-label="Close"><X size={16} /></button>
                 </div>
                 {children}
@@ -314,7 +329,6 @@ export default function TradeSaleInvoice() {
     const [showSubArea, setShowSubArea] = useState(false);
     const [subArea, setSubArea] = useState({ name: '', district: '', main: '' });
     const [savingArea, setSavingArea] = useState(false);
-    const [subAreaList, setSubAreaList] = useState(false);
     const areaKind = (a: any) => String(a.code || '').charAt(0).toUpperCase();
     const districts = areas.filter((a) => areaKind(a) === 'D');
     const mainAreas = areas.filter((a) => areaKind(a) === 'M' && (!subArea.district || String(a.parent) === subArea.district));
@@ -325,7 +339,6 @@ export default function TradeSaleInvoice() {
 
     const addArea = () => {
         setSubArea({ name: '', district: '', main: '' });
-        setSubAreaList(false);
         setShowSubArea(true);
     };
 
@@ -349,19 +362,25 @@ export default function TradeSaleInvoice() {
         } finally { setSavingArea(false); }
     };
 
-    /* ── Chart of Accounts › View: every account in a grid (legacy view screen).
-       Picking a row loads it into the form for Update / Delete. */
+    /* ── Chart of Account › View — its own window (legacy view screen): the form
+       on top, every account in a grid below. Picking a row loads it into this
+       window's form for Update / Delete. */
+    const [showCoaView, setShowCoaView] = useState(false);
+    const [coaV, setCoaV] = useState({ ...EMPTY_COA });
     const [coaSearch, setCoaSearch] = useState('');
     const [coaSel, setCoaSel] = useState<any | null>(null);
     const [coaBusy, setCoaBusy] = useState(false);
 
     const viewAccounts = async () => {
+        setCoaV({ ...EMPTY_COA });
+        setCoaSel(null);
+        setCoaSearch('');
+        setCoaList(null);
+        setShowCoaView(true);
         try {
             const { data } = await api.get('v1/company/ledger-accounts/');
             setCoaList(data);
-            setCoaSel(null);
-            setCoaSearch('');
-        } catch { toast.error('Could not load accounts.'); }
+        } catch { toast.error('Could not load accounts.'); setCoaList([]); }
     };
 
     // Grid narrows by the level dropdowns and the Search Account box. While a row
@@ -371,36 +390,36 @@ export default function TradeSaleInvoice() {
         const q = coaSearch.trim().toLowerCase();
         const byLevel = !coaSel;
         return coaList.filter((a) =>
-            (!byLevel || !coa.main || String(a.main) === coa.main) &&
-            (!byLevel || !coa.l2 || String(a.level2) === coa.l2) &&
-            (!byLevel || !coa.l3 || String(a.group) === coa.l3) &&
+            (!byLevel || !coaV.main || String(a.main) === coaV.main) &&
+            (!byLevel || !coaV.l2 || String(a.level2) === coaV.l2) &&
+            (!byLevel || !coaV.l3 || String(a.group) === coaV.l3) &&
             (!q || String(a.acc_id).includes(q) || String(a.name).toLowerCase().includes(q)
                 || String(a.area_name || '').toLowerCase().includes(q)));
-    }, [coaList, coa.main, coa.l2, coa.l3, coaSearch, coaSel]);
+    }, [coaList, coaV.main, coaV.l2, coaV.l3, coaSearch, coaSel]);
 
     const pickCoaRow = (a: any) => {
         setCoaSel(a);
-        setCoa({
+        setCoaV({
             main: String(a.main ?? ''), l2: String(a.level2 ?? ''), l3: String(a.group ?? ''),
             name: a.name || '', cell: a.cell_no || '', contact: a.contact_person || '',
             area: a.area ? String(a.area) : '', status: a.status || '',
         });
     };
 
+    // Add New: back to the entry window, cleared for a new account.
     const coaAddNew = () => {
-        setCoaSel(null);
-        setCoaList(null);
-        setCoa((c) => ({ ...EMPTY_COA, main: c.main, l2: c.l2, l3: c.l3 }));
+        setShowCoaView(false);
+        setCoa((c) => ({ ...EMPTY_COA, main: coaV.main || c.main, l2: coaV.l2 || c.l2, l3: coaV.l3 || c.l3 }));
     };
 
     const updateAccount = async () => {
         if (!coaSel || coaBusy) return;
-        if (!coa.name.trim()) { toast.error('Enter the Acc. Name.'); return; }
+        if (!coaV.name.trim()) { toast.error('Enter the Acc. Name.'); return; }
         setCoaBusy(true);
         try {
             const { data } = await api.patch(`v1/company/ledger-accounts/${coaSel.id}/`, {
-                name: coa.name.trim(), cell_no: coa.cell.trim(), contact_person: coa.contact.trim(),
-                area: coa.area || null, status: coa.status || coaSel.status,
+                name: coaV.name.trim(), cell_no: coaV.cell.trim(), contact_person: coaV.contact.trim(),
+                area: coaV.area || null, status: coaV.status || coaSel.status,
             });
             setCoaList((l) => (l || []).map((x) => (x.id === data.id ? data : x)));
             setCoaSel(data);
@@ -428,7 +447,7 @@ export default function TradeSaleInvoice() {
                     setCoaList((l) => (l || []).filter((x) => x.id !== sel.id));
                     if (sel.customer) setCustomers((cs) => cs.filter((c) => c.id !== sel.customer));
                     setCoaSel(null);
-                    setCoa((c) => ({ ...EMPTY_COA, main: c.main, l2: c.l2, l3: c.l3 }));
+                    setCoaV({ ...EMPTY_COA });
                     toast.success(`Account ${sel.acc_id} deleted.`);
                 } catch (err: any) {
                     toast.error(String(err?.response?.data?.detail || 'Could not delete the account.'), { duration: 7000 });
@@ -437,17 +456,180 @@ export default function TradeSaleInvoice() {
         });
     };
 
-    const exportAccounts = () => {
-        const head = ['Main Account', '2nd Level Acc.', '3rd Level Acc.', 'Account ID', 'Acc. Name', 'Area', 'Cell No', 'Contact Person', 'Status'];
-        const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-        const csv = [head, ...coaRows.map((a) => [a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no, a.contact_person, a.status])]
-            .map((r) => r.map(esc).join(',')).join('\r\n');
-        const url = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
-        const link = document.createElement('a');
-        link.href = url; link.download = `chart-of-accounts-${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-        URL.revokeObjectURL(url);
+    const exportAccounts = () => downloadCsv('chart-of-accounts',
+        ['Main Account', '2nd Level Acc.', '3rd Level Acc.', 'Account ID', 'Acc. Name', 'Area', 'Cell No', 'Contact Person', 'Status'],
+        coaRows.map((a) => [a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no, a.contact_person, a.status]));
+
+    /* ── Sub Area › View — its own window: District · Main Area · Area ID · Area Name. */
+    const [showAreaView, setShowAreaView] = useState(false);
+    const [areaV, setAreaV] = useState({ name: '', district: '', main: '' });
+    const [areaSel, setAreaSel] = useState<any | null>(null);
+    const [areaSearch, setAreaSearch] = useState('');
+    const [areaBusy, setAreaBusy] = useState(false);
+    const areaById = useMemo(() => new Map(areas.map((a) => [String(a.id), a])), [areas]);
+    const mainAreasOf = (district: string) =>
+        areas.filter((a) => areaKind(a) === 'A' ? false : areaKind(a) === 'M' && (!district || String(a.parent) === district));
+
+    const subAreaRows = useMemo(() => {
+        const q = areaSearch.trim().toLowerCase();
+        const byLevel = !areaSel;
+        return areas
+            .filter((a) => areaKind(a) === 'A')
+            .map((a) => {
+                const main = areaById.get(String(a.parent));
+                const dist = main ? areaById.get(String(main.parent)) : undefined;
+                return { a, id: parseInt(String(a.code).slice(1), 10) || 0, main, dist };
+            })
+            .filter((r) =>
+                (!byLevel || !areaV.district || String(r.dist?.id) === areaV.district) &&
+                (!byLevel || !areaV.main || String(r.main?.id) === areaV.main) &&
+                (!q || String(r.a.name).toLowerCase().includes(q) || String(r.id).includes(q)))
+            .sort((x, y) => String(x.dist?.name || '').localeCompare(String(y.dist?.name || ''))
+                || String(x.main?.name || '').localeCompare(String(y.main?.name || ''))
+                || x.id - y.id);
+    }, [areas, areaById, areaV.district, areaV.main, areaSearch, areaSel]);
+
+    const viewAreas = () => {
+        setAreaV({ name: '', district: '', main: '' });
+        setAreaSel(null);
+        setAreaSearch('');
+        setShowAreaView(true);
     };
+
+    const pickAreaRow = (r: any) => {
+        setAreaSel(r);
+        setAreaV({ name: r.a.name, district: r.dist ? String(r.dist.id) : '', main: r.main ? String(r.main.id) : '' });
+    };
+
+    const areaAddNew = () => {
+        setShowAreaView(false);
+        setSubArea({ name: '', district: areaV.district, main: areaV.main });
+    };
+
+    const updateArea = async () => {
+        if (!areaSel || areaBusy) return;
+        const name = areaV.name.trim();
+        if (!name) { toast.error('Enter the Sub Area Name.'); return; }
+        if (!areaV.main) { toast.error('Select the Main Area.'); return; }
+        setAreaBusy(true);
+        try {
+            await api.patch(`v1/company/areas/${areaSel.a.id}/`, { name, parent: Number(areaV.main) });
+            await loadAreas();
+            setAreaSel(null);
+            toast.success(`Sub area ${areaSel.id} updated.`);
+        } catch (err: any) {
+            const d = err?.response?.data;
+            toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not update the sub area.'));
+        } finally { setAreaBusy(false); }
+    };
+
+    const deleteArea = () => {
+        if (!areaSel) return;
+        const sel = areaSel;
+        const used = Number(sel.a.customer_count || 0);
+        if (used > 0) {
+            toast.error(`${sel.a.name} has ${used} customer(s), so it cannot be deleted.`, { duration: 6000 });
+            return;
+        }
+        setAsk({
+            msg: `Do you want to Delete sub area ${sel.id} — ${sel.a.name} ?`,
+            yes: async () => {
+                setAreaBusy(true);
+                try {
+                    await api.delete(`v1/company/areas/${sel.a.id}/`);
+                    await loadAreas();
+                    setAreaSel(null);
+                    setAreaV({ name: '', district: '', main: '' });
+                    toast.success(`Sub area ${sel.id} deleted.`);
+                } catch (err: any) {
+                    toast.error(String(err?.response?.data?.detail || 'Could not delete the sub area.'));
+                } finally { setAreaBusy(false); }
+            },
+        });
+    };
+
+    const exportAreas = () => downloadCsv('sub-areas', ['District', 'Main Area', 'Area ID', 'Area Name'],
+        subAreaRows.map((r) => [r.dist?.name || '', r.main?.name || '', r.id, r.a.name]));
+
+    /* Shared form bodies — the entry window and its View window show the same form. */
+    type CoaState = typeof EMPTY_COA;
+    const coaForm = (f: CoaState, setF: React.Dispatch<React.SetStateAction<CoaState>>, accId: string, onEnter: () => void, focus: boolean) => (
+        <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1">
+            <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Chart of Accounts</legend>
+            <div className="grid grid-cols-[112px_1fr_98px_1fr_96px_1fr] items-center gap-x-2.5 gap-y-3">
+                <span className={LABEL}>Main Account</span>
+                <select value={f.main} onChange={(e) => setF((c) => ({ ...c, main: e.target.value, l2: '', l3: '' }))} className={COA_SELECT}>
+                    <option value="">Select any one</option>
+                    {groupsAt(1, '').map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
+                </select>
+                <span className={LABEL}>Acc.2nd Level</span>
+                <select value={f.l2} onChange={(e) => setF((c) => ({ ...c, l2: e.target.value, l3: '' }))} disabled={!f.main} className={COA_SELECT}>
+                    <option value="">Select any one</option>
+                    {groupsAt(2, f.main).map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
+                </select>
+                <span className={LABEL}>Acc 3rd Level</span>
+                <select value={f.l3} onChange={(e) => setF((c) => ({ ...c, l3: e.target.value }))} disabled={!f.l2} className={COA_SELECT}>
+                    <option value="">Select any one</option>
+                    {groupsAt(3, f.l2).map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
+                </select>
+
+                <span className={LABEL}>Account ID</span>
+                <ReadBox value={<span className="font-mono">{accId}</span>} />
+                <span className={LABEL}>Cell No</span>
+                <input value={f.cell} onChange={(e) => setF((c) => ({ ...c, cell: e.target.value }))} inputMode="tel" className={`${EDIT} w-full`} />
+                <span className={`${LABEL} flex items-center justify-between gap-1`}>
+                    Area
+                    <button type="button" onClick={addArea}
+                        className="h-7 rounded border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-2 text-[12px] font-bold text-slate-800 hover:to-[#ffcf9a]">Add</button>
+                </span>
+                <select value={f.area} onChange={(e) => setF((c) => ({ ...c, area: e.target.value }))} className={COA_SELECT}>
+                    <option value="">Select any one</option>
+                    {areas.map((a) => <option key={a.id} value={a.id}>{a.name}{a.parent_name ? `  (${a.parent_name})` : ''}</option>)}
+                </select>
+
+                <span className={LABEL}>Acc. Name</span>
+                <input autoFocus={focus} value={f.name} onChange={(e) => setF((c) => ({ ...c, name: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') onEnter(); }} className={`${EDIT} col-span-3 w-full`} />
+                <span className="col-span-2" />
+
+                <span className={LABEL}>Contact Person</span>
+                <input value={f.contact} onChange={(e) => setF((c) => ({ ...c, contact: e.target.value }))} className={`${EDIT} w-full`} />
+                <span className={LABEL}>Status</span>
+                <select value={f.status} onChange={(e) => setF((c) => ({ ...c, status: e.target.value }))} className={COA_SELECT}>
+                    <option value="">Select any One</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+                <span className="col-span-2" />
+            </div>
+        </fieldset>
+    );
+
+    type AreaFormState = { name: string; district: string; main: string };
+    const subAreaForm = (f: AreaFormState, setF: React.Dispatch<React.SetStateAction<AreaFormState>>, idText: string, onEnter: () => void, focus: boolean) => (
+        <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1">
+            <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sub Area</legend>
+            <div className="grid grid-cols-[124px_1fr_92px_1fr] items-center gap-x-3 gap-y-3">
+                <span className={LABEL}>Sub Area ID</span>
+                <ReadBox value={idText} className="justify-center font-mono" />
+                <span className="col-span-2" />
+                <span className={LABEL}>Sub Area Name</span>
+                <input autoFocus={focus} value={f.name} onChange={(e) => setF((a) => ({ ...a, name: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter') onEnter(); }} className={`${EDIT} w-full`} />
+                <span className="col-span-2" />
+                <span className={LABEL}>District</span>
+                <select value={f.district} onChange={(e) => setF((a) => ({ ...a, district: e.target.value, main: '' }))} className={COA_SELECT}>
+                    <option value="">Select any one</option>
+                    {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+                <span className={LABEL}>Main Area</span>
+                <select value={f.main} onChange={(e) => setF((a) => ({ ...a, main: e.target.value }))} className={COA_SELECT}>
+                    <option value="">Select any one</option>
+                    {mainAreasOf(f.district).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+            </div>
+        </fieldset>
+    );
 
     const saveNewCustomer = async () => {
         if (savingCust) return;
@@ -988,117 +1170,9 @@ export default function TradeSaleInvoice() {
             {/* ─── Close / delete confirmation ─── */}
             {ask && <ConfirmBox msg={ask.msg} onNo={() => setAsk(null)} onYes={() => { const fn = ask.yes; setAsk(null); fn(); }} />}
 
-            {/* ─── Find Customer ─── */}
+            {/* ─── Find Customer (legacy "Find Account") ─── */}
             {showFindCust && (
-                <Modal title={addingCust ? 'Chart of Accounts' : 'Find Customer'} onClose={() => askClose(closeFindCustomer)} wide={!coaList} xl={addingCust && !!coaList}>
-                    {addingCust ? (
-                        <>
-                            <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
-                                <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1">
-                                    <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Chart of Accounts</legend>
-                                    <div className="grid grid-cols-[112px_1fr_98px_1fr_96px_1fr] items-center gap-x-2.5 gap-y-3">
-                                        {/* Row 1 — account levels */}
-                                        <span className={LABEL}>Main Account</span>
-                                        <select value={coa.main} onChange={(e) => setCoa((c) => ({ ...c, main: e.target.value, l2: '', l3: '' }))} className={COA_SELECT}>
-                                            <option value="">Select any one</option>
-                                            {groupsAt(1, '').map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
-                                        </select>
-                                        <span className={LABEL}>Acc.2nd Level</span>
-                                        <select value={coa.l2} onChange={(e) => setCoa((c) => ({ ...c, l2: e.target.value, l3: '' }))} disabled={!coa.main} className={COA_SELECT}>
-                                            <option value="">Select any one</option>
-                                            {groupsAt(2, coa.main).map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
-                                        </select>
-                                        <span className={LABEL}>Acc 3rd Level</span>
-                                        <select value={coa.l3} onChange={(e) => setCoa((c) => ({ ...c, l3: e.target.value }))} disabled={!coa.l2} className={COA_SELECT}>
-                                            <option value="">Select any one</option>
-                                            {groupsAt(3, coa.l2).map((g) => <option key={g.code} value={g.code}>{g.name}</option>)}
-                                        </select>
-
-                                        {/* Row 2 — id / cell / area */}
-                                        <span className={LABEL}>Account ID</span>
-                                        <ReadBox value={<span className="font-mono">{coaSel ? coaSel.acc_id : nextAccId}</span>} />
-                                        <span className={LABEL}>Cell No</span>
-                                        <input value={coa.cell} onChange={(e) => setCoa((c) => ({ ...c, cell: e.target.value }))} inputMode="tel" className={`${EDIT} w-full`} />
-                                        <span className={`${LABEL} flex items-center justify-between gap-1`}>
-                                            Area
-                                            <button type="button" onClick={addArea}
-                                                className="h-7 rounded border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-2 text-[12px] font-bold text-slate-800 hover:to-[#ffcf9a]">Add</button>
-                                        </span>
-                                        <select value={coa.area} onChange={(e) => setCoa((c) => ({ ...c, area: e.target.value }))} className={COA_SELECT}>
-                                            <option value="">Select any one</option>
-                                            {areas.map((a) => <option key={a.id} value={a.id}>{a.name}{a.parent_name ? `  (${a.parent_name})` : ''}</option>)}
-                                        </select>
-
-                                        {/* Row 3 — name */}
-                                        <span className={LABEL}>Acc. Name</span>
-                                        <input autoFocus value={coa.name} onChange={(e) => setCoa((c) => ({ ...c, name: e.target.value }))}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') saveNewCustomer(); }}
-                                            className={`${EDIT} col-span-3 w-full`} />
-                                        <span className="col-span-2" />
-
-                                        {/* Row 4 — contact / status */}
-                                        <span className={LABEL}>Contact Person</span>
-                                        <input value={coa.contact} onChange={(e) => setCoa((c) => ({ ...c, contact: e.target.value }))} className={`${EDIT} w-full`} />
-                                        <span className={LABEL}>Status</span>
-                                        <select value={coa.status} onChange={(e) => setCoa((c) => ({ ...c, status: e.target.value }))} className={COA_SELECT}>
-                                            <option value="">Select any One</option>
-                                            <option value="active">Active</option>
-                                            <option value="inactive">Inactive</option>
-                                        </select>
-                                        <span className="col-span-2" />
-                                    </div>
-                                </fieldset>
-
-                                {/* View — every account in a legacy grid; click a row to Update / Delete it. */}
-                                {coaList && (
-                                    <div className="mt-3 h-[300px] overflow-auto border border-slate-500 bg-[#9ea1ad]">
-                                        <table className="w-full min-w-[980px] table-fixed border-collapse bg-white text-[13px]">
-                                            <colgroup>
-                                                {COA_VIEW_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}
-                                            </colgroup>
-                                            <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                                <tr>{COA_VIEW_COLS.map((c) => <th key={c.h} className="overflow-hidden whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
-                                            </thead>
-                                            <tbody>
-                                                {coaRows.map((a) => (
-                                                    <tr key={a.id} onClick={() => pickCoaRow(a)}
-                                                        className={`cursor-pointer ${coaSel?.id === a.id ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
-                                                        {[a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no || '-', a.contact_person || '0'].map((v, k) => (
-                                                            <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 3 ? 'font-mono' : ''}`}>{v}</td>
-                                                        ))}
-                                                    </tr>
-                                                ))}
-                                                {!coaRows.length && <tr><td colSpan={COA_VIEW_COLS.length} className="px-3 py-4 text-center text-slate-400">No accounts.</td></tr>}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-                            {coaList ? (
-                                <div className="flex items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
-                                    <span className={`${LABEL} text-[14px]`}>Search Account</span>
-                                    <input value={coaSearch} onChange={(e) => setCoaSearch(e.target.value)} placeholder="ID, name or area"
-                                        className={`${FIELD} w-[200px] border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
-                                    <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {coaRows.length}</span>} className="w-[200px]" />
-                                    <span className="flex-1" />
-                                    <button type="button" onClick={exportAccounts} className={ACTION_BTN}>Export</button>
-                                    <button type="button" onClick={coaAddNew} className={ACTION_BTN}><span className="underline">A</span>dd New</button>
-                                    <button type="button" onClick={updateAccount} disabled={!coaSel || coaBusy} className={ACTION_BTN}><span className="underline">U</span>pdate</button>
-                                    <button type="button" onClick={deleteAccount} disabled={!coaSel || coaBusy} className={ACTION_BTN}><span className="underline">D</span>elete</button>
-                                    <button type="button" onClick={() => askClose(() => setAddingCust(false))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
-                                </div>
-                            ) : (
-                                <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
-                                    <button type="button" onClick={saveNewCustomer} disabled={savingCust} className={ACTION_BTN}>
-                                        {savingCust ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
-                                    </button>
-                                    <button type="button" onClick={viewAccounts} className={ACTION_BTN}><span className="underline">V</span>iew</button>
-                                    <button type="button" onClick={() => askClose(() => setAddingCust(false))} disabled={savingCust} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
-                                </div>
-                            )}
-                        </>
-                    ) : (
-                    <>
+                <Modal title="Find Account" onClose={() => askClose(closeFindCustomer)} wide>
                     <div className="flex items-center gap-2 border-b border-slate-200 p-3">
                         <div className="relative flex-1">
                             <Search size={15} className="absolute left-2.5 top-2 text-slate-400" />
@@ -1132,67 +1206,118 @@ export default function TradeSaleInvoice() {
                         <ReadBox value={`${custMatches.length}${custMatches.length === 200 ? '+' : ''} of ${customers.length} customers`} className="w-[280px] !text-[12.5px]" />
                         <button type="button" onClick={() => askClose(closeFindCustomer)} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                     </div>
-                    </>
-                    )}
                 </Modal>
             )}
 
-            {/* ─── Sub Area (opened from Chart of Accounts › Area › Add) ─── */}
-            {showSubArea && (
-                <Modal title="Sub Area" onClose={() => !savingArea && askClose(() => setShowSubArea(false))}>
+            {/* ─── Chart of Account — entry window (Find Account › Add New) ─── */}
+            {addingCust && (
+                <Modal title="Chart of Account" onClose={() => !savingCust && askClose(() => setAddingCust(false))} wide>
                     <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
-                        <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1">
-                            <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sub Area</legend>
-                            <div className="grid grid-cols-[124px_1fr_92px_1fr] items-center gap-x-3 gap-y-3">
-                                <span className={LABEL}>Sub Area ID</span>
-                                <ReadBox value={nextSubAreaId} className="justify-center font-mono" />
-                                <span className="col-span-2" />
-                                <span className={LABEL}>Sub Area Name</span>
-                                <input autoFocus value={subArea.name} onChange={(e) => setSubArea((a) => ({ ...a, name: e.target.value }))}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') saveSubArea(); }} className={`${EDIT} w-full`} />
-                                <span className="col-span-2" />
-                                <span className={LABEL}>District</span>
-                                <select value={subArea.district} onChange={(e) => setSubArea((a) => ({ ...a, district: e.target.value, main: '' }))} className={COA_SELECT}>
-                                    <option value="">Select any one</option>
-                                    {districts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                                </select>
-                                <span className={LABEL}>Main Area</span>
-                                <select value={subArea.main} onChange={(e) => setSubArea((a) => ({ ...a, main: e.target.value }))} className={COA_SELECT}>
-                                    <option value="">Select any one</option>
-                                    {mainAreas.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                </select>
-                            </div>
-                        </fieldset>
+                        {coaForm(coa, setCoa, nextAccId, saveNewCustomer, true)}
+                    </div>
+                    <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                        <button type="button" onClick={saveNewCustomer} disabled={savingCust} className={ACTION_BTN}>
+                            {savingCust ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                        </button>
+                        <button type="button" onClick={viewAccounts} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                        <button type="button" onClick={() => askClose(() => setAddingCust(false))} disabled={savingCust} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                    </div>
+                </Modal>
+            )}
 
-                        {/* View — existing sub areas */}
-                        {subAreaList && (
-                            <div className="mt-3 max-h-[220px] overflow-auto rounded-lg border border-slate-400 bg-white">
-                                <table className="w-full border-collapse text-[12.5px]">
-                                    <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                        <tr>{['ID', 'Sub Area Name', 'Main Area'].map((h) => <th key={h} className="border-b border-r border-slate-300 px-2 py-1.5">{h}</th>)}</tr>
-                                    </thead>
-                                    <tbody>
-                                        {areas.filter((a) => areaKind(a) === 'A')
-                                            .filter((a) => !subArea.main || String(a.parent) === subArea.main)
-                                            .sort((a, b) => parseInt(String(a.code).slice(1), 10) - parseInt(String(b.code).slice(1), 10))
-                                            .map((a) => (
-                                                <tr key={a.id} className="border-b border-slate-200 hover:bg-indigo-50">
-                                                    <td className="border-r border-slate-200 px-2 py-1 font-mono">{String(a.code).slice(1)}</td>
-                                                    <td className="border-r border-slate-200 px-2 py-1 font-semibold">{a.name}</td>
-                                                    <td className="px-2 py-1">{a.parent_name || '—'}</td>
-                                                </tr>
+            {/* ─── Chart of Account — View window ─── */}
+            {showCoaView && (
+                <Modal title="Chart of Account" onClose={() => askClose(() => setShowCoaView(false))} xl>
+                    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#e4e4fb] p-4">
+                        {coaForm(coaV, setCoaV, coaSel ? coaSel.acc_id : '', updateAccount, false)}
+                        <div className="min-h-[220px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                            <table className="w-full min-w-[980px] table-fixed border-collapse bg-white text-[13px]">
+                                <colgroup>{COA_VIEW_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                                <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                    <tr>{COA_VIEW_COLS.map((c) => <th key={c.h} className="overflow-hidden whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
+                                </thead>
+                                <tbody>
+                                    {coaRows.map((a) => (
+                                        <tr key={a.id} onClick={() => pickCoaRow(a)}
+                                            className={`cursor-pointer ${coaSel?.id === a.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
+                                            {[a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no || '-', a.contact_person || '0'].map((v, k) => (
+                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 3 ? 'font-mono' : ''}`}>{v}</td>
                                             ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                                        </tr>
+                                    ))}
+                                    {!coaRows.length && (
+                                        <tr><td colSpan={COA_VIEW_COLS.length} className="px-3 py-4 text-center text-slate-400">{coaList ? 'No accounts.' : 'Loading…'}</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                        <span className={`${LABEL} text-[14px]`}>Search Account</span>
+                        <input value={coaSearch} onChange={(e) => setCoaSearch(e.target.value)} placeholder="ID, name or area"
+                            className={`${EDIT} w-[200px]`} />
+                        <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {coaRows.length}</span>} className="w-[190px]" />
+                        <span className="flex-1" />
+                        <button type="button" onClick={exportAccounts} className={ACTION_BTN}>Export</button>
+                        <button type="button" onClick={coaAddNew} className={ACTION_BTN}><span className="underline">A</span>dd New</button>
+                        <button type="button" onClick={updateAccount} disabled={!coaSel || coaBusy} className={ACTION_BTN}><span className="underline">U</span>pdate</button>
+                        <button type="button" onClick={deleteAccount} disabled={!coaSel || coaBusy} className={ACTION_BTN}><span className="underline">D</span>elete</button>
+                        <button type="button" onClick={() => askClose(() => setShowCoaView(false))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* ─── Sub Area — entry window (Chart of Account › Area › Add) ─── */}
+            {showSubArea && (
+                <Modal title="Sub Area" onClose={() => !savingArea && askClose(() => setShowSubArea(false))} wide>
+                    <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
+                        {subAreaForm(subArea, setSubArea, String(nextSubAreaId), saveSubArea, true)}
                     </div>
                     <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
                         <button type="button" onClick={saveSubArea} disabled={savingArea} className={ACTION_BTN}>
                             {savingArea ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
-                        <button type="button" onClick={() => setSubAreaList((v) => !v)} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                        <button type="button" onClick={viewAreas} className={ACTION_BTN}><span className="underline">V</span>iew</button>
                         <button type="button" onClick={() => askClose(() => setShowSubArea(false))} disabled={savingArea} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* ─── Sub Area — View window ─── */}
+            {showAreaView && (
+                <Modal title="Sub Area" onClose={() => askClose(() => setShowAreaView(false))} xl>
+                    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#e4e4fb] p-4">
+                        {subAreaForm(areaV, setAreaV, areaSel ? String(areaSel.id) : '', updateArea, false)}
+                        <div className="min-h-[220px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                            <table className="w-[72%] table-fixed border-collapse bg-white text-[13px]">
+                                <colgroup><col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '17%' }} /><col style={{ width: '35%' }} /></colgroup>
+                                <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                    <tr>{['District', 'Main Area', 'Area ID', 'Area Name'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
+                                </thead>
+                                <tbody>
+                                    {subAreaRows.map((r) => (
+                                        <tr key={r.a.id} onClick={() => pickAreaRow(r)}
+                                            className={`cursor-pointer ${areaSel?.a.id === r.a.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
+                                            {[r.dist?.name || '', r.main?.name || '', r.id, r.a.name].map((v, k) => (
+                                                <td key={k} title={String(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{v}</td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                    {!subAreaRows.length && <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-400">No sub areas.</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                        <span className={`${LABEL} text-[14px]`}>Sub Area</span>
+                        <input value={areaSearch} onChange={(e) => setAreaSearch(e.target.value)} placeholder="Name or ID" className={`${EDIT} w-[200px]`} />
+                        <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {subAreaRows.length}</span>} className="w-[190px]" />
+                        <span className="flex-1" />
+                        <button type="button" onClick={exportAreas} className={ACTION_BTN}>Export</button>
+                        <button type="button" onClick={areaAddNew} className={ACTION_BTN}>Add <span className="underline">N</span>ew</button>
+                        <button type="button" onClick={updateArea} disabled={!areaSel || areaBusy} className={ACTION_BTN}><span className="underline">U</span>pdate</button>
+                        <button type="button" onClick={deleteArea} disabled={!areaSel || areaBusy} className={ACTION_BTN}><span className="underline">D</span>elete</button>
+                        <button type="button" onClick={() => askClose(() => setShowAreaView(false))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                     </div>
                 </Modal>
             )}
