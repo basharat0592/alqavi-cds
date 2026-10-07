@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, Loader2, Printer, Save } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import api from '@/lib/axios';
+import * as XLSX from 'xlsx';
 import { orderService, userService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
 import FitStage from '@/components/trade/FitStage';
@@ -75,15 +76,19 @@ const COA_VIEW_COLS = [
     { h: 'Cell No', w: '11%' }, { h: 'Contact Person', w: '11%' },
 ];
 
-/* Download rows as a CSV file (Excel opens it). */
-function downloadCsv(name: string, head: string[], rows: any[][]) {
-    const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const csv = [head, ...rows].map((r) => r.map(esc).join(',')).join('\r\n');
-    const url = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url; link.download = `${name}-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+/* Download rows as an Excel workbook (.xlsx). Numeric-looking IDs/codes are
+   kept as text so leading digits and long codes stay exactly as shown. */
+function downloadXlsx(name: string, sheet: string, head: string[], rows: any[][]) {
+    const data = [head, ...rows.map((r) => r.map((v) => (v === null || v === undefined ? '' : String(v))))];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    // Fit each column to its longest value (capped), like the legacy export.
+    ws['!cols'] = head.map((_, c) => ({
+        wch: Math.min(48, Math.max(8, ...data.map((r) => String(r[c] ?? '').length + 2))),
+    }));
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: head.length - 1 } }) };
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheet.slice(0, 31));
+    XLSX.writeFile(wb, `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 /* Keyboard shortcuts shown in the grid footer. */
@@ -457,7 +462,7 @@ export default function TradeSaleInvoice() {
         });
     };
 
-    const exportAccounts = () => downloadCsv('chart-of-accounts',
+    const exportAccounts = () => downloadXlsx('chart-of-accounts', 'Chart of Accounts',
         ['Main Account', '2nd Level Acc.', '3rd Level Acc.', 'Account ID', 'Acc. Name', 'Area', 'Cell No', 'Contact Person', 'Status'],
         coaRows.map((a) => [a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no, a.contact_person, a.status]));
 
@@ -549,7 +554,7 @@ export default function TradeSaleInvoice() {
         });
     };
 
-    const exportAreas = () => downloadCsv('sub-areas', ['District', 'Main Area', 'Area ID', 'Area Name'],
+    const exportAreas = () => downloadXlsx('sub-areas', 'Sub Areas', ['District', 'Main Area', 'Area ID', 'Area Name'],
         subAreaRows.map((r) => [r.dist?.name || '', r.main?.name || '', r.id, r.a.name]));
 
     /* Shared form bodies — the entry window and its View window show the same form. */
