@@ -418,12 +418,13 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         orders = scope_to_tenant(request.user, Order.objects.filter(customer_id=cust_id)
                                  .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant')
         items = (OrderItem.objects.filter(order__in=orders)
-                 .select_related('order', 'product__category', 'product__stock', 'batch')
+                 .select_related('order', 'product__category', 'product__stock__product__company', 'batch')
                  .order_by('-order__created_at', 'id')[:300])
         rows = []
         for it in items:
             p = it.product
             stock = getattr(p, 'stock', None) if p else None
+            sp = getattr(stock, 'product', None)
             gross = Decimal(str(it.price or 0)) * (it.quantity or 0)
             disc_pct = (Decimal(str(it.discount or 0)) / gross * 100) if gross else Decimal('0')
             rows.append({
@@ -438,6 +439,8 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'qty': it.quantity, 'bonus': it.bonus_quantity,
                 'tp': it.price, 'tp_pct': round(disc_pct, 2),
                 'retail': (it.batch.retail_price if it.batch_id else None) or (p.original_price if p else 0) or 0,
+                'company_id': sp.company_id if sp else None,
+                'company': sp.company.name if (sp and sp.company_id) else '',
             })
         return Response(rows)
 

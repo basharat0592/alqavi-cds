@@ -802,9 +802,21 @@ export default function TradeSaleInvoice() {
         } else setHistRows([]);
     };
 
+    // Nothing is listed until there is something to search by.
+    const fpSearching = !!(fpCompany || fpName.trim() || fpBarcode.trim());
+
+    // Purchase history narrows by the chosen company and the typed name too.
+    const histShown = useMemo(() => {
+        const q = fpName.trim().toLowerCase();
+        return histRows.filter((r) =>
+            (!fpCompany || String(r.company_id) === fpCompany) &&
+            (!q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q)));
+    }, [histRows, fpCompany, fpName]);
+
     // Available stock follows the filters (debounced).
     useEffect(() => {
         if (!showFindProd) return;
+        if (!fpSearching) { setStockRows([]); setStockLoading(false); return; }
         setStockLoading(true);
         const t = setTimeout(() => {
             const params: any = {};
@@ -817,7 +829,7 @@ export default function TradeSaleInvoice() {
                 .finally(() => setStockLoading(false));
         }, 250);
         return () => clearTimeout(t);
-    }, [showFindProd, fpCompany, fpName, fpBarcode]);
+    }, [showFindProd, fpCompany, fpName, fpBarcode, fpSearching]);
 
     // Keyboard handler is bound once; route F3 to the latest opener.
     const openFpRef = useRef(openFindProduct);
@@ -1466,13 +1478,13 @@ export default function TradeSaleInvoice() {
                                             </tr>
                                         ))}
                                         {!stockRows.length && (
-                                            <tr><td colSpan={FP_STOCK_COLS.length} className="px-3 py-4 text-center text-slate-400">{stockLoading ? 'Loading…' : 'No stock matches.'}</td></tr>
+                                            <tr><td colSpan={FP_STOCK_COLS.length} className="px-3 py-4 text-center text-slate-500">{!fpSearching ? 'Pick a company, type a product name or scan a barcode to see the stock.' : stockLoading ? 'Loading…' : 'No stock matches.'}</td></tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
                             <div className="shrink-0 border-t border-slate-400 bg-[#ececfd] px-3 py-1 text-[12.5px] font-semibold text-[#1f2bd6]">
-                                Available Stock — {stockRows.length} batch(es){stockLoading ? ' · loading…' : ''} · double-click a row to select it
+                                Available Stock — {fpSearching ? `${stockRows.length} batch(es)` : 'search to list'}{stockLoading ? ' · loading…' : ''} · double-click a row to select it
                             </div>
                         </div>
 
@@ -1485,7 +1497,7 @@ export default function TradeSaleInvoice() {
                                         <tr>{FP_HIST_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
                                     </thead>
                                     <tbody>
-                                        {histRows.map((r, i) => (
+                                        {histShown.map((r, i) => (
                                             <tr key={i} onDoubleClick={() => pickHistoryRow(r)} className="cursor-pointer tabular-nums hover:bg-[#fff3a6]"
                                                 title={`Invoice ${r.invoice_no} · ${String(r.date).slice(0, 10)} — double-click to sell again`}>
                                                 {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), r.bonus ? fmt(num(r.bonus)) : '', fmt(num(r.tp)), num(r.tp_pct) ? fmt(num(r.tp_pct)) : '', fmt(num(r.retail))].map((v, k) => (
@@ -1493,16 +1505,20 @@ export default function TradeSaleInvoice() {
                                                 ))}
                                             </tr>
                                         ))}
-                                        {!histRows.length && (
+                                        {!histShown.length && (
                                             <tr><td colSpan={FP_HIST_COLS.length} className="px-3 py-4 text-center text-slate-500">
-                                                {customer ? `${custName(customer)} has not bought anything from us yet.` : 'Find a customer first to see what they have bought from us.'}
+                                                {!customer ? 'Find a customer first to see what they have bought from us.'
+                                                    : histRows.length ? 'Nothing bought from this company / product yet.'
+                                                    : `${custName(customer)} has not bought anything from us yet.`}
                                             </td></tr>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
                             <div className="shrink-0 border-t border-slate-400 bg-[#ececfd] px-3 py-1 text-[12.5px] font-semibold text-[#1f2bd6]">
-                                {customer ? `Purchase history — ${custName(customer)} · ${histRows.length} line(s)` : 'Purchase history — no customer selected'}
+                                {customer
+                                    ? `Purchase history — ${custName(customer)}${fpCompany ? ` · ${companies.find((c) => String(c.id) === fpCompany)?.name || ''}` : ''} · ${histShown.length} line(s)`
+                                    : 'Purchase history — no customer selected'}
                             </div>
                         </div>
                     </div>
