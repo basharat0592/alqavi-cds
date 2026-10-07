@@ -407,6 +407,41 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         return Response(results)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def customer_items(self, request):
+        """What a customer has bought from us (Trade 1.0 Find Product, bottom
+        grid): one row per sale line, newest first — PID, Category, Product,
+        Pack, Expiry, Qty(U), Qty(B), TP, TP %, Retail. ?customer=<id>."""
+        from decimal import Decimal
+        cust_id = request.query_params.get('customer')
+        if not cust_id:
+            return Response([])
+        orders = scope_to_tenant(request.user, Order.objects.filter(customer_id=cust_id)
+                                 .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant')
+        items = (OrderItem.objects.filter(order__in=orders)
+                 .select_related('order', 'product__category', 'product__stock', 'batch')
+                 .order_by('-order__created_at', 'id')[:300])
+        rows = []
+        for it in items:
+            p = it.product
+            stock = getattr(p, 'stock', None) if p else None
+            gross = Decimal(str(it.price or 0)) * (it.quantity or 0)
+            disc_pct = (Decimal(str(it.discount or 0)) / gross * 100) if gross else Decimal('0')
+            rows.append({
+                'invoice_no': it.order.tracking_id,
+                'date': (it.order.sale_date or it.order.created_at.date()),
+                'product_id': str(p.id) if p else None,
+                'pid': (p.sku or '') if p else '',
+                'category': p.category.name if (p and p.category_id) else '',
+                'name': p.product_name if p else 'Deleted product',
+                'pack': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
+                'expiry_date': it.expiry_date,
+                'qty': it.quantity, 'bonus': it.bonus_quantity,
+                'tp': it.price, 'tp_pct': round(disc_pct, 2),
+                'retail': (it.batch.retail_price if it.batch_id else None) or (p.original_price if p else 0) or 0,
+            })
+        return Response(rows)
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def next_invoice_no(self, request):
         """Preview of the next Trade 1.0 sale invoice number (e.g. S26000912).
         The number is only reserved when the sale is saved."""

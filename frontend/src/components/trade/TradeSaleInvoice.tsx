@@ -91,6 +91,18 @@ function downloadXlsx(name: string, sheet: string, head: string[], rows: any[][]
     XLSX.writeFile(wb, `${name}-${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
+/* Find Product grids (legacy column order). */
+const FP_STOCK_COLS = [
+    { h: 'PID', w: '7%' }, { h: 'Category', w: '10%' }, { h: 'Product Name', w: '27%' }, { h: 'Pack', w: '6%' },
+    { h: 'Expiry Date', w: '10%' }, { h: 'Qty(U)', w: '7%' }, { h: 'T.P', w: '8%' }, { h: 'Retail Rate', w: '9%' },
+    { h: 'Company', w: '16%' },
+];
+const FP_HIST_COLS = [
+    { h: 'PID', w: '7%' }, { h: 'Category', w: '10%' }, { h: 'Product', w: '27%' }, { h: 'Pack', w: '6%' },
+    { h: 'Expiry Date', w: '10%' }, { h: 'Qty(U)', w: '7%' }, { h: 'Qty(B)', w: '7%' }, { h: 'T.P', w: '9%' },
+    { h: 'TP %', w: '7%' }, { h: 'Retail Rate', w: '10%' },
+];
+
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
     ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
@@ -219,9 +231,6 @@ export default function TradeSaleInvoice() {
 
     // Product search
     const [showFindProd, setShowFindProd] = useState(false);
-    const [prodQuery, setProdQuery] = useState('');
-    const [prodResults, setProdResults] = useState<LookupProduct[]>([]);
-    const [prodSearching, setProdSearching] = useState(false);
 
     // Invoice
     const [invoiceNo, setInvoiceNo] = useState('…');
@@ -750,28 +759,104 @@ export default function TradeSaleInvoice() {
 
     const resolveCode = async () => {
         const code = entry.code.trim();
-        if (!code) { setShowFindProd(true); return; }
+        if (!code) { openFindProduct(); return; }
         try {
             const { data } = await api.get('v1/products/items/sale_lookup/', { params: { code } });
             if (data.length) loadProduct(data[0]);
-            else { setProdQuery(code); setShowFindProd(true); }
+            else { openFindProduct(code); }
         } catch { toast.error('Product lookup failed.'); }
     };
 
-    // Debounced name search inside the Find Product popup.
+    /* ── Find Product window (legacy Trade 1.0): filters on top, available stock
+       (one row per in-stock batch) in the middle, and below it what the selected
+       customer has bought from us before. ── */
+    const [fpCompany, setFpCompany] = useState('');
+    const [fpName, setFpName] = useState('');
+    const [fpBarcode, setFpBarcode] = useState('');
+    const [companies, setCompanies] = useState<any[]>([]);
+    const [stockRows, setStockRows] = useState<any[]>([]);
+    const [stockLoading, setStockLoading] = useState(false);
+    const [histRows, setHistRows] = useState<any[]>([]);
+    const [fpSel, setFpSel] = useState('');
+
+    const openFindProduct = (name = '') => {
+        setFpName(name); setFpBarcode(''); setFpSel('');
+        setShowFindProd(true);
+        if (!companies.length) {
+            (async () => {
+                const all: any[] = [];
+                try {
+                    for (let page = 1; page <= 20; page++) {
+                        const { data } = await api.get('v1/company/companies/', { params: { page, page_size: 100 } });
+                        if (Array.isArray(data)) { all.push(...data); break; }
+                        all.push(...(data.results || []));
+                        if (!data.next) break;
+                    }
+                } catch { /* company filter is optional */ }
+                setCompanies(all.sort((a, b) => String(a.name).localeCompare(String(b.name))));
+            })();
+        }
+        if (customer) {
+            api.get('v1/sales/orders/customer_items/', { params: { customer: customer.id } })
+                .then(({ data }) => setHistRows(data)).catch(() => setHistRows([]));
+        } else setHistRows([]);
+    };
+
+    // Available stock follows the filters (debounced).
     useEffect(() => {
         if (!showFindProd) return;
-        const q = prodQuery.trim();
-        if (q.length < 2) { setProdResults([]); return; }
-        setProdSearching(true);
+        setStockLoading(true);
         const t = setTimeout(() => {
-            api.get('v1/products/items/sale_lookup/', { params: { q } })
-                .then(({ data }) => setProdResults(data))
-                .catch(() => setProdResults([]))
-                .finally(() => setProdSearching(false));
+            const params: any = {};
+            if (fpCompany) params.company = fpCompany;
+            if (fpName.trim()) params.q = fpName.trim();
+            if (fpBarcode.trim()) params.barcode = fpBarcode.trim();
+            api.get('v1/products/items/stock_list/', { params })
+                .then(({ data }) => setStockRows(data))
+                .catch(() => setStockRows([]))
+                .finally(() => setStockLoading(false));
         }, 250);
         return () => clearTimeout(t);
-    }, [prodQuery, showFindProd]);
+    }, [showFindProd, fpCompany, fpName, fpBarcode]);
+
+    // Keyboard handler is bound once; route F3 to the latest opener.
+    const openFpRef = useRef(openFindProduct);
+    openFpRef.current = openFindProduct;
+
+    // Pick a stock row: load that product into the entry row on that exact batch.
+    const pickStockRow = async (r: any) => {
+        try {
+            const { data } = await api.get('v1/products/items/sale_lookup/', { params: { code: r.pid } });
+            const prod: LookupProduct | undefined = data.find((x: any) => x.id === r.product_id) || data[0];
+            if (!prod) { toast.error('Product not found.'); return; }
+            loadProduct(prod);
+            if (prod.batches.some((b) => b.id === r.batch_id)) applyBatch(prod, r.batch_id);
+        } catch { toast.error('Could not load the product.'); }
+    };
+
+    // Pick a history row: same product again, with the discount given last time.
+    const pickHistoryRow = async (r: any) => {
+        if (!r.pid) return;
+        try {
+            const { data } = await api.get('v1/products/items/sale_lookup/', { params: { code: r.pid } });
+            const prod: LookupProduct | undefined = data.find((x: any) => x.id === r.product_id) || data[0];
+            if (!prod) { toast.error('This product is no longer available.'); return; }
+            loadProduct(prod);
+            if (num(r.tp_pct) > 0) setEntry((e) => ({ ...e, discPct: String(num(r.tp_pct)) }));
+        } catch { toast.error('Could not load the product.'); }
+    };
+
+    // Barcode: Enter picks the product straight away when it matches one batch.
+    const onBarcodeEnter = async () => {
+        const code = fpBarcode.trim();
+        if (!code) return;
+        try {
+            const { data } = await api.get('v1/products/items/stock_list/', { params: { barcode: code } });
+            setStockRows(data);
+            if (data.length === 1) pickStockRow(data[0]);
+            else if (!data.length) toast.error('No product in stock with that barcode.');
+        } catch { toast.error('Barcode lookup failed.'); }
+    };
 
     /* ── entry maths ── */
     const p = entry.product;
@@ -936,7 +1021,7 @@ export default function TradeSaleInvoice() {
     useEffect(() => {
         const h = (e: KeyboardEvent) => {
             if (e.key === 'F2') { e.preventDefault(); setShowFindCust(true); }
-            else if (e.key === 'F3') { e.preventDefault(); setShowFindProd(true); }
+            else if (e.key === 'F3') { e.preventDefault(); openFpRef.current(); }
             else if (e.key === 'F9') { e.preventDefault(); setShowPV(true); }
             else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveRef.current(false); }
         };
@@ -1001,7 +1086,7 @@ export default function TradeSaleInvoice() {
                     <span className={LABEL}>Disc Amt.</span>
                     <span className={LABEL}>Sub Total</span>
 
-                    <button type="button" onClick={() => setShowFindProd(true)}
+                    <button type="button" onClick={() => openFindProduct()}
                         className="h-8 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-bold text-slate-800 shadow-sm hover:to-[#d9d9e6] active:translate-y-px">
                         Find
                     </button>
@@ -1328,39 +1413,98 @@ export default function TradeSaleInvoice() {
                 </Modal>
             )}
 
-            {/* ─── Find Product ─── */}
+            {/* ─── Find Product (legacy Trade 1.0) ─── */}
             {showFindProd && (
-                <Modal title="Find Product" onClose={() => askClose(() => setShowFindProd(false))} wide>
-                    <div className="border-b border-slate-200 p-3">
-                        <div className="relative">
-                            <Search size={15} className="absolute left-2.5 top-2.5 text-slate-400" />
-                            <input autoFocus value={prodQuery} onChange={(e) => setProdQuery(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' && prodResults[0]) loadProduct(prodResults[0]); }}
-                                placeholder="Product name or code (2+ letters)…" className={`${EDIT} w-full pl-8`} />
-                            {prodSearching && <Loader2 size={15} className="absolute right-2.5 top-2.5 animate-spin text-slate-400" />}
+                <Modal title="Find Product" onClose={() => askClose(() => setShowFindProd(false))} xl>
+                    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#e4e4fb] p-3">
+                        {/* Filters + actions */}
+                        <div className="grid shrink-0 grid-cols-[1.5fr_1.15fr_auto] gap-3">
+                            <div className="grid grid-cols-[120px_1fr] items-center gap-x-3 gap-y-2 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 py-3">
+                                <span className={LABEL}>Company Name</span>
+                                <select value={fpCompany} onChange={(e) => setFpCompany(e.target.value)} className={COA_SELECT}>
+                                    <option value="">Select any one</option>
+                                    {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </select>
+                                <span className={LABEL}>Product Name</span>
+                                <input autoFocus value={fpName} onChange={(e) => setFpName(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && stockRows[0]) pickStockRow(stockRows[0]); }}
+                                    placeholder="Name or PID" className={`${EDIT} w-full`} />
+                            </div>
+                            <div className="flex items-center gap-3 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 py-3">
+                                <span className={`${LABEL} leading-tight`}>Product<br />Bar Code</span>
+                                <input value={fpBarcode} onChange={(e) => setFpBarcode(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onBarcodeEnter(); } }}
+                                    placeholder="Scan or type, then Enter" className={`${FIELD} w-full border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
+                            </div>
+                            <div className="flex flex-col justify-center gap-2">
+                                <button type="button" onClick={() => openPopup('/admin/products/add')} className={`${ACTION_BTN} min-w-[170px]`}>
+                                    <span className="underline">A</span>dd New Product
+                                </button>
+                                <button type="button" onClick={() => askClose(() => setShowFindProd(false))}
+                                    className="flex h-9 min-w-[170px] items-center justify-center rounded-md border border-slate-400 bg-gradient-to-b from-[#f1f1f4] to-[#d6d6de] px-4 text-[14px] font-bold text-slate-700 shadow-sm hover:to-[#c9c9d4]">
+                                    <span className="underline">C</span>ancel
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-auto">
-                        <table className="w-full text-[13px]">
-                            <thead className="sticky top-0 bg-slate-100 text-left text-slate-600">
-                                <tr><th className="px-3 py-1.5">PID</th><th className="px-3 py-1.5">Product Name</th><th className="px-3 py-1.5">Company</th><th className="px-3 py-1.5 text-right">Stock</th><th className="px-3 py-1.5 text-right">TP</th><th className="px-3 py-1.5">Nearest Exp</th></tr>
-                            </thead>
-                            <tbody>
-                                {prodResults.map((r) => (
-                                    <tr key={r.id} onClick={() => loadProduct(r)} className="cursor-pointer border-t border-slate-100 hover:bg-indigo-50">
-                                        <td className="px-3 py-1.5 font-mono tabular-nums">{r.code}</td>
-                                        <td className="px-3 py-1.5 font-semibold">{r.name}</td>
-                                        <td className="px-3 py-1.5 text-slate-600">{r.company || '—'}</td>
-                                        <td className={`px-3 py-1.5 text-right tabular-nums ${r.stock <= 0 ? 'text-rose-600' : ''}`}>{fmt(r.stock)}</td>
-                                        <td className="px-3 py-1.5 text-right tabular-nums">{fmt(num(r.selling_price))}</td>
-                                        <td className="px-3 py-1.5 tabular-nums">{ymd(r.batches[0]?.expiry_date || null)}</td>
-                                    </tr>
-                                ))}
-                                {!prodResults.length && (
-                                    <tr><td colSpan={6} className="px-3 py-6 text-center text-slate-400">{prodQuery.trim().length < 2 ? 'Type at least 2 letters.' : prodSearching ? 'Searching…' : 'No products match.'}</td></tr>
-                                )}
-                            </tbody>
-                        </table>
+
+                        {/* Available stock — one row per in-stock batch */}
+                        <div className="flex min-h-[120px] flex-[3] flex-col overflow-hidden border border-slate-500 bg-[#9ea1ad]">
+                            <div className="min-h-0 flex-1 overflow-auto">
+                                <table className="w-full min-w-[900px] table-fixed border-collapse bg-white text-[13px]">
+                                    <colgroup>{FP_STOCK_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                                    <thead className="sticky top-0 z-10 bg-[#ffe1b8] text-left">
+                                        <tr>{FP_STOCK_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
+                                    </thead>
+                                    <tbody>
+                                        {stockRows.map((r) => (
+                                            <tr key={r.batch_id} onClick={() => setFpSel(r.batch_id)} onDoubleClick={() => pickStockRow(r)}
+                                                className={`cursor-pointer tabular-nums ${fpSel === r.batch_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
+                                                title="Double-click to select">
+                                                {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), fmt(num(r.tp)), fmt(num(r.retail)), r.company].map((v, k) => (
+                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                        {!stockRows.length && (
+                                            <tr><td colSpan={FP_STOCK_COLS.length} className="px-3 py-4 text-center text-slate-400">{stockLoading ? 'Loading…' : 'No stock matches.'}</td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="shrink-0 border-t border-slate-400 bg-[#ececfd] px-3 py-1 text-[12.5px] font-semibold text-[#1f2bd6]">
+                                Available Stock — {stockRows.length} batch(es){stockLoading ? ' · loading…' : ''} · double-click a row to select it
+                            </div>
+                        </div>
+
+                        {/* What this customer has bought from us */}
+                        <div className="flex min-h-[100px] flex-[2] flex-col overflow-hidden border border-slate-500 bg-[#9ea1ad]">
+                            <div className="min-h-0 flex-1 overflow-auto">
+                                <table className="w-full min-w-[900px] table-fixed border-collapse bg-[#ffffcf] text-[13px]">
+                                    <colgroup>{FP_HIST_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                                    <thead className="sticky top-0 z-10 bg-[#ffe1b8] text-left">
+                                        <tr>{FP_HIST_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
+                                    </thead>
+                                    <tbody>
+                                        {histRows.map((r, i) => (
+                                            <tr key={i} onDoubleClick={() => pickHistoryRow(r)} className="cursor-pointer tabular-nums hover:bg-[#fff3a6]"
+                                                title={`Invoice ${r.invoice_no} · ${String(r.date).slice(0, 10)} — double-click to sell again`}>
+                                                {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), r.bonus ? fmt(num(r.bonus)) : '', fmt(num(r.tp)), num(r.tp_pct) ? fmt(num(r.tp_pct)) : '', fmt(num(r.retail))].map((v, k) => (
+                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                        {!histRows.length && (
+                                            <tr><td colSpan={FP_HIST_COLS.length} className="px-3 py-4 text-center text-slate-500">
+                                                {customer ? `${custName(customer)} has not bought anything from us yet.` : 'Find a customer first to see what they have bought from us.'}
+                                            </td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="shrink-0 border-t border-slate-400 bg-[#ececfd] px-3 py-1 text-[12.5px] font-semibold text-[#1f2bd6]">
+                                {customer ? `Purchase history — ${custName(customer)} · ${histRows.length} line(s)` : 'Purchase history — no customer selected'}
+                            </div>
+                        </div>
                     </div>
                 </Modal>
             )}

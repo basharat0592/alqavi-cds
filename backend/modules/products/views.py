@@ -188,6 +188,42 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         return queryset
 
     @action(detail=False, methods=['get'])
+    def stock_list(self, request):
+        """Available stock for the Trade 1.0 Find Product window: one row per
+        in-stock batch (PID, Category, Product, Pack, Expiry, Qty, TP, Retail,
+        Company). Filters: ?company=<company id>, ?q=<name/code>, ?barcode=."""
+        qs = self.get_queryset().filter(status='ACTIVE')
+        company = (request.query_params.get('company') or '').strip()
+        q = (request.query_params.get('q') or '').strip()
+        barcode = (request.query_params.get('barcode') or '').strip()
+        if company:
+            qs = qs.filter(stock__product__company_id=company)
+        if q:
+            qs = qs.filter(Q(product_name__icontains=q) | Q(sku__icontains=q))
+        if barcode:
+            qs = qs.filter(Q(barcode__iexact=barcode) | Q(sku__iexact=barcode))
+        batches = (ProductBatch.objects
+                   .filter(product__in=qs, quantity__gt=0)
+                   .select_related('product__category', 'product__stock__product__company')
+                   .order_by('product__product_name', 'expiry_date')[:3000])
+        rows = []
+        for b in batches:
+            p = b.product
+            stock = getattr(p, 'stock', None)
+            sp = getattr(stock, 'product', None)
+            rows.append({
+                'batch_id': str(b.id), 'product_id': str(p.id), 'pid': p.sku or '',
+                'category': p.category.name if p.category_id else '',
+                'name': p.product_name, 'barcode': p.barcode or '',
+                'pack': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
+                'expiry_date': b.expiry_date, 'qty': b.quantity,
+                'tp': b.selling_price or p.selling_price or 0,
+                'retail': b.retail_price or p.original_price or 0,
+                'company': sp.company.name if (sp and sp.company_id) else '',
+            })
+        return Response(rows)
+
+    @action(detail=False, methods=['get'])
     def sale_lookup(self, request):
         """Product lookup for the Trade 1.0 Sale Invoice window.
         ?code=10816 -> exact match on product code (PID/sku) or barcode;
