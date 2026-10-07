@@ -11,7 +11,7 @@ export const metadata = {
     description: 'The #1 Platform for Wholesale Cosmetics and Beauty Products by Al-Qavi',
 };
 
-import { Toaster } from 'react-hot-toast';
+import AppToaster from '@/components/ui/AppToaster';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
 import CartDrawer from '@/components/layout/CartDrawer';
 import SiteIdentityManager from '@/components/layout/SiteIdentityManager';
@@ -25,7 +25,7 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning={true}>
             <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning={true}>
                 <SiteIdentityManager />
-                <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+                <AppToaster />
                 <WhatsAppButton />
                 <CartProvider>
                     <WishlistProvider>
