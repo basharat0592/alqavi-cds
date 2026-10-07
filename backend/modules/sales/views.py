@@ -433,26 +433,26 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             return code, (f"{c.first_name or ''} {c.last_name or ''}".strip() if c else '') or fallback_name
 
         if p.get('type') == 'return':
-            qs = scope_to_tenant(request.user, SaleReturn.objects.all(), 'tenant') \
-                .select_related('customer', 'order__staff')
+            from .models import TradeSaleReturn
+            qs = scope_to_tenant(request.user, TradeSaleReturn.objects.all(), 'tenant')                 .select_related('customer', 'staff')
             if date_from:
-                qs = qs.filter(created_at__date__gte=date_from)
+                qs = qs.filter(return_date__gte=date_from)
             if date_to:
-                qs = qs.filter(created_at__date__lte=date_to)
+                qs = qs.filter(return_date__lte=date_to)
             if customer:
                 qs = qs.filter(customer_id=customer)
             if staff:
-                qs = qs.filter(order__staff_id=staff)
+                qs = qs.filter(staff_id=staff)
             rows = []
-            for r in qs.order_by('-created_at')[:3000]:
-                amount = Decimal(str(r.items_total or 0))
-                code, name = cust_cols(r.customer, r.order.customer_name if r.order_id else '')
-                paid = Decimal(str(r.refund_amount or 0)) - Decimal(str(r.refund_remaining or 0))
+            for r in qs.order_by('-return_date', '-created_at')[:3000]:
+                code, name = cust_cols(r.customer, r.customer_name)
+                pre = Decimal(str(r.prev_balance or 0))
                 rows.append({
-                    'id': None, 'sale_id': r.return_number, 'date': r.created_at.date(),
-                    'staff': r.order.staff.name if (r.order_id and r.order.staff_id) else '',
-                    'acc_id': code, 'acc_name': name, 'amount': amount, 'disc': z, 'net': amount,
-                    'pre_bal': z, 'total': amount, 'paid': paid, 'balance': amount - paid,
+                    'id': None, 'return_id': r.id, 'sale_id': r.return_no, 'date': r.return_date,
+                    'staff': r.staff.name if r.staff_id else '', 'acc_id': code, 'acc_name': name,
+                    'amount': r.gross, 'disc': r.discount + r.less_amount, 'net': r.net_amount - r.less_amount,
+                    'pre_bal': pre, 'total': pre - (r.net_amount - r.less_amount),
+                    'paid': r.cash_returned, 'balance': pre - r.credit,
                 })
             return Response(rows)
 
@@ -481,6 +481,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 (o.salesperson.get_full_name() or o.salesperson.username) if o.salesperson_id else '')
             rows.append({
                 'id': str(o.id), 'sale_id': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
+                'customer_id': o.customer_id,
                 'staff': staff_name, 'acc_id': code, 'acc_name': name,
                 'amount': o.gross, 'disc': o.line_disc + Decimal(str(o.discount or 0)), 'net': net,
                 'pre_bal': pre, 'total': pre + net, 'paid': paid, 'balance': pre + net - paid,
@@ -556,6 +557,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 total += rem
                 if o.due_date and (earliest_due is None or o.due_date < earliest_due):
                     earliest_due = o.due_date
+        # Trade 1.0 sale returns are credited to the customer.
+        from .trade_returns import customer_return_credit
+        total -= customer_return_credit(cust_id, request.user)
         return Response({
             'previous_balance': float(total),
             'due_date': earliest_due.isoformat() if earliest_due else None,

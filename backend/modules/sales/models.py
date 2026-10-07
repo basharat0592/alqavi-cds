@@ -667,3 +667,81 @@ class SaleReturnItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.product_name}"
+
+
+class TradeSaleReturn(models.Model):
+    """Trade 1.0 sale return (legacy T-series, e.g. T26000197): a whole invoice
+    ('complete') or chosen lines from the customer's sales ('random'). Returned
+    units go back into stock and the value is credited to the customer:
+    credit = net_amount - less_amount - cash_returned. 'legacy' rows are the
+    imported Trade 2.1 history and do not touch stock or balances."""
+    KIND_CHOICES = [('complete', 'Complete Bill'), ('random', 'Random'), ('legacy', 'Legacy')]
+
+    return_no = models.CharField(max_length=20, unique=True, db_index=True)
+    kind = models.CharField(max_length=10, choices=KIND_CHOICES, default='random')
+    customer = models.ForeignKey('customer.Customer', on_delete=models.SET_NULL, null=True, blank=True,
+                                 related_name='trade_returns')
+    customer_name = models.CharField(max_length=150, blank=True, default='')
+    order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='trade_returns')
+    staff = models.ForeignKey(SalesStaff, on_delete=models.SET_NULL, null=True, blank=True,
+                              related_name='trade_returns')
+    return_date = models.DateField()
+    gross = models.DecimalField(max_digits=12, decimal_places=2, default=0)          # Sale Amount
+    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)       # Disc. Amount
+    net_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)     # Net Sale Amount
+    bonus_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)    # Amt.Bonus (at cost)
+    less_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)    # deducted from the credit
+    cash_returned = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Return Amt / Amount Return
+    prev_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True, default='')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='created_trade_returns')
+    tenant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='tenant_trade_returns'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trade_sale_returns'
+        ordering = ['-return_date', '-created_at']
+
+    @property
+    def credit(self):
+        """What this return takes off the customer's balance."""
+        return (self.net_amount or 0) - (self.less_amount or 0) - (self.cash_returned or 0)
+
+    @staticmethod
+    def next_return_no(on_date=None):
+        """'T' + 2-digit year + 6-digit sequence, continuing the legacy series."""
+        import datetime
+        prefix = f"T{(on_date or datetime.date.today()).year % 100:02d}"
+        last = 0
+        for no in TradeSaleReturn.objects.filter(return_no__startswith=prefix).values_list('return_no', flat=True):
+            tail = no[len(prefix):]
+            if tail.isdigit():
+                last = max(last, int(tail))
+        return f"{prefix}{last + 1:06d}"
+
+    def __str__(self):
+        return f"Return {self.return_no} - {self.customer_name}"
+
+
+class TradeSaleReturnItem(models.Model):
+    sale_return = models.ForeignKey(TradeSaleReturn, on_delete=models.CASCADE, related_name='items')
+    order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='trade_return_items')
+    product = models.ForeignKey('products.Product', on_delete=models.SET_NULL, null=True, blank=True)
+    batch = models.ForeignKey('products.ProductBatch', on_delete=models.SET_NULL, null=True, blank=True)
+    expiry_date = models.DateField(null=True, blank=True)
+    quantity = models.PositiveIntegerField(default=0)
+    bonus_quantity = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)       # TP
+    retail = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    disc_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)    # Dis.Amt
+    cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'trade_sale_return_items'

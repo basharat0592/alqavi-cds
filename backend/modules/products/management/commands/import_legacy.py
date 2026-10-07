@@ -392,6 +392,62 @@ class Command(BaseCommand):
             Order.objects.filter(id=oid).update(created_at=dates[sid])
         self.stdout.write(f'Sales: invoices={len(by_id)} lines={len(items)} '
                           f'(skipped existing={len(taken)}, lines without product={n_missing})')
+        self._import_sale_returns(d, tenant, products, customers, staff, money)
+
+    def _import_sale_returns(self, d, tenant, products, customers, staff, money):
+        """Legacy sale returns (SaleRetAmount + SaleReturn, T-series) as history
+        (kind='legacy'): no restock and no effect on balances. New returns carry
+        on from the last legacy number."""
+        from decimal import Decimal
+        from modules.sales.models import TradeSaleReturn, TradeSaleReturnItem
+        headers = rows(d, 'SaleRetAmount')
+        if not headers:
+            return
+        lines = {}
+        for r in rows(d, 'SaleReturn'):
+            lines.setdefault(clean(r.get('SaleRetID')), []).append(r)
+        ids = [clean(h.get('SaleRetID')) for h in headers if clean(h.get('SaleRetID'))]
+        TradeSaleReturn.objects.filter(return_no__in=ids, kind='legacy').delete()
+        taken = set(TradeSaleReturn.objects.filter(return_no__in=ids).values_list('return_no', flat=True))
+        rets = []
+        for h in headers:
+            rid = clean(h.get('SaleRetID'))
+            if not rid or rid in taken:
+                continue
+            cust = customers.get(clean(h.get('AccID')))
+            gross = to_dec(h.get('Amount'))
+            disc = to_dec(h.get('DisPAmt'))
+            rets.append(TradeSaleReturn(
+                return_no=rid, kind='legacy', customer=cust,
+                customer_name=(cust.first_name if cust else f"Account {clean(h.get('AccID'))}")[:150],
+                staff=staff.get(clean(h.get('StaffID'))),
+                return_date=to_date(h.get('SaleDate')) or to_date(h.get('CreateDt')) or date.today(),
+                gross=money(gross), discount=money(disc),
+                net_amount=money(gross - disc - to_dec(h.get('DiscAAmt'))),
+                less_amount=money(h.get('DiscAAmt')), cash_returned=money(h.get('PaidCash')),
+                prev_balance=money(h.get('PreBal')), notes='Legacy Trade 2.1 sale return (imported history)',
+                tenant=tenant,
+            ))
+        TradeSaleReturn.objects.bulk_create(rets, batch_size=500)
+        by_no = dict(TradeSaleReturn.objects.filter(return_no__in=[r.return_no for r in rets])
+                     .values_list('return_no', 'id'))
+        items = []
+        for rid, pk in by_no.items():
+            for r in lines.get(rid, []):
+                qty = max(0, to_int(r.get('Qty')))
+                price = float(to_dec(r.get('USRate')))
+                pct = float(to_dec(r.get('DiscP')))
+                items.append(TradeSaleReturnItem(
+                    sale_return_id=pk, product=products.get(clean(r.get('PID'))),
+                    expiry_date=to_date(r.get('ExpDate')), quantity=qty,
+                    bonus_quantity=max(0, to_int(r.get('QtyTo'))),
+                    price=Decimal(str(round(price, 2))), retail=money(r.get('URRate')),
+                    disc_pct=Decimal(str(round(pct, 2))),
+                    discount=Decimal(str(round(qty * price * pct / 100, 2))),
+                    cost_price=money(r.get('UPRate')),
+                ))
+        TradeSaleReturnItem.objects.bulk_create(items, batch_size=1000)
+        self.stdout.write(f'Sale returns: {len(by_no)} lines={len(items)} (skipped existing={len(taken)})')
 
     def _import_chart(self, d, tenant, area_map):
         """Chart of Accounts: the three heading levels, then every legacy account,

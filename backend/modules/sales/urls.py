@@ -4,6 +4,7 @@ from .views import (
     OrderViewSet, PurchaseViewSet, SupplierDashboardViewSet,
     PurchaseReturnViewSet, SaleReturnViewSet, track_order_by_id
 )
+from .trade_returns import TradeSaleReturnViewSet
 from .reports import (
     report_by_area, report_by_user, report_statements, report_returns_summary,
     report_delivery, report_ledger,
@@ -12,6 +13,7 @@ from .reports import (
 router = DefaultRouter()
 router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'returns', SaleReturnViewSet, basename='sale-return')
+router.register(r'trade-returns', TradeSaleReturnViewSet, basename='trade-return')
 router.register(r'purchases', PurchaseViewSet, basename='purchase')
 router.register(r'purchase-returns', PurchaseReturnViewSet, basename='purchase-return')
 router.register(r'supplier/dashboard', SupplierDashboardViewSet, basename='supplier-dashboard')

@@ -110,6 +110,18 @@ const SR_COLS = [
     { h: 'Pre. Bal.', w: '7%' }, { h: 'Total', w: '6.5%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '6%' },
 ];
 
+/* Sale return grids (legacy column order). */
+const RET_COLS = [
+    { h: 'SNo', w: '5%' }, { h: 'PID', w: '7%' }, { h: 'Product Name', w: '24%' }, { h: 'Expiry', w: '9%' },
+    { h: 'Qty', w: '5.5%' }, { h: 'Bons', w: '5.5%' }, { h: 'TP', w: '7%' }, { h: 'Retail', w: '7%' },
+    { h: 'Sub Total', w: '8%' }, { h: 'Dis %', w: '5.5%' }, { h: 'Dis.Amt', w: '7%' }, { h: 'Net Amt', w: '9.5%' },
+];
+const RR_HIST_COLS = [
+    { h: 'Sale Inv.', w: '10%' }, { h: 'Date', w: '8.5%' }, { h: 'PID', w: '7%' }, { h: 'Product Name', w: '25%' },
+    { h: 'Expiry', w: '8.5%' }, { h: 'Qty', w: '5.5%' }, { h: 'Bonus', w: '6%' }, { h: 'Returned', w: '7.5%' },
+    { h: 'TP', w: '7%' }, { h: 'Disc%', w: '6%' }, { h: 'Retail', w: '9%' },
+];
+
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
     ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
@@ -697,7 +709,7 @@ export default function TradeSaleInvoice() {
     };
 
     // Find Account serves the invoice and the Sale Records filter.
-    const custTarget = useRef<'invoice' | 'records'>('invoice');
+    const custTarget = useRef<'invoice' | 'records' | 'return'>('invoice');
     const closeFindCustomer = () => { setShowFindCust(false); setAddingCust(false); custTarget.current = 'invoice'; };
 
     // Saleman options — the legacy Staff list (all kept for Sale Records;
@@ -728,6 +740,12 @@ export default function TradeSaleInvoice() {
 
     /* ── customer ── */
     const pickCustomer = (c: any) => {
+        if (custTarget.current === 'return') {
+            custTarget.current = 'invoice';
+            setShowFindCust(false); setCustQuery('');
+            setRrCustomer(c);
+            return;
+        }
         if (custTarget.current === 'records') {
             custTarget.current = 'invoice';
             setSrCust(c); setSrCustInput(custCode(c));
@@ -1004,15 +1022,219 @@ export default function TradeSaleInvoice() {
         if (srChoice === 'print') {
             if (!r.id) { toast.error('This record has no printable invoice.'); return; }
             openPopup(`/admin/sales/${r.id}/invoice?print=true`);
+        } else if (!r.id) {
+            toast.error('Pick a sale (not a return) to make a return from.');
+        } else if (srChoice === 'return_all') {
+            openReturnBill(r);
         } else {
-            toast(`The Sale Return form is next to be built — ${srChoice === 'return_all' ? 'complete bill' : 'random'} return of ${r.sale_id} will open it.`, { icon: 'ℹ️', duration: 5000 });
+            openReturnRandom(r);
         }
     };
 
-    const openSaleRecords = () => {
-        setSrFrom(today()); setSrTo(today()); setSrStaff(''); setSrType('');
-        setSrCust(null); setSrCustInput(''); setSrRows(null); setSrSel('');
+    const openSaleRecords = (opts?: { type?: string; cust?: any }) => {
+        setSrFrom(today()); setSrTo(today()); setSrStaff(''); setSrType(opts?.type || '');
+        setSrCust(opts?.cust || null); setSrCustInput(opts?.cust ? custCode(opts.cust) : ''); setSrRows(null); setSrSel('');
         setShowView(true);
+    };
+
+    /* ═══ Sale returns (legacy "Sale Return Complete Bill" / "Sale Return (Random)") ═══
+       Returned units go back into stock and the value is credited to the customer. */
+    const loadNextReturnNo = async () => {
+        try { const { data } = await api.get('v1/sales/trade-returns/next_no/'); return data.return_no as string; }
+        catch { return '—'; }
+    };
+    const loadBalance = async (customerId: any) => {
+        if (!customerId) return 0;
+        try { const b: any = await orderService.getCustomerBalance(String(customerId)); return num(b?.previous_balance); }
+        catch { return 0; }
+    };
+    const retLineGross = (l: any, q: number) => num(l.tp) * q;
+    const retLineDisc = (l: any, q: number) => retLineGross(l, q) * num(l.disc_pct) / 100;
+    const saveErr = (err: any, fallback: string) => {
+        const d = err?.response?.data;
+        toast.error(String(d?.detail || (d && Object.values(d)[0]) || fallback), { duration: 7000 });
+    };
+
+    /* ── Complete Bill: return everything still returnable on one invoice ── */
+    const [rb, setRb] = useState<null | { orderId: string; saleId: string; customerId: any; accId: string; accName: string; staff: string }>(null);
+    const [rbLines, setRbLines] = useState<any[] | null>(null);
+    const [rbNo, setRbNo] = useState('');
+    const [rbPrev, setRbPrev] = useState(0);
+    const [rbCash, setRbCash] = useState('');
+    const [rbDateOn, setRbDateOn] = useState(false);
+    const [rbDate, setRbDate] = useState(today);
+    const [rbSaving, setRbSaving] = useState(false);
+
+    const openReturnBill = async (r: any) => {
+        setRb({ orderId: r.id, saleId: r.sale_id, customerId: r.customer_id, accId: r.acc_id, accName: r.acc_name, staff: r.staff });
+        setRbLines(null); setRbCash(''); setRbDateOn(false); setRbDate(today()); setRbNo('…');
+        try {
+            const { data } = await api.get('v1/sales/trade-returns/order_lines/', { params: { order: r.id } });
+            setRbLines(data.filter((l: any) => l.remaining_qty > 0 || l.remaining_bonus > 0));
+        } catch { toast.error('Could not load the invoice.'); setRbLines([]); }
+        setRbNo(await loadNextReturnNo());
+        setRbPrev(await loadBalance(r.customer_id));
+    };
+
+    const rbTotals = useMemo(() => {
+        const ls = rbLines || [];
+        const bonus = ls.reduce((s2, l) => s2 + num(l.cost) * l.remaining_bonus, 0);
+        const billed = ls.reduce((s2, l) => s2 + retLineGross(l, l.remaining_qty), 0);
+        const disc = ls.reduce((s2, l) => s2 + retLineDisc(l, l.remaining_qty), 0);
+        const net = billed - disc;
+        const cash = Math.max(0, num(rbCash));
+        return { bonus, billed, disc, net, cash, balance: rbPrev - net + cash };
+    }, [rbLines, rbCash, rbPrev]);
+
+    const saveReturnBill = () => {
+        if (!rb || !rbLines?.length || rbSaving) return;
+        setAsk({
+            msg: `Do you want to return the complete bill ${rb.saleId} ?`,
+            yes: async () => {
+                setRbSaving(true);
+                try {
+                    const { data } = await api.post('v1/sales/trade-returns/', {
+                        kind: 'complete', customer: rb.customerId,
+                        return_date: rbDateOn ? rbDate : today(),
+                        cash_returned: round2(rbTotals.cash), prev_balance: round2(rbPrev),
+                        items: rbLines.map((l) => ({ order_item: l.order_item, quantity: l.remaining_qty, bonus_quantity: l.remaining_bonus })),
+                    });
+                    toast.success(`Sale return ${data.return_no} saved — ${fmt(num(data.net_amount))} credited.`);
+                    setRb(null);
+                    if (showView) searchSaleRecords();
+                } catch (err) { saveErr(err, 'Could not save the return.'); }
+                finally { setRbSaving(false); }
+            },
+        });
+    };
+
+    /* ── Random: pick lines from the customer's sale history ── */
+    const [rrOpen, setRrOpen] = useState(false);
+    const [rrCust, setRrCust] = useState<any | null>(null);
+    const [rrCustInput, setRrCustInput] = useState('');
+    const [rrStaff, setRrStaff] = useState('');
+    const [rrHist, setRrHist] = useState<any[] | null>(null);
+    const [rrHistLoading, setRrHistLoading] = useState(false);
+    const [rrProduct, setRrProduct] = useState('');
+    const [rrInvoice, setRrInvoice] = useState('');
+    const [rrFromOn, setRrFromOn] = useState(false);
+    const [rrFrom, setRrFrom] = useState(today);
+    const [rrToOn, setRrToOn] = useState(false);
+    const [rrTo, setRrTo] = useState(today);
+    const [rrPick, setRrPick] = useState<any | null>(null);
+    const [rrQty, setRrQty] = useState('');
+    const [rrLines, setRrLines] = useState<any[]>([]);
+    const [rrSel, setRrSel] = useState(-1);
+    const [rrLess, setRrLess] = useState('');
+    const [rrCash, setRrCash] = useState('');
+    const [rrDate, setRrDate] = useState(today);
+    const [rrPrev, setRrPrev] = useState(0);
+    const [rrNo, setRrNo] = useState('');
+    const [rrSaving, setRrSaving] = useState(false);
+    const rrQtyRef = useRef<HTMLInputElement>(null);
+
+    const loadRrHistory = async (cust = rrCust, invoice = rrInvoice) => {
+        if (!cust) { toast.error('Find a customer first.'); return; }
+        setRrHistLoading(true);
+        try {
+            const params: any = { customer: cust.id };
+            if (rrProduct.trim()) params.product = rrProduct.trim();
+            if (invoice.trim()) params.invoice = invoice.trim();
+            if (rrFromOn) params.date_from = rrFrom;
+            if (rrToOn) params.date_to = rrTo;
+            const { data } = await api.get('v1/sales/trade-returns/customer_lines/', { params });
+            setRrHist(data);
+        } catch { toast.error('Could not load the sale history.'); setRrHist([]); }
+        finally { setRrHistLoading(false); }
+    };
+
+    const setRrCustomer = async (c: any, invoice = '') => {
+        setRrCust(c); setRrCustInput(c ? custCode(c) : '');
+        setRrPick(null); setRrQty(''); setRrLines([]); setRrSel(-1);
+        setRrPrev(await loadBalance(c?.id));
+        if (c) loadRrHistory(c, invoice);
+    };
+
+    const openReturnRandom = async (r?: any) => {
+        setRrOpen(true);
+        setRrHist(null); setRrPick(null); setRrQty(''); setRrLines([]); setRrSel(-1);
+        setRrLess(''); setRrCash(''); setRrDate(today()); setRrStaff('');
+        setRrProduct(''); setRrFromOn(false); setRrToOn(false);
+        setRrInvoice(r?.sale_id || '');
+        setRrNo(await loadNextReturnNo());
+        const c = r?.customer_id ? customers.find((x) => String(x.id) === String(r.customer_id)) : null;
+        if (c) setRrCustomer(c, r?.sale_id || '');
+        else { setRrCust(null); setRrCustInput(''); setRrPrev(0); }
+    };
+
+    const findReturnCustomer = (input = rrCustInput) => {
+        const q = input.trim().toLowerCase();
+        const hit = q ? customers.find((c) => custCode(c).toLowerCase() === q) : null;
+        if (hit) { setRrCustomer(hit); return; }
+        custTarget.current = 'return';
+        setCustQuery(input.trim());
+        setShowFindCust(true);
+    };
+
+    // Units of a sale line already on this return (so it is never over-returned).
+    const rrUsed = (orderItem: number) => rrLines.filter((l) => l.order_item === orderItem)
+        .reduce((a, l) => ({ q: a.q + l.ret_qty, b: a.b + l.ret_bonus }), { q: 0, b: 0 });
+
+    const pickRrLine = (l: any) => { setRrPick(l); setRrQty(''); setTimeout(() => rrQtyRef.current?.focus(), 0); };
+
+    const addRrLine = () => {
+        if (!rrPick) { toast.error('Pick a product from the sale history first.'); return; }
+        const used = rrUsed(rrPick.order_item);
+        const leftQ = rrPick.remaining_qty - used.q;
+        const leftB = rrPick.remaining_bonus - used.b;
+        const q = Math.max(0, Math.floor(num(rrQty)));
+        if (q <= 0 && leftQ > 0) { toast.error('Enter the Ret. Qty.'); rrQtyRef.current?.focus(); return; }
+        if (q > leftQ) { toast.error(`Only ${leftQ} unit(s) of ${rrPick.name} can still be returned.`); return; }
+        // Returning all that is left of a line brings its bonus units back too.
+        const b = q === leftQ ? leftB : 0;
+        if (q + b <= 0) { toast.error('Nothing left to return on this line.'); return; }
+        setRrLines((ls) => [...ls, { ...rrPick, ret_qty: q, ret_bonus: b }]);
+        setRrPick(null); setRrQty('');
+    };
+
+    const removeRrLine = () => {
+        if (rrSel < 0) { toast.error('Select a line in the grid to remove.'); return; }
+        setRrLines((ls) => ls.filter((_, i) => i !== rrSel));
+        setRrSel(-1);
+    };
+
+    const rrTotals = useMemo(() => {
+        const sale = rrLines.reduce((s2, l) => s2 + retLineGross(l, l.ret_qty), 0);
+        const disc = rrLines.reduce((s2, l) => s2 + retLineDisc(l, l.ret_qty), 0);
+        const net = sale - disc;
+        const less = Math.max(0, num(rrLess));
+        const cash = Math.max(0, num(rrCash));
+        return { sale, disc, net, less, cash, balance: rrPrev - (net - less) + cash };
+    }, [rrLines, rrLess, rrCash, rrPrev]);
+
+    const saveReturnRandom = () => {
+        if (rrSaving) return;
+        if (!rrCust) { toast.error('Find a customer first.'); return; }
+        if (!rrLines.length) { toast.error('Add at least one product to return.'); return; }
+        setAsk({
+            msg: `Do you want to save this sale return (${rrLines.length} product(s)) ?`,
+            yes: async () => {
+                setRrSaving(true);
+                try {
+                    const { data } = await api.post('v1/sales/trade-returns/', {
+                        kind: 'random', customer: rrCust.id, staff: rrStaff || null, return_date: rrDate,
+                        less_amount: round2(rrTotals.less), cash_returned: round2(rrTotals.cash), prev_balance: round2(rrPrev),
+                        items: rrLines.map((l) => ({ order_item: l.order_item, quantity: l.ret_qty, bonus_quantity: l.ret_bonus })),
+                    });
+                    toast.success(`Sale return ${data.return_no} saved — ${fmt(num(data.credit))} credited.`);
+                    setRrLines([]); setRrSel(-1); setRrLess(''); setRrCash(''); setRrPick(null); setRrQty('');
+                    setRrNo(await loadNextReturnNo());
+                    setRrPrev(await loadBalance(rrCust.id));
+                    loadRrHistory(rrCust);
+                } catch (err) { saveErr(err, 'Could not save the return.'); }
+                finally { setRrSaving(false); }
+            },
+        });
     };
 
     const searchSaleRecords = async () => {
@@ -1342,7 +1564,7 @@ export default function TradeSaleInvoice() {
                         <button type="button" onClick={() => saveInvoice(false)} disabled={saving} className={ACTION_BTN}>
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
-                        <button type="button" onClick={openSaleRecords} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                        <button type="button" onClick={() => openSaleRecords()} className={ACTION_BTN}><span className="underline">V</span>iew</button>
                         <button type="button" onClick={closeWindow} className={ACTION_BTN}><span className="underline">C</span>lose</button>
                     </div>
                 </div>
@@ -1777,6 +1999,269 @@ export default function TradeSaleInvoice() {
                     </div>
                 </Modal>
             )}
+
+            {/* ─── Sale Return Complete Bill (legacy) ─── */}
+            {rb && (
+                <Modal title="Sale Return Complete Invoice" onClose={() => !rbSaving && askClose(() => setRb(null))} xl>
+                    <div className="flex min-h-0 flex-1 gap-3 overflow-hidden bg-[#e4e4fb] p-3">
+                        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                            <h2 className="text-[22px] font-black leading-none tracking-tight text-[#1f2bd6]">Sale Return Complete Bill</h2>
+                            <div className="flex shrink-0 items-center gap-2">
+                                <span className="text-[18px] font-black text-[#1b1f4b]">Customer</span>
+                                <ReadBox value={<span className="w-full text-right font-mono text-[16px]">{rb.accId}</span>} className="w-[150px] !bg-white" />
+                                <ReadBox value={<span className="font-semibold text-[#1f2bd6]">{rb.accName}</span>} className="min-w-0 flex-1" />
+                                <span className="shrink-0 text-[12.5px] font-semibold text-slate-600">from invoice <b className="font-mono">{rb.saleId}</b></span>
+                            </div>
+                            <div className="min-h-0 flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                                <table className="w-full min-w-[860px] table-fixed border-collapse bg-white text-[13px]">
+                                    <colgroup>{RET_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                                    <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                        <tr>{RET_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
+                                    </thead>
+                                    <tbody>
+                                        {(rbLines || []).map((l, i) => (
+                                            <tr key={l.order_item} className="tabular-nums">
+                                                {[i + 1, l.pid, l.name, ymd(l.expiry_date), l.remaining_qty, l.remaining_bonus, fmt(num(l.tp)), fmt(num(l.retail)),
+                                                  fmt(retLineGross(l, l.remaining_qty)), fmt(num(l.disc_pct)), fmt(retLineDisc(l, l.remaining_qty)),
+                                                  fmt(retLineGross(l, l.remaining_qty) - retLineDisc(l, l.remaining_qty))].map((v, k) => (
+                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                        {(!rbLines || !rbLines.length) && (
+                                            <tr><td colSpan={RET_COLS.length} className="px-3 py-4 text-center text-slate-500">
+                                                {rbLines ? 'Everything on this invoice has already been returned.' : 'Loading…'}
+                                            </td></tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-3">
+                                <div className="w-[300px] rounded-md bg-black px-3 py-1.5 text-[16px] font-bold text-white">Items= {(rbLines || []).length}</div>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap items-center gap-3">
+                                <span className={`${LABEL} text-[14px]`}>Invoice No.</span>
+                                <ReadBox value={<span className="w-full text-center font-mono text-[16px] font-bold text-[#1f2bd6]">{rbNo}</span>} className="w-[170px] !border-orange-200 !bg-[#ffe3c7]" />
+                                <span className={`${LABEL} text-[14px]`}>Staff</span>
+                                <ReadBox value={<span className="w-full text-center font-bold text-[#1f2bd6]">{rb.staff || '—'}</span>} className="w-[190px] !border-orange-200 !bg-[#ffe3c7]" />
+                                <label className={`${LABEL} ml-2 flex cursor-pointer items-center gap-1.5 text-[14px]`}>
+                                    Sale Ret.Date
+                                    <input type="checkbox" checked={rbDateOn} onChange={(e) => { setRbDateOn(e.target.checked); if (!e.target.checked) setRbDate(today()); }} className="h-4 w-4 accent-[#3b3f8f]" />
+                                </label>
+                                <input type="date" value={rbDate} disabled={!rbDateOn} max={today()} onChange={(e) => e.target.value && setRbDate(e.target.value)}
+                                    className={`${FIELD} w-[170px] ${rbDateOn ? 'border-emerald-300 bg-[#e3fbe3] text-slate-900' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
+                            </div>
+                        </div>
+
+                        <div className="flex w-[330px] shrink-0 flex-col gap-2 overflow-y-auto">
+                            {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['Disc Amt', fmt(rbTotals.disc), 'green'],
+                              ['Net Amount', fmt(rbTotals.net), 'yellow'], ['Prev.Bal', fmt(rbPrev), 'yellow']].map(([label, value, tone]) => (
+                                <div key={label} className="grid grid-cols-[118px_1fr] items-center gap-2">
+                                    <span className="text-[16px] font-black text-[#1b1f4b]">{label}</span>
+                                    <div className={`flex h-11 items-center justify-end rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 font-mono text-[22px] font-black tabular-nums ${tone === 'yellow' ? 'text-[#ffe14d]' : 'text-[#3cff5a]'}`}>{value}</div>
+                                </div>
+                            ))}
+                            <div className="grid grid-cols-[118px_1fr] items-center gap-2">
+                                <span className="text-[16px] font-black text-[#1b1f4b]">Return Amt</span>
+                                <input value={rbCash} onChange={(e) => setRbCash(e.target.value)} inputMode="decimal" placeholder="0"
+                                    title="Cash handed back to the customer"
+                                    className="h-11 w-full rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 text-right font-mono text-[22px] font-black tabular-nums text-[#ffe14d] outline-none placeholder:text-[#ffe14d]/50 focus:ring-2 focus:ring-amber-300" />
+                            </div>
+                            <div className="mt-3 grid grid-cols-[118px_1fr] items-center gap-2">
+                                <span className="text-[16px] font-black text-[#1b1f4b]">Net Balance</span>
+                                <div className="flex h-11 items-center justify-end rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 font-mono text-[22px] font-black tabular-nums text-[#ffe14d]">{fmt(rbTotals.balance)}</div>
+                            </div>
+                            <div className="mt-auto grid grid-cols-2 gap-3 pt-3">
+                                <button type="button" onClick={saveReturnBill} disabled={rbSaving || !rbLines?.length} className={ACTION_BTN}>
+                                    {rbSaving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">R</span>eturn</>}
+                                </button>
+                                <button type="button" onClick={() => askClose(() => setRb(null))} disabled={rbSaving} className={ACTION_BTN}><span className="underline">C</span>lose</button>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* ─── Sale Return (Random) (legacy) ─── */}
+            {rrOpen && (
+                <Modal title="Sale Return" onClose={() => !rrSaving && askClose(() => setRrOpen(false))} xl>
+                    <div className="flex min-h-0 flex-1 gap-3 overflow-hidden bg-[#e4e4fb] p-3">
+                        {/* Left: entry + grids */}
+                        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+                            <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-3 pb-2 pt-0">
+                                <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sale Return (Random)</legend>
+                                <div className="grid grid-cols-[1.15fr_0.8fr_2.2fr_0.85fr_0.85fr_0.6fr] items-end gap-x-2 gap-y-0.5">
+                                    <span className={LABEL}>Sale.Return Inv.</span><span className={LABEL}>Product ID</span><span className={LABEL}>Product Name</span>
+                                    <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={LABEL}>Disc %</span>
+                                    <ReadBox value={rrPick?.invoice_no || ''} className="font-mono" />
+                                    <ReadBox value={rrPick?.pid || ''} />
+                                    <ReadBox value={rrPick?.name || ''} />
+                                    <ReadBox value={rrPick ? fmt(num(rrPick.tp)) : ''} className="justify-end" />
+                                    <ReadBox value={rrPick ? fmt(num(rrPick.retail)) : ''} className="justify-end" />
+                                    <ReadBox value={rrPick ? fmt(num(rrPick.disc_pct)) : ''} className="justify-end" />
+                                </div>
+                                <div className="mt-2 grid grid-cols-[auto_110px_auto_1fr_auto_1fr_auto_1.3fr] items-center gap-x-2">
+                                    <span className={LABEL}>Ret. Qty</span>
+                                    <input ref={rrQtyRef} value={rrQty} onChange={(e) => setRrQty(e.target.value)} inputMode="numeric"
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addRrLine(); } }}
+                                        className={`${EDIT} w-full text-right`} aria-label="Return quantity" />
+                                    <span className={LABEL}>Sale Qty</span>
+                                    <ReadBox value={rrPick ? `${rrPick.qty}${rrPick.returned_qty ? `  (${rrPick.remaining_qty} left)` : ''}` : ''} className="justify-end" />
+                                    <span className={LABEL}>Sale(Bons)</span>
+                                    <ReadBox value={rrPick ? String(rrPick.bonus) : ''} className="justify-end" />
+                                    <span className={LABEL}>Expiry</span>
+                                    <ReadBox value={rrPick ? ymd(rrPick.expiry_date) : ''} />
+                                </div>
+                                <div className="mt-2 grid grid-cols-[auto_150px_1fr_auto_1fr] items-center gap-x-2">
+                                    <button type="button" onClick={() => findReturnCustomer()}
+                                        className="h-8 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] px-3 text-[13px] font-bold text-slate-800 hover:to-[#d9d9e6]">Find Customer</button>
+                                    <input value={rrCustInput} onChange={(e) => setRrCustInput(e.target.value)} placeholder="Code"
+                                        onKeyDown={(e) => { if (e.key === 'Enter') findReturnCustomer(); }} className={`${EDIT} w-full`} />
+                                    <ReadBox value={rrCust ? `${custName(rrCust)}${rrCust.area_name ? `  ·  ${rrCust.area_name}` : ''}` : ''} />
+                                    <span className={LABEL}>Staff</span>
+                                    <select value={rrStaff} onChange={(e) => setRrStaff(e.target.value)} className={COA_SELECT}>
+                                        <option value="">Select any one</option>
+                                        {staff.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                                    </select>
+                                </div>
+                            </fieldset>
+
+                            {/* Products being returned */}
+                            <div className="min-h-[90px] flex-[1.1] overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                                <table className="w-full min-w-[860px] table-fixed border-collapse bg-white text-[13px]">
+                                    <colgroup>{RET_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                                    <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                        <tr>{RET_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
+                                    </thead>
+                                    <tbody>
+                                        {rrLines.map((l, i) => (
+                                            <tr key={i} onClick={() => setRrSel(i)} className={`cursor-pointer tabular-nums ${rrSel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
+                                                {[i + 1, l.pid, l.name, ymd(l.expiry_date), l.ret_qty, l.ret_bonus || '', fmt(num(l.tp)), fmt(num(l.retail)),
+                                                  fmt(retLineGross(l, l.ret_qty)), fmt(num(l.disc_pct)), fmt(retLineDisc(l, l.ret_qty)),
+                                                  fmt(retLineGross(l, l.ret_qty) - retLineDisc(l, l.ret_qty))].map((v, k) => (
+                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                        {!rrLines.length && (
+                                            <tr className="bg-white">{RET_COLS.map((c) => <td key={c.h} className="border-b border-r border-slate-300 px-1.5 py-1">&nbsp;</td>)}</tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* The customer's sale history — click a line to return from it */}
+                            <div className="flex min-h-[110px] flex-[1.4] flex-col overflow-hidden border border-slate-500 bg-[#9ea1ad]">
+                                <div className="min-h-0 flex-1 overflow-auto">
+                                    <table className="w-full min-w-[860px] table-fixed border-collapse bg-white text-[13px]">
+                                        <colgroup>{RR_HIST_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                                        <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                            <tr>{RR_HIST_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
+                                        </thead>
+                                        <tbody>
+                                            {(rrHist || []).map((l) => (
+                                                <tr key={l.order_item} onClick={() => pickRrLine(l)}
+                                                    className={`cursor-pointer tabular-nums ${rrPick?.order_item === l.order_item ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
+                                                    title="Click to return from this line">
+                                                    {[l.invoice_no, ymd(String(l.date)), l.pid, l.name, ymd(l.expiry_date), l.qty, l.bonus || '', l.returned_qty || '',
+                                                      fmt(num(l.tp)), num(l.disc_pct) ? fmt(num(l.disc_pct)) : '', fmt(num(l.retail))].map((v, k) => (
+                                                        <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 3 ? 'font-semibold' : ''}`}>{v}</td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                            {(!rrHist || !rrHist.length) && (
+                                                <tr><td colSpan={RR_HIST_COLS.length} className="px-3 py-4 text-center text-slate-500">
+                                                    {rrHistLoading ? 'Loading…' : !rrCust ? 'Find a customer, then press Sale. History.' : rrHist ? 'Nothing left to return for this search.' : 'Press Sale. History.'}
+                                                </td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div className="shrink-0 border-t border-slate-400 bg-[#ececfd] px-3 py-1 text-[12.5px] font-semibold text-[#1f2bd6]">
+                                    Sale history{rrCust ? ` — ${custName(rrCust)}` : ''} · {(rrHist || []).length} returnable line(s) · click a line, enter Ret. Qty, press Add
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: totals, actions, history filters */}
+                        <div className="flex w-[380px] shrink-0 flex-col gap-2 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-[#9da1d8] bg-[#ececfd] p-2.5">
+                                {[['Sale Amount', fmt(rrTotals.sale)], ['Disc. Amount', fmt(rrTotals.disc)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
+                                    <div key={label} className="flex flex-col gap-0.5">
+                                        <span className={LABEL}>{label}</span>
+                                        <div className="flex h-9 items-center justify-center rounded-md bg-black font-mono text-[18px] font-black tabular-nums text-[#3cff5a]">{value}</div>
+                                    </div>
+                                ))}
+                                <label className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>Less Amount</span>
+                                    <input value={rrLess} onChange={(e) => setRrLess(e.target.value)} inputMode="decimal" placeholder="0" className={`${EDIT} w-full text-right`} />
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>Amount Return</span>
+                                    <input value={rrCash} onChange={(e) => setRrCash(e.target.value)} inputMode="decimal" placeholder="0" title="Cash handed back to the customer"
+                                        className={`${FIELD} w-full border-slate-400 bg-white text-right text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
+                                </label>
+                                <label className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>Date</span>
+                                    <input type="date" value={rrDate} max={today()} onChange={(e) => e.target.value && setRrDate(e.target.value)}
+                                        className={`${FIELD} w-full border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
+                                </label>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className={LABEL}>Net Balance</span>
+                                    <div className="flex h-8 items-center justify-center rounded-md bg-black font-mono text-[18px] font-black tabular-nums text-[#3cff5a]">{fmt(rrTotals.balance)}</div>
+                                </div>
+                                <button type="button" onClick={addRrLine} className={`${PANEL_BTN} mt-1 border-amber-300 from-[#fffbd1] to-[#fff09a] text-slate-700 hover:to-[#ffe86a]`}><span className="underline">A</span>dd</button>
+                                <button type="button" onClick={removeRrLine} className={`${PANEL_BTN} mt-1 border-amber-200 from-[#fffde8] to-[#f6f0c4] text-slate-600 hover:to-[#efe6ad]`}><span className="underline">R</span>emove</button>
+                                <span className={`${LABEL} col-span-2 mt-1 flex items-center gap-2`}>
+                                    Voucher No
+                                    <span className="flex h-8 flex-1 items-center justify-center rounded-md bg-black font-mono text-[16px] font-bold text-white">{rrNo}</span>
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                <button type="button" onClick={saveReturnRandom} disabled={rrSaving || !rrLines.length} className={`${ACTION_BTN} !min-w-0`}>
+                                    {rrSaving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                                </button>
+                                <button type="button" onClick={() => openSaleRecords({ type: 'return', cust: rrCust })} className={`${ACTION_BTN} !min-w-0`}><span className="underline">V</span>iew</button>
+                                <button type="button" onClick={() => askClose(() => setRrOpen(false))} disabled={rrSaving} className={`${ACTION_BTN} !min-w-0`}><span className="underline">C</span>ancel</button>
+                            </div>
+                            <ReadBox value={<span className="w-full text-center font-bold text-[#1f2bd6]">Total Products = {rrLines.length}</span>} />
+
+                            <div className="flex flex-col gap-2 rounded-lg border border-[#e6b98a] bg-[#ffe3c7] p-2.5">
+                                <div className="grid grid-cols-[96px_1fr] items-center gap-2">
+                                    <button type="button" onClick={() => findReturnCustomer()} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Cust.</button>
+                                    <input value={rrCustInput} onChange={(e) => setRrCustInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') findReturnCustomer(); }} className={`${EDIT} w-full`} placeholder="Code" />
+                                </div>
+                                <ReadBox value={rrCust ? custName(rrCust) : ''} />
+                                <div className="grid grid-cols-[96px_1fr] items-center gap-2">
+                                    <button type="button" onClick={() => loadRrHistory()} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Product</button>
+                                    <input value={rrProduct} onChange={(e) => setRrProduct(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') loadRrHistory(); }} className={`${EDIT} w-full`} placeholder="PID or name" />
+                                </div>
+                                <div className="grid grid-cols-[96px_1fr] items-center gap-2">
+                                    <span className={`${LABEL} text-center`}>Sale Invoice</span>
+                                    <input value={rrInvoice} onChange={(e) => setRrInvoice(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') loadRrHistory(); }} className={`${EDIT} w-full`} placeholder="e.g. S26000911" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {([['From Date', rrFromOn, setRrFromOn, rrFrom, setRrFrom], ['To Date', rrToOn, setRrToOn, rrTo, setRrTo]] as const).map(([label, on, setOn, val, setVal]) => (
+                                        <div key={label} className="flex flex-col gap-0.5">
+                                            <label className={`${LABEL} flex cursor-pointer items-center gap-1.5`}>
+                                                {label}
+                                                <input type="checkbox" checked={on} onChange={(e) => setOn(e.target.checked)} className="h-4 w-4 accent-[#3b3f8f]" />
+                                            </label>
+                                            <input type="date" value={val} disabled={!on} onChange={(e) => e.target.value && setVal(e.target.value)}
+                                                className={`${FIELD} w-full ${on ? 'border-slate-400 bg-white text-slate-900' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
+                                        </div>
+                                    ))}
+                                </div>
+                                <button type="button" onClick={() => loadRrHistory()} disabled={rrHistLoading}
+                                    className="h-9 rounded-md border border-cyan-400 bg-gradient-to-b from-[#c8f6ff] to-[#9fe9f7] text-[14px] font-bold text-slate-800 hover:to-[#86e0f2]">
+                                    {rrHistLoading ? 'Loading…' : 'Sale. History'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
 
         </div>
     );
