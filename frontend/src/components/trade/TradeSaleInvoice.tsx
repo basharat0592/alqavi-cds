@@ -186,7 +186,7 @@ function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo
     );
 }
 
-function Modal({ title, onClose, children, wide = false, xl = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean }) {
+function Modal({ title, onClose, children, wide = false, xl = false, small = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean; small?: boolean }) {
     // How many windows are already open (the first one dims the screen; windows
     // behind a newer one dim a little more).
     const [depth] = useState(() => modalStack.length);
@@ -212,7 +212,7 @@ function Modal({ title, onClose, children, wide = false, xl = false }: { title: 
         // Stacked by opening order, so the newest window is always on top.
         <div style={{ zIndex: 50 + depth }}
             className={`fixed inset-0 flex items-center justify-center p-4 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : 'bg-slate-900/25'}`}>
-            <div className={`flex max-h-[calc(100vh-2rem)] w-full ${xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
+            <div className={`flex max-h-[calc(100vh-2rem)] w-full ${xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : wide ? 'max-w-4xl' : small ? 'max-w-lg' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
                 <div className="flex items-center justify-between bg-gradient-to-r from-[#3b3f8f] to-[#5a5fc4] px-4 py-2 text-white print:hidden">
                     <span className="text-[13.5px] font-semibold">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( {title} )</span>
                     <button type="button" onClick={onClose} className="rounded p-1 hover:bg-white/20" aria-label="Close"><X size={16} /></button>
@@ -994,6 +994,20 @@ export default function TradeSaleInvoice() {
     const [srRows, setSrRows] = useState<any[] | null>(null);
     const [srLoading, setSrLoading] = useState(false);
     const [srSel, setSrSel] = useState('');
+    // Clicking a record opens the legacy action box.
+    const [srAction, setSrAction] = useState<any | null>(null);
+    const [srChoice, setSrChoice] = useState<'print' | 'return_all' | 'return_some'>('print');
+    const runSrAction = () => {
+        const r = srAction;
+        if (!r) return;
+        setSrAction(null);
+        if (srChoice === 'print') {
+            if (!r.id) { toast.error('This record has no printable invoice.'); return; }
+            openPopup(`/admin/sales/${r.id}/invoice?print=true`);
+        } else {
+            toast(`The Sale Return form is next to be built — ${srChoice === 'return_all' ? 'complete bill' : 'random'} return of ${r.sale_id} will open it.`, { icon: 'ℹ️', duration: 5000 });
+        }
+    };
 
     const openSaleRecords = () => {
         setSrFrom(today()); setSrTo(today()); setSrStaff(''); setSrType('');
@@ -1670,7 +1684,7 @@ export default function TradeSaleInvoice() {
                                     {srLoading ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>earch</>}
                                 </button>
                                 <button type="button" onClick={() => askClose(() => setShowView(false))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
-                                <ReadBox value={srRows ? <span className="text-[#1f2bd6]">Total Records = {srRows.length}</span> : ''} />
+                                <ReadBox value={srRows ? <span className="text-[#1f2bd6]">Total Items = {srRows.length}</span> : ''} />
 
                                 <label className="flex flex-col gap-0.5">
                                     <span className={LABEL}>Staff</span>
@@ -1708,10 +1722,9 @@ export default function TradeSaleInvoice() {
                                 </thead>
                                 <tbody>
                                     {(srRows || []).map((r, i) => (
-                                        <tr key={r.sale_id + i} onClick={() => setSrSel(r.sale_id)}
-                                            onDoubleClick={() => r.id && openPopup(`/admin/sales/${r.id}/invoice`)}
+                                        <tr key={r.sale_id + i} onClick={() => { setSrSel(r.sale_id); setSrChoice('print'); setSrAction(r); }}
                                             className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
-                                            title={r.id ? 'Double-click to open the invoice' : undefined}>
+                                            title={`${r.sale_id} — click for Print / Sale Return`}>
                                             {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0',
                                               fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
                                                 <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 4 ? 'font-semibold' : ''}`}>{v}</td>
@@ -1743,6 +1756,28 @@ export default function TradeSaleInvoice() {
                     </div>
                 </Modal>
             )}
+
+            {/* ─── Sale Records › row action box (legacy) ─── */}
+            {srAction && (
+                <Modal title={`Sale Records — ${srAction.sale_id}`} onClose={() => askClose(() => setSrAction(null))} small>
+                    <div className="flex items-center gap-4 bg-[#e4e4fb] p-5">
+                        <div className="flex flex-1 flex-col gap-3 rounded-lg border-2 border-[#3b3f8f] bg-[#ececfd] px-5 py-4">
+                            {([['print', 'Print Sale Invoice'], ['return_all', 'Sale Return Complete Bill'], ['return_some', 'Sale Return Random']] as const).map(([v, label]) => (
+                                <label key={v} className="flex cursor-pointer items-center gap-3 text-[16px] font-bold text-slate-800">
+                                    <input type="radio" name="sr-action" checked={srChoice === v} onChange={() => setSrChoice(v)}
+                                        className="h-4 w-4 accent-[#3b3f8f]" />
+                                    {label}
+                                </label>
+                            ))}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <button type="button" autoFocus onClick={runSrAction} className={`${ACTION_BTN} min-w-[110px]`}><span className="underline">O</span>K</button>
+                            <button type="button" onClick={() => askClose(() => setSrAction(null))} className={`${ACTION_BTN} min-w-[110px]`}>Cancel</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
         </div>
     );
 }
