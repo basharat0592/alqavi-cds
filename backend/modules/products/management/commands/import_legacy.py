@@ -29,6 +29,7 @@ from modules.products.models import Category, Product, ProductBatch, SupplierPro
 
 User = get_user_model()
 
+LEGACY_SALE_NOTE = 'Legacy Trade 2.1 sale (imported history)'
 CUSTOMER_GROUP = '1202'   # Accounts Receivables
 SUPPLIER_GROUP = '2201'   # Account Payables
 
@@ -87,6 +88,9 @@ class Command(BaseCommand):
                             help='Only import the Chart of Accounts (MainAccount/Accounts2L/Accounts3L/'
                                  'Accounts) and link existing customers/suppliers; products, stock '
                                  'and parties are left untouched.')
+        parser.add_argument('--sales-only', action='store_true',
+                            help='Only import the legacy sales history (SaleAmount + Sale) as settled, '
+                                 'delivered invoices. Stock, balances and the income ledger are untouched.')
 
     @transaction.atomic
     def handle(self, *args, **opts):
@@ -157,6 +161,10 @@ class Command(BaseCommand):
 
         if opts['accounts_only']:
             self._import_chart(d, tenant, area_map)
+            self.stdout.write(self.style.SUCCESS('IMPORT_OK'))
+            return
+        if opts['sales_only']:
+            self._import_sales(d, tenant)
             self.stdout.write(self.style.SUCCESS('IMPORT_OK'))
             return
 
@@ -284,7 +292,88 @@ class Command(BaseCommand):
         self.stdout.write(f'Customers: {n_cust}  Suppliers: {n_sup}')
 
         self._import_chart(d, tenant, area_map)
+        self._import_sales(d, tenant)
         self.stdout.write(self.style.SUCCESS('IMPORT_OK'))
+
+    def _import_sales(self, d, tenant):
+        """Legacy sales history (SaleAmount = invoice header, Sale = lines) as
+        DELIVERED, fully-PAID orders keeping their legacy numbers (S23000079 …).
+
+        History only: rows are bulk-inserted, so no stock is deducted (current
+        stock already reflects these sales) and no income-ledger entries are
+        booked (the order post_save hook is skipped). Marked as PAID so they
+        don't change customers' Prev. Bal. Re-running replaces them."""
+        from datetime import datetime, time
+        from decimal import Decimal
+        from django.utils import timezone
+        from modules.sales.models import Order, OrderItem
+
+        headers = rows(d, 'SaleAmount')
+        if not headers:
+            self.stdout.write('Sales: no SaleAmount.csv - skipped')
+            return
+        lines = {}
+        for r in rows(d, 'Sale'):
+            lines.setdefault(clean(r.get('SaleID')), []).append(r)
+
+        products = {p.sku: p for p in Product.objects.filter(tenant=tenant).exclude(sku__isnull=True)}
+        customers = {c.username[4:]: c for c in Customer.objects.filter(username__startswith='cust')}
+        ids = [clean(h.get('SaleID')) for h in headers if clean(h.get('SaleID'))]
+
+        # Replace earlier imports of these invoices; never touch an order made
+        # in the new system that happens to share a number.
+        Order.objects.filter(tracking_id__in=ids, notes=LEGACY_SALE_NOTE).delete()
+        taken = set(Order.objects.filter(tracking_id__in=ids).values_list('tracking_id', flat=True))
+
+        def money(v):
+            d = v if isinstance(v, Decimal) else to_dec(v)
+            return Decimal(str(round(float(d), 2)))
+
+        orders, dates, n_missing = [], {}, 0
+        for h in headers:
+            sid = clean(h.get('SaleID'))
+            if not sid or sid in taken:
+                continue
+            cust = customers.get(clean(h.get('AccID')))
+            sd = to_date(h.get('SaleDate')) or to_date(h.get('CreateDt')) or date.today()
+            gross = to_dec(h.get('Amount'))
+            net = gross - to_dec(h.get('DisPAmt')) - to_dec(h.get('DiscAAmt'))
+            when = timezone.make_aware(datetime.combine(sd, time(12, 0)))
+            orders.append(Order(
+                tracking_id=sid, customer=cust,
+                customer_name=(cust.first_name if cust else f"Account {clean(h.get('AccID'))}")[:100],
+                phone_number=((cust.phone if cust else '') or 'N/A')[:20], shipping_address='-',
+                notes=LEGACY_SALE_NOTE, status='DELIVERED', payment_method='SHOP',
+                payment_status='PAID', total_amount=money(net), amount_paid=money(net),
+                discount=money(h.get('DiscAAmt')), sale_date=sd, delivered_at=when, tenant=tenant,
+            ))
+            dates[sid] = when
+        Order.objects.bulk_create(orders, batch_size=500)
+
+        by_id = dict(Order.objects.filter(tracking_id__in=[o.tracking_id for o in orders])
+                     .values_list('tracking_id', 'id'))
+        items = []
+        for sid, oid in by_id.items():
+            for r in lines.get(sid, []):
+                qty = max(0, to_int(r.get('Qty')))
+                price = float(to_dec(r.get('USRate')))
+                disc = qty * price * float(to_dec(r.get('DiscP'))) / 100
+                prod = products.get(clean(r.get('PID')))
+                if not prod:
+                    n_missing += 1
+                items.append(OrderItem(
+                    order_id=oid, product=prod, quantity=qty,
+                    bonus_quantity=max(0, to_int(r.get('QtyTo'))),
+                    price=Decimal(str(round(price, 2))), discount=Decimal(str(round(disc, 2))),
+                    cost_price=money(r.get('UPRate')), expiry_date=to_date(r.get('ExpDate')),
+                ))
+        OrderItem.objects.bulk_create(items, batch_size=1000)
+
+        # Order the history by the real sale date, not the import time.
+        for sid, oid in by_id.items():
+            Order.objects.filter(id=oid).update(created_at=dates[sid])
+        self.stdout.write(f'Sales: invoices={len(by_id)} lines={len(items)} '
+                          f'(skipped existing={len(taken)}, lines without product={n_missing})')
 
     def _import_chart(self, d, tenant, area_map):
         """Chart of Accounts: the three heading levels, then every legacy account,
