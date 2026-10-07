@@ -163,8 +163,8 @@ function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo
 }
 
 function Modal({ title, onClose, children, wide = false, xl = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean }) {
-    // How many windows are already open: each new one cascades down-right like
-    // separate desktop windows, and only the first dims the screen behind.
+    // How many windows are already open (the first one dims the screen; windows
+    // behind a newer one dim a little more).
     const [depth] = useState(() => modalStack.length);
     const closeRef = useRef(onClose);
     closeRef.current = onClose;
@@ -183,9 +183,10 @@ function Modal({ title, onClose, children, wide = false, xl = false }: { title: 
     return (
         // Like the legacy windows, clicking outside does not close it — only X,
         // Esc or the window's own Cancel/Close (which ask for confirmation).
-        <div className={`fixed inset-0 z-50 flex items-start justify-center p-6 pt-12 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : ''}`}>
-            <div style={depth ? { transform: `translate(${depth * 28}px, ${depth * 26}px)` } : undefined}
-                className={`flex max-h-[86vh] w-full ${xl ? 'h-[86vh] max-w-6xl' : wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
+        // Every window opens centred straight on top of the previous one and is
+        // sized to fit the screen, so nothing in it is ever cut off.
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : 'bg-slate-900/25'}`}>
+            <div className={`flex max-h-[calc(100vh-2rem)] w-full ${xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : wide ? 'max-w-4xl' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
                 <div className="flex items-center justify-between bg-gradient-to-r from-[#3b3f8f] to-[#5a5fc4] px-4 py-2 text-white print:hidden">
                     <span className="text-[13.5px] font-semibold">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( {title} )</span>
                     <button type="button" onClick={onClose} className="rounded p-1 hover:bg-white/20" aria-label="Close"><X size={16} /></button>
@@ -1215,7 +1216,7 @@ export default function TradeSaleInvoice() {
                     <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
                         {coaForm(coa, setCoa, nextAccId, saveNewCustomer, true)}
                     </div>
-                    <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
                         <button type="button" onClick={saveNewCustomer} disabled={savingCust} className={ACTION_BTN}>
                             {savingCust ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
@@ -1230,7 +1231,7 @@ export default function TradeSaleInvoice() {
                 <Modal title="Chart of Account" onClose={() => askClose(() => setShowCoaView(false))} xl>
                     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#e4e4fb] p-4">
                         {coaForm(coaV, setCoaV, coaSel ? coaSel.acc_id : '', updateAccount, false)}
-                        <div className="min-h-[220px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                        <div className="min-h-[120px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
                             <table className="w-full min-w-[980px] table-fixed border-collapse bg-white text-[13px]">
                                 <colgroup>{COA_VIEW_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                 <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
@@ -1252,7 +1253,7 @@ export default function TradeSaleInvoice() {
                             </table>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                    <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
                         <span className={`${LABEL} text-[14px]`}>Search Account</span>
                         <input value={coaSearch} onChange={(e) => setCoaSearch(e.target.value)} placeholder="ID, name or area"
                             className={`${EDIT} w-[200px]`} />
@@ -1273,7 +1274,7 @@ export default function TradeSaleInvoice() {
                     <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
                         {subAreaForm(subArea, setSubArea, String(nextSubAreaId), saveSubArea, true)}
                     </div>
-                    <div className="flex items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
                         <button type="button" onClick={saveSubArea} disabled={savingArea} className={ACTION_BTN}>
                             {savingArea ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
@@ -1288,7 +1289,7 @@ export default function TradeSaleInvoice() {
                 <Modal title="Sub Area" onClose={() => askClose(() => setShowAreaView(false))} xl>
                     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#e4e4fb] p-4">
                         {subAreaForm(areaV, setAreaV, areaSel ? String(areaSel.id) : '', updateArea, false)}
-                        <div className="min-h-[220px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                        <div className="min-h-[120px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
                             <table className="w-[72%] table-fixed border-collapse bg-white text-[13px]">
                                 <colgroup><col style={{ width: '24%' }} /><col style={{ width: '24%' }} /><col style={{ width: '17%' }} /><col style={{ width: '35%' }} /></colgroup>
                                 <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
@@ -1308,7 +1309,7 @@ export default function TradeSaleInvoice() {
                             </table>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
+                    <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-[#9da1d8] bg-[#e4e4fb] px-4 py-3">
                         <span className={`${LABEL} text-[14px]`}>Sub Area</span>
                         <input value={areaSearch} onChange={(e) => setAreaSearch(e.target.value)} placeholder="Name or ID" className={`${EDIT} w-[200px]`} />
                         <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {subAreaRows.length}</span>} className="w-[190px]" />
