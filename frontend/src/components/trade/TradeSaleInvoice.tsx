@@ -62,7 +62,7 @@ const EDIT = `${FIELD} border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:bord
 const READ = `${FIELD} border-slate-300 bg-[#ececf3] text-slate-700`;
 
 const PANEL_BTN = 'h-9 rounded-md border bg-gradient-to-b text-[14.5px] font-bold shadow-sm active:translate-y-px';
-const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-md border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-4 text-[14px] font-bold text-slate-800 shadow-sm hover:to-[#ffcf9a] active:translate-y-px disabled:opacity-60';
+const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-md border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-4 text-[14px] font-bold text-slate-800 shadow-sm hover:to-[#ffcf9a] active:translate-y-px disabled:cursor-not-allowed disabled:border-slate-300 disabled:from-[#f3f3f6] disabled:to-[#e2e2e8] disabled:text-slate-400 disabled:shadow-none';
 
 /* Design size of the form. FitStage scales it to fill the window in proportion
    to the screen; this is the smallest area the whole form needs. */
@@ -1088,6 +1088,7 @@ export default function TradeSaleInvoice() {
 
     const saveReturnBill = () => {
         if (!rb || !rbLines?.length || rbSaving) return;
+        if (!rbDateOn) { toast.error('Tick Sale Ret.Date and choose the return date first.'); return; }
         setAsk({
             msg: `Do you want to return the complete bill ${rb.saleId} ?`,
             yes: async () => {
@@ -1260,10 +1261,19 @@ export default function TradeSaleInvoice() {
         setShowFindCust(true);
     };
 
+    // Save stays disabled until everything the invoice needs is filled in.
+    const saveMissing = [
+        !customer && 'Customer',
+        !lines.length && 'at least one Product',
+        !salesman && 'Saleman',
+        !backDate && 'Sale Date (tick it)',
+        paidCash.trim() === '' && 'Paid Cash (0 for credit)',
+    ].filter(Boolean) as string[];
+    const saveHint = saveMissing.length ? `To save, fill in: ${saveMissing.join(', ')}` : 'Save the invoice';
+
     const saveInvoice = async (print: boolean) => {
         if (saving) return;
-        if (!customer) { toast.error('Find a customer first.'); return; }
-        if (!lines.length) { toast.error('Add at least one product.'); return; }
+        if (saveMissing.length) { toast.error(saveHint); return; }
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
         setSaving(true);
         try {
@@ -1561,7 +1571,7 @@ export default function TradeSaleInvoice() {
                     </div>
                     <div className="flex gap-2">
                         <button type="button" onClick={newInvoice} className={ACTION_BTN}><span className="underline">N</span>ew Invoice</button>
-                        <button type="button" onClick={() => saveInvoice(false)} disabled={saving} className={ACTION_BTN}>
+                        <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint} className={ACTION_BTN}>
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
                         <button type="button" onClick={() => openSaleRecords()} className={ACTION_BTN}><span className="underline">V</span>iew</button>
@@ -1875,11 +1885,11 @@ export default function TradeSaleInvoice() {
                     <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 print:hidden">
                         <button type="button" onClick={() => askClose(() => setShowPV(false))} disabled={saving}
                             className="h-9 rounded-md border border-slate-300 bg-white px-4 text-[13px] font-semibold text-slate-700 hover:bg-slate-100">Close</button>
-                        <button type="button" onClick={() => saveInvoice(false)} disabled={saving || !lines.length || !customer}
+                        <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint}
                             className="flex h-9 items-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600 px-4 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Invoice
                         </button>
-                        <button type="button" onClick={() => saveInvoice(true)} disabled={saving || !lines.length || !customer}
+                        <button type="button" onClick={() => saveInvoice(true)} disabled={saving || saveMissing.length > 0} title={saveHint}
                             className="flex h-9 items-center gap-1.5 rounded-md border border-[#3b3f8f] bg-[#3b3f8f] px-4 text-[13px] font-bold text-white hover:bg-[#2f3278] disabled:opacity-50">
                             <Printer size={14} /> Save &amp; Print
                         </button>
@@ -2072,7 +2082,8 @@ export default function TradeSaleInvoice() {
                                 <div className="flex h-11 items-center justify-end rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 font-mono text-[22px] font-black tabular-nums text-[#ffe14d]">{fmt(rbTotals.balance)}</div>
                             </div>
                             <div className="mt-auto grid grid-cols-2 gap-3 pt-3">
-                                <button type="button" onClick={saveReturnBill} disabled={rbSaving || !rbLines?.length} className={ACTION_BTN}>
+                                <button type="button" onClick={saveReturnBill} disabled={rbSaving || !rbLines?.length || !rbDateOn}
+                                    title={rbDateOn ? 'Return the complete bill' : 'Tick Sale Ret.Date and choose the date first'} className={ACTION_BTN}>
                                     {rbSaving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">R</span>eturn</>}
                                 </button>
                                 <button type="button" onClick={() => askClose(() => setRb(null))} disabled={rbSaving} className={ACTION_BTN}><span className="underline">C</span>lose</button>
