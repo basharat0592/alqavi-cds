@@ -18,6 +18,7 @@ import api from '@/lib/axios';
 import * as XLSX from 'xlsx';
 import { orderService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
+import { getImageUrl } from '@/lib/utils';
 import FitStage from '@/components/trade/FitStage';
 
 /* ───────────────────────── types & helpers ───────────────────────── */
@@ -225,7 +226,7 @@ function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo
     );
 }
 
-function Modal({ title, onClose, children, wide = false, xl = false, small = false, full = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; xl?: boolean; small?: boolean; full?: boolean }) {
+function Modal({ title, onClose, children, wide = false, large = false, xl = false, small = false, full = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; large?: boolean; xl?: boolean; small?: boolean; full?: boolean }) {
     // How many windows are already open (the first one dims the screen; windows
     // behind a newer one dim a little more).
     const [depth] = useState(() => modalStack.length);
@@ -251,7 +252,7 @@ function Modal({ title, onClose, children, wide = false, xl = false, small = fal
         // Stacked by opening order, so the newest window is always on top.
         <div style={{ zIndex: 50 + depth }}
             className={`fixed inset-0 flex items-center justify-center p-4 print:static print:bg-white print:p-0 ${depth === 0 ? 'bg-slate-900/40 backdrop-blur-[1px]' : 'bg-slate-900/25'}`}>
-            <div className={`flex max-h-[calc(100vh-2rem)] w-full ${full ? 'h-[calc(100vh-2rem)] max-w-[min(96vw,1600px)]' : xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : wide ? 'max-w-4xl' : small ? 'max-w-lg' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
+            <div className={`flex max-h-[calc(100vh-2rem)] w-full ${full ? 'h-[calc(100vh-2rem)] max-w-[min(96vw,1600px)]' : xl ? 'h-[calc(100vh-2rem)] max-w-6xl' : large ? 'max-w-6xl' : wide ? 'max-w-4xl' : small ? 'max-w-lg' : 'max-w-2xl'} flex-col overflow-hidden rounded-xl border border-slate-400 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.55)] print:max-h-none print:border-0 print:shadow-none`}>
                 <div className="flex items-center justify-between bg-gradient-to-r from-[#3b3f8f] to-[#5a5fc4] px-4 py-2 text-white print:hidden">
                     <span className="text-[13.5px] font-semibold">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( {title} )</span>
                     <button type="button" onClick={onClose} className="rounded p-1 hover:bg-white/20" aria-label="Close"><X size={16} /></button>
@@ -259,6 +260,289 @@ function Modal({ title, onClose, children, wide = false, xl = false, small = fal
                 {children}
             </div>
         </div>
+    );
+}
+
+/* ───────────────────────── Product Detail (legacy Trade 1.0) ─────────────────────────
+   Opened from Find Product › Add New Product. Same fields and layout as the
+   legacy window (PID, Product Name + Find Company, Bar Code, Packing, Re Order
+   Qty, Expiry Apply, Category, Status), plus a product picture. View lists every
+   product under the form; picking a row loads it for Update. */
+type ProdForm = {
+    name: string; company: string; barcode: string; packing: string; reorder: string;
+    expiry: string; category: string; status: string;
+};
+const EMPTY_PROD: ProdForm = { name: '', company: '', barcode: '', packing: '', reorder: '', expiry: '', category: '', status: '' };
+const PD_VIEW_COLS = [
+    { h: 'PID', w: '7%' }, { h: 'Product Name', w: '26%' }, { h: 'Company', w: '17%' }, { h: 'Category', w: '12%' },
+    { h: 'Bar Code', w: '12%' }, { h: 'Packing', w: '6%' }, { h: 'Re Order', w: '6%' }, { h: 'Expiry', w: '6%' }, { h: 'Status', w: '8%' },
+];
+
+function ProductDetailWindow({ companies, initialName, askClose, onClose }: {
+    companies: any[]; initialName: string;
+    askClose: (fn: () => void, msg?: string) => void; onClose: () => void;
+}) {
+    const [f, setF] = useState<ProdForm>({ ...EMPTY_PROD, name: initialName });
+    const [pid, setPid] = useState('…');
+    const [categories, setCategories] = useState<any[]>([]);
+    const [saving, setSaving] = useState(false);
+    // Picture: a newly chosen file, or the saved one (URL) of the loaded product.
+    const [image, setImage] = useState<File | null>(null);
+    const [preview, setPreview] = useState('');
+    const [removeImage, setRemoveImage] = useState(false);
+    const fileRef = useRef<HTMLInputElement>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
+    // View grid
+    const [list, setList] = useState<any[] | null>(null);
+    const [sel, setSel] = useState<any | null>(null);
+    const [search, setSearch] = useState('');
+    // Find Company
+    const [findCo, setFindCo] = useState(false);
+    const [coQuery, setCoQuery] = useState('');
+
+    const loadPid = () => api.get('v1/products/items/next_pid/').then(({ data }) => setPid(data.pid)).catch(() => setPid('—'));
+    useEffect(() => {
+        loadPid();
+        (async () => {
+            const all: any[] = [];
+            try {
+                for (let page = 1; page <= 20; page++) {
+                    const { data } = await api.get('v1/products/categories/', { params: { page, page_size: 100 } });
+                    if (Array.isArray(data)) { all.push(...data); break; }
+                    all.push(...(data.results || []));
+                    if (!data.next) break;
+                }
+            } catch { /* leave the list empty */ }
+            setCategories(all.filter((c) => String(c.status || 'ACTIVE').toUpperCase() === 'ACTIVE')
+                .sort((a, b) => String(a.name).localeCompare(String(b.name))));
+        })();
+        nameRef.current?.focus();
+    }, []);
+    useEffect(() => () => { if (preview.startsWith('blob:')) URL.revokeObjectURL(preview); }, [preview]);
+
+    const set = (k: keyof ProdForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+        setF((p) => ({ ...p, [k]: e.target.value }));
+    const digits = (k: keyof ProdForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+        setF((p) => ({ ...p, [k]: e.target.value.replace(/\D/g, '') }));
+    const complete = !!(f.name.trim() && f.company && f.packing && Number(f.packing) >= 1 && f.reorder !== '' && f.expiry && f.category && f.status);
+
+    const pickImage = (file: File | undefined) => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) { toast.error('Choose a picture file (JPG, PNG…).'); return; }
+        if (file.size > 5 * 1024 * 1024) { toast.error('The picture must be 5 MB or smaller.'); return; }
+        setImage(file); setRemoveImage(false); setPreview(URL.createObjectURL(file));
+    };
+    const clearImage = () => {
+        setImage(null); setPreview(''); setRemoveImage(true);
+        if (fileRef.current) fileRef.current.value = '';
+    };
+
+    const resetForm = () => {
+        setF({ ...EMPTY_PROD }); setSel(null);
+        setImage(null); setPreview(''); setRemoveImage(false);
+        if (fileRef.current) fileRef.current.value = '';
+        loadPid();
+        nameRef.current?.focus();
+    };
+
+    const loadList = async () => {
+        try {
+            const { data } = await api.get('v1/products/items/trade_list/');
+            setList(data);
+        } catch { toast.error('Could not load products.'); setList([]); }
+    };
+    const view = () => { setSearch(''); if (!list) setList([]); loadList(); };
+
+    const pickRow = (r: any) => {
+        setSel(r);
+        setPid(r.pid || '—');
+        setF({
+            name: r.name || '', company: r.company_id || '', barcode: r.barcode || '',
+            packing: String(r.packing || ''), reorder: String(r.reorder_qty ?? ''),
+            expiry: r.expiry_apply ? 'Yes' : 'No', category: r.category_id || '',
+            status: String(r.status || '').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
+        });
+        setImage(null); setRemoveImage(false);
+        setPreview(r.image ? (getImageUrl(r.image) || '') : '');
+        if (fileRef.current) fileRef.current.value = '';
+    };
+
+    const save = async () => {
+        if (saving || !complete) return;
+        setSaving(true);
+        try {
+            const body = new FormData();
+            if (sel) body.append('id', sel.id);
+            body.append('name', f.name.trim());
+            body.append('company', f.company);
+            body.append('barcode', f.barcode.trim());
+            body.append('packing', f.packing);
+            body.append('reorder_qty', f.reorder);
+            body.append('expiry_apply', f.expiry);
+            body.append('category', f.category);
+            body.append('status', f.status);
+            if (image) body.append('image', image);
+            else if (removeImage) body.append('remove_image', '1');
+            const { data } = await api.post('v1/products/items/trade_save/', body);
+            toast.success(sel ? `Product ${data.pid} — ${data.name} updated.` : `Product ${data.pid} — ${data.name} added.`);
+            resetForm();
+            if (list) loadList();
+        } catch (err: any) {
+            const d = err?.response?.data;
+            toast.error(String(d?.error || d?.detail || 'Could not save the product.'));
+        } finally { setSaving(false); }
+    };
+
+    const rows = useMemo(() => {
+        if (!list) return [];
+        const q = search.trim().toLowerCase();
+        return list.filter((r) => !q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q)
+            || String(r.barcode).toLowerCase().includes(q) || String(r.company).toLowerCase().includes(q));
+    }, [list, search]);
+
+    const exportRows = () => downloadXlsx('products', 'Products', PD_VIEW_COLS.map((c) => c.h),
+        rows.map((r) => [r.pid, r.name, r.company, r.category, r.barcode, r.packing, r.reorder_qty, r.expiry_apply ? 'Yes' : 'No',
+            String(r.status).toUpperCase() === 'ACTIVE' ? 'Active' : 'Inactive']));
+
+    const coRows = useMemo(() => {
+        const q = coQuery.trim().toLowerCase();
+        return companies.filter((c) => !q || String(c.name).toLowerCase().includes(q));
+    }, [companies, coQuery]);
+    const pickCompany = (c: any) => { setF((p) => ({ ...p, company: String(c.id) })); setFindCo(false); };
+
+    const PD_SELECT = `${COA_SELECT} h-9 text-[15px]`;
+    const PD_EDIT = `${EDIT} h-9 w-full text-[15px]`;
+    const viewing = list !== null;
+
+    return (
+        <Modal title="Product Detail" onClose={() => !saving && askClose(onClose)} large={!viewing} xl={viewing}>
+            <div className={`flex min-h-0 flex-1 flex-col gap-3 overflow-auto bg-[#c9c9f9] p-4`}>
+                <fieldset className="shrink-0 rounded-md border-2 border-white/80 px-4 pb-4 pt-1">
+                    <legend className="px-1 text-[24px] font-black tracking-tight text-[#1a1aff]">Product Detail</legend>
+                    <div className="flex gap-4">
+                        <div className="grid min-w-0 flex-1 grid-cols-[110px_minmax(0,1.3fr)_auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5">
+                            <span className={LABEL}>PID</span>
+                            <div className="flex h-9 w-[150px] items-center justify-center rounded-sm border border-slate-500 bg-[#dedede] text-[17px] font-black tabular-nums text-[#1f2bd6]">{pid}</div>
+                            <span className="col-span-4" />
+
+                            <span className={LABEL}>Product Name</span>
+                            <input ref={nameRef} value={f.name} onChange={set('name')} maxLength={255} className={PD_EDIT} />
+                            <button type="button" onClick={() => { setCoQuery(''); setFindCo(true); }}
+                                className="h-9 whitespace-nowrap rounded-sm border border-slate-500 bg-gradient-to-b from-white to-[#e2e2e8] px-3 text-[13px] font-bold text-slate-800 shadow-sm hover:to-[#d4d4dc] active:translate-y-px">
+                                Find Company
+                            </button>
+                            <select value={f.company} onChange={set('company')} className={`${PD_SELECT} col-span-3`}>
+                                <option value="">Select any one</option>
+                                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+
+                            <span className={LABEL}>Bar Code</span>
+                            <input value={f.barcode} onChange={set('barcode')} maxLength={100} className={PD_EDIT} />
+                            <span className={LABEL}>Packing</span>
+                            <input value={f.packing} onChange={digits('packing')} inputMode="numeric" className={PD_EDIT} />
+                            <span className={LABEL}>Re Order Qty</span>
+                            <input value={f.reorder} onChange={digits('reorder')} inputMode="numeric" className={PD_EDIT} />
+
+                            <span className={LABEL}>Expiry Apply</span>
+                            <select value={f.expiry} onChange={set('expiry')} className={PD_SELECT}>
+                                <option value="">Select any One</option>
+                                <option value="Yes">Yes</option>
+                                <option value="No">No</option>
+                            </select>
+                            <span className={LABEL}>Category</span>
+                            <select value={f.category} onChange={set('category')} className={PD_SELECT}>
+                                <option value="">Select any one</option>
+                                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                            <span className={LABEL}>Status</span>
+                            <select value={f.status} onChange={set('status')} className={PD_SELECT}>
+                                <option value="">Select any One</option>
+                                <option value="ACTIVE">Active</option>
+                                <option value="INACTIVE">Inactive</option>
+                            </select>
+                        </div>
+
+                        {/* Picture */}
+                        <div className="flex w-[150px] shrink-0 flex-col items-center gap-1.5">
+                            <span className={LABEL}>Picture</span>
+                            <button type="button" onClick={() => fileRef.current?.click()}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => { e.preventDefault(); pickImage(e.dataTransfer.files[0]); }}
+                                title="Click or drop a picture"
+                                className="flex h-[118px] w-full items-center justify-center overflow-hidden rounded-sm border border-slate-500 bg-white text-[12px] font-semibold text-slate-400 hover:bg-slate-50">
+                                {preview ? <img src={preview} alt="Product" className="h-full w-full object-contain" /> : 'No Picture'}
+                            </button>
+                            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickImage(e.target.files?.[0])} />
+                            <div className="flex w-full gap-1.5">
+                                <button type="button" onClick={() => fileRef.current?.click()}
+                                    className="h-7 flex-1 rounded-sm border border-slate-500 bg-gradient-to-b from-white to-[#e2e2e8] text-[12px] font-bold text-slate-800 hover:to-[#d4d4dc]">Browse</button>
+                                <button type="button" onClick={clearImage} disabled={!preview}
+                                    className="h-7 flex-1 rounded-sm border border-slate-500 bg-gradient-to-b from-white to-[#e2e2e8] text-[12px] font-bold text-slate-800 hover:to-[#d4d4dc] disabled:opacity-40">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                {viewing && (
+                    <div className="min-h-[160px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                        <table className="w-full min-w-[900px] table-fixed border-collapse bg-white text-[13px]">
+                            <colgroup>{PD_VIEW_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
+                            <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                <tr>{PD_VIEW_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                                {rows.map((r) => (
+                                    <tr key={r.id} onClick={() => pickRow(r)}
+                                        className={`cursor-pointer tabular-nums ${sel?.id === r.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
+                                        {[r.pid, r.name, r.company, r.category, r.barcode, r.packing, r.reorder_qty, r.expiry_apply ? 'Yes' : 'No',
+                                            String(r.status).toUpperCase() === 'ACTIVE' ? 'Active' : 'Inactive'].map((v, k) => (
+                                            <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 1 ? 'font-semibold' : ''}`}>{v}</td>
+                                        ))}
+                                    </tr>
+                                ))}
+                                {!rows.length && <tr><td colSpan={PD_VIEW_COLS.length} className="px-3 py-4 text-center text-slate-500">{list && list.length ? 'No products match.' : 'Loading…'}</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-[#9da1d8] bg-[#c9c9f9] px-4 py-3">
+                {viewing && (
+                    <>
+                        <span className={`${LABEL} text-[14px]`}>Search</span>
+                        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, PID, bar code or company" className={`${EDIT} w-[240px]`} />
+                        <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {rows.length}</span>} className="w-[190px]" />
+                        <button type="button" onClick={exportRows} className={ACTION_BTN}>Export</button>
+                    </>
+                )}
+                <span className="flex-1" />
+                {sel && <button type="button" onClick={resetForm} className={ACTION_BTN}><span>Add <span className="underline">N</span>ew</span></button>}
+                {!viewing && <button type="button" onClick={view} className={ACTION_BTN}><span className="underline">V</span>iew</button>}
+                <button type="button" onClick={save} disabled={saving || !complete} className={ACTION_BTN}>
+                    {saving ? <Loader2 size={14} className="animate-spin" /> : sel ? <><span className="underline">U</span>pdate</> : <><span className="underline">S</span>ave</>}
+                </button>
+                <button type="button" onClick={() => askClose(onClose)} disabled={saving} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+            </div>
+
+            {findCo && (
+                <Modal title="Find Company" onClose={() => setFindCo(false)} small>
+                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden bg-[#e4e4fb] p-3">
+                        <input autoFocus value={coQuery} onChange={(e) => setCoQuery(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' && coRows[0]) pickCompany(coRows[0]); }}
+                            placeholder="Type the company name" className={`${EDIT} w-full`} />
+                        <div className="h-[320px] overflow-auto border border-slate-500 bg-white">
+                            {coRows.map((c) => (
+                                <div key={c.id} onClick={() => pickCompany(c)}
+                                    className={`cursor-pointer border-b border-slate-200 px-2 py-1 text-[13.5px] font-semibold hover:bg-indigo-50 ${String(c.id) === f.company ? 'bg-[#7dfa7d]' : ''}`}>
+                                    {c.name}
+                                </div>
+                            ))}
+                            {!coRows.length && <div className="px-3 py-4 text-center text-[13px] text-slate-500">{companies.length ? 'No company matches.' : 'Loading…'}</div>}
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </Modal>
     );
 }
 
@@ -848,6 +1132,7 @@ export default function TradeSaleInvoice() {
     const [stockLoading, setStockLoading] = useState(false);
     const [histRows, setHistRows] = useState<any[]>([]);
     const [fpSel, setFpSel] = useState('');
+    const [showProdDetail, setShowProdDetail] = useState(false);
 
     const openFindProduct = (name = '') => {
         setFpName(name); setFpBarcode(''); setFpSel('');
@@ -1788,7 +2073,7 @@ export default function TradeSaleInvoice() {
                                     placeholder="Scan or type, then Enter" className={`${FIELD} w-full border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
                             </div>
                             <div className="flex flex-col justify-center gap-2">
-                                <button type="button" onClick={() => openPopup('/admin/products/add')} className={`${ACTION_BTN} min-w-[170px]`}>
+                                <button type="button" onClick={() => setShowProdDetail(true)} className={`${ACTION_BTN} min-w-[170px]`}>
                                     <span className="underline">A</span>dd New Product
                                 </button>
                                 <button type="button" onClick={() => askClose(() => setShowFindProd(false))}
@@ -1862,6 +2147,12 @@ export default function TradeSaleInvoice() {
                         </div>
                     </div>
                 </Modal>
+            )}
+
+            {/* ─── Product Detail (Find Product › Add New Product) ─── */}
+            {showProdDetail && (
+                <ProductDetailWindow companies={companies} initialName={/^\d+$/.test(fpName.trim()) ? '' : fpName.trim()}
+                    askClose={askClose} onClose={() => setShowProdDetail(false)} />
             )}
 
             {/* ─── Invoice preview (F9) → save / print ─── */}

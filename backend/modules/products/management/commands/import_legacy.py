@@ -215,6 +215,7 @@ class Command(BaseCommand):
             min_qty = to_int(r.get('MinQty'), 10)
             packing = max(1, to_int(r.get('Packing'), 1))
             status = 'ACTIVE' if clean(r.get('ProdStatus')).lower().startswith('activ') else 'INACTIVE'
+            exp_apply = clean(r.get('ExpApply')).lower().startswith('y')
             b = batch.get(pid, {})
             qty = int(b.get('qty') or 0)
             cost = b.get('cost') or Decimal('0')
@@ -248,7 +249,7 @@ class Command(BaseCommand):
                               cost_price=cost, selling_price=sale or 0,
                               original_price=retail, min_count=min_qty,
                               total_quantity=qty, barcode=barcode, status=status,
-                              expiry_date=exp),
+                              expiry_date=exp, expiry_apply=exp_apply),
             )
             # Batches are replaced wholesale so re-runs stay idempotent.
             product.batches.all().delete()

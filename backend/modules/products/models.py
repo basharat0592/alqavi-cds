@@ -100,6 +100,8 @@ class Product(BaseModel):
     # Nearest batch expiry date (populated from the legacy CompBatchStock on import,
     # and from the earliest live batch going forward). Powers the dashboard Expiry List.
     expiry_date = models.DateField(null=True, blank=True)
+    # Legacy "Expiry Apply" (Product Detail): whether this item is sold by expiry batch.
+    expiry_apply = models.BooleanField(default=False)
     # Owning Admin (tenant) — per-Admin product isolation. NULL = legacy/shared.
     tenant = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,

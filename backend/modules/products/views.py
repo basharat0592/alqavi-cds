@@ -1,5 +1,5 @@
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -263,6 +263,160 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'batches': batches.get(p.id, []),
             })
         return Response(out)
+
+    # ── Trade 1.0 "Product Detail" window ──
+    # A legacy product is one SupplierProduct (PID, company) -> Stock (packing)
+    # -> Product (the sellable row) chain, exactly as import_legacy builds it.
+
+    @staticmethod
+    def _next_pid():
+        """Legacy PIDs are numbers (10001, 10002, …). SupplierProduct.sku is
+        globally unique, so the next PID follows the highest numeric one anywhere."""
+        codes = list(SupplierProduct.objects.exclude(sku__isnull=True).values_list('sku', flat=True))
+        codes += list(Product.objects.exclude(sku__isnull=True).values_list('sku', flat=True))
+        nums = [int(c) for c in codes if c and c.strip().isdigit()]
+        return max(nums) + 1 if nums else 10001
+
+    @action(detail=False, methods=['get'])
+    def next_pid(self, request):
+        return Response({'pid': str(self._next_pid())})
+
+    @action(detail=False, methods=['get'])
+    def trade_list(self, request):
+        """Every product (active and inactive) for the Product Detail › View grid."""
+        qs = (self.get_queryset().select_related('category', 'stock__product__company')
+              .order_by('product_name'))
+        out = []
+        for p in qs:
+            stock = getattr(p, 'stock', None)
+            sp = getattr(stock, 'product', None)
+            out.append({
+                'id': str(p.id), 'pid': p.sku or '', 'name': p.product_name,
+                'barcode': p.barcode or '',
+                'company_id': str(sp.company_id) if (sp and sp.company_id) else '',
+                'company': sp.company.name if (sp and sp.company_id) else '',
+                'category_id': str(p.category_id) if p.category_id else '',
+                'category': p.category.name if p.category_id else '',
+                'packing': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
+                'reorder_qty': p.min_count, 'expiry_apply': p.expiry_apply,
+                'status': p.status, 'image': p.image.url if p.image else '',
+            })
+        return Response(out)
+
+    @action(detail=False, methods=['post'])
+    def trade_save(self, request):
+        """Save the Product Detail form (multipart). No ``id`` -> new product with
+        the next PID; with ``id`` -> update that product. Fields: name, company,
+        barcode, packing, reorder_qty, expiry_apply (Yes/No), category, status
+        (ACTIVE/INACTIVE), image (optional file), remove_image (1)."""
+        from datetime import date
+        from modules.company.models import Company
+        from modules.inventory.models import Stock, Warehouse
+
+        d = request.data
+        name = (d.get('name') or '').strip()
+        barcode = (d.get('barcode') or '').strip() or None
+        status_v = (d.get('status') or '').strip().upper()
+        exp_v = (d.get('expiry_apply') or '').strip().lower()
+        try:
+            packing = int(d.get('packing') or 0)
+            reorder = int(d.get('reorder_qty') or 0)
+        except (TypeError, ValueError):
+            return Response({'error': 'Packing and Re Order Qty must be whole numbers.'}, status=400)
+        if not name:
+            return Response({'error': 'Enter the Product Name.'}, status=400)
+        if packing < 1:
+            return Response({'error': 'Packing must be 1 or more.'}, status=400)
+        if reorder < 0:
+            return Response({'error': 'Re Order Qty cannot be negative.'}, status=400)
+        if exp_v not in ('yes', 'no'):
+            return Response({'error': 'Select Expiry Apply.'}, status=400)
+        if status_v not in ('ACTIVE', 'INACTIVE'):
+            return Response({'error': 'Select the Status.'}, status=400)
+
+        company = None
+        if d.get('company'):
+            company = scope_to_tenant(request.user, Company.objects.all(), 'tenant') \
+                .filter(pk=d.get('company')).first()
+        if not company:
+            return Response({'error': 'Select the Company.'}, status=400)
+        category = None
+        if d.get('category'):
+            category = scope_to_tenant(request.user, Category.objects.all(), 'tenant') \
+                .filter(pk=d.get('category')).first()
+        if not category:
+            return Response({'error': 'Select the Category.'}, status=400)
+        # Super admins aren't tenant-scoped: the product belongs to the company's admin.
+        tid = tenant_id_for(request.user) or company.tenant_id
+
+        product = None
+        if d.get('id'):
+            product = self.get_queryset().select_related('stock__product').filter(pk=d.get('id')).first()
+            if not product:
+                return Response({'error': 'Product not found.'}, status=404)
+            tid = product.tenant_id
+        stock = getattr(product, 'stock', None)
+        sp = getattr(stock, 'product', None)
+
+        # One product per name per company; bar codes must be unique.
+        dup = Product.objects.filter(tenant_id=tid, product_name__iexact=name,
+                                     stock__product__company=company).exclude(status='ARCHIVED')
+        if product:
+            dup = dup.exclude(pk=product.pk)
+        if dup.exists():
+            return Response({'error': f'"{name}" already exists for {company.name} (PID {dup.first().sku}).'}, status=400)
+        if barcode:
+            taken = Product.objects.filter(tenant_id=tid, barcode__iexact=barcode).exclude(status='ARCHIVED')
+            taken_sp = SupplierProduct.objects.filter(barcode__iexact=barcode)
+            if product:
+                taken = taken.exclude(pk=product.pk)
+            if sp:
+                taken_sp = taken_sp.exclude(pk=sp.pk)
+            if taken.exists() or taken_sp.exists():
+                return Response({'error': f'Bar Code {barcode} is already used by another product.'}, status=400)
+
+        image = request.FILES.get('image')
+        try:
+            with transaction.atomic():
+                if product is None:
+                    # Same branch as the rest of this admin's products.
+                    wh_id = (Product.objects.filter(tenant_id=tid).exclude(warehouse__isnull=True)
+                             .values_list('warehouse_id', flat=True).first())
+                    warehouse = (Warehouse.objects.filter(pk=wh_id).first() if wh_id
+                                 else Warehouse.objects.filter(tenant_id=tid).first())
+                    pid = str(self._next_pid())
+                    sp = SupplierProduct.objects.create(
+                        sku=pid, name=name, barcode=barcode, company=company, category=category,
+                        status=status_v, is_approved=True)
+                    stock = Stock.objects.create(
+                        tenant_id=tid, warehouse=warehouse, product=sp, product_name=name,
+                        category=category, purchase_type='single', total_quantity=0,
+                        items_per_carton=packing, price_per_item=0, date=date.today(),
+                        created_by=request.user)
+                    product = Product.objects.create(
+                        tenant_id=tid, warehouse=warehouse, stock=stock, sku=pid,
+                        product_name=name, category=category, barcode=barcode,
+                        min_count=reorder, expiry_apply=exp_v == 'yes', status=status_v,
+                        selling_price=0, cost_price=0, total_quantity=0, image=image)
+                else:
+                    if sp:
+                        sp.name, sp.barcode, sp.company, sp.category, sp.status = \
+                            name, barcode, company, category, status_v
+                        sp.save()
+                    if stock:
+                        stock.product_name, stock.category, stock.items_per_carton = name, category, packing
+                        stock.save()
+                    product.product_name, product.category, product.barcode = name, category, barcode
+                    product.min_count, product.expiry_apply, product.status = reorder, exp_v == 'yes', status_v
+                    if image:
+                        product.image = image
+                    elif d.get('remove_image') == '1':
+                        product.image = None
+                    product.save()
+        except IntegrityError:
+            return Response({'error': 'Could not save: the PID or Bar Code clashes with another product. Try again.'}, status=400)
+        return Response({'id': str(product.id), 'pid': product.sku, 'name': product.product_name},
+                        status=200 if d.get('id') else 201)
 
     @action(detail=False, methods=['get'])
     def dashboard_lists(self, request):
