@@ -413,6 +413,65 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         qs = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant')
         return Response([{'id': s.id, 'name': s.name, 'status': s.status} for s in qs])
 
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def trade_invoice(self, request, pk=None):
+        """Everything the printed Trade 1.0 sale invoice shows (half-A4 landscape
+        and the 80 mm slip): account, address, salesman, per line PID / unit /
+        bonus / TP / special discount / shelf rate, and the balances."""
+        from decimal import Decimal
+        o = (scope_to_tenant(request.user, Order.objects.all(), 'tenant')
+             .select_related('customer__area', 'staff', 'salesperson').filter(pk=pk).first())
+        if not o:
+            return Response({'detail': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
+        c = o.customer
+        acc_id = c.username[4:] if (c and str(c.username).startswith('cust')) else ''
+        z = Decimal('0')
+        lines = []
+        for it in o.items.select_related('product__stock').order_by('id'):
+            p = it.product
+            stock = getattr(p, 'stock', None) if p else None
+            gross = Decimal(str(it.price or 0)) * (it.quantity or 0)
+            disc = Decimal(str(it.discount or 0))
+            shelf = Decimal(str(it.shelf_discount or 0))
+            packing = max(1, int(getattr(stock, 'items_per_carton', None) or 1))
+            carton = int(getattr(p, 'carton_qty', None) or 0) if p else 0
+            lines.append({
+                'pid': (p.sku or '') if p else '', 'name': p.product_name if p else 'Deleted product',
+                'expiry_date': it.expiry_date, 'unit': it.sale_unit or 'PIECE',
+                'packing': packing, 'carton': carton,
+                'qty': it.quantity, 'bonus': it.bonus_quantity, 'tp': it.price,
+                'gross': gross, 'special': disc - shelf, 'shelf': shelf, 'net': gross - disc,
+                'special_pct': round((disc - shelf) / gross * 100, 2) if gross else z,
+                'shelf_pct': round(shelf / gross * 100, 2) if gross else z,
+            })
+        gross = sum((l['gross'] for l in lines), z)
+        special = sum((l['special'] for l in lines), z)
+        shelf = sum((l['shelf'] for l in lines), z)
+        bill_disc = Decimal(str(o.discount or 0))
+        net = Decimal(str(o.total_amount or 0))
+        prev = Decimal(str(o.prev_balance or 0))
+        paid = Decimal(str(o.paid_at_sale if o.paid_at_sale is not None else (o.amount_paid or 0)))
+        staff = o.staff.name if o.staff_id else (
+            (o.salesperson.get_full_name() or o.salesperson.username) if o.salesperson_id else '')
+        return Response({
+            'id': str(o.id), 'invoice_no': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
+            'time': o.created_at, 'staff': staff,
+            'customer': {
+                'acc_id': acc_id,
+                'name': (f"{c.first_name or ''} {c.last_name or ''}".strip() if c else '') or o.customer_name,
+                'address': ((c.address if c else '') or '').strip() or (o.shipping_address if o.shipping_address not in ('-', None) else ''),
+                'area': c.area.name if (c and c.area_id) else '',
+                'phone': (c.phone if c else '') or (o.phone_number if o.phone_number != 'N/A' else ''),
+            },
+            'lines': lines,
+            'totals': {
+                'pieces': sum(l['qty'] for l in lines), 'bonus': sum(l['bonus'] for l in lines),
+                'gross': gross, 'special': special, 'shelf': shelf, 'bill_disc': bill_disc,
+                'net': net, 'prev_balance': prev, 'total': prev + net, 'paid': paid,
+                'balance': prev + net - paid,
+            },
+        })
+
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def sale_records(self, request):
         """Trade 1.0 'Sale / Sale-Return Records'. Filters: date_from, date_to

@@ -20,6 +20,7 @@ import { orderService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
 import { getImageUrl } from '@/lib/utils';
 import FitStage from '@/components/trade/FitStage';
+import { INVOICE_SIZES, savedInvoiceSize, type InvoiceSize } from '@/components/trade/TradeInvoicePrint';
 
 /* ───────────────────────── types & helpers ───────────────────────── */
 type Batch = {
@@ -777,6 +778,13 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         });
     };
     const [showPV, setShowPV] = useState(false);
+    // Printed invoice size: Half A4 landscape or a thermal slip (remembered per browser).
+    const [printSize, setPrintSize] = useState<InvoiceSize>('a5');
+    useEffect(() => { setPrintSize(savedInvoiceSize()); }, []);
+    const choosePrintSize = (v: InvoiceSize) => {
+        setPrintSize(v);
+        try { localStorage.setItem('trade.invoice.size', v); } catch { /* ignore */ }
+    };
     const [saving, setSaving] = useState(false);
 
     // Bottom bar: Paid Cash / Saleman / Sale Date
@@ -1562,7 +1570,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         setSrAction(null);
         if (srChoice === 'print') {
             if (!r.id) { toast.error('This record has no printable invoice.'); return; }
-            openPopup(`/admin/sales/${r.id}/invoice?print=true`);
+            openPopup(`/admin/trade/invoice/${r.id}?print=1`);
         } else if (!r.id) {
             toast.error('Pick a sale (not a return) to make a return from.');
         } else if (srChoice === 'return_all') {
@@ -1827,6 +1835,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         if (saving) return;
         if (saveMissing.length) { toast.error(saveHint); return; }
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
+        // Opened now, while the click still counts as a user action, so the
+        // browser does not block it; it is pointed at the invoice once saved.
+        const printWin = print ? window.open('', 'trade:invoice-print', 'popup=yes,width=1100,height=820') : null;
+        printWin?.document.write('<p style="font:14px sans-serif;padding:24px">Saving invoice…</p>');
         setSaving(true);
         try {
             // Paid Cash settles the invoice fully, partly, or not at all (credit).
@@ -1873,14 +1885,15 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 }
             }
             toast.success(`Invoice ${no} saved.`);
-            if (print) {
-                setInvoiceNo(no);
-                setTimeout(() => { window.print(); setShowPV(false); resetInvoice(); }, 150);
-            } else {
-                setShowPV(false);
-                resetInvoice();
+            if (print && order?.id) {
+                const url = `/admin/trade/invoice/${order.id}?print=1&size=${printSize}`;
+                if (printWin && !printWin.closed) printWin.location.href = url;
+                else openPopup(url);
             }
+            setShowPV(false);
+            resetInvoice();
         } catch (err: any) {
+            printWin?.close();
             const d = err?.response?.data;
             const msg = typeof d === 'string' ? d : (d?.detail || d?.error || (Array.isArray(d) ? d[0] : Object.values(d || {})[0]) || 'Could not save the invoice.');
             toast.error(String(msg), { duration: 6000 });
@@ -2466,6 +2479,13 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         </div>
                     </div>
                     <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 print:hidden">
+                        <label className="mr-auto flex items-center gap-2 text-[13px] font-semibold text-slate-600">
+                            Print size
+                            <select value={printSize} onChange={(e) => choosePrintSize(e.target.value as InvoiceSize)}
+                                className="h-9 rounded-md border border-slate-300 bg-white px-2 text-[13px] font-semibold text-slate-800">
+                                {INVOICE_SIZES.map((o) => <option key={o.v} value={o.v}>{o.label}</option>)}
+                            </select>
+                        </label>
                         <button type="button" onClick={() => askClose(() => setShowPV(false))} disabled={saving}
                             className="h-9 rounded-md border border-slate-300 bg-white px-4 text-[13px] font-semibold text-slate-700 hover:bg-slate-100">Close</button>
                         <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint}
