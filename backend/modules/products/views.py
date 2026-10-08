@@ -277,11 +277,11 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         nums = [int(c) for c in codes if c and c.strip().isdigit()]
         return max(nums) + 1 if nums else 10001
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
     def next_pid(self, request):
         return Response({'pid': str(self._next_pid())})
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
     def trade_list(self, request):
         """Every product (active and inactive) for the Product Detail › View grid."""
         qs = (self.get_queryset().select_related('category', 'stock__product__company')
@@ -303,7 +303,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             })
         return Response(out)
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
     def trade_save(self, request):
         """Save the Product Detail form (multipart). No ``id`` -> new product with
         the next PID; with ``id`` -> update that product. Fields: name, company,
