@@ -45,9 +45,6 @@ const SHOP_GILGIT_UR = 'قاسمی مارکیٹ CMH روڈ خومر گلگت';
 const SHOP_SKARDU_UR = 'ابراہیم مارکیٹ کلفٹن پل سکردو';
 const SLOGAN_UR = 'مشہور اور با اعتماد ملکی و غیر ملکی کاسمیٹکس کا مرکز';
 const DISTRIBUTES_LIST_UR = 'بائیو آملہ کمپنی، مدر کیئر کمپنی، فیس فریش کمپنی، سعید غنی کمپنی، آئش کمپنی، کلر آن کمپنی، سکین وائٹ کمپنی، ڈرما شائن کمپنی، سپر گریس کمپنی، برجین کمپنی، ایزی کلین کمپنی اور یونیورسل کمپنی';
-const termsUr = (city: string) =>
-    `نوٹ:۔ تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں القوی ٹریڈرز ${city} سے لے رہے ہیں ان کو ایکسپائری سے تین مہینے پہلے تبدیل کرانا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیلی کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بشمول پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی فرق کی صورت میں فوراً اطلاع کریں بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ`;
-
 /* Payment is due within this many days of the invoice date. */
 const DUE_DAYS = 15;
 
@@ -168,7 +165,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     const slipW = size === '58' ? 54 : 74; // printable width in mm
     const pageCss = isSlip
         ? `@page { size: ${size}mm ${Math.max(60, Math.ceil(slipH) + 6)}mm; margin: 3mm 0; }`
-        : `@page { size: ${paper.w}mm ${paper.h}mm; margin: ${paper.m}mm ${paper.m}mm ${paper.m + 2}mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7pt sans-serif; color: #555; } }`;
+        : `@page { size: ${paper.w}mm ${paper.h}mm; margin: ${paper.m}mm ${paper.m}mm ${paper.m + 2}mm; @top-right { content: "Page " counter(page) " of " counter(pages); font: 7pt sans-serif; color: #555; } }`;
 
     return (
         <div className="min-h-screen bg-slate-200 py-6 print:bg-white print:py-0">
@@ -309,28 +306,26 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     );
     return (
         <div className="inv sheet mx-auto bg-white shadow-xl" style={{ width: `${contentW}mm` }}>
-            <div ref={ref} style={{ width: `${DESIGN_W}mm`, zoom, fontSize: '8pt', color: '#111' }}>
+            <div ref={ref} style={{ width: `${DESIGN_W}mm`, zoom, fontSize: '8pt', color: '#111', position: 'relative' }}>
+                {/* Page number, top-right corner (printed by the page margin box; this one is the screen preview) */}
+                <div className="no-print" style={{ position: 'absolute', top: '-5mm', right: 0, fontSize: '7pt', color: '#555' }}>Page 1 of {pages}</div>
                 {/* Header */}
                 <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 56mm', gap: '3mm' }}>
                     <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" style={{ width: '44mm', height: 'auto', marginTop: '1mm' }} />
                     <div className="flex flex-col items-center text-center">
                         <img src="/brand/aqt-name-ur.png" alt={NAME_UR} style={{ width: '66mm', height: 'auto' }} />
                         <div style={{ fontSize: '14pt', fontWeight: 800, marginTop: '1mm' }}>Sale Invoice</div>
-                        <div style={{ marginTop: '0.8mm', fontSize: '7.5pt', fontWeight: 700, color: due.owing ? '#c62828' : '#2e7d32' }}>
-                            ( {due.owing ? '⚠ ' : '✓ '}{due.text} )
-                        </div>
                     </div>
                     <div style={{ fontSize: '7.5pt', lineHeight: 1.45 }}>
                         <div style={{ fontWeight: 800, fontSize: '8.5pt' }}>Proprietor:</div>
                         <div style={{ fontWeight: 600 }}>{pf.proprietor}</div>
-                        <div>{region.name} Region <b>({region.code})</b></div>
+                        <div>{region.name} Region</div>
                         <div className="grid" style={{ gridTemplateColumns: '18mm 1fr', marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums' }}>
                             <span style={{ color: '#333' }}>Easypaisa:</span><span style={{ fontWeight: 600 }}>{pf.easypaisa || '—'}</span>
                             <span style={{ color: '#333' }}>Contact No:</span><span style={{ fontWeight: 600 }}>{pf.contact_no || '—'}</span>
                             {pf.whatsapp && <><span style={{ color: '#333' }}>WhatsApp:</span><span style={{ fontWeight: 600 }}>{pf.whatsapp}</span></>}
                             {pf.phones && <><span style={{ color: '#333' }}>Phones:</span><span>{pf.phones}</span></>}
                         </div>
-                        <div style={{ marginTop: '1.2mm', border: '0.3mm dashed #333', textAlign: 'center', padding: '0.4mm 0', fontWeight: 600 }}>Page {1} of {pages}</div>
                     </div>
                 </div>
 
@@ -408,8 +403,12 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                         <div dir="ltr" style={{ fontWeight: 600, borderBottom: '0.2mm solid #555', paddingBottom: '0.5mm' }}>Distributors:</div>
                         <div className="ur" style={{ fontSize: '7.5pt', lineHeight: 2.05 }}>{DISTRIBUTES_LIST_UR}</div>
                     </div>
-                    <div className="ur" dir="rtl" style={{ fontSize: '7.5pt', lineHeight: 2.1, marginTop: '1.5mm', textAlign: 'justify' }}>
-                        {termsUr(region.code === 'SKD' ? 'سکردو' : 'گلگت')}
+                    <div style={{
+                        marginTop: '3mm', padding: '1.5mm 2.2mm', borderRadius: '1mm', fontSize: '8pt', fontWeight: 600, textAlign: 'center',
+                        border: `0.35mm solid ${due.owing ? '#c62828' : '#2e7d32'}`, color: due.owing ? '#c62828' : '#2e7d32',
+                        background: due.owing ? (due.overdue ? '#ffe5e5' : '#fff3f3') : '#eef8ef',
+                    }}>
+                        {due.owing ? '⚠ ' : '✓ '}{due.text}
                     </div>
                     <div className="flex justify-between" style={{ marginTop: '9mm', fontSize: '8pt', fontWeight: 600 }}>
                         <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.8mm' }}>Store Manager</div>
@@ -492,7 +491,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                 <div style={{ fontSize: `${fs + 3}pt`, fontWeight: 800, marginTop: '0.6mm' }}>Sale Invoice</div>
                 <div style={{ marginTop: '1mm', lineHeight: 1.4 }}>
                     <b>Proprietor:</b> {pf.proprietor}<br />
-                    {region.name} Region <b>({region.code})</b><br />
+                    {region.name} Region<br />
                     <span style={{ fontVariantNumeric: 'tabular-nums' }}>
                         Easypaisa: <b>{pf.easypaisa || '—'}</b> · Contact: <b>{pf.contact_no || '—'}</b>
                         {pf.whatsapp ? <><br />WhatsApp: <b>{pf.whatsapp}</b></> : null}
@@ -539,9 +538,6 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             <div style={{ borderTop: '0.4mm solid #000', marginTop: '0.8mm', paddingTop: '0.4mm' }}>
                 {row('Total Remaining Balance', n(t.prev_balance) + n(t.gross) - n(t.special) - n(t.shelf) - n(t.bill_disc) - n(t.paid), true)}
             </div>
-            <div style={{ border: '0.4mm solid #000', padding: '0.9mm 1.4mm', fontWeight: 700, textAlign: 'center', marginTop: '1.4mm' }}>
-                Due Date: {dmy(due.dueDate)}<br />{due.owing ? '⚠ ' : ''}{due.text}
-            </div>
             {rule}
             {/* Footer — as on the page invoice */}
             {shop(SHOP_GILGIT_UR)}
@@ -551,8 +547,8 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                 <div style={{ fontWeight: 600, borderBottom: '0.2mm solid #000' }}>Distributors:</div>
                 <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1}pt`, lineHeight: 2 }}>{DISTRIBUTES_LIST_UR}</div>
             </div>
-            <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1.5}pt`, lineHeight: 2, marginTop: '1mm', textAlign: 'justify' }}>
-                {termsUr(region.code === 'SKD' ? 'سکردو' : 'گلگت')}
+            <div style={{ border: '0.4mm solid #000', padding: '0.9mm 1.4mm', fontWeight: 700, textAlign: 'center', marginTop: '1.4mm' }}>
+                Due Date: {dmy(due.dueDate)}<br />{due.owing ? '⚠ ' : ''}{due.text}
             </div>
             <div className="flex justify-between" style={{ gap: '4mm', marginTop: '7mm', fontWeight: 600 }}>
                 <div style={{ flex: 1, borderTop: '0.3mm solid #000', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
