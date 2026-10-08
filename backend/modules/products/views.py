@@ -298,7 +298,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'category_id': str(p.category_id) if p.category_id else '',
                 'category': p.category.name if p.category_id else '',
                 'packing': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
-                'reorder_qty': p.min_count, 'expiry_apply': p.expiry_apply,
+                'carton': p.carton_qty, 'expiry_apply': p.expiry_apply,
                 'status': p.status, 'image': p.image.url if p.image else '',
             })
         return Response(out)
@@ -307,7 +307,8 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     def trade_save(self, request):
         """Save the Product Detail form (multipart). No ``id`` -> new product with
         the next PID; with ``id`` -> update that product. Fields: name, company,
-        barcode, packing, reorder_qty, expiry_apply (Yes/No), category, status
+        barcode, carton (pieces per carton), packing (pieces per pack),
+        expiry_apply (Yes/No), category, status
         (ACTIVE/INACTIVE), image (optional file), remove_image (1)."""
         from datetime import date
         from modules.company.models import Company
@@ -320,15 +321,17 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         exp_v = (d.get('expiry_apply') or '').strip().lower()
         try:
             packing = int(d.get('packing') or 0)
-            reorder = int(d.get('reorder_qty') or 0)
+            carton = int(d.get('carton') or 0)
         except (TypeError, ValueError):
-            return Response({'error': 'Packing and Re Order Qty must be whole numbers.'}, status=400)
+            return Response({'error': 'Carton and Packing must be whole numbers.'}, status=400)
         if not name:
             return Response({'error': 'Enter the Product Name.'}, status=400)
         if packing < 1:
             return Response({'error': 'Packing must be 1 or more.'}, status=400)
-        if reorder < 0:
-            return Response({'error': 'Re Order Qty cannot be negative.'}, status=400)
+        if carton < 1:
+            return Response({'error': 'Enter the pieces in one Carton.'}, status=400)
+        if carton < packing:
+            return Response({'error': f'A carton ({carton} pcs) cannot hold less than one pack ({packing} pcs).'}, status=400)
         if exp_v not in ('yes', 'no'):
             return Response({'error': 'Select Expiry Apply.'}, status=400)
         if status_v not in ('ACTIVE', 'INACTIVE'):
@@ -396,7 +399,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     product = Product.objects.create(
                         tenant_id=tid, warehouse=warehouse, stock=stock, sku=pid,
                         product_name=name, category=category, barcode=barcode,
-                        min_count=reorder, expiry_apply=exp_v == 'yes', status=status_v,
+                        carton_qty=carton, expiry_apply=exp_v == 'yes', status=status_v,
                         selling_price=0, cost_price=0, total_quantity=0, image=image)
                 else:
                     if sp:
@@ -407,7 +410,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                         stock.product_name, stock.category, stock.items_per_carton = name, category, packing
                         stock.save()
                     product.product_name, product.category, product.barcode = name, category, barcode
-                    product.min_count, product.expiry_apply, product.status = reorder, exp_v == 'yes', status_v
+                    product.carton_qty, product.expiry_apply, product.status = carton, exp_v == 'yes', status_v
                     if image:
                         product.image = image
                     elif d.get('remove_image') == '1':

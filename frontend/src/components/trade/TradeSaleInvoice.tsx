@@ -459,17 +459,18 @@ function NewCompanyWindow({ companies, askClose, reload, initialName = '', onClo
 
 /* ───────────────────────── Product Detail (legacy Trade 1.0) ─────────────────────────
    Opened from Find Product › Add New Product. Same fields and layout as the
-   legacy window (PID, Product Name + Find Company, Bar Code, Packing, Re Order
-   Qty, Expiry Apply, Category, Status), plus a product picture. View lists every
+   legacy window (PID, Product Name + Find Company, Bar Code, Carton, Packing,
+   Expiry Apply, Category, Status), plus a product picture. Carton = pieces in
+   one carton; Packing = pieces per pack (what Qty(P) multiplies on the invoice). View lists every
    product under the form; picking a row loads it for Update. */
 type ProdForm = {
-    name: string; company: string; barcode: string; packing: string; reorder: string;
+    name: string; company: string; barcode: string; carton: string; packing: string;
     expiry: string; category: string; status: string;
 };
-const EMPTY_PROD: ProdForm = { name: '', company: '', barcode: '', packing: '', reorder: '', expiry: '', category: '', status: '' };
+const EMPTY_PROD: ProdForm = { name: '', company: '', barcode: '', carton: '', packing: '', expiry: '', category: '', status: '' };
 const PD_VIEW_COLS = [
     { h: 'PID', w: '7%' }, { h: 'Product Name', w: '26%' }, { h: 'Company', w: '17%' }, { h: 'Category', w: '12%' },
-    { h: 'Bar Code', w: '12%' }, { h: 'Packing', w: '6%' }, { h: 'Re Order', w: '6%' }, { h: 'Expiry', w: '6%' }, { h: 'Status', w: '8%' },
+    { h: 'Bar Code', w: '12%' }, { h: 'Carton', w: '6%' }, { h: 'Packing', w: '6%' }, { h: 'Expiry', w: '6%' }, { h: 'Status', w: '8%' },
 ];
 
 function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose, onClose }: {
@@ -517,7 +518,13 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
         setF((p) => ({ ...p, [k]: e.target.value }));
     const digits = (k: keyof ProdForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
         setF((p) => ({ ...p, [k]: e.target.value.replace(/\D/g, '') }));
-    const complete = !!(f.name.trim() && f.company && f.packing && Number(f.packing) >= 1 && f.reorder !== '' && f.expiry && f.category && f.status);
+    const cartonN = Number(f.carton), packN = Number(f.packing);
+    const cartonOk = cartonN >= 1 && packN >= 1 && cartonN >= packN;
+    const complete = !!(f.name.trim() && f.company && cartonOk && f.expiry && f.category && f.status);
+    // "1 Carton = 24 pcs = 2 packs × 12" under the two boxes.
+    const cartonHint = !(cartonN >= 1 && packN >= 1) ? 'Carton = pieces in one carton · Packing = pieces in one pack'
+        : cartonN < packN ? 'A carton cannot hold less than one pack.'
+        : `1 Carton = ${cartonN} pcs = ${cartonN % packN ? `${Math.floor(cartonN / packN)} packs × ${packN} + ${cartonN % packN} pcs` : `${cartonN / packN} pack${cartonN / packN === 1 ? '' : 's'} × ${packN}`}`;
 
     const pickImage = (file: File | undefined) => {
         if (!file) return;
@@ -551,7 +558,7 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
         setPid(r.pid || '—');
         setF({
             name: r.name || '', company: r.company_id || '', barcode: r.barcode || '',
-            packing: String(r.packing || ''), reorder: String(r.reorder_qty ?? ''),
+            carton: r.carton ? String(r.carton) : '', packing: String(r.packing || ''),
             expiry: r.expiry_apply ? 'Yes' : 'No', category: r.category_id || '',
             status: String(r.status || '').toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
         });
@@ -570,7 +577,7 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
             body.append('company', f.company);
             body.append('barcode', f.barcode.trim());
             body.append('packing', f.packing);
-            body.append('reorder_qty', f.reorder);
+            body.append('carton', f.carton);
             body.append('expiry_apply', f.expiry);
             body.append('category', f.category);
             body.append('status', f.status);
@@ -594,7 +601,7 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
     }, [list, search]);
 
     const exportRows = () => downloadXlsx('products', 'Products', PD_VIEW_COLS.map((c) => c.h),
-        rows.map((r) => [r.pid, r.name, r.company, r.category, r.barcode, r.packing, r.reorder_qty, r.expiry_apply ? 'Yes' : 'No',
+        rows.map((r) => [r.pid, r.name, r.company, r.category, r.barcode, r.carton ?? '', r.packing, r.expiry_apply ? 'Yes' : 'No',
             String(r.status).toUpperCase() === 'ACTIVE' ? 'Active' : 'Inactive']));
 
 
@@ -626,10 +633,12 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
 
                             <span className={LABEL}>Bar Code</span>
                             <input value={f.barcode} onChange={set('barcode')} maxLength={100} className={PD_EDIT} />
+                            <span className={LABEL}>Carton</span>
+                            <input value={f.carton} onChange={digits('carton')} inputMode="numeric" placeholder="pcs / carton" title="Pieces in one carton" className={PD_EDIT} />
                             <span className={LABEL}>Packing</span>
-                            <input value={f.packing} onChange={digits('packing')} inputMode="numeric" className={PD_EDIT} />
-                            <span className={LABEL}>Re Order Qty</span>
-                            <input value={f.reorder} onChange={digits('reorder')} inputMode="numeric" className={PD_EDIT} />
+                            <input value={f.packing} onChange={digits('packing')} inputMode="numeric" placeholder="pcs / pack" title="Pieces in one pack" className={PD_EDIT} />
+                            <span className="col-span-2" />
+                            <span className={`col-span-4 -mt-1.5 text-[12.5px] font-semibold ${cartonN >= 1 && packN >= 1 && cartonN < packN ? 'text-red-600' : 'text-[#1f2bd6]'}`}>{cartonHint}</span>
 
                             <span className={LABEL}>Expiry Apply</span>
                             <select value={f.expiry} onChange={set('expiry')} className={PD_SELECT}>
@@ -682,7 +691,7 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
                                 {rows.map((r) => (
                                     <tr key={r.id} onClick={() => pickRow(r)}
                                         className={`cursor-pointer tabular-nums ${sel?.id === r.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
-                                        {[r.pid, r.name, r.company, r.category, r.barcode, r.packing, r.reorder_qty, r.expiry_apply ? 'Yes' : 'No',
+                                        {[r.pid, r.name, r.company, r.category, r.barcode, r.carton ?? '', r.packing, r.expiry_apply ? 'Yes' : 'No',
                                             String(r.status).toUpperCase() === 'ACTIVE' ? 'Active' : 'Inactive'].map((v, k) => (
                                             <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 1 ? 'font-semibold' : ''}`}>{v}</td>
                                         ))}

@@ -102,6 +102,9 @@ class Product(BaseModel):
     expiry_date = models.DateField(null=True, blank=True)
     # Legacy "Expiry Apply" (Product Detail): whether this item is sold by expiry batch.
     expiry_apply = models.BooleanField(default=False)
+    # Pieces in one carton (Product Detail "Carton"). Packing — pieces per pack,
+    # used by Qty(P) on the sale invoice — stays on Stock.items_per_carton.
+    carton_qty = models.PositiveIntegerField(null=True, blank=True)
     # Owning Admin (tenant) — per-Admin product isolation. NULL = legacy/shared.
     tenant = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
