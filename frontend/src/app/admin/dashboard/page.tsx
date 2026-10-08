@@ -45,7 +45,7 @@ const MENUS: Menu[] = [
     { title: 'Sale', items: [
         { label: 'Sale Invoice', href: '/admin/trade/sale-invoice' },
         { label: 'Sale (POS)', href: '/admin/sale' },
-        { label: 'Sale Records', href: '/admin/sales' },
+        { label: 'Sale Records', href: '/admin/trade/sale-records' },
         { label: 'Sale Return', href: '/admin/sale-returns' },
         { label: 'Orders', href: '/admin/orders' },
     ] },
@@ -149,7 +149,7 @@ const COLUMNS: Group[] = [
     ] },
     { theme: THEMES.sale, buttons: [
         { name: 'Sale', href: '/admin/trade/sale-invoice', icon: ScanLine },
-        { name: 'Sale Records', href: '/admin/sales', icon: TrendingUp },
+        { name: 'Sale Records', href: '/admin/trade/sale-records', icon: TrendingUp },
         { name: 'Sale Return', href: '/admin/sale-returns', icon: RotateCcw },
         { name: 'Orders', href: '/admin/orders', icon: History },
     ] },

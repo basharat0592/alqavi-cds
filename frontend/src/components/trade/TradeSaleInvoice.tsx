@@ -79,9 +79,9 @@ const STAGE_H = 760;
 
 const COA_SELECT = `${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:opacity-60`;
 const COA_VIEW_COLS = [
-    { h: 'Main Account', w: '9%' }, { h: '2nd Level Acc.', w: '15%' }, { h: '3rd Level Acc.', w: '13%' },
-    { h: 'Account ID', w: '9%' }, { h: 'Acc. Name', w: '20%' }, { h: 'Area', w: '12%' },
-    { h: 'Cell No', w: '11%' }, { h: 'Contact Person', w: '11%' },
+    { h: 'Main Account', w: '8%' }, { h: '2nd Level Acc.', w: '12%' }, { h: '3rd Level Acc.', w: '11%' },
+    { h: 'Account ID', w: '8%' }, { h: 'Acc. Name', w: '18%' }, { h: 'Area', w: '10%' },
+    { h: 'Cell No', w: '10%' }, { h: 'Contact Person', w: '10%' }, { h: 'Address', w: '13%' },
 ];
 
 /* Download rows as an Excel workbook (.xlsx). Numeric-looking IDs/codes are
@@ -737,7 +737,10 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
 }
 
 /* ───────────────────────── main window ───────────────────────── */
-export default function TradeSaleInvoice() {
+/* mode 'records': the dashboard's Sale Records button — the Sale / Sale-Return
+   Records window on its own (Find Account, Chart of Account, Print and Sale
+   Return all work from it); closing it closes the pop-up. */
+export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice' | 'records' }) {
     // Customer
     const [customers, setCustomers] = useState<any[]>([]);
     const [customer, setCustomer] = useState<any | null>(null);
@@ -797,7 +800,7 @@ export default function TradeSaleInvoice() {
     const discRef = useRef<HTMLInputElement>(null);
     const shelfRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { document.title = "AL-QAVI TRADERS  Trade 1.0  ( Sale Invoice )"; }, []);
+    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${mode === 'records' ? 'Sale Records' : 'Sale Invoice'} )`; }, [mode]);
 
     const loadInvoiceNo = useCallback(() => {
         api.get('v1/sales/orders/next_invoice_no/')
@@ -833,7 +836,7 @@ export default function TradeSaleInvoice() {
        Opened from Find Customer with Assets › Current assets › Accounts
        Receivables preselected, so a new account is a customer by default. */
     const CUSTOMER_GROUP = 1202;
-    const EMPTY_COA = { main: '', l2: '', l3: '', name: '', cell: '', contact: '', area: '', status: '' };
+    const EMPTY_COA = { main: '', l2: '', l3: '', name: '', cell: '', contact: '', address: '', area: '', status: '' };
     const [addingCust, setAddingCust] = useState(false);
     const [coa, setCoa] = useState({ ...EMPTY_COA });
     const [groups, setGroups] = useState<{ code: number; name: string; level: number; parent: number | null }[]>([]);
@@ -953,7 +956,7 @@ export default function TradeSaleInvoice() {
         setCoaSel(a);
         setCoaV({
             main: String(a.main ?? ''), l2: String(a.level2 ?? ''), l3: String(a.group ?? ''),
-            name: a.name || '', cell: a.cell_no || '', contact: a.contact_person || '',
+            name: a.name || '', cell: a.cell_no || '', contact: a.contact_person || '', address: a.address || '',
             area: a.area ? String(a.area) : '', status: a.status || '',
         });
     };
@@ -970,14 +973,14 @@ export default function TradeSaleInvoice() {
         setCoaBusy(true);
         try {
             const { data } = await api.patch(`v1/company/ledger-accounts/${coaSel.id}/`, {
-                name: coaV.name.trim(), cell_no: coaV.cell.trim(), contact_person: coaV.contact.trim(),
+                name: coaV.name.trim(), cell_no: coaV.cell.trim(), contact_person: coaV.contact.trim(), address: coaV.address.trim(),
                 area: coaV.area || null, status: coaV.status || coaSel.status,
             });
             setCoaList((l) => (l || []).map((x) => (x.id === data.id ? data : x)));
             setCoaSel(data);
             if (data.customer) {
                 setCustomers((cs) => cs.map((c) => (c.id === data.customer
-                    ? { ...c, first_name: data.name, last_name: '', phone: data.cell_no, area: data.area, area_name: data.area_name, is_active: data.status === 'active' }
+                    ? { ...c, first_name: data.name, last_name: '', phone: data.cell_no, address: data.address, area: data.area, area_name: data.area_name, is_active: data.status === 'active' }
                     : c)));
             }
             toast.success(`Account ${data.acc_id} updated.`);
@@ -1010,7 +1013,7 @@ export default function TradeSaleInvoice() {
 
     const exportAccounts = () => downloadXlsx('chart-of-accounts', 'Chart of Accounts',
         ['Main Account', '2nd Level Acc.', '3rd Level Acc.', 'Account ID', 'Acc. Name', 'Area', 'Cell No', 'Contact Person', 'Status'],
-        coaRows.map((a) => [a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no, a.contact_person, a.status]));
+        coaRows.map((a) => [a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no, a.contact_person, a.address || '', a.status]));
 
     /* ── Sub Area › View — its own window: District · Main Area · Area ID · Area Name. */
     const [showAreaView, setShowAreaView] = useState(false);
@@ -1142,7 +1145,11 @@ export default function TradeSaleInvoice() {
                 <span className={LABEL}>Acc. Name</span>
                 <input autoFocus={focus} value={f.name} onChange={(e) => setF((c) => ({ ...c, name: e.target.value }))}
                     onKeyDown={(e) => { if (e.key === 'Enter') onEnter(); }} className={`${EDIT} col-span-3 w-full`} />
-                <span className="col-span-2" />
+                {/* Address: a block beside Acc. Name, two rows tall. */}
+                <span className={`${LABEL} row-span-2 self-start pt-2`}>Address</span>
+                <textarea value={f.address} onChange={(e) => setF((c) => ({ ...c, address: e.target.value }))} rows={3} maxLength={1000}
+                    placeholder="Shop / house no., street, area, city"
+                    className={`${EDIT} row-span-2 h-full min-h-[76px] w-full resize-none py-1.5 leading-snug`} />
 
                 <span className={LABEL}>Contact Person</span>
                 <input value={f.contact} onChange={(e) => setF((c) => ({ ...c, contact: e.target.value }))} className={`${EDIT} w-full`} />
@@ -1152,7 +1159,6 @@ export default function TradeSaleInvoice() {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                 </select>
-                <span className="col-span-2" />
             </div>
         </fieldset>
     );
@@ -1191,7 +1197,7 @@ export default function TradeSaleInvoice() {
         setSavingCust(true);
         try {
             const { data } = await api.post('v1/company/ledger-accounts/', {
-                group: coa.l3, name, cell_no: coa.cell.trim(), contact_person: coa.contact.trim(),
+                group: coa.l3, name, cell_no: coa.cell.trim(), contact_person: coa.contact.trim(), address: coa.address.trim(),
                 area: coa.area || null, status: coa.status || 'active',
             });
             toast.success(`Account ${data.acc_id} — ${name} saved.`);
@@ -1201,7 +1207,7 @@ export default function TradeSaleInvoice() {
                 setAddingCust(false);
                 pickCustomer(data.customer_record);
             } else {
-                setCoa((c) => ({ ...c, name: '', cell: '', contact: '' }));
+                setCoa((c) => ({ ...c, name: '', cell: '', contact: '', address: '' }));
                 api.get('v1/company/ledger-accounts/next_id/', { params: { group: coa.l3 } })
                     .then(({ data: n }) => setNextAccId(n.acc_id || '')).catch(() => {});
             }
@@ -1571,6 +1577,13 @@ export default function TradeSaleInvoice() {
         setSrCust(opts?.cust || null); setSrCustInput(opts?.cust ? custCode(opts.cust) : ''); setSrRows(null); setSrSel('');
         setShowView(true);
     };
+    useEffect(() => { if (mode === 'records') openSaleRecords(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const closeSaleRecords = () => {
+        if (mode !== 'records') { setShowView(false); return; }
+        window.close();
+        // Not a pop-up (opened in a tab): go back to the dashboard instead.
+        setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
+    };
 
     /* ═══ Sale returns (legacy "Sale Return Complete Bill" / "Sale Return (Random)") ═══
        Returned units go back into stock and the value is credited to the customer. */
@@ -1872,6 +1885,7 @@ export default function TradeSaleInvoice() {
 
     /* ── keyboard ── */
     useEffect(() => {
+        if (mode === 'records') return;
         const h = (e: KeyboardEvent) => {
             if (e.key === 'F2') { e.preventDefault(); setShowFindCust(true); }
             else if (e.key === 'F3') { e.preventDefault(); openFpRef.current(); }
@@ -1897,7 +1911,7 @@ export default function TradeSaleInvoice() {
 
             {/* The whole form scales to fill the window (bigger on big screens,
                 smaller on small ones) — always one glance, never a scrollbar. */}
-            <div className="print:hidden">
+            <div className={mode === 'records' ? 'hidden' : 'print:hidden'}>
             <FitStage width={STAGE_W} height={STAGE_H} className="flex flex-col overflow-hidden">
             {/* Window caption */}
             <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1 print:hidden">
@@ -2206,7 +2220,7 @@ export default function TradeSaleInvoice() {
                                     {coaRows.map((a) => (
                                         <tr key={a.id} onClick={() => pickCoaRow(a)}
                                             className={`cursor-pointer ${coaSel?.id === a.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
-                                            {[a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no || '-', a.contact_person || '0'].map((v, k) => (
+                                            {[a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no || '-', a.contact_person || '0', a.address || ''].map((v, k) => (
                                                 <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 3 ? 'font-mono' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
@@ -2464,7 +2478,7 @@ export default function TradeSaleInvoice() {
 
             {/* ─── View: Sale / Sale-Return Records (legacy Trade 1.0) ─── */}
             {showView && (
-                <Modal title="Sale Records" onClose={() => askClose(() => setShowView(false))} xl>
+                <Modal title="Sale Records" onClose={() => askClose(closeSaleRecords)} xl>
                     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#e4e4fb] p-3">
                         <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-3 pt-1">
                             <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sale / Sale-Return Records</legend>
@@ -2480,7 +2494,7 @@ export default function TradeSaleInvoice() {
                                 <button type="button" onClick={searchSaleRecords} disabled={srLoading} className={ACTION_BTN}>
                                     {srLoading ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>earch</>}
                                 </button>
-                                <button type="button" onClick={() => askClose(() => setShowView(false))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                                <button type="button" onClick={() => askClose(closeSaleRecords)} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                                 <ReadBox value={srRows ? <span className="text-[#1f2bd6]">Total Items = {srRows.length}</span> : ''} />
 
                                 <label className="flex flex-col gap-0.5">

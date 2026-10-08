@@ -203,7 +203,7 @@ def _ledger_row(a):
         'level2': l2.code if l2 else None, 'level2_name': l2.name if l2 else '',
         'main': l1.code if l1 else None, 'main_name': l1.name if l1 else '',
         'area': a.area_id, 'area_name': a.area.name if a.area_id else None,
-        'cell_no': a.cell_no, 'contact_person': a.contact_person, 'status': a.status,
+        'cell_no': a.cell_no, 'contact_person': a.contact_person, 'address': a.address, 'status': a.status,
         'customer': a.customer_id, 'supplier': str(a.supplier_id) if a.supplier_id else None,
     }
 
@@ -281,6 +281,7 @@ class LedgerAccountViewSet(viewsets.ViewSet):
         st = 'inactive' if str(d.get('status', '')).lower() == 'inactive' else 'active'
         cell = (d.get('cell_no') or '').strip()[:40]
         contact = (d.get('contact_person') or '').strip()[:150]
+        address = (d.get('address') or '').strip()[:1000]
         # New accounts belong to the actor's tenant; a platform operator adds to
         # the tenant that owns the chosen group.
         tenant_id = tenant_id_for(request.user) or group.tenant_id
@@ -295,18 +296,18 @@ class LedgerAccountViewSet(viewsets.ViewSet):
                 customer = Customer.objects.create(
                     username=f'cust{acc_id}', email=f'cust{acc_id}@legacy.local',
                     password=make_password(secrets.token_urlsafe(12)),
-                    first_name=name[:100], phone=cell[:20], area=area,
+                    first_name=name[:100], phone=cell[:20], area=area, address=address,
                     tenant_id=tenant_id, created_by=request.user if request.user.is_staff else None,
                     status=st, is_active=st == 'active',
                 )
             elif group.code == SUPPLIER_GROUP:
                 supplier = Supplier.objects.create(
-                    name=name, contact_person=contact or None, phone=cell or None,
+                    name=name, contact_person=contact or None, phone=cell or None, address=address or None,
                     tenant_id=tenant_id, status=st, is_active=st == 'active',
                 )
             acc = LedgerAccount.objects.create(
                 acc_id=acc_id, name=name, group=group, area=area, cell_no=cell,
-                contact_person=contact, status=st, customer=customer, supplier=supplier,
+                contact_person=contact, address=address, status=st, customer=customer, supplier=supplier,
                 tenant_id=tenant_id,
             )
         out = _ledger_row(acc)
@@ -331,6 +332,8 @@ class LedgerAccountViewSet(viewsets.ViewSet):
             acc.cell_no = (d.get('cell_no') or '').strip()[:40]
         if 'contact_person' in d:
             acc.contact_person = (d.get('contact_person') or '').strip()[:150]
+        if 'address' in d:
+            acc.address = (d.get('address') or '').strip()[:1000]
         if 'area' in d:
             acc.area = Area.objects.filter(id=d.get('area')).first() if d.get('area') else None
         if d.get('status'):
@@ -343,15 +346,17 @@ class LedgerAccountViewSet(viewsets.ViewSet):
                 c.first_name = acc.name[:100]
                 c.phone = acc.cell_no[:20]
                 c.area = acc.area
+                c.address = acc.address
                 c.status, c.is_active = acc.status, active
-                c.save(update_fields=['first_name', 'phone', 'area', 'status', 'is_active'])
+                c.save(update_fields=['first_name', 'phone', 'area', 'address', 'status', 'is_active'])
             if acc.supplier_id:
                 sp = acc.supplier
                 sp.name = acc.name
                 sp.phone = acc.cell_no or None
                 sp.contact_person = acc.contact_person or None
+                sp.address = acc.address or None
                 sp.status, sp.is_active = acc.status, active
-                sp.save(update_fields=['name', 'phone', 'contact_person', 'status', 'is_active'])
+                sp.save(update_fields=['name', 'phone', 'contact_person', 'address', 'status', 'is_active'])
         return Response(_ledger_row(acc))
 
     def destroy(self, request, pk=None):

@@ -96,6 +96,7 @@ class LedgerAccount(models.Model):
     area = models.ForeignKey(Area, on_delete=models.SET_NULL, null=True, blank=True, related_name='ledger_accounts')
     cell_no = models.CharField(max_length=40, blank=True, default='')
     contact_person = models.CharField(max_length=150, blank=True, default='')
+    address = models.TextField(blank=True, default='')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     customer = models.OneToOneField('customer.Customer', on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='ledger_account')
