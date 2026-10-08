@@ -27,20 +27,23 @@ type Batch = {
     cost_price: number; selling_price: number; retail_price: number;
 };
 type LookupProduct = {
-    id: string; code: string; name: string; company: string; packing: number; stock: number;
+    id: string; code: string; name: string; company: string; packing: number; carton: number; stock: number;
     cost_price: number; selling_price: number; retail_price: number; batches: Batch[];
 };
+type SaleUnit = 'PIECE' | 'CARTON';
 type Line = {
     productId: string; code: string; name: string; company: string;
     batchId: string; expiry: string | null;
-    qty: number; bonus: number; tp: number; retail: number; discPct: number; cost: number;
+    qty: number; bonus: number; tp: number; retail: number; discPct: number; shelfPct: number; cost: number;
+    unit: SaleUnit;
 };
 type Entry = {
     product: LookupProduct | null; batchId: string;
-    code: string; qtyP: string; qtyU: string; bonus: string; tp: string; discPct: string;
+    code: string; unit: SaleUnit; qtyP: string; qtyU: string; bonus: string; tp: string; discPct: string; shelfPct: string;
 };
+// PIECE: Qty(P) packs × Packing + Qty(U) loose pieces. CARTON: Qty(C) cartons × pieces per carton + Qty(U).
 
-const EMPTY_ENTRY: Entry = { product: null, batchId: '', code: '', qtyP: '', qtyU: '', bonus: '', tp: '', discPct: '' };
+const EMPTY_ENTRY: Entry = { product: null, batchId: '', code: '', unit: 'PIECE', qtyP: '', qtyU: '', bonus: '', tp: '', discPct: '', shelfPct: '' };
 
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -51,7 +54,10 @@ const custCode = (c: any) => String(c?.username || '').replace(/^cust/i, '');
 const custName = (c: any) => `${c?.first_name || ''} ${c?.last_name || ''}`.trim() || c?.username || '';
 
 const lineGross = (l: Line) => l.qty * l.tp;
-const lineDisc = (l: Line) => lineGross(l) * (l.discPct / 100);
+// Special Discount and Shelf Rate are both % of the line's sub total; Disc.Amt is the two together.
+const lineSpecial = (l: Line) => lineGross(l) * (l.discPct / 100);
+const lineShelf = (l: Line) => lineGross(l) * (l.shelfPct / 100);
+const lineDisc = (l: Line) => lineSpecial(l) + lineShelf(l);
 const lineNet = (l: Line) => lineGross(l) - lineDisc(l);
 const lineCost = (l: Line) => (l.qty + l.bonus) * l.cost;
 
@@ -159,10 +165,10 @@ const SHORTCUTS: [string, string][] = [
 /* Sale grid columns — legacy order and proportions (as % of the grid width, so
    they scale with the window); headers and values left-aligned like Trade 1.0. */
 const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
-    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6%' }, { h: 'Product Name', w: '21.5%' }, { h: 'Expiry', w: '11%' },
-    { h: 'Qty', w: '5.5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '7%' },
-    { h: 'Retail', w: '7%' }, { h: 'SubTotal', w: '8.5%' }, { h: 'Disc%', w: '5.5%' },
-    { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
+    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '14.5%' }, { h: 'Expiry', w: '10%' },
+    { h: 'Qty', w: '5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '6.5%' },
+    { h: 'Retail', w: '6.5%' }, { h: 'SubTotal', w: '8%' }, { h: 'S.Disc%', w: '6.5%' }, { h: 'Shelf%', w: '6%' },
+    { h: 'Dis.Amt', w: '8.5%' }, { h: 'Net Amt', w: '12.5%' },
 ];
 
 function ReadBox({ value, className = '' }: { value: React.ReactNode; className?: string }) {
@@ -783,11 +789,13 @@ export default function TradeSaleInvoice() {
 
     const custRef = useRef<HTMLInputElement>(null);
     const codeRef = useRef<HTMLInputElement>(null);
+    const unitRef = useRef<HTMLSelectElement>(null);
     const qtyPRef = useRef<HTMLInputElement>(null);
     const qtyURef = useRef<HTMLInputElement>(null);
     const bonRef = useRef<HTMLInputElement>(null);
     const tpRef = useRef<HTMLInputElement>(null);
     const discRef = useRef<HTMLInputElement>(null);
+    const shelfRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => { document.title = "AL-QAVI TRADERS  Trade 1.0  ( Sale Invoice )"; }, []);
 
@@ -1288,11 +1296,11 @@ export default function TradeSaleInvoice() {
     const loadProduct = (p: LookupProduct) => {
         // First in-stock batch = nearest expiry (FEFO), like the legacy picker.
         const first = p.batches.find((b) => b.quantity - usedInBatch(b.id) > 0) || p.batches[0];
-        setEntry({ ...EMPTY_ENTRY });
+        setEntry((e) => ({ ...EMPTY_ENTRY, unit: e.unit === 'CARTON' && p.carton > 0 ? 'CARTON' : 'PIECE', shelfPct: e.shelfPct }));
         applyBatch(p, first?.id || '');
         setShowFindProd(false);
         if (!p.batches.length) toast.error(`${p.name} has no stock to sell.`);
-        setTimeout(() => qtyPRef.current?.focus(), 0);
+        setTimeout(() => unitRef.current?.focus(), 0);
     };
 
     const resolveCode = async () => {
@@ -1394,6 +1402,7 @@ export default function TradeSaleInvoice() {
             if (!prod) { toast.error('This product is no longer available.'); return; }
             loadProduct(prod);
             if (num(r.tp_pct) > 0) setEntry((e) => ({ ...e, discPct: String(num(r.tp_pct)) }));
+            if (num(r.shelf_pct) > 0) setEntry((e) => ({ ...e, shelfPct: String(num(r.shelf_pct)) }));
         } catch { toast.error('Could not load the product.'); }
     };
 
@@ -1413,12 +1422,17 @@ export default function TradeSaleInvoice() {
     const p = entry.product;
     const batch = p?.batches.find((b) => b.id === entry.batchId) || null;
     const packing = p?.packing || 1;
-    const totalUnits = num(entry.qtyP) * packing + num(entry.qtyU);
+    const cartonPcs = p?.carton || 0;
+    // With no product loaded the chosen unit is kept for the next one.
+    const unit: SaleUnit = entry.unit === 'CARTON' && (!p || cartonPcs > 0) ? 'CARTON' : 'PIECE';
+    const perQty = unit === 'CARTON' ? cartonPcs || 1 : packing;
+    const totalUnits = num(entry.qtyP) * perQty + num(entry.qtyU);
     const bonus = num(entry.bonus);
     const tp = num(entry.tp);
     const discPct = num(entry.discPct);
+    const shelfPct = num(entry.shelfPct);
     const subTotal = totalUnits * tp;
-    const discAmt = subTotal * (discPct / 100);
+    const discAmt = subTotal * ((discPct + shelfPct) / 100);
     const entryNet = subTotal - discAmt;
     const purRate = num(batch?.cost_price) || num(p?.cost_price);
     const entryProfit = entryNet - (totalUnits + bonus) * purRate;
@@ -1437,9 +1451,10 @@ export default function TradeSaleInvoice() {
             productId: p.id, code: p.code, name: p.name, company: p.company,
             batchId: batch.id, expiry: batch.expiry_date,
             qty: totalUnits, bonus, tp, retail: num(batch.retail_price) || num(p.retail_price),
-            discPct, cost: purRate,
+            discPct, shelfPct, cost: purRate, unit,
         }]);
-        setEntry({ ...EMPTY_ENTRY });
+        // The next line starts with the same unit and shelf rate (one shop's shelf).
+        setEntry({ ...EMPTY_ENTRY, unit: entry.unit, shelfPct: entry.shelfPct });
         setSelected(-1);
         codeRef.current?.focus();
     };
@@ -1460,7 +1475,7 @@ export default function TradeSaleInvoice() {
             setLines((ls) => ls.filter((_, k) => k !== i));
             setSelected(-1);
             setEntry({ ...EMPTY_ENTRY });
-            applyBatch(prod, l.batchId, { qtyU: String(l.qty), bonus: l.bonus ? String(l.bonus) : '', discPct: l.discPct ? String(l.discPct) : '' });
+            applyBatch(prod, l.batchId, { qtyU: String(l.qty), bonus: l.bonus ? String(l.bonus) : '', discPct: l.discPct ? String(l.discPct) : '', shelfPct: l.shelfPct ? String(l.shelfPct) : '' });
             setEntry((e) => ({ ...e, tp: String(l.tp) }));
             setTimeout(() => qtyURef.current?.focus(), 0);
         } catch { toast.error('Could not load that line.'); }
@@ -1468,7 +1483,9 @@ export default function TradeSaleInvoice() {
 
     /* ── invoice totals ── */
     const amountBilled = lines.reduce((s, l) => s + lineGross(l), 0);
-    const totalDisc = lines.reduce((s, l) => s + lineDisc(l), 0);
+    const totalSpecial = lines.reduce((s, l) => s + lineSpecial(l), 0);
+    const totalShelf = lines.reduce((s, l) => s + lineShelf(l), 0);
+    const totalDisc = totalSpecial + totalShelf;
     const netAmount = amountBilled - totalDisc;
     const paid = Math.max(0, num(paidCash));
     const netBalance = prevBal + netAmount - paid;
@@ -1798,6 +1815,8 @@ export default function TradeSaleInvoice() {
                     id: l.productId, batch_id: l.batchId,
                     quantity: l.qty, bonus_quantity: l.bonus, price: l.tp,
                     discount: round2(lineDisc(l)),
+                    shelf_discount: round2(lineShelf(l)),
+                    sale_unit: l.unit,
                 })),
             } as any);
             const no = order?.order_number || order?.tracking_id || invoiceNo;
@@ -1883,16 +1902,18 @@ export default function TradeSaleInvoice() {
                 </div>
 
                 {/* Row 2/3 — entry labels + fields */}
-                <div className="grid shrink-0 grid-cols-[72px_2.1fr_1.05fr_1.05fr_1.25fr_0.85fr_0.85fr_1.2fr_0.95fr_1.3fr_1.35fr_1.7fr] items-end gap-x-1.5 gap-y-0.5">
+                <div className="grid shrink-0 grid-cols-[72px_1.45fr_1.2fr_0.95fr_0.95fr_1.1fr_0.85fr_0.8fr_1.1fr_0.9fr_0.9fr_1.15fr_1.2fr_1.5fr] items-end gap-x-1.5 gap-y-0.5">
                     <span />
                     <span className={LABEL}>Product Code</span>
-                    <span className={LABEL}>Qty(P)</span>
+                    <span className={LABEL}>Unit</span>
+                    <span className={LABEL}>{unit === 'CARTON' ? 'Qty(C)' : 'Qty(P)'}</span>
                     <span className={LABEL}>Qty(U)</span>
                     <span className={LABEL}>Total Units</span>
-                    <span className={LABEL}>Packing</span>
+                    <span className={LABEL}>{unit === 'CARTON' ? 'Pcs/Ctn' : 'Packing'}</span>
                     <span className={LABEL}>Bon(U)</span>
                     <span className={LABEL}>Unit TP</span>
-                    <span className={LABEL}>Disct %</span>
+                    <span className={LABEL} title="Special Discount %">S.Disc %</span>
+                    <span className={LABEL} title="Shelf Rate % — what the shop charges to keep the product on its shelf">Shelf %</span>
                     <span className={LABEL}>Retail Rate</span>
                     <span className={LABEL}>Disc Amt.</span>
                     <span className={LABEL}>Sub Total</span>
@@ -1902,13 +1923,22 @@ export default function TradeSaleInvoice() {
                         Find
                     </button>
                     <input ref={codeRef} value={entry.code} onChange={setE('code')} onKeyDown={onEnter(resolveCode)} className={`${EDIT} w-full`} aria-label="Product code" />
-                    <input ref={qtyPRef} value={entry.qtyP} onChange={setE('qtyP')} onKeyDown={onEnter(() => qtyURef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Quantity in packs" />
+                    <select ref={unitRef} value={unit} aria-label="Sell by"
+                        onChange={(e) => setEntry((x) => ({ ...x, unit: e.target.value as SaleUnit }))}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); qtyPRef.current?.focus(); } }}
+                        title={p && !cartonPcs ? 'No carton size set for this product (Product Detail › Carton)' : undefined}
+                        className={`${EDIT} w-full px-1.5`}>
+                        <option value="PIECE">Piece</option>
+                        <option value="CARTON" disabled={!!p && !cartonPcs}>Carton</option>
+                    </select>
+                    <input ref={qtyPRef} value={entry.qtyP} onChange={setE('qtyP')} onKeyDown={onEnter(() => qtyURef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label={unit === 'CARTON' ? 'Quantity in cartons' : 'Quantity in packs'} />
                     <input ref={qtyURef} value={entry.qtyU} onChange={setE('qtyU')} onKeyDown={onEnter(() => bonRef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Quantity in units" />
                     <ReadBox value={totalUnits ? fmt(totalUnits) : ''} className="justify-end" />
-                    <ReadBox value={p ? packing : ''} className="justify-end" />
+                    <ReadBox value={p ? perQty : ''} className="justify-end" />
                     <input ref={bonRef} value={entry.bonus} onChange={setE('bonus')} onKeyDown={onEnter(() => tpRef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Bonus units" />
                     <input ref={tpRef} value={entry.tp} onChange={setE('tp')} onKeyDown={onEnter(() => discRef.current?.focus())} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Unit trade price" />
-                    <input ref={discRef} value={entry.discPct} onChange={setE('discPct')} onKeyDown={onEnter(addLine)} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Discount percent" />
+                    <input ref={discRef} value={entry.discPct} onChange={setE('discPct')} onKeyDown={onEnter(() => shelfRef.current?.focus())} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Special discount percent" />
+                    <input ref={shelfRef} value={entry.shelfPct} onChange={setE('shelfPct')} onKeyDown={onEnter(addLine)} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Shelf rate percent" />
                     <ReadBox value={p ? fmt(num(batch?.retail_price) || num(p.retail_price)) : ''} className="justify-end" />
                     <ReadBox value={discAmt ? fmt(discAmt) : ''} className="justify-end" />
                     <ReadBox value={subTotal ? fmt(subTotal) : ''} className="justify-end" />
@@ -1937,7 +1967,7 @@ export default function TradeSaleInvoice() {
                                         <tr key={i} onClick={() => setSelected(i)} onDoubleClick={() => editLine(i)}
                                             className={`cursor-pointer tabular-nums ${selected === i ? 'bg-[#2f5bd3] text-white' : i % 2 ? 'bg-[#f6f7ff]' : 'bg-white'} hover:outline hover:outline-1 hover:outline-[#2f5bd3]`}>
                                             {[i + 1, l.code, l.name, ymd(l.expiry), fmt(l.qty), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
-                                              fmt(lineGross(l)), l.discPct ? fmt(l.discPct) : '', lineDisc(l) ? fmt(lineDisc(l)) : '', fmt(lineNet(l))].map((v, k) => (
+                                              fmt(lineGross(l)), l.discPct ? fmt(l.discPct) : '', l.shelfPct ? fmt(l.shelfPct) : '', lineDisc(l) ? fmt(lineDisc(l)) : '', fmt(lineNet(l))].map((v, k) => (
                                                 <td key={k} title={k === 2 ? String(v) : undefined}
                                                     className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
                                             ))}
@@ -2032,9 +2062,10 @@ export default function TradeSaleInvoice() {
                 </div>
 
                 {/* Totals */}
-                <div className="grid shrink-0 grid-cols-[1fr_1fr_0.95fr_1.1fr_1.5fr] gap-3">
+                <div className="grid shrink-0 grid-cols-[1fr_0.9fr_0.9fr_1fr_1fr_1.4fr] gap-3">
                     <Led label="Amount Billed" value={fmt(amountBilled)} />
-                    <Led label="Total Disc By%" value={fmt(totalDisc)} />
+                    <Led label="Special Disc" value={fmt(totalSpecial)} />
+                    <Led label="Shelf Rate" value={fmt(totalShelf)} />
                     <Led label="Net Amount" value={fmt(netAmount)} />
                     <Led label="Prev. Bal" value={customer ? fmt(prevBal) : ''} />
                     <Led label="Net Balance" value={fmt(netBalance)} tone="yellow" />
@@ -2361,7 +2392,7 @@ export default function TradeSaleInvoice() {
                         <table className="w-full border-collapse text-[12.5px] tabular-nums">
                             <thead>
                                 <tr className="border-y border-slate-400 bg-slate-50 text-left">
-                                    {['#', 'PID', 'Product', 'Expiry', 'Qty', 'Bon', 'TP', 'SubTotal', 'Disc', 'Net'].map((h) => <th key={h} className="px-1.5 py-1">{h}</th>)}
+                                    {['#', 'PID', 'Product', 'Expiry', 'Qty', 'Bon', 'TP', 'SubTotal', 'S.Disc', 'Shelf', 'Net'].map((h) => <th key={h} className="px-1.5 py-1">{h}</th>)}
                                 </tr>
                             </thead>
                             <tbody>
@@ -2371,14 +2402,15 @@ export default function TradeSaleInvoice() {
                                         <td className="px-1.5 py-1 font-medium">{l.name}</td><td className="px-1.5 py-1">{ymd(l.expiry)}</td>
                                         <td className="px-1.5 py-1 text-right">{fmt(l.qty)}</td><td className="px-1.5 py-1 text-right">{l.bonus ? fmt(l.bonus) : ''}</td>
                                         <td className="px-1.5 py-1 text-right">{fmt(l.tp)}</td><td className="px-1.5 py-1 text-right">{fmt(lineGross(l))}</td>
-                                        <td className="px-1.5 py-1 text-right">{lineDisc(l) ? fmt(lineDisc(l)) : ''}</td><td className="px-1.5 py-1 text-right font-semibold">{fmt(lineNet(l))}</td>
+                                        <td className="px-1.5 py-1 text-right">{lineSpecial(l) ? fmt(lineSpecial(l)) : ''}</td><td className="px-1.5 py-1 text-right">{lineShelf(l) ? fmt(lineShelf(l)) : ''}</td>
+                                        <td className="px-1.5 py-1 text-right font-semibold">{fmt(lineNet(l))}</td>
                                     </tr>
                                 ))}
-                                {!lines.length && <tr><td colSpan={10} className="px-2 py-4 text-center text-slate-400">No items.</td></tr>}
+                                {!lines.length && <tr><td colSpan={11} className="px-2 py-4 text-center text-slate-400">No items.</td></tr>}
                             </tbody>
                         </table>
                         <div className="ml-auto mt-3 w-72 space-y-0.5 text-[13px] tabular-nums">
-                            {[['Amount Billed', amountBilled], ['Total Discount', totalDisc], ['Net Amount', netAmount], ['Prev. Balance', prevBal], ['Paid Cash', paid]].map(([k, v]) => (
+                            {[['Amount Billed', amountBilled], ['Special Discount', totalSpecial], ['Shelf Rate', totalShelf], ['Net Amount', netAmount], ['Prev. Balance', prevBal], ['Paid Cash', paid]].map(([k, v]) => (
                                 <div key={k as string} className="flex justify-between"><span className="text-slate-500">{k}</span><span>{fmt(v as number)}</span></div>
                             ))}
                             <div className="flex justify-between border-t border-slate-800 pt-1 text-[15px] font-black"><span>Net Balance</span><span>{fmt(netBalance)}</span></div>

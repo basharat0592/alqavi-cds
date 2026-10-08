@@ -19,7 +19,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'bonus_quantity', 'price', 'discount', 'line_net', 'profit', 'cost_price', 'weight', 'size', 'batch', 'expiry_date']
+        fields = ['id', 'product', 'product_name', 'image', 'quantity', 'bonus_quantity', 'price', 'discount', 'shelf_discount', 'sale_unit', 'line_net', 'profit', 'cost_price', 'weight', 'size', 'batch', 'expiry_date']
 
     def get_product_name(self, obj):
         return obj.product.product_name if obj.product else 'Deleted Product'
@@ -258,6 +258,9 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         quantity = int(item.get('quantity', 1))
                         bonus = int(item.get('bonus_quantity', 0) or 0)
                         line_discount = float(item.get('discount', 0) or 0)
+                        # Shelf Rate is part of the line discount, never more than it.
+                        shelf_discount = min(max(float(item.get('shelf_discount', 0) or 0), 0), line_discount)
+                        sale_unit = str(item.get('sale_unit') or '').upper()[:10]
                         # Physical units that leave stock = paid qty + free bonus.
                         deduct_units = quantity + bonus
 
@@ -284,6 +287,8 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                             bonus_quantity=bonus,
                             price=price,
                             discount=line_discount,
+                            shelf_discount=shelf_discount,
+                            sale_unit=sale_unit,
                             cost_price=(batch.cost_price if batch and batch.cost_price else product.cost_price) or 0,
                             batch=batch,
                             expiry_date=batch.expiry_date if batch else None,

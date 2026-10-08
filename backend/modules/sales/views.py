@@ -508,7 +508,10 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             stock = getattr(p, 'stock', None) if p else None
             sp = getattr(stock, 'product', None)
             gross = Decimal(str(it.price or 0)) * (it.quantity or 0)
-            disc_pct = (Decimal(str(it.discount or 0)) / gross * 100) if gross else Decimal('0')
+            # TP % is the Special Discount only; the Shelf Rate is shown on its own.
+            shelf = Decimal(str(it.shelf_discount or 0))
+            disc_pct = ((Decimal(str(it.discount or 0)) - shelf) / gross * 100) if gross else Decimal('0')
+            shelf_pct = (shelf / gross * 100) if gross else Decimal('0')
             rows.append({
                 'invoice_no': it.order.tracking_id,
                 'date': (it.order.sale_date or it.order.created_at.date()),
@@ -519,7 +522,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'pack': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
                 'expiry_date': it.expiry_date,
                 'qty': it.quantity, 'bonus': it.bonus_quantity,
-                'tp': it.price, 'tp_pct': round(disc_pct, 2),
+                'tp': it.price, 'tp_pct': round(disc_pct, 2), 'shelf_pct': round(shelf_pct, 2),
                 'retail': (it.batch.retail_price if it.batch_id else None) or (p.original_price if p else 0) or 0,
                 'company_id': sp.company_id if sp else None,
                 'company': sp.company.name if (sp and sp.company_id) else '',

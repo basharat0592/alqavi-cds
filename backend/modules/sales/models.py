@@ -273,6 +273,11 @@ class OrderItem(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)      # Snapshotted selling price / "Unit TP"
     # Per-line discount AMOUNT (desktop "Disc.Amt"); the % is a UI convenience.
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # Part of `discount` that is the shop's Shelf Rate (Trade 1.0 Sale Invoice);
+    # the rest is the Special Discount. `discount` stays the line's full deduction.
+    shelf_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    # How the line was entered: PIECE (packs + loose pieces) or CARTON.
+    sale_unit = models.CharField(max_length=10, blank=True, default='')
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Snapshotted purchase cost
     # Stock batch the units were taken from (Trade 1.0 Sale Invoice picks a batch by
     # expiry). Its quantity is drawn down on a DELIVERED sale.

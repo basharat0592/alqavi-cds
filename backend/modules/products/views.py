@@ -257,6 +257,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'id': str(p.id), 'code': p.sku or '', 'name': p.product_name,
                 'company': sp.company.name if (sp and sp.company_id) else '',
                 'packing': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
+                'carton': p.carton_qty or 0,
                 'stock': int(p.total_quantity or 0),
                 'cost_price': p.cost_price or 0, 'selling_price': p.selling_price or 0,
                 'retail_price': p.original_price or 0,
