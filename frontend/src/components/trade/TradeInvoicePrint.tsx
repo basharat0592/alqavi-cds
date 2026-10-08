@@ -47,9 +47,6 @@ const SHOP_SKARDU_UR = 'ابراہیم مارکیٹ کلفٹن پل سکردو';
 const SLOGAN_UR = 'مشہور اور با اعتماد ملکی و غیر ملکی کاسمیٹکس کا مرکز';
 const PROPRIETOR = 'Syed Sakhawat & Associates';
 const PROPRIETOR_PHONES = ['03138692190', '03351240190'];
-const CEO_UR = 'سید سجاد حسین';
-const PHONES = ['0335-1240190', '0355-5555190'];
-const DISTRIBUTOR_UR = 'ڈسٹری بیوٹر آف';
 const DISTRIBUTES_LIST_UR = 'بائیو آملہ کمپنی، مدر کیئر کمپنی، فیس فریش کمپنی، سعید غنی کمپنی، آئش کمپنی، کلر آن کمپنی، سکین وائٹ کمپنی، ڈرما شائن کمپنی، سپر گریس کمپنی، برجین کمپنی، ایزی کلین کمپنی اور یونیورسل کمپنی';
 const termsUr = (city: string) =>
     `نوٹ:۔ تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں القوی ٹریڈرز ${city} سے لے رہے ہیں ان کو ایکسپائری سے تین مہینے پہلے تبدیل کرانا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیلی کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بشمول پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی فرق کی صورت میں فوراً اطلاع کریں بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ`;
@@ -398,7 +395,11 @@ function ShopsBanner() {
     );
 }
 
-/* ───────────────────────── Thermal slip (80 / 58 mm) ───────────────────────── */
+/* ───────────────────────── Thermal slip (80 / 58 mm) ─────────────────────────
+   The same header and footer as the page invoice, stacked for a narrow roll:
+   monogram, Urdu name, "Sale Invoice", proprietor + region + phones; invoice /
+   customer details; lines; totals; the 15-day alert; shops, distributors,
+   terms and signatures. Black only — thermal heads print no colour. */
 function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHeight: (mm: number) => void }) {
     const ref = useRef<HTMLDivElement>(null);
     useLayoutEffect(() => {
@@ -412,45 +413,55 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
     }, [onHeight, widthMm]);
     const t = inv.totals;
     const c = inv.customer;
+    const region = inv.region || { code: 'GLT', name: 'Gilgit' };
     const small = widthMm < 60;
-    const fs = small ? 7.5 : 8.5;
+    const fs = small ? 7 : 8;
     const due = dueInfo(inv);
-    const rule = <div style={{ borderTop: '0.3mm dashed #000', margin: '1.5mm 0' }} />;
+    const d = inv.date ? new Date(`${String(inv.date).slice(0, 10)}T00:00:00`) : null;
+    const day = d ? d.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
+    const rule = <div style={{ borderTop: '0.3mm dashed #000', margin: '1.3mm 0' }} />;
+    const kv = (k: string, v: React.ReactNode) => (
+        <div className="flex" style={{ gap: '1.5mm' }}><span style={{ minWidth: small ? '15mm' : '19mm', color: '#333' }}>{k}</span><span className="min-w-0 flex-1">{v || '—'}</span></div>
+    );
     const row = (k: string, v: any, bold = false) => (
-        <div className="flex justify-between" style={{ fontWeight: bold ? 800 : 500, fontSize: bold ? `${fs + 1.5}pt` : `${fs}pt` }}>
+        <div className="flex justify-between" style={{ fontWeight: bold ? 700 : 400, fontSize: bold ? `${fs + 1}pt` : `${fs}pt` }}>
             <span>{k}</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>{money(v)}</span>
         </div>
     );
+    const shop = (text: string) => (
+        <div className="ur" dir="rtl" style={{ background: '#000', color: '#fff', fontSize: `${fs - 0.5}pt`, lineHeight: 1.9, padding: '0 2mm', textAlign: 'center', marginTop: '0.8mm' }}>{text}</div>
+    );
     return (
         <div ref={ref} className="inv sheet mx-auto bg-white shadow-xl" style={{ width: `${widthMm}mm`, padding: '1mm 0', fontSize: `${fs}pt`, lineHeight: 1.35, color: '#000' }}>
+            {/* Header — as on the page invoice */}
             <div className="flex flex-col items-center text-center">
                 <img src="/brand/aqt-monogram-black.png" alt="Al-Qavi Traders" style={{ width: small ? '30mm' : '40mm', height: 'auto' }} />
-                <div className="ur-name" dir="rtl" style={{ fontSize: small ? '14pt' : '17pt', lineHeight: 1.3, marginTop: '1mm' }}>{NAME_UR}</div>
+                <div className="ur-name" dir="rtl" style={{ fontSize: small ? '15pt' : '18pt', lineHeight: 1.25, marginTop: '0.8mm' }}>{NAME_UR}</div>
                 <div className="ur" dir="rtl" style={{ fontSize: `${fs}pt`, lineHeight: 1.9 }}>{TAGLINE_UR}</div>
-                <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1}pt`, lineHeight: 1.9 }}>{SHOP_GILGIT_UR}</div>
-                <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1}pt`, lineHeight: 1.9 }}>{SHOP_SKARDU_UR}</div>
-                <div className="flex items-center justify-center" style={{ gap: '1.5mm', marginTop: '0.5mm' }}>
-                    <span style={{ fontWeight: 800, fontSize: `${fs - 1}pt`, border: '0.3mm solid #000', padding: '0 1.2mm' }}>CEO</span>
-                    <span className="ur" dir="rtl" style={{ fontSize: `${fs}pt`, lineHeight: 1.7 }}>{CEO_UR}</span>
+                <div style={{ fontSize: `${fs + 3}pt`, fontWeight: 800 }}>Sale Invoice</div>
+                <div style={{ marginTop: '1mm', lineHeight: 1.4 }}>
+                    <b>Proprietor:</b> {PROPRIETOR}<br />
+                    <b>{region.code}</b> · {region.name} Region<br />
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{PROPRIETOR_PHONES.join('  ·  ')}</span>
                 </div>
-                <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{PHONES.join('  ·  ')}</div>
             </div>
             {rule}
-            <div style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em' }}>SALE INVOICE</div>
-            <div className="flex justify-between"><span>No: <b>{inv.invoice_no}</b></span><span>{dmy(inv.date)}</span></div>
-            {inv.staff && <div>Salesman: {inv.staff}</div>}
-            {rule}
-            <div><b>{c.name}</b>{c.acc_id ? <span> ({c.acc_id})</span> : null}</div>
-            {c.address && <div style={{ fontSize: `${fs - 0.5}pt` }}>{c.address}</div>}
-            {(c.area || c.phone) && <div style={{ fontSize: `${fs - 0.5}pt` }}>{[c.area, c.phone].filter(Boolean).join(' · ')}</div>}
+            {kv('Invoice No:', <b>{inv.invoice_no}</b>)}
+            {kv('Date:', `${dmy(inv.date)} (${day})`)}
+            {kv('Customer:', c.name)}
+            {kv('Account:', c.acc_id)}
+            {kv('Cell #:', c.phone)}
+            {kv('Address:', c.address)}
+            {kv('Area:', c.area)}
+            {kv('Saleman:', inv.staff ? `${inv.staff}${inv.staff_cell ? ` · ${inv.staff_cell}` : ''}` : '')}
             {rule}
             {inv.lines.map((l, i) => (
-                <div key={i} style={{ marginBottom: '1.2mm', breakInside: 'avoid' }}>
-                    <div style={{ fontWeight: 700 }}>{i + 1}. {l.name}</div>
+                <div key={i} style={{ marginBottom: '1.1mm', breakInside: 'avoid' }}>
+                    <div style={{ fontWeight: 600 }}>{i + 1}. {l.name}</div>
                     <div className="flex justify-between">
                         <span>
-                            {isCarton(l) ? `Carton: ${cartonCount(l)} = ${qtyFmt(l.qty)} pcs` : `Piece: ${qtyFmt(l.qty)} pcs`} × {money(l.tp)}
-                            {l.bonus ? ` +${qtyFmt(l.bonus)} bonus` : ''}
+                            {isCarton(l) ? `Carton ${cartonCount(l)} = ${qtyFmt(l.qty)} pcs` : `Piece ${qtyFmt(l.qty)} pcs`} × {money(l.tp)}
+                            {l.bonus ? ` +${qtyFmt(l.bonus)} bon` : ''}
                         </span>
                         <span style={{ fontVariantNumeric: 'tabular-nums' }}>{money(l.gross)}</span>
                     </div>
@@ -463,7 +474,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                 </div>
             ))}
             {rule}
-            <div style={{ fontWeight: 700 }}>Total Products = {qtyFmt(t.pieces)}{t.bonus ? ` (+${qtyFmt(t.bonus)} bonus)` : ''}</div>
+            <div>Total Products = {qtyFmt(t.pieces)}{t.bonus ? ` (+${qtyFmt(t.bonus)} bonus)` : ''} · {inv.lines.length} item{inv.lines.length === 1 ? '' : 's'}</div>
             {row('Amount', t.gross)}
             {n(t.special) > 0 && row('Special Discount', -n(t.special))}
             {n(t.shelf) > 0 && row('Shelf Rent', -n(t.shelf))}
@@ -472,13 +483,23 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             {row('Advance Amount', t.paid)}
             {row('Left Amount', n(t.net) - n(t.paid))}
             {row('Previous Balance', t.prev_balance)}
-            <div style={{ borderTop: '0.4mm solid #000', marginTop: '1mm', paddingTop: '0.5mm' }}>{row('Net Balance', t.balance, true)}</div>
+            <div style={{ borderTop: '0.4mm solid #000', marginTop: '0.8mm', paddingTop: '0.4mm' }}>{row('Net Balance', t.balance, true)}</div>
+            <div style={{ border: '0.4mm solid #000', padding: '0.9mm 1.4mm', fontWeight: 700, textAlign: 'center', marginTop: '1.4mm' }}>{due.owing ? '⚠ ' : ''}{due.text}</div>
             {rule}
-            <div style={{ border: '0.4mm solid #000', padding: '1mm 1.5mm', fontWeight: 700, textAlign: 'center' }}>{due.owing ? '⚠ ' : ''}{due.text}</div>
-            <div className="ur text-center" dir="rtl" style={{ lineHeight: 2.1, marginTop: '1mm' }}>خریداری کا شکریہ</div>
-            {rule}
-            <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1.5}pt`, lineHeight: 2, textAlign: 'center' }}>
-                <b>{DISTRIBUTOR_UR}:</b> {DISTRIBUTES_LIST_UR}
+            {/* Footer — as on the page invoice */}
+            {shop(SHOP_GILGIT_UR)}
+            <div className="ur" dir="rtl" style={{ fontSize: `${fs - 0.5}pt`, lineHeight: 1.9, textAlign: 'center' }}>{SLOGAN_UR}</div>
+            {shop(SHOP_SKARDU_UR)}
+            <div style={{ border: '0.3mm solid #000', padding: '0.6mm 1.4mm', marginTop: '1.2mm' }}>
+                <div style={{ fontWeight: 600, borderBottom: '0.2mm solid #000' }}>Distributors:</div>
+                <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1}pt`, lineHeight: 2 }}>{DISTRIBUTES_LIST_UR}</div>
+            </div>
+            <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1.5}pt`, lineHeight: 2, marginTop: '1mm', textAlign: 'justify' }}>
+                {termsUr(region.code === 'SKD' ? 'سکردو' : 'گلگت')}
+            </div>
+            <div className="flex justify-between" style={{ gap: '4mm', marginTop: '7mm', fontWeight: 600 }}>
+                <div style={{ flex: 1, borderTop: '0.3mm solid #000', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
+                <div style={{ flex: 1, borderTop: '0.3mm solid #000', textAlign: 'center', paddingTop: '0.6mm' }}>Saleman</div>
             </div>
         </div>
     );

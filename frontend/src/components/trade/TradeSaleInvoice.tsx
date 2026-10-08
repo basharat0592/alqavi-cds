@@ -60,7 +60,11 @@ const lineSpecial = (l: Line) => lineGross(l) * (l.discPct / 100);
 const lineShelf = (l: Line) => lineGross(l) * (l.shelfPct / 100);
 const lineDisc = (l: Line) => lineSpecial(l) + lineShelf(l);
 // "2 Ctn" for whole cartons, "Ctn" for a part carton, else "Pcs".
-const lineUnit = (l: Line) => (l.unit === 'CARTON' && l.carton > 0 ? (l.qty % l.carton ? 'Ctn' : `${l.qty / l.carton} Ctn`) : 'Pcs');
+const lineCartons = (l: Line) => {
+    if (l.unit !== 'CARTON' || !(l.carton > 0)) return '';
+    const c = Math.floor(l.qty / l.carton), r = l.qty % l.carton;
+    return r ? `${c} + ${r} pcs` : String(c);
+};
 const lineNet = (l: Line) => lineGross(l) - lineDisc(l);
 const lineCost = (l: Line) => (l.qty + l.bonus) * l.cost;
 
@@ -171,8 +175,8 @@ const SHORTCUTS: [string, string][] = [
 const thFit = (h: string) => (h.startsWith('Special') || h.startsWith('Shelf Rent') ? ' !whitespace-normal !text-[10.5px] !leading-tight' : '');
 
 const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
-    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '14%' }, { h: 'Expiry', w: '9%' },
-    { h: 'Qty', w: '5%' }, { h: 'Unit', w: '5.5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '6.5%' },
+    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '13%' }, { h: 'Expiry', w: '9%' },
+    { h: 'Qty', w: '5%' }, { h: 'Carton', w: '6.5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '6.5%' },
     { h: 'Retail', w: '6.5%' }, { h: 'SubTotal', w: '8%' }, { h: 'Special Disc %', w: '5.5%' }, { h: 'Shelf Rent %', w: '5.5%' },
     { h: 'Dis.Amt', w: '8.5%' }, { h: 'Net Amt', w: '10%' },
 ];
@@ -2006,7 +2010,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 </div>
 
                 {/* Row 2/3 — entry labels + fields */}
-                <div className="grid shrink-0 grid-cols-[72px_1.6fr_1.15fr_0.9fr_0.9fr_1.05fr_0.85fr_0.6fr_1.15fr_0.7fr_0.7fr_1.1fr_1.1fr_1.15fr_1.45fr] items-end gap-x-1.5 gap-y-0.5">
+                {/* Fixed small boxes (2-digit fields smallest); Product Code takes what is left. */}
+                <div className="grid shrink-0 grid-cols-[64px_minmax(120px,1fr)_96px_56px_56px_72px_60px_50px_76px_52px_52px_76px_84px_84px_104px] items-end gap-x-1.5 gap-y-0.5 [&>span]:!whitespace-normal [&>span]:leading-[1.1]">
                     <span />
                     <span className={LABEL}>Product Code</span>
                     <span className={LABEL}>Unit</span>
@@ -2072,7 +2077,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     {lines.map((l, i) => (
                                         <tr key={i} onClick={() => setSelected(i)} onDoubleClick={() => editLine(i)}
                                             className={`cursor-pointer tabular-nums ${selected === i ? 'bg-[#2f5bd3] text-white' : i % 2 ? 'bg-[#f6f7ff]' : 'bg-white'} hover:outline hover:outline-1 hover:outline-[#2f5bd3]`}>
-                                            {[i + 1, l.code, l.name, ymd(l.expiry), fmt(l.qty), lineUnit(l), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
+                                            {[i + 1, l.code, l.name, ymd(l.expiry), fmt(l.qty), lineCartons(l), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
                                               fmt(lineGross(l)), l.discPct ? fmt(l.discPct) : '', l.shelfPct ? fmt(l.shelfPct) : '', lineDisc(l) ? fmt(lineDisc(l)) : '', fmt(lineNet(l))].map((v, k) => (
                                                 <td key={k} title={k === 2 ? String(v) : undefined}
                                                     className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
