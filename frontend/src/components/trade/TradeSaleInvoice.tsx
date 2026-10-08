@@ -1432,8 +1432,9 @@ export default function TradeSaleInvoice() {
     const discPct = num(entry.discPct);
     const shelfPct = num(entry.shelfPct);
     const subTotal = totalUnits * tp;
-    const discAmt = subTotal * ((discPct + shelfPct) / 100);
-    const entryNet = subTotal - discAmt;
+    const discAmt = subTotal * (discPct / 100);
+    const shelfAmt = subTotal * (shelfPct / 100);
+    const entryNet = subTotal - discAmt - shelfAmt;
     const purRate = num(batch?.cost_price) || num(p?.cost_price);
     const entryProfit = entryNet - (totalUnits + bonus) * purRate;
     const entryProfitPct = purRate > 0 && totalUnits + bonus > 0 ? (entryProfit / ((totalUnits + bonus) * purRate)) * 100 : 0;
@@ -1486,6 +1487,9 @@ export default function TradeSaleInvoice() {
     const totalSpecial = lines.reduce((s, l) => s + lineSpecial(l), 0);
     const totalShelf = lines.reduce((s, l) => s + lineShelf(l), 0);
     const totalDisc = totalSpecial + totalShelf;
+    // Pieces on the invoice (10 pcs + 3 pcs = 13), not the number of lines.
+    const totalPieces = lines.reduce((s, l) => s + l.qty, 0);
+    const totalBonus = lines.reduce((s, l) => s + l.bonus, 0);
     const netAmount = amountBilled - totalDisc;
     const paid = Math.max(0, num(paidCash));
     const netBalance = prevBal + netAmount - paid;
@@ -1902,7 +1906,7 @@ export default function TradeSaleInvoice() {
                 </div>
 
                 {/* Row 2/3 — entry labels + fields */}
-                <div className="grid shrink-0 grid-cols-[72px_1.45fr_1.2fr_0.95fr_0.95fr_1.1fr_0.85fr_0.8fr_1.1fr_0.9fr_0.9fr_1.15fr_1.2fr_1.5fr] items-end gap-x-1.5 gap-y-0.5">
+                <div className="grid shrink-0 grid-cols-[72px_1.35fr_1.15fr_0.9fr_0.9fr_1.05fr_0.85fr_0.8fr_1.05fr_0.9fr_0.9fr_1.1fr_1.1fr_1.1fr_1.4fr] items-end gap-x-1.5 gap-y-0.5">
                     <span />
                     <span className={LABEL}>Product Code</span>
                     <span className={LABEL}>Unit</span>
@@ -1915,7 +1919,8 @@ export default function TradeSaleInvoice() {
                     <span className={LABEL} title="Special Discount %">S.Disc %</span>
                     <span className={LABEL} title="Shelf Rate % — what the shop charges to keep the product on its shelf">Shelf %</span>
                     <span className={LABEL}>Retail Rate</span>
-                    <span className={LABEL}>Disc Amt.</span>
+                    <span className={LABEL} title="Special Discount amount">Disc Amt.</span>
+                    <span className={LABEL} title="Shelf Rate amount">Shelf Amt.</span>
                     <span className={LABEL}>Sub Total</span>
 
                     <button type="button" onClick={() => openFindProduct()}
@@ -1941,6 +1946,7 @@ export default function TradeSaleInvoice() {
                     <input ref={shelfRef} value={entry.shelfPct} onChange={setE('shelfPct')} onKeyDown={onEnter(addLine)} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Shelf rate percent" />
                     <ReadBox value={p ? fmt(num(batch?.retail_price) || num(p.retail_price)) : ''} className="justify-end" />
                     <ReadBox value={discAmt ? fmt(discAmt) : ''} className="justify-end" />
+                    <ReadBox value={shelfAmt ? fmt(shelfAmt) : ''} className="justify-end" />
                     <ReadBox value={subTotal ? fmt(subTotal) : ''} className="justify-end" />
                 </div>
 
@@ -2057,7 +2063,7 @@ export default function TradeSaleInvoice() {
                             </div>
                         )}
 
-                        <div className="rounded-md bg-black px-3 py-1.5 font-mono text-[13.5px] font-bold text-white">Total Products = {lines.length}</div>
+                        <div className="rounded-md bg-black px-3 py-1.5 font-mono text-[13.5px] font-bold text-white">Total Products = {fmt(totalPieces)}{totalBonus ? ` (+${fmt(totalBonus)} bonus)` : ''}</div>
                     </div>
                 </div>
 
