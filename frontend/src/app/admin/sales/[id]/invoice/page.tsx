@@ -75,6 +75,10 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
     };
 
     const items: any[] = order?.items || [];
+    // Trade 1.0 sales split each line's discount into Special Discount + Shelf Rate.
+    const lineDiscTotal = items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0);
+    const shelfTotal = items.reduce((s, i) => s + (parseFloat(i.shelf_discount || 0) || 0), 0);
+    const hasShelf = shelfTotal > 0;
     const sel = useTableSelection(items, (item) => String(items.indexOf(item)));
 
     if (loading) return <PageLoader />;
@@ -175,7 +179,8 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 <th className="py-1.5 px-3 text-center w-16">Qty</th>
                                 <th className="py-1.5 px-3 text-center w-16">Bonus</th>
                                 <th className="py-1.5 px-3 text-right w-24">Unit Price</th>
-                                <th className="py-1.5 px-3 text-right w-24">Disc</th>
+                                <th className="py-1.5 px-3 text-right w-24">{hasShelf ? 'S.Disc' : 'Disc'}</th>
+                                {hasShelf && <th className="py-1.5 px-3 text-right w-24">Shelf</th>}
                                 <th className="py-1.5 px-3 text-right w-28">Total</th>
                             </tr>
                         </thead>
@@ -185,6 +190,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 const qty = item.quantity || 1;
                                 const bonus = parseInt(item.bonus_quantity || 0) || 0;
                                 const disc = parseFloat(item.discount || 0) || 0;
+                                const shelf = parseFloat(item.shelf_discount || 0) || 0;
                                 const net = item.line_net != null ? parseFloat(item.line_net) : (price * qty - disc);
                                 return (
                                     <tr key={i} className="hover:bg-slate-50">
@@ -194,7 +200,8 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                         <td className="py-1.5 px-3 text-center tabular-nums">{qty}</td>
                                         <td className="py-1.5 px-3 text-center tabular-nums text-emerald-700 font-bold">{bonus > 0 ? `+${bonus}` : '—'}</td>
                                         <td className="py-1.5 px-3 text-right text-slate-600 tabular-nums">{formatCurrency(price)}</td>
-                                        <td className="py-1.5 px-3 text-right tabular-nums text-rose-600">{disc > 0 ? `-${formatCurrency(disc)}` : '—'}</td>
+                                        <td className="py-1.5 px-3 text-right tabular-nums text-rose-600">{disc - shelf > 0 ? `-${formatCurrency(disc - shelf)}` : '—'}</td>
+                                        {hasShelf && <td className="py-1.5 px-3 text-right tabular-nums text-rose-600">{shelf > 0 ? `-${formatCurrency(shelf)}` : '—'}</td>}
                                         <td className="py-1.5 px-3 text-right font-black text-slate-900 tabular-nums">{formatCurrency(net)}</td>
                                     </tr>
                                 );
@@ -220,10 +227,16 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 <span className="font-bold text-emerald-700 tabular-nums">+{items.reduce((s, i) => s + (parseInt(i.bonus_quantity || 0) || 0), 0)} free</span>
                             </div>
                         )}
-                        {items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0) > 0 && (
+                        {lineDiscTotal - shelfTotal > 0 && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Line Discounts</span>
-                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(items.reduce((s, i) => s + (parseFloat(i.discount || 0) || 0), 0))}</span>
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">{hasShelf ? 'Special Discount' : 'Line Discounts'}</span>
+                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(lineDiscTotal - shelfTotal)}</span>
+                            </div>
+                        )}
+                        {hasShelf && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Shelf Rate</span>
+                                <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(shelfTotal)}</span>
                             </div>
                         )}
                         {parseFloat((order as any).shipping_cost || '0') > 0 && (
@@ -300,6 +313,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                     bonus_units: bonus,
                                     unit_price: price,
                                     discount: disc,
+                                    shelf_rate: parseFloat(item.shelf_discount || 0) || 0,
                                     total: net,
                                 };
                             }),

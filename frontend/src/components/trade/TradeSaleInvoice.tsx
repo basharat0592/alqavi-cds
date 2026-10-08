@@ -106,28 +106,28 @@ const FP_STOCK_COLS = [
     { h: 'Company', w: '16%' },
 ];
 const FP_HIST_COLS = [
-    { h: 'PID', w: '7%' }, { h: 'Category', w: '10%' }, { h: 'Product', w: '27%' }, { h: 'Pack', w: '6%' },
+    { h: 'PID', w: '7%' }, { h: 'Category', w: '10%' }, { h: 'Product', w: '21%' }, { h: 'Pack', w: '6%' },
     { h: 'Expiry Date', w: '10%' }, { h: 'Qty(U)', w: '7%' }, { h: 'Qty(B)', w: '7%' }, { h: 'T.P', w: '9%' },
-    { h: 'TP %', w: '7%' }, { h: 'Retail Rate', w: '10%' },
+    { h: 'TP %', w: '7%' }, { h: 'Shelf %', w: '6%' }, { h: 'Retail Rate', w: '10%' },
 ];
 
 /* Sale / Sale-Return Records grid (legacy column order). */
 const SR_COLS = [
     { h: 'SaleID', w: '9%' }, { h: 'Date Sale', w: '8%' }, { h: 'Staff', w: '10%' }, { h: 'Acc.ID', w: '8%' },
-    { h: 'Acc.Name', w: '19%' }, { h: 'Amount', w: '7.5%' }, { h: 'Disc.', w: '6%' }, { h: 'Net.Amount', w: '7.5%' },
+    { h: 'Acc.Name', w: '13.5%' }, { h: 'Amount', w: '7.5%' }, { h: 'S.Disc.', w: '6%' }, { h: 'Shelf', w: '5.5%' }, { h: 'Net.Amount', w: '7.5%' },
     { h: 'Pre. Bal.', w: '7%' }, { h: 'Total', w: '6.5%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '6%' },
 ];
 
 /* Sale return grids (legacy column order). */
 const RET_COLS = [
-    { h: 'SNo', w: '4.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '23%' }, { h: 'Expiry', w: '9.5%' },
+    { h: 'SNo', w: '4.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '17%' }, { h: 'Expiry', w: '9.5%' },
     { h: 'Qty', w: '5%' }, { h: 'Bons', w: '5%' }, { h: 'TP', w: '7%' }, { h: 'Retail', w: '7%' },
-    { h: 'Sub Total', w: '8.5%' }, { h: 'Dis %', w: '5.5%' }, { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
+    { h: 'Sub Total', w: '8.5%' }, { h: 'S.Dis %', w: '5.5%' }, { h: 'Shelf %', w: '6%' }, { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
 ]
 const RR_HIST_COLS = [
-    { h: 'Sale Inv.', w: '11%' }, { h: 'Date', w: '9.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '23%' },
+    { h: 'Sale Inv.', w: '11%' }, { h: 'Date', w: '9.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '17.5%' },
     { h: 'Expiry', w: '9.5%' }, { h: 'Qty', w: '5%' }, { h: 'Bonus', w: '6%' }, { h: 'Returned', w: '7.5%' },
-    { h: 'TP', w: '7%' }, { h: 'Disc%', w: '6%' }, { h: 'Retail', w: '9%' },
+    { h: 'TP', w: '7%' }, { h: 'S.Disc%', w: '6%' }, { h: 'Shelf%', w: '5.5%' }, { h: 'Retail', w: '9%' },
 ]
 
 /* Lays a window body out at a design size (w x h) and scales it to exactly fit
@@ -1597,7 +1597,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         catch { return 0; }
     };
     const retLineGross = (l: any, q: number) => num(l.tp) * q;
-    const retLineDisc = (l: any, q: number) => retLineGross(l, q) * num(l.disc_pct) / 100;
+    // A returned line gives back its Special Discount and Shelf Rate in proportion.
+    const retLineShelf = (l: any, q: number) => retLineGross(l, q) * num(l.shelf_pct) / 100;
+    const retLineDisc = (l: any, q: number) => retLineGross(l, q) * (num(l.disc_pct) + num(l.shelf_pct)) / 100;
     const saveErr = (err: any, fallback: string) => {
         const d = err?.response?.data;
         toast.error(String(d?.detail || (d && Object.values(d)[0]) || fallback), { duration: 7000 });
@@ -1629,9 +1631,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         const bonus = ls.reduce((s2, l) => s2 + num(l.cost) * l.remaining_bonus, 0);
         const billed = ls.reduce((s2, l) => s2 + retLineGross(l, l.remaining_qty), 0);
         const disc = ls.reduce((s2, l) => s2 + retLineDisc(l, l.remaining_qty), 0);
+        const shelf = ls.reduce((s2, l) => s2 + retLineShelf(l, l.remaining_qty), 0);
         const net = billed - disc;
         const cash = Math.max(0, num(rbCash));
-        return { bonus, billed, disc, net, cash, balance: rbPrev - net + cash };
+        return { bonus, billed, disc, shelf, net, cash, balance: rbPrev - net + cash };
     }, [rbLines, rbCash, rbPrev]);
 
     const saveReturnBill = () => {
@@ -1755,10 +1758,11 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const rrTotals = useMemo(() => {
         const sale = rrLines.reduce((s2, l) => s2 + retLineGross(l, l.ret_qty), 0);
         const disc = rrLines.reduce((s2, l) => s2 + retLineDisc(l, l.ret_qty), 0);
+        const shelf = rrLines.reduce((s2, l) => s2 + retLineShelf(l, l.ret_qty), 0);
         const net = sale - disc;
         const less = Math.max(0, num(rrLess));
         const cash = Math.max(0, num(rrCash));
-        return { sale, disc, net, less, cash, balance: rrPrev - (net - less) + cash };
+        return { sale, disc, shelf, net, less, cash, balance: rrPrev - (net - less) + cash };
     }, [rrLines, rrLess, rrCash, rrPrev]);
 
     const saveReturnRandom = () => {
@@ -2384,7 +2388,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                             <tr key={i} onClick={() => setFpHistSel(i)} onDoubleClick={() => pickHistoryRow(r)}
                                                 className={`cursor-pointer tabular-nums ${fpHistSel === i ? 'bg-[#7dfa7d]' : 'hover:bg-[#fff3a6]'}`}
                                                 title={`Invoice ${r.invoice_no} · ${String(r.date).slice(0, 10)} — Enter or double-click to sell again`}>
-                                                {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), r.bonus ? fmt(num(r.bonus)) : '', fmt(num(r.tp)), num(r.tp_pct) ? fmt(num(r.tp_pct)) : '', fmt(num(r.retail))].map((v, k) => (
+                                                {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), r.bonus ? fmt(num(r.bonus)) : '', fmt(num(r.tp)), num(r.tp_pct) ? fmt(num(r.tp_pct)) : '', num(r.shelf_pct) ? fmt(num(r.shelf_pct)) : '', fmt(num(r.retail))].map((v, k) => (
                                                     <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
                                             </tr>
@@ -2536,7 +2540,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                         <tr key={r.sale_id + i} onClick={() => { setSrSel(r.sale_id); setSrChoice('print'); setSrAction(r); }}
                                             className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
                                             title={`${r.sale_id} — click for Print / Sale Return`}>
-                                            {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0',
+                                            {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
                                               fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
                                                 <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 4 ? 'font-semibold' : ''}`}>{v}</td>
                                             ))}
@@ -2552,7 +2556,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <tfoot className="sticky bottom-0 bg-[#ececfd] font-bold tabular-nums">
                                         <tr>
                                             <td colSpan={5} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">Totals</td>
-                                            {(['amount', 'disc', 'net'] as const).map((k) => (
+                                            {(['amount', 'disc', 'shelf', 'net'] as const).map((k) => (
                                                 <td key={k} className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r[k]), 0))}</td>
                                             ))}
                                             <td className="border-t border-r border-slate-300" />
@@ -2612,7 +2616,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                         {(rbLines || []).map((l, i) => (
                                             <tr key={l.order_item} className="tabular-nums">
                                                 {[i + 1, l.pid, l.name, ymd(l.expiry_date), l.remaining_qty, l.remaining_bonus, fmt(num(l.tp)), fmt(num(l.retail)),
-                                                  fmt(retLineGross(l, l.remaining_qty)), fmt(num(l.disc_pct)), fmt(retLineDisc(l, l.remaining_qty)),
+                                                  fmt(retLineGross(l, l.remaining_qty)), fmt(num(l.disc_pct)), num(l.shelf_pct) ? fmt(num(l.shelf_pct)) : '', fmt(retLineDisc(l, l.remaining_qty)),
                                                   fmt(retLineGross(l, l.remaining_qty) - retLineDisc(l, l.remaining_qty))].map((v, k) => (
                                                     <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
@@ -2644,7 +2648,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         </div>
 
                         <div className="flex w-[330px] shrink-0 flex-col gap-2 overflow-hidden">
-                            {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['Disc Amt', fmt(rbTotals.disc), 'green'],
+                            {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['S.Disc Amt', fmt(rbTotals.disc - rbTotals.shelf), 'green'], ['Shelf Amt', fmt(rbTotals.shelf), 'green'],
                               ['Net Amount', fmt(rbTotals.net), 'yellow'], ['Prev.Bal', fmt(rbPrev), 'yellow']].map(([label, value, tone]) => (
                                 <div key={label} className="grid grid-cols-[118px_1fr] items-center gap-2">
                                     <span className="text-[16px] font-black text-[#1b1f4b]">{label}</span>
@@ -2683,15 +2687,16 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
                             <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-3 pb-2 pt-0">
                                 <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sale Return (Random)</legend>
-                                <div className="grid grid-cols-[1.15fr_0.8fr_2.2fr_0.85fr_0.85fr_0.6fr] items-end gap-x-2 gap-y-0.5">
+                                <div className="grid grid-cols-[1.15fr_0.8fr_2fr_0.85fr_0.85fr_0.6fr_0.6fr] items-end gap-x-2 gap-y-0.5">
                                     <span className={LABEL}>Sale.Return Inv.</span><span className={LABEL}>Product ID</span><span className={LABEL}>Product Name</span>
-                                    <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={LABEL}>Disc %</span>
+                                    <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={LABEL}>S.Disc %</span><span className={LABEL}>Shelf %</span>
                                     <ReadBox value={rrPick?.invoice_no || ''} className="font-mono" />
                                     <ReadBox value={rrPick?.pid || ''} />
                                     <ReadBox value={rrPick?.name || ''} />
                                     <ReadBox value={rrPick ? fmt(num(rrPick.tp)) : ''} className="justify-end" />
                                     <ReadBox value={rrPick ? fmt(num(rrPick.retail)) : ''} className="justify-end" />
                                     <ReadBox value={rrPick ? fmt(num(rrPick.disc_pct)) : ''} className="justify-end" />
+                                    <ReadBox value={rrPick ? fmt(num(rrPick.shelf_pct)) : ''} className="justify-end" />
                                 </div>
                                 <div className="mt-2 grid grid-cols-[auto_110px_auto_1fr_auto_1fr_auto_1.3fr] items-center gap-x-2">
                                     <span className={LABEL}>Ret. Qty</span>
@@ -2730,7 +2735,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                         {rrLines.map((l, i) => (
                                             <tr key={i} onClick={() => setRrSel(i)} className={`cursor-pointer tabular-nums ${rrSel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
                                                 {[i + 1, l.pid, l.name, ymd(l.expiry_date), l.ret_qty, l.ret_bonus || '', fmt(num(l.tp)), fmt(num(l.retail)),
-                                                  fmt(retLineGross(l, l.ret_qty)), fmt(num(l.disc_pct)), fmt(retLineDisc(l, l.ret_qty)),
+                                                  fmt(retLineGross(l, l.ret_qty)), fmt(num(l.disc_pct)), num(l.shelf_pct) ? fmt(num(l.shelf_pct)) : '', fmt(retLineDisc(l, l.ret_qty)),
                                                   fmt(retLineGross(l, l.ret_qty) - retLineDisc(l, l.ret_qty))].map((v, k) => (
                                                     <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
@@ -2757,7 +2762,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                                     className={`cursor-pointer tabular-nums ${rrPick?.order_item === l.order_item ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
                                                     title="Click to return from this line">
                                                     {[l.invoice_no, ymd(String(l.date)), l.pid, l.name, ymd(l.expiry_date), l.qty, l.bonus || '', l.returned_qty || '',
-                                                      fmt(num(l.tp)), num(l.disc_pct) ? fmt(num(l.disc_pct)) : '', fmt(num(l.retail))].map((v, k) => (
+                                                      fmt(num(l.tp)), num(l.disc_pct) ? fmt(num(l.disc_pct)) : '', num(l.shelf_pct) ? fmt(num(l.shelf_pct)) : '', fmt(num(l.retail))].map((v, k) => (
                                                         <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 3 ? 'font-semibold' : ''}`}>{v}</td>
                                                     ))}
                                                 </tr>
@@ -2779,7 +2784,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         {/* Right: totals, actions, history filters */}
                         <div className="flex w-[380px] shrink-0 flex-col gap-2 overflow-hidden">
                             <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-[#9da1d8] bg-[#ececfd] p-2.5">
-                                {[['Sale Amount', fmt(rrTotals.sale)], ['Disc. Amount', fmt(rrTotals.disc)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
+                                {[['Sale Amount', fmt(rrTotals.sale)], ['S.Disc Amount', fmt(rrTotals.disc - rrTotals.shelf)], ['Shelf Amount', fmt(rrTotals.shelf)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
                                     <div key={label} className="flex flex-col gap-0.5">
                                         <span className={LABEL}>{label}</span>
                                         <div className="flex h-9 items-center justify-center rounded-md bg-black font-mono text-[18px] font-black tabular-nums text-[#3cff5a]">{value}</div>

@@ -693,7 +693,8 @@ class TradeSaleReturn(models.Model):
                               related_name='trade_returns')
     return_date = models.DateField()
     gross = models.DecimalField(max_digits=12, decimal_places=2, default=0)          # Sale Amount
-    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)       # Disc. Amount
+    discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)       # Disc. Amount (special + shelf)
+    shelf_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0) # Shelf Rate part of discount
     net_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)     # Net Sale Amount
     bonus_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)    # Amt.Bonus (at cost)
     less_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)    # deducted from the credit
@@ -745,7 +746,8 @@ class TradeSaleReturnItem(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)       # TP
     retail = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     disc_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)    # Dis.Amt
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)    # Dis.Amt (special + shelf)
+    shelf_discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Shelf Rate part
     cost_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:

@@ -450,7 +450,8 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 rows.append({
                     'id': None, 'return_id': r.id, 'sale_id': r.return_no, 'date': r.return_date,
                     'staff': r.staff.name if r.staff_id else '', 'acc_id': code, 'acc_name': name,
-                    'amount': r.gross, 'disc': r.discount + r.less_amount, 'net': r.net_amount - r.less_amount,
+                    'amount': r.gross, 'disc': r.discount - r.shelf_discount + r.less_amount,
+                    'shelf': r.shelf_discount, 'net': r.net_amount - r.less_amount,
                     'pre_bal': pre, 'total': pre - (r.net_amount - r.less_amount),
                     'paid': r.cash_returned, 'balance': pre - r.credit,
                 })
@@ -470,6 +471,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         qs = qs.annotate(
             gross=Coalesce(Sum(ExpressionWrapper(F('items__price') * F('items__quantity'), output_field=money)), z, output_field=money),
             line_disc=Coalesce(Sum('items__discount'), z, output_field=money),
+            line_shelf=Coalesce(Sum('items__shelf_discount'), z, output_field=money),
         ).order_by('-sale_date', '-created_at')
         rows = []
         for o in qs[:3000]:
@@ -483,7 +485,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'id': str(o.id), 'sale_id': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
                 'customer_id': o.customer_id,
                 'staff': staff_name, 'acc_id': code, 'acc_name': name,
-                'amount': o.gross, 'disc': o.line_disc + Decimal(str(o.discount or 0)), 'net': net,
+                # Disc. = Special Discount (+ any bill discount); Shelf shown on its own.
+                'amount': o.gross, 'disc': o.line_disc - o.line_shelf + Decimal(str(o.discount or 0)),
+                'shelf': o.line_shelf, 'net': net,
                 'pre_bal': pre, 'total': pre + net, 'paid': paid, 'balance': pre + net - paid,
             })
         return Response(rows)

@@ -42,7 +42,10 @@ def _line(oi, returned):
     p = oi.product
     rq, rb = returned.get(oi.id, (0, 0))
     gross = _d(oi.price) * (oi.quantity or 0)
-    disc_pct = (_d(oi.discount) / gross * 100) if gross else Z
+    # disc_pct = Special Discount %, shelf_pct = Shelf Rate % (together: the line's discount).
+    shelf = _d(oi.shelf_discount)
+    disc_pct = ((_d(oi.discount) - shelf) / gross * 100) if gross else Z
+    shelf_pct = (shelf / gross * 100) if gross else Z
     retail = (oi.batch.retail_price if oi.batch_id else None) or (p.original_price if p else 0) or 0
     return {
         'order_item': oi.id, 'order_id': str(oi.order_id), 'invoice_no': oi.order.tracking_id,
@@ -53,7 +56,8 @@ def _line(oi, returned):
         'returned_qty': rq, 'returned_bonus': rb,
         'remaining_qty': max(0, (oi.quantity or 0) - rq),
         'remaining_bonus': max(0, (oi.bonus_quantity or 0) - rb),
-        'tp': oi.price, 'retail': retail, 'disc_pct': round(disc_pct, 2), 'cost': oi.cost_price,
+        'tp': oi.price, 'retail': retail, 'disc_pct': round(disc_pct, 2), 'shelf_pct': round(shelf_pct, 2),
+        'cost': oi.cost_price,
     }
 
 
@@ -156,7 +160,8 @@ class TradeSaleReturnViewSet(viewsets.ViewSet):
                 'id': r.id, 'return_no': r.return_no, 'kind': r.kind, 'date': r.return_date,
                 'invoice_no': r.order.tracking_id if r.order_id else '',
                 'staff': r.staff.name if r.staff_id else '', 'acc_id': code, 'acc_name': r.customer_name,
-                'amount': r.gross, 'disc': r.discount, 'net': r.net_amount, 'less': r.less_amount,
+                'amount': r.gross, 'disc': r.discount - r.shelf_discount, 'shelf': r.shelf_discount,
+                'net': r.net_amount, 'less': r.less_amount,
                 'pre_bal': pre, 'cash_returned': r.cash_returned, 'balance': pre - r.credit,
             })
         return Response(rows)
@@ -182,6 +187,7 @@ class TradeSaleReturnViewSet(viewsets.ViewSet):
             returned = _returned_map(list(items))
             customer_id = d.get('customer') or None
             gross = disc = net = bonus_value = Z
+            shelf_total = Z
             prepared = []
             for x in lines:
                 oi = items.get(int(x.get('order_item') or 0))
@@ -205,11 +211,13 @@ class TradeSaleReturnViewSet(viewsets.ViewSet):
                 returned[oi.id] = (rq + q, rb + b)  # same line twice in one return
                 line_gross = _d(oi.price) * (oi.quantity or 0)
                 pct = (_d(oi.discount) / line_gross * 100) if line_gross else Z
+                shelf_pct = (_d(oi.shelf_discount) / line_gross * 100) if line_gross else Z
                 g = _d(oi.price) * q
                 dsc = _r2(g * pct / 100)
-                gross += g; disc += dsc; net += g - dsc
+                sdsc = min(dsc, _r2(g * shelf_pct / 100))
+                gross += g; disc += dsc; net += g - dsc; shelf_total += sdsc
                 bonus_value += _d(oi.cost_price) * b
-                prepared.append((oi, q, b, pct, dsc))
+                prepared.append((oi, q, b, pct, dsc, sdsc))
             if not prepared:
                 return Response({'detail': 'Enter a quantity to return.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -225,20 +233,21 @@ class TradeSaleReturnViewSet(viewsets.ViewSet):
                                else prepared[0][0].order.customer_name)[:150],
                 order_id=next(iter(orders)) if len(orders) == 1 else None,
                 staff=staff, return_date=rdate,
-                gross=_r2(gross), discount=_r2(disc), net_amount=_r2(net), bonus_value=_r2(bonus_value),
+                gross=_r2(gross), discount=_r2(disc), shelf_discount=_r2(shelf_total),
+                net_amount=_r2(net), bonus_value=_r2(bonus_value),
                 less_amount=_r2(_d(d.get('less_amount'))), cash_returned=_r2(_d(d.get('cash_returned'))),
                 prev_balance=_r2(_d(d.get('prev_balance'))) if d.get('prev_balance') not in (None, '') else None,
                 created_by=request.user if request.user.is_staff else None,
                 tenant_id=prepared[0][0].order.tenant_id or tenant_id_for(request.user),
             )
-            for oi, q, b, pct, dsc in prepared:
+            for oi, q, b, pct, dsc, sdsc in prepared:
                 batch = _restock(oi, q + b)
                 p = oi.product
                 TradeSaleReturnItem.objects.create(
                     sale_return=ret, order_item=oi, product=p, batch=batch, expiry_date=oi.expiry_date,
                     quantity=q, bonus_quantity=b, price=oi.price,
                     retail=(oi.batch.retail_price if oi.batch_id else None) or (p.original_price if p else 0) or 0,
-                    disc_pct=_r2(pct), discount=dsc, cost_price=oi.cost_price or 0,
+                    disc_pct=_r2(pct), discount=dsc, shelf_discount=sdsc, cost_price=oi.cost_price or 0,
                 )
         return Response({'id': ret.id, 'return_no': ret.return_no, 'net_amount': ret.net_amount,
                          'credit': ret.credit}, status=status.HTTP_201_CREATED)
