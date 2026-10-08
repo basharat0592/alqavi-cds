@@ -41,6 +41,24 @@ def _settlement_alert(due_date, remaining):
     return False, 0, (0 <= (due_date - today).days <= 3)
 
 
+class InvoiceProfile(models.Model):
+    """Proprietor block printed on the Trade 1.0 sale invoice (one per Admin)."""
+    tenant = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
+                                  related_name='invoice_profile')
+    proprietor = models.CharField(max_length=150, default='Syed Sakhawat & Associates')
+    phones = models.CharField(max_length=120, default='03351240190, 03138692190')
+    easypaisa = models.CharField(max_length=40, blank=True, default='')
+    contact_no = models.CharField(max_length=40, blank=True, default='')
+    whatsapp = models.CharField(max_length=40, blank=True, default='')
+
+    class Meta:
+        db_table = 'trade_invoice_profile'
+
+    def as_dict(self):
+        return {'proprietor': self.proprietor, 'phones': self.phones, 'easypaisa': self.easypaisa,
+                'contact_no': self.contact_no, 'whatsapp': self.whatsapp}
+
+
 class SalesStaff(models.Model):
     """Saleman / order-booker (legacy Trade 2.1 Staff table). Not a login user —
     just who booked the sale, chosen on the Sale Invoice."""

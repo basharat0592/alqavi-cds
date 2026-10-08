@@ -41,12 +41,9 @@ const DESIGN_W = 194; // A4 width less 8 mm margins
 
 /* Business details (the customer's legacy invoice, letterhead and visiting card). */
 const NAME_UR = 'القوی ٹریڈرز';
-const TAGLINE_UR = 'کاسمیٹکس ڈیلر گلگت بلتستان';
 const SHOP_GILGIT_UR = 'قاسمی مارکیٹ CMH روڈ خومر گلگت';
 const SHOP_SKARDU_UR = 'ابراہیم مارکیٹ کلفٹن پل سکردو';
 const SLOGAN_UR = 'مشہور اور با اعتماد ملکی و غیر ملکی کاسمیٹکس کا مرکز';
-const PROPRIETOR = 'Syed Sakhawat & Associates';
-const PROPRIETOR_PHONES = ['03138692190', '03351240190'];
 const DISTRIBUTES_LIST_UR = 'بائیو آملہ کمپنی، مدر کیئر کمپنی، فیس فریش کمپنی، سعید غنی کمپنی، آئش کمپنی، کلر آن کمپنی، سکین وائٹ کمپنی، ڈرما شائن کمپنی، سپر گریس کمپنی، برجین کمپنی، ایزی کلین کمپنی اور یونیورسل کمپنی';
 const termsUr = (city: string) =>
     `نوٹ:۔ تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں القوی ٹریڈرز ${city} سے لے رہے ہیں ان کو ایکسپائری سے تین مہینے پہلے تبدیل کرانا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیلی کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بشمول پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی فرق کی صورت میں فوراً اطلاع کریں بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ`;
@@ -59,10 +56,14 @@ type Line = {
     qty: number; bonus: number; tp: number; retail: number; gross: number; special: number; shelf: number; net: number;
     special_pct: number; shelf_pct: number;
 };
+type Profile = { proprietor: string; phones: string; easypaisa: string; contact_no: string; whatsapp: string };
+const DEFAULT_PROFILE: Profile = { proprietor: 'Syed Sakhawat & Associates', phones: '03351240190, 03138692190', easypaisa: '', contact_no: '', whatsapp: '' };
+
 type Invoice = {
     id: string; invoice_no: string; date: string; time: string; staff: string; staff_cell?: string;
     region?: { code: string; name: string };
-    customer: { acc_id: string; name: string; address: string; area: string; phone: string };
+    customer: { acc_id: string; name: string; contact?: string; address: string; area: string; phone: string };
+    profile?: Profile;
     lines: Line[];
     totals: { pieces: number; bonus: number; gross: number; special: number; shelf: number; bill_disc: number;
         net: number; prev_balance: number; total: number; paid: number; balance: number };
@@ -96,7 +97,7 @@ function dueInfo(inv: Invoice) {
     else if (left > 0) text = `Payment due within ${DUE_DAYS} days — by ${dmy(due)} · ${left} day${left === 1 ? '' : 's'} left`;
     else if (left === 0) text = `Payment due TODAY (${dmy(due)})`;
     else text = `OVERDUE by ${-left} day${left === -1 ? '' : 's'} — payment was due on ${dmy(due)}`;
-    return { text, owing, overdue: owing && left < 0 };
+    return { text, owing, overdue: owing && left < 0, dueDate: due };
 }
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');`;
@@ -110,6 +111,19 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     // A roll has no fixed page length: the slip's page is exactly as long as
     // its content (measured after layout), so the printer feeds no blank paper.
     const [slipH, setSlipH] = useState(0);
+    // Proprietor block (Easypaisa, contact …) — edited here, kept on the server.
+    const [editPf, setEditPf] = useState<Profile | null>(null);
+    const [savingPf, setSavingPf] = useState(false);
+    const savePf = async () => {
+        if (!editPf || savingPf) return;
+        setSavingPf(true);
+        try {
+            const { data } = await api.patch('v1/sales/orders/invoice_profile/', editPf);
+            setInv((v) => (v ? { ...v, profile: data } : v));
+            setEditPf(null);
+        } catch (e: any) { alert(e?.response?.data?.error || 'Could not save the details.'); }
+        finally { setSavingPf(false); }
+    };
 
     useEffect(() => {
         const q = new URLSearchParams(window.location.search);
@@ -194,6 +208,10 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
                     </span>
                 )}
                 <span className="mx-1 h-6 w-px bg-slate-200" />
+                <button type="button" onClick={() => setEditPf({ ...DEFAULT_PROFILE, ...(inv?.profile || {}) })} disabled={!inv}
+                    className="h-8 rounded-md border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                    Invoice details
+                </button>
                 <button type="button" onClick={() => window.print()} disabled={!inv}
                     className="flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
                     <Printer size={14} /> Print
@@ -203,6 +221,25 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
                 </button>
             </div>
 
+            {editPf && (
+                <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
+                        <h2 className="mb-3 text-[16px] font-bold text-slate-800">Invoice details (printed under Proprietor)</h2>
+                        {([['proprietor', 'Proprietor'], ['easypaisa', 'Easypaisa No'], ['contact_no', 'Contact No'], ['whatsapp', 'WhatsApp No'], ['phones', 'Other phones']] as const).map(([k, label]) => (
+                            <label key={k} className="mb-2.5 grid grid-cols-[110px_1fr] items-center gap-2 text-[13px] font-semibold text-slate-600">
+                                {label}
+                                <input value={editPf[k]} onChange={(e) => setEditPf({ ...editPf, [k]: e.target.value })}
+                                    className="h-9 rounded-md border border-slate-300 px-2.5 text-[14px] text-slate-900" />
+                            </label>
+                        ))}
+                        <div className="mt-4 flex justify-end gap-2">
+                            <button type="button" onClick={() => setEditPf(null)} className="h-9 rounded-md border border-slate-300 px-4 text-[13px] font-semibold">Cancel</button>
+                            <button type="button" onClick={savePf} disabled={savingPf || !editPf.proprietor.trim()}
+                                className="h-9 rounded-md bg-emerald-600 px-4 text-[13px] font-bold text-white disabled:opacity-50">{savingPf ? 'Saving…' : 'Save'}</button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {err && <p className="no-print text-center text-[14px] font-semibold text-red-600">{err}</p>}
             {!inv && !err && <p className="no-print text-center text-[14px] text-slate-500">Loading invoice…</p>}
 
@@ -212,16 +249,22 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     );
 }
 
-/* ───────────────────────── Page invoice (customer's legacy layout) ─────────────────────────
-   Monogram | Urdu name + "Sale Invoice" | Proprietor, region, phones, page box.
-   Invoice / customer / salesman on the left, day, date, account, address and
-   area on the right; bordered grid with Unit, Special Disc and Shelf Rent;
-   totals with advance and left amount; the red 15-day payment alert; shops
-   banner, distributors, terms and signatures. Drawn at A4 width and scaled
-   (CSS zoom) to the chosen paper. */
+/* ───────────────────────── Page invoice (the customer's layout) ─────────────────────────
+   Header: monogram | Urdu name artwork, "Sale Invoice", red payment-due line |
+   proprietor, region, phones, Easypaisa, contact, WhatsApp, page box.
+   Details: Inv Date · Print Time · Day / Inv No · Company Acc No / Shop Name ·
+   Area · Address / Customer Name · Cell No / Saleman · Cell No · Due Date.
+   Bordered grid (S.No, PID, Product, Carton, Qty, Bon, TP, Retail, Special
+   Disc %, Shelf Rent %, Net Amount) with a totals row; the boxed summary
+   (Previous Amount, Total Amount / Total Special Discount, Shelf Rent,
+   Advance Amount, Total Remaining Balance); shops banner, distributors, terms,
+   signatures. Drawn at A4 width and scaled (CSS zoom) to the chosen paper. */
+const B = '0.3mm solid #222';
+
 function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m: number } }) {
     const t = inv.totals;
     const c = inv.customer;
+    const pf = inv.profile || DEFAULT_PROFILE;
     const region = inv.region || { code: 'GLT', name: 'Gilgit' };
     const contentW = paper.w - paper.m * 2;
     const contentH = paper.h - paper.m * 2 - 2;
@@ -240,106 +283,123 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const d = inv.date ? new Date(`${String(inv.date).slice(0, 10)}T00:00:00`) : null;
     const longDate = d ? `${d.getDate()} - ${d.toLocaleDateString('en-GB', { month: 'long' })} - ${d.getFullYear()}` : '';
     const day = d ? d.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
-    const left = n(t.net) - n(t.paid);
+    const printTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true });
     const due = dueInfo(inv);
-    const kv = (k: string, v: React.ReactNode) => (
-        <><span style={{ color: '#555' }}>{k}</span><span>{v || '—'}</span></>
+    const remaining = n(t.prev_balance) + n(t.gross) - n(t.special) - n(t.shelf) - n(t.bill_disc) - n(t.paid);
+    const cartons = inv.lines.reduce((s, l) => s + (isCarton(l) ? Math.floor(l.qty / l.carton) : 0), 0);
+    const field = (k: string, v: React.ReactNode, kw = '24mm') => (
+        <div className="flex min-w-0" style={{ gap: '1.5mm' }}>
+            <span style={{ width: kw, flexShrink: 0, color: '#333' }}>{k}</span>
+            <span className="min-w-0 flex-1" style={{ fontWeight: 600 }}>{v || '—'}</span>
+        </div>
     );
     const th = (h: string, right = false, w?: string) => (
-        <th style={{ border: '0.25mm solid #333', padding: '0.9mm 1.1mm', fontWeight: 600, textAlign: right ? 'right' : 'left', width: w, lineHeight: 1.15 }}>{h}</th>
+        <th style={{ border: B, padding: '1mm 1.2mm', fontWeight: 700, textAlign: right ? 'right' : 'left', width: w, lineHeight: 1.15 }}>{h}</th>
     );
     const td = (v: React.ReactNode, right = false, bold = false) => (
-        <td style={{ borderLeft: '0.25mm solid #333', borderRight: '0.25mm solid #333', borderBottom: '0.15mm solid #bbb', padding: '0.7mm 1.1mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 600 : 400, verticalAlign: 'top', fontVariantNumeric: 'tabular-nums' }}>{v}</td>
+        <td style={{ border: B, padding: '0.9mm 1.2mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 600 : 400, verticalAlign: 'top', fontVariantNumeric: 'tabular-nums' }}>{v}</td>
+    );
+    const sum = (k: string, v: any, strong = false) => (
+        <td style={{ border: B, padding: '1.4mm 2mm' }}>
+            <div className="flex items-baseline justify-between" style={{ gap: '2mm' }}>
+                <span style={{ color: '#333' }}>{k}</span>
+                <span style={{ fontWeight: strong ? 800 : 600, fontSize: strong ? '9.5pt' : undefined, fontVariantNumeric: 'tabular-nums' }}>{money(v)}</span>
+            </div>
+        </td>
     );
     return (
         <div className="inv sheet mx-auto bg-white shadow-xl" style={{ width: `${contentW}mm` }}>
             <div ref={ref} style={{ width: `${DESIGN_W}mm`, zoom, fontSize: '8pt', color: '#111' }}>
-                {/* Letterhead */}
-                <div className="grid items-start" style={{ gridTemplateColumns: '50mm 1fr 52mm', gap: '3mm' }}>
-                    <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" style={{ width: '46mm', height: 'auto', marginTop: '1mm' }} />
+                {/* Header */}
+                <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 56mm', gap: '3mm' }}>
+                    <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" style={{ width: '44mm', height: 'auto', marginTop: '1mm' }} />
                     <div className="flex flex-col items-center text-center">
-                        <div className="ur-name" dir="rtl" style={{ fontSize: '30pt', lineHeight: 1.15, color: '#343434' }}>{NAME_UR}</div>
-                        <div className="ur" dir="rtl" style={{ fontSize: '9pt', lineHeight: 1.9, color: '#343434' }}>{TAGLINE_UR}</div>
-                        <div style={{ fontSize: '15pt', fontWeight: 800, marginTop: '0.5mm' }}>Sale Invoice</div>
+                        <img src="/brand/aqt-name-ur.png" alt={NAME_UR} style={{ width: '66mm', height: 'auto' }} />
+                        <div style={{ fontSize: '14pt', fontWeight: 800, marginTop: '1mm' }}>Sale Invoice</div>
+                        <div style={{ marginTop: '0.8mm', fontSize: '7.5pt', fontWeight: 700, color: due.owing ? '#c62828' : '#2e7d32' }}>
+                            ( {due.owing ? '⚠ ' : '✓ '}{due.text} )
+                        </div>
                     </div>
-                    <div style={{ fontSize: '8pt', lineHeight: 1.45 }}>
-                        <div style={{ fontWeight: 700 }}>Proprietor:</div>
-                        <div>{PROPRIETOR}</div>
-                        <div><b>{region.code}</b> · {region.name} Region</div>
-                        <div style={{ marginTop: '1mm', fontVariantNumeric: 'tabular-nums' }}>{PROPRIETOR_PHONES.map((p) => <div key={p}>{p}</div>)}</div>
-                        <div style={{ marginTop: '1.5mm', border: '0.3mm dashed #333', textAlign: 'center', padding: '0.5mm 0' }}>Page - 1 of {pages}</div>
+                    <div style={{ fontSize: '7.5pt', lineHeight: 1.45 }}>
+                        <div style={{ fontWeight: 800, fontSize: '8.5pt' }}>Proprietor:</div>
+                        <div style={{ fontWeight: 600 }}>{pf.proprietor}</div>
+                        <div>{region.name} Region <b>({region.code})</b></div>
+                        <div className="grid" style={{ gridTemplateColumns: '18mm 1fr', marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums' }}>
+                            <span style={{ color: '#333' }}>Easypaisa:</span><span style={{ fontWeight: 600 }}>{pf.easypaisa || '—'}</span>
+                            <span style={{ color: '#333' }}>Contact No:</span><span style={{ fontWeight: 600 }}>{pf.contact_no || '—'}</span>
+                            {pf.whatsapp && <><span style={{ color: '#333' }}>WhatsApp:</span><span style={{ fontWeight: 600 }}>{pf.whatsapp}</span></>}
+                            {pf.phones && <><span style={{ color: '#333' }}>Phones:</span><span>{pf.phones}</span></>}
+                        </div>
+                        <div style={{ marginTop: '1.2mm', border: '0.3mm dashed #333', textAlign: 'center', padding: '0.4mm 0', fontWeight: 600 }}>Page {1} of {pages}</div>
                     </div>
                 </div>
 
-                {/* Invoice + customer (left) | day, date, account, address, area (right) — small, unbold */}
-                <div className="grid" style={{ gridTemplateColumns: '1fr 72mm', gap: '4mm', margin: '2mm 0 1.8mm', fontSize: '7.5pt', lineHeight: 1.35 }}>
-                    <div className="grid" style={{ gridTemplateColumns: '25mm 1fr', rowGap: '0.4mm' }}>
-                        {kv('Date Invoice:', longDate)}
-                        {kv('Invoice No:', inv.invoice_no)}
-                        {kv('Customer Name:', c.name)}
-                        {kv('Customer Cell #:', c.phone)}
-                        {kv('Saleman:', inv.staff)}
-                        {kv('Saleman Cell #:', inv.staff_cell)}
-                    </div>
-                    <div className="grid self-start" style={{ gridTemplateColumns: '15mm 1fr', rowGap: '0.4mm', border: '0.25mm solid #999', borderRadius: '1mm', padding: '1.3mm 2mm' }}>
-                        {kv('Day', day)}
-                        {kv('Date', dmy(inv.date))}
-                        {kv('Account', c.acc_id)}
-                        {kv('Address', c.address)}
-                        {kv('Area', c.area)}
-                    </div>
+                {/* Details */}
+                <div className="grid" style={{ gridTemplateColumns: '1.05fr 1fr 1fr', columnGap: '4mm', rowGap: '0.9mm', margin: '2.5mm 0 2mm', fontSize: '7.8pt', lineHeight: 1.3 }}>
+                    {field('Inv. Date:', longDate)}
+                    {field('Print Time:', printTime, '17mm')}
+                    {field('Day:', day, '9mm')}
+                    {field('Inv. No #:', inv.invoice_no)}
+                    <div className="col-span-2">{field('Company Acc. No #:', c.acc_id, '27mm')}</div>
+                    {field('Shop Name:', c.name)}
+                    {field('Area:', c.area, '17mm')}
+                    {field('Address:', c.address, '13mm')}
+                    {field('Customer Name:', c.contact)}
+                    <div className="col-span-2">{field('C. Cell No:', c.phone, '17mm')}</div>
+                    {field('Saleman Name:', inv.staff)}
+                    {field('Cell No:', inv.staff_cell, '17mm')}
+                    {field('Due Date:', <span style={{ color: due.owing ? '#c62828' : undefined }}>{dmy(due.dueDate)}</span>, '13mm')}
                 </div>
 
                 {/* Items */}
-                <table style={{ fontSize: '7.5pt', borderBottom: '0.25mm solid #333' }}>
+                <table style={{ fontSize: '7.8pt' }}>
                     <thead>
-                        <tr style={{ background: '#efefef' }}>
-                            {th('S.No', false, '8mm')}{th('PID', false, '11mm')}{th('Product Name')}{th('Unit', false, '12mm')}{th('Qty', true, '12mm')}{th('Bon', true, '8mm')}
-                            {th('TP', true, '15mm')}{th('Retail', true, '15mm')}{th('Special Disc %', true, '13mm')}{th('Shelf Rent %', true, '12mm')}
-                            {th('Disc Amt', true, '16mm')}{th('Net Amount', true, '20mm')}
+                        <tr style={{ background: '#ececec' }}>
+                            {th('S.No', false, '8mm')}{th('PID', false, '11mm')}{th('Product Name')}{th('Carton', true, '13mm')}{th('Qty', true, '11mm')}
+                            {th('Bon', true, '8mm')}{th('TP', true, '15mm')}{th('Retail', true, '15mm')}{th('Special Disc %', true, '13mm')}
+                            {th('Shelf Rent %', true, '12mm')}{th('Net Amount', true, '20mm')}
                         </tr>
                     </thead>
                     <tbody>
                         {inv.lines.map((l, i) => (
                             <tr key={i}>
                                 {td(i + 1, true)}{td(l.pid)}
-                                {td(<>{l.name}{l.expiry_date ? <div style={{ color: '#666', fontSize: '6.5pt', whiteSpace: 'nowrap' }}>Exp {dmy(l.expiry_date)}</div> : null}</>)}
-                                {td(isCarton(l) ? <>Carton<div style={{ color: '#666', fontSize: '6.5pt', whiteSpace: 'nowrap' }}>{cartonCount(l)}</div></> : 'Piece')}
+                                {td(<>{l.name}{l.expiry_date ? <span style={{ color: '#666', fontSize: '6.5pt' }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
+                                {td(isCarton(l) ? cartonCount(l).replace(' Ctn', '') : '', true)}
                                 {td(qtyFmt(l.qty), true)}{td(qtyFmt(l.bonus), true)}{td(money(l.tp), true)}{td(money(l.retail), true)}
-                                {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}
-                                {td(money(n(l.special) + n(l.shelf)), true)}{td(money(l.net), true, true)}
+                                {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}{td(money(l.net), true, true)}
                             </tr>
                         ))}
+                        <tr style={{ background: '#f4f4f4', fontWeight: 700 }}>
+                            <td colSpan={3} style={{ border: B, padding: '0.9mm 1.2mm' }}>Total ({inv.lines.length} item{inv.lines.length === 1 ? '' : 's'})</td>
+                            {td(cartons || '', true, true)}{td(qtyFmt(t.pieces), true, true)}{td(qtyFmt(t.bonus), true, true)}
+                            <td colSpan={4} style={{ border: B }} />
+                            {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}
+                        </tr>
                     </tbody>
                 </table>
 
-                {/* Totals + 15-day payment alert */}
-                <div className="flex items-start justify-between" style={{ gap: '5mm', marginTop: '2mm', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
-                    <div style={{ flex: 1, fontSize: '7.5pt', paddingTop: '0.5mm' }}>
-                        <div>Total Products = {qtyFmt(t.pieces)}{t.bonus ? <span style={{ color: '#555' }}> (+{qtyFmt(t.bonus)} bonus)</span> : null}
-                            <span style={{ color: '#555' }}> · {inv.lines.length} item{inv.lines.length === 1 ? '' : 's'}</span></div>
-                        <div style={{
-                            marginTop: '2.5mm', padding: '1.6mm 2.2mm', borderRadius: '1mm', fontSize: '8pt', fontWeight: 600,
-                            border: `0.35mm solid ${due.owing ? '#c62828' : '#2e7d32'}`, color: due.owing ? '#c62828' : '#2e7d32',
-                            background: due.owing ? (due.overdue ? '#ffe5e5' : '#fff3f3') : '#eef8ef',
-                        }}>
-                            {due.owing ? '⚠ ' : '✓ '}{due.text}
-                        </div>
-                    </div>
-                    <table style={{ width: '78mm', fontSize: '7.5pt', border: '0.25mm solid #333' }}>
-                        <tbody>
-                            <Tot k="Amount" v={t.gross} />
-                            <Tot k="Special Discount" v={-n(t.special)} />
-                            <Tot k="Shelf Rent" v={-n(t.shelf)} />
-                            {n(t.bill_disc) > 0 && <Tot k="Bill Discount" v={-n(t.bill_disc)} />}
-                            <Tot k="Net Amount" v={t.net} strong />
-                            <Tot k="Advance Amount" v={t.paid} />
-                            <Tot k="Left Amount" v={left} strong />
-                            <Tot k="Previous Balance" v={t.prev_balance} />
-                            <Tot k="Net Balance" v={t.balance} strong shade />
-                        </tbody>
-                    </table>
-                </div>
+                {/* Summary box (customer's layout) */}
+                <table style={{ marginTop: '2.5mm', fontSize: '8pt', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                    <tbody>
+                        <tr>
+                            {sum('Previous Amount', t.prev_balance)}
+                            <td style={{ border: B }} colSpan={2} />
+                            {sum('Total Amount', t.gross, true)}
+                        </tr>
+                        <tr>
+                            {sum('Total Special Discount', n(t.special) + n(t.bill_disc))}
+                            {sum('Shelf Rent', t.shelf)}
+                            {sum('Advance Amount', t.paid)}
+                            <td style={{ border: B, padding: '1.4mm 2mm', background: '#ececec' }}>
+                                <div className="flex items-baseline justify-between" style={{ gap: '2mm' }}>
+                                    <span style={{ fontWeight: 700 }}>Total Remaining Balance</span>
+                                    <span style={{ fontWeight: 800, fontSize: '10pt', fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
                 {/* Footer: shops banner, distributors, terms, signatures */}
                 <div style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
@@ -358,15 +418,6 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 </div>
             </div>
         </div>
-    );
-}
-
-function Tot({ k, v, strong, shade }: { k: string; v: any; strong?: boolean; shade?: boolean }) {
-    return (
-        <tr style={{ borderBottom: '0.15mm solid #bbb', background: shade ? '#efefef' : undefined }}>
-            <td style={{ padding: '0.65mm 2mm', fontWeight: strong ? 600 : 400 }}>{k}</td>
-            <td style={{ padding: '0.65mm 2mm', textAlign: 'right', fontWeight: strong ? 600 : 400, fontVariantNumeric: 'tabular-nums' }}>{money(v)}</td>
-        </tr>
     );
 }
 
@@ -414,6 +465,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
     const t = inv.totals;
     const c = inv.customer;
     const region = inv.region || { code: 'GLT', name: 'Gilgit' };
+    const pf = inv.profile || DEFAULT_PROFILE;
     const small = widthMm < 60;
     const fs = small ? 7 : 8;
     const due = dueInfo(inv);
@@ -436,21 +488,25 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             {/* Header — as on the page invoice */}
             <div className="flex flex-col items-center text-center">
                 <img src="/brand/aqt-monogram-black.png" alt="Al-Qavi Traders" style={{ width: small ? '30mm' : '40mm', height: 'auto' }} />
-                <div className="ur-name" dir="rtl" style={{ fontSize: small ? '15pt' : '18pt', lineHeight: 1.25, marginTop: '0.8mm' }}>{NAME_UR}</div>
-                <div className="ur" dir="rtl" style={{ fontSize: `${fs}pt`, lineHeight: 1.9 }}>{TAGLINE_UR}</div>
-                <div style={{ fontSize: `${fs + 3}pt`, fontWeight: 800 }}>Sale Invoice</div>
+                <img src="/brand/aqt-name-ur-black.png" alt={NAME_UR} style={{ width: small ? '40mm' : '52mm', height: 'auto', marginTop: '1mm' }} />
+                <div style={{ fontSize: `${fs + 3}pt`, fontWeight: 800, marginTop: '0.6mm' }}>Sale Invoice</div>
                 <div style={{ marginTop: '1mm', lineHeight: 1.4 }}>
-                    <b>Proprietor:</b> {PROPRIETOR}<br />
-                    <b>{region.code}</b> · {region.name} Region<br />
-                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>{PROPRIETOR_PHONES.join('  ·  ')}</span>
+                    <b>Proprietor:</b> {pf.proprietor}<br />
+                    {region.name} Region <b>({region.code})</b><br />
+                    <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        Easypaisa: <b>{pf.easypaisa || '—'}</b> · Contact: <b>{pf.contact_no || '—'}</b>
+                        {pf.whatsapp ? <><br />WhatsApp: <b>{pf.whatsapp}</b></> : null}
+                    </span>
                 </div>
             </div>
             {rule}
-            {kv('Invoice No:', <b>{inv.invoice_no}</b>)}
-            {kv('Date:', `${dmy(inv.date)} (${day})`)}
-            {kv('Customer:', c.name)}
-            {kv('Account:', c.acc_id)}
-            {kv('Cell #:', c.phone)}
+            {kv('Inv. No #:', <b>{inv.invoice_no}</b>)}
+            {kv('Inv. Date:', `${dmy(inv.date)} (${day})`)}
+            {kv('Print Time:', new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true }))}
+            {kv('Acc. No #:', c.acc_id)}
+            {kv('Shop Name:', c.name)}
+            {kv('Customer:', c.contact)}
+            {kv('Cell No:', c.phone)}
             {kv('Address:', c.address)}
             {kv('Area:', c.area)}
             {kv('Saleman:', inv.staff ? `${inv.staff}${inv.staff_cell ? ` · ${inv.staff_cell}` : ''}` : '')}
@@ -474,17 +530,18 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                 </div>
             ))}
             {rule}
-            <div>Total Products = {qtyFmt(t.pieces)}{t.bonus ? ` (+${qtyFmt(t.bonus)} bonus)` : ''} · {inv.lines.length} item{inv.lines.length === 1 ? '' : 's'}</div>
-            {row('Amount', t.gross)}
-            {n(t.special) > 0 && row('Special Discount', -n(t.special))}
-            {n(t.shelf) > 0 && row('Shelf Rent', -n(t.shelf))}
-            {n(t.bill_disc) > 0 && row('Bill Discount', -n(t.bill_disc))}
-            {row('Net Amount', t.net, true)}
+            <div>Total Carton = {inv.lines.reduce((s2, l) => s2 + (isCarton(l) ? Math.floor(l.qty / l.carton) : 0), 0)} · Total Pcs = {qtyFmt(t.pieces)}{t.bonus ? ` (+${qtyFmt(t.bonus)} bonus)` : ''}</div>
+            {row('Previous Amount', t.prev_balance)}
+            {row('Total Amount', t.gross, true)}
+            {row('Total Special Discount', n(t.special) + n(t.bill_disc))}
+            {row('Shelf Rent', t.shelf)}
             {row('Advance Amount', t.paid)}
-            {row('Left Amount', n(t.net) - n(t.paid))}
-            {row('Previous Balance', t.prev_balance)}
-            <div style={{ borderTop: '0.4mm solid #000', marginTop: '0.8mm', paddingTop: '0.4mm' }}>{row('Net Balance', t.balance, true)}</div>
-            <div style={{ border: '0.4mm solid #000', padding: '0.9mm 1.4mm', fontWeight: 700, textAlign: 'center', marginTop: '1.4mm' }}>{due.owing ? '⚠ ' : ''}{due.text}</div>
+            <div style={{ borderTop: '0.4mm solid #000', marginTop: '0.8mm', paddingTop: '0.4mm' }}>
+                {row('Total Remaining Balance', n(t.prev_balance) + n(t.gross) - n(t.special) - n(t.shelf) - n(t.bill_disc) - n(t.paid), true)}
+            </div>
+            <div style={{ border: '0.4mm solid #000', padding: '0.9mm 1.4mm', fontWeight: 700, textAlign: 'center', marginTop: '1.4mm' }}>
+                Due Date: {dmy(due.dueDate)}<br />{due.owing ? '⚠ ' : ''}{due.text}
+            </div>
             {rule}
             {/* Footer — as on the page invoice */}
             {shop(SHOP_GILGIT_UR)}

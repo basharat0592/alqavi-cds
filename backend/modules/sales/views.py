@@ -413,6 +413,26 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         qs = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant')
         return Response([{'id': s.id, 'name': s.name, 'status': s.status} for s in qs])
 
+    @staticmethod
+    def _invoice_profile(tenant_id):
+        from .models import InvoiceProfile
+        prof, _ = InvoiceProfile.objects.get_or_create(tenant_id=tenant_id)
+        return prof
+
+    @action(detail=False, methods=['get', 'patch'], permission_classes=[permissions.IsAdminUser])
+    def invoice_profile(self, request):
+        """Proprietor, phones, Easypaisa, contact and WhatsApp printed on the invoice."""
+        tid = tenant_id_for(request.user) or request.user.pk
+        prof = self._invoice_profile(tid)
+        if request.method == 'PATCH':
+            for k, n in (('proprietor', 150), ('phones', 120), ('easypaisa', 40), ('contact_no', 40), ('whatsapp', 40)):
+                if k in request.data:
+                    setattr(prof, k, str(request.data.get(k) or '').strip()[:n])
+            if not prof.proprietor:
+                return Response({'error': 'Enter the proprietor name.'}, status=status.HTTP_400_BAD_REQUEST)
+            prof.save()
+        return Response(prof.as_dict())
+
     @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def trade_invoice(self, request, pk=None):
         """Everything the printed Trade 1.0 sale invoice shows (half-A4 landscape
@@ -464,8 +484,10 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             'id': str(o.id), 'invoice_no': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
             'time': o.created_at, 'staff': staff, 'staff_cell': o.staff.cell if o.staff_id else '',
             'region': {'code': 'SKD', 'name': 'Skardu'} if skardu else {'code': 'GLT', 'name': 'Gilgit'},
+            'profile': self._invoice_profile(o.tenant_id or tenant_id_for(request.user) or request.user.pk).as_dict(),
             'customer': {
                 'acc_id': acc_id,
+                'contact': (getattr(getattr(c, 'ledger_account', None), 'contact_person', '') if c else '') or '',
                 'name': (f"{c.first_name or ''} {c.last_name or ''}".strip() if c else '') or o.customer_name,
                 'address': ((c.address if c else '') or '').strip() or (o.shipping_address if o.shipping_address not in ('-', None) else ''),
                 'area': c.area.name if (c and c.area_id) else '',
