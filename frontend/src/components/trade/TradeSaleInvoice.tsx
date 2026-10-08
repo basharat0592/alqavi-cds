@@ -1324,6 +1324,9 @@ export default function TradeSaleInvoice() {
     const [stockLoading, setStockLoading] = useState(false);
     const [histRows, setHistRows] = useState<any[]>([]);
     const [fpSel, setFpSel] = useState('');
+    const [fpHistSel, setFpHistSel] = useState(-1);
+    const fpStockRef = useRef<HTMLDivElement>(null);
+    const fpHistRef = useRef<HTMLDivElement>(null);
     const [showProdDetail, setShowProdDetail] = useState(false);
 
     const loadCompanies = async () => {
@@ -1340,7 +1343,7 @@ export default function TradeSaleInvoice() {
     };
 
     const openFindProduct = (name = '') => {
-        setFpName(name); setFpBarcode(''); setFpSel('');
+        setFpName(name); setFpBarcode(''); setFpSel(''); setFpHistSel(-1);
         setShowFindProd(true);
         if (!companies.length) loadCompanies();
         if (customer) {
@@ -1383,6 +1386,21 @@ export default function TradeSaleInvoice() {
     openFpRef.current = openFindProduct;
 
     // Pick a stock row: load that product into the entry row on that exact batch.
+    /* Grid keys (legacy): click selects, Enter adds the selected row — same as a
+       double-click — and Up/Down move the selection. */
+    useEffect(() => { setFpHistSel(-1); }, [histShown]);
+
+    const gridKeys = (count: number, at: number, select: (i: number) => void, pick: (i: number) => void, box: React.RefObject<HTMLDivElement | null>) =>
+        (e: React.KeyboardEvent) => {
+            if (!count) return;
+            if (e.key === 'Enter') { e.preventDefault(); pick(at < 0 ? 0 : at); return; }
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+            e.preventDefault();
+            const i = Math.min(count - 1, Math.max(0, at + (e.key === 'ArrowDown' ? 1 : -1)));
+            select(i);
+            box.current?.querySelectorAll('tbody tr')[i]?.scrollIntoView({ block: 'nearest' });
+        };
+
     const pickStockRow = async (r: any) => {
         try {
             const { data } = await api.get('v1/products/items/sale_lookup/', { params: { code: r.pid } });
@@ -2284,7 +2302,10 @@ export default function TradeSaleInvoice() {
                                 </select>
                                 <span className={LABEL}>Product Name</span>
                                 <input autoFocus value={fpName} onChange={(e) => setFpName(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' && stockRows[0]) pickStockRow(stockRows[0]); }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') { const r = stockRows.find((x) => x.batch_id === fpSel) || stockRows[0]; if (r) pickStockRow(r); }
+                                        else if (e.key === 'ArrowDown' && stockRows.length) { e.preventDefault(); if (!fpSel) setFpSel(stockRows[0].batch_id); fpStockRef.current?.focus(); }
+                                    }}
                                     placeholder="Name or PID" className={`${EDIT} w-full`} />
                             </div>
                             <div className="flex items-center gap-3 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 py-3">
@@ -2306,7 +2327,9 @@ export default function TradeSaleInvoice() {
 
                         {/* Available stock — one row per in-stock batch */}
                         <div className="flex min-h-[120px] flex-[3] flex-col overflow-hidden border border-slate-500 bg-[#9ea1ad]">
-                            <div className="min-h-0 flex-1 overflow-auto">
+                            <div ref={fpStockRef} tabIndex={0} className="min-h-0 flex-1 overflow-auto outline-none focus:ring-2 focus:ring-inset focus:ring-[#2f5bd3]"
+                                onKeyDown={gridKeys(stockRows.length, stockRows.findIndex((x) => x.batch_id === fpSel),
+                                    (i) => setFpSel(stockRows[i].batch_id), (i) => pickStockRow(stockRows[i]), fpStockRef)}>
                                 <table className="w-full min-w-[900px] table-fixed border-collapse bg-white text-[13px]">
                                     <colgroup>{FP_STOCK_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-[#ffe1b8] text-left">
@@ -2316,7 +2339,7 @@ export default function TradeSaleInvoice() {
                                         {stockRows.map((r) => (
                                             <tr key={r.batch_id} onClick={() => setFpSel(r.batch_id)} onDoubleClick={() => pickStockRow(r)}
                                                 className={`cursor-pointer tabular-nums ${fpSel === r.batch_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
-                                                title="Double-click to select">
+                                                title="Click to select · Enter or double-click to add">
                                                 {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), fmt(num(r.tp)), fmt(num(r.retail)), r.company].map((v, k) => (
                                                     <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
@@ -2329,13 +2352,14 @@ export default function TradeSaleInvoice() {
                                 </table>
                             </div>
                             <div className="shrink-0 border-t border-slate-400 bg-[#ececfd] px-3 py-1 text-[12.5px] font-semibold text-[#1f2bd6]">
-                                Available Stock — {fpSearching ? `${stockRows.length} batch(es)` : 'search to list'}{stockLoading ? ' · loading…' : ''} · double-click a row to select it
+                                Available Stock — {fpSearching ? `${stockRows.length} batch(es)` : 'search to list'}{stockLoading ? ' · loading…' : ''} · click a row, then Enter (or double-click) to add it
                             </div>
                         </div>
 
                         {/* What this customer has bought from us */}
                         <div className="flex min-h-[100px] flex-[2] flex-col overflow-hidden border border-slate-500 bg-[#9ea1ad]">
-                            <div className="min-h-0 flex-1 overflow-auto">
+                            <div ref={fpHistRef} tabIndex={0} className="min-h-0 flex-1 overflow-auto outline-none focus:ring-2 focus:ring-inset focus:ring-[#2f5bd3]"
+                                onKeyDown={gridKeys(histShown.length, fpHistSel, setFpHistSel, (i) => pickHistoryRow(histShown[i]), fpHistRef)}>
                                 <table className="w-full min-w-[900px] table-fixed border-collapse bg-[#ffffcf] text-[13px]">
                                     <colgroup>{FP_HIST_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-[#ffe1b8] text-left">
@@ -2343,8 +2367,9 @@ export default function TradeSaleInvoice() {
                                     </thead>
                                     <tbody>
                                         {histShown.map((r, i) => (
-                                            <tr key={i} onDoubleClick={() => pickHistoryRow(r)} className="cursor-pointer tabular-nums hover:bg-[#fff3a6]"
-                                                title={`Invoice ${r.invoice_no} · ${String(r.date).slice(0, 10)} — double-click to sell again`}>
+                                            <tr key={i} onClick={() => setFpHistSel(i)} onDoubleClick={() => pickHistoryRow(r)}
+                                                className={`cursor-pointer tabular-nums ${fpHistSel === i ? 'bg-[#7dfa7d]' : 'hover:bg-[#fff3a6]'}`}
+                                                title={`Invoice ${r.invoice_no} · ${String(r.date).slice(0, 10)} — Enter or double-click to sell again`}>
                                                 {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), r.bonus ? fmt(num(r.bonus)) : '', fmt(num(r.tp)), num(r.tp_pct) ? fmt(num(r.tp_pct)) : '', fmt(num(r.retail))].map((v, k) => (
                                                     <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
