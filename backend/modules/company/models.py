@@ -32,6 +32,8 @@ class Area(models.Model):
 class Company(models.Model):
     """A company / brand / manufacturer (e.g. Aish, Amour Company) with a name,
     contact number(s) and a free-text category. Tenant-scoped per Admin."""
+    # Legacy Trade 1.0 "Company Code" (CompID): 1, 2, 3 … per tenant, assigned on save.
+    code = models.PositiveIntegerField(null=True, blank=True)
     name = models.CharField(max_length=150)
     numbers = models.CharField(max_length=200, blank=True, default='')   # phone number(s)
     category = models.CharField(max_length=100, blank=True, default='')
@@ -47,6 +49,13 @@ class Company(models.Model):
         db_table = 'companies'
         ordering = ['name']
         unique_together = [('tenant', 'name')]
+
+    def save(self, *args, **kwargs):
+        if self.code is None:
+            last = (Company.objects.filter(tenant_id=self.tenant_id)
+                    .aggregate(m=models.Max('code'))['m']) or 0
+            self.code = last + 1
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name

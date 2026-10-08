@@ -115,7 +115,11 @@ class Command(BaseCommand):
             name = clean(r.get('CompName'))
             if not name:
                 continue
-            obj, _ = Company.objects.get_or_create(tenant=tenant, name=name)
+            code = to_int(r.get('CompID'), 0) or None
+            obj, _ = Company.objects.get_or_create(tenant=tenant, name=name, defaults={'code': code})
+            if code and obj.code != code and not Company.objects.filter(tenant=tenant, code=code).exists():
+                obj.code = code
+                obj.save(update_fields=['code'])
             comp_map[clean(r.get('CompID'))] = obj
         self.stdout.write(f'Companies: {len(comp_map)}')
 

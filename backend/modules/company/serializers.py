@@ -6,8 +6,8 @@ from .models import Area, Company
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
-        fields = ['id', 'name', 'numbers', 'category', 'is_active', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'code', 'name', 'numbers', 'category', 'is_active', 'created_at']
+        read_only_fields = ['id', 'code', 'created_at']
 
 
 class AreaSerializer(serializers.ModelSerializer):

@@ -263,6 +263,200 @@ function Modal({ title, onClose, children, wide = false, large = false, xl = fal
     );
 }
 
+/* ───────────────────────── Find Company / New Company (legacy Trade 1.0) ─────────────────────────
+   Product Detail › Find Company: search by name, pick a row. Add Company opens
+   the New Company window (Company Code + Name); its View lists every company
+   for Update / Delete. */
+const byCode = (a: any, b: any) => (a.code ?? 1e9) - (b.code ?? 1e9) || String(a.name).localeCompare(String(b.name));
+const errMsg = (err: any, fallback: string) => {
+    const d = err?.response?.data;
+    return String(d?.error || d?.detail || (d && typeof d === 'object' && Object.values(d).flat()[0]) || fallback);
+};
+
+function FindCompanyWindow({ companies, current, askClose, reload, onPick, onClose }: {
+    companies: any[]; current: string;
+    askClose: (fn: () => void, msg?: string) => void; reload: () => Promise<void>;
+    onPick: (c: any) => void; onClose: () => void;
+}) {
+    const [q, setQ] = useState('');
+    const [sel, setSel] = useState(current);
+    const [adding, setAdding] = useState(false);
+    const rows = useMemo(() => {
+        const s = q.trim().toLowerCase();
+        return [...companies].sort(byCode).filter((c) => !s || String(c.name).toLowerCase().includes(s) || String(c.code ?? '') === s);
+    }, [companies, q]);
+    const enter = () => { const c = rows.find((r) => String(r.id) === sel) || rows[0]; if (c) onPick(c); };
+
+    return (
+        <Modal title="Find Company" onClose={() => askClose(onClose)} wide>
+            <div className="flex min-h-0 flex-1 flex-col gap-3 bg-[#c9c9f9] p-4">
+                <fieldset className="shrink-0 rounded-md border-2 border-white/80 px-4 pb-4 pt-0">
+                    <legend className="px-1 text-[22px] font-semibold tracking-tight text-[#1a1aff]">Search Company Name</legend>
+                    <div className="flex items-center justify-end gap-3">
+                        <span className={`${LABEL} text-[14px]`}>Company Name</span>
+                        <input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); enter(); } }}
+                            className={`${EDIT} h-9 w-[340px] text-[15px]`} />
+                        <button type="button" onClick={() => setAdding(true)} className={`${ACTION_BTN} min-w-[190px]`}>
+                            <span><span className="underline">A</span>dd Company</span>
+                        </button>
+                    </div>
+                </fieldset>
+                <div className="h-[52vh] min-h-[220px] overflow-auto border border-slate-500 bg-[#8a8a8a]">
+                    <table className="w-[70%] min-w-[460px] table-fixed border-collapse bg-white text-[14px]">
+                        <colgroup><col style={{ width: '22%' }} /><col style={{ width: '56%' }} /><col style={{ width: '22%' }} /></colgroup>
+                        <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                            <tr>{['Categ ID', 'Company', ''].map((h, i) => <th key={i} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 text-[15px] font-semibold">{h}</th>)}</tr>
+                        </thead>
+                        <tbody>
+                            {rows.map((c) => (
+                                <tr key={c.id} onClick={() => setSel(String(c.id))} onDoubleClick={() => onPick(c)} title="Double-click to select"
+                                    className={`cursor-pointer tabular-nums ${sel === String(c.id) ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
+                                    <td className="border-b border-r border-slate-300 px-1.5 py-1">{c.code ?? ''}</td>
+                                    <td className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 font-semibold" title={c.name}>{c.name}</td>
+                                    <td className="border-b border-r border-slate-300 px-1.5 py-1" />
+                                </tr>
+                            ))}
+                            {!rows.length && <tr><td colSpan={3} className="px-3 py-4 text-center text-slate-500">{companies.length ? 'No company matches.' : 'Loading…'}</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-3 border-t border-[#9da1d8] bg-[#c9c9f9] px-4 py-3">
+                <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {rows.length}</span>} className="w-[200px]" />
+                <span className="flex-1" />
+                <button type="button" onClick={enter} disabled={!rows.length} className={ACTION_BTN}>Select</button>
+                <button type="button" onClick={() => askClose(onClose)} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+            </div>
+
+            {adding && (
+                <NewCompanyWindow companies={companies} askClose={askClose} reload={reload}
+                    onClose={() => setAdding(false)}
+                    onSaved={(c) => { setAdding(false); onPick(c); }} />
+            )}
+        </Modal>
+    );
+}
+
+function NewCompanyWindow({ companies, askClose, reload, initialName = '', onClose, onSaved }: {
+    companies: any[]; askClose: (fn: () => void, msg?: string) => void; reload: () => Promise<void>;
+    initialName?: string; onClose: () => void; onSaved?: (c: any) => void;
+}) {
+    const [name, setName] = useState(initialName);
+    const [nextCode, setNextCode] = useState('');
+    const [viewing, setViewing] = useState(false);
+    const [sel, setSel] = useState<any | null>(null);
+    const [busy, setBusy] = useState(false);
+    const nameRef = useRef<HTMLInputElement>(null);
+
+    const loadCode = () => api.get('v1/company/companies/next_code/').then(({ data }) => setNextCode(String(data.code))).catch(() => setNextCode(''));
+    useEffect(() => { loadCode(); nameRef.current?.focus(); }, []);
+
+    const rows = useMemo(() => [...companies].sort(byCode), [companies]);
+    const pick = (c: any) => { setSel(c); setName(c.name); };
+    const addNew = () => { setSel(null); setName(''); setViewing(false); loadCode(); nameRef.current?.focus(); };
+
+    const save = async () => {
+        if (busy || !name.trim()) return;
+        setBusy(true);
+        try {
+            const { data } = await api.post('v1/company/companies/', { name: name.trim() });
+            await reload();
+            toast.success(`Company ${data.code} — ${data.name} added.`);
+            if (onSaved) { onSaved(data); return; }
+            setName(''); loadCode();
+        } catch (err) { toast.error(errMsg(err, 'Could not add the company.')); }
+        finally { setBusy(false); }
+    };
+    const update = async () => {
+        if (busy || !sel || !name.trim()) return;
+        setBusy(true);
+        try {
+            const { data } = await api.patch(`v1/company/companies/${sel.id}/`, { name: name.trim() });
+            await reload();
+            setSel(data);
+            toast.success(`Company ${data.code} — ${data.name} updated.`);
+        } catch (err) { toast.error(errMsg(err, 'Could not update the company.')); }
+        finally { setBusy(false); }
+    };
+    const remove = () => {
+        if (!sel) return;
+        askClose(async () => {
+            setBusy(true);
+            try {
+                await api.delete(`v1/company/companies/${sel.id}/`);
+                await reload();
+                toast.success(`Company ${sel.code} — ${sel.name} deleted.`);
+                setSel(null); setName('');
+            } catch (err) { toast.error(errMsg(err, 'Could not delete the company.')); }
+            finally { setBusy(false); }
+        }, `Do you want to Delete ${sel.name} ?`);
+    };
+    const exportRows = () => downloadXlsx('companies', 'Companies', ['Company Code', 'Company Name'], rows.map((c) => [c.code ?? '', c.name]));
+
+    return (
+        <Modal title="New Company" onClose={() => !busy && askClose(onClose)} wide>
+            <div className="flex min-h-0 flex-1 flex-col gap-3 bg-[#c9c9f9] p-4">
+                <fieldset className="shrink-0 rounded-md border-2 border-white/80 px-4 pb-4 pt-0">
+                    <legend className="px-1 text-[22px] font-black tracking-tight text-[#1a1aff]">New Company</legend>
+                    <div className="grid grid-cols-[150px_1fr] items-center gap-x-3 gap-y-2.5">
+                        <span className={`${LABEL} text-[15px] font-semibold`}>Company Code</span>
+                        <div className="flex h-9 w-[180px] items-center rounded-sm border border-slate-500 bg-[#dedede] px-2.5 text-[15px] font-bold tabular-nums text-[#1f2bd6]">{sel ? sel.code : nextCode}</div>
+                        <span className={`${LABEL} text-[15px] font-semibold`}>Company Name</span>
+                        <input ref={nameRef} value={name} onChange={(e) => setName(e.target.value)} maxLength={150}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (sel) update(); else save(); } }}
+                            className={`${EDIT} h-9 w-full max-w-[500px] text-[15px]`} />
+                    </div>
+                </fieldset>
+                {viewing && (
+                    <div className="h-[48vh] min-h-[200px] overflow-auto border border-slate-500 bg-[#8a8a8a]">
+                        <table className="w-[86%] min-w-[460px] table-fixed border-collapse bg-white text-[14px]">
+                            <colgroup><col style={{ width: '36%' }} /><col style={{ width: '64%' }} /></colgroup>
+                            <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                <tr>{['Company Code', 'Company Name'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
+                            </thead>
+                            <tbody>
+                                {rows.map((c) => (
+                                    <tr key={c.id} onClick={() => pick(c)}
+                                        className={`cursor-pointer tabular-nums ${sel?.id === c.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
+                                        <td className="border-b border-r border-slate-300 px-1.5 py-1">{c.code ?? ''}</td>
+                                        <td className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1" title={c.name}>{c.name}</td>
+                                    </tr>
+                                ))}
+                                {!rows.length && <tr><td colSpan={2} className="px-3 py-4 text-center text-slate-500">No companies.</td></tr>}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-[#9da1d8] bg-[#c9c9f9] px-4 py-3">
+                {viewing && (
+                    <>
+                        <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {rows.length}</span>} className="w-[190px]" />
+                        <button type="button" onClick={exportRows} className={ACTION_BTN}>Export</button>
+                    </>
+                )}
+                <span className="flex-1" />
+                {viewing ? (
+                    <>
+                        <button type="button" onClick={addNew} disabled={busy} className={ACTION_BTN}><span><span className="underline">A</span>dd New</span></button>
+                        <button type="button" onClick={update} disabled={busy || !sel || !name.trim() || name.trim() === sel?.name} className={ACTION_BTN}><span className="underline">U</span>pdate</button>
+                        <button type="button" onClick={remove} disabled={busy || !sel} className={ACTION_BTN}><span className="underline">D</span>elete</button>
+                    </>
+                ) : (
+                    <>
+                        <button type="button" onClick={save} disabled={busy || !name.trim()} className={ACTION_BTN}>
+                            {busy ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                        </button>
+                        <button type="button" onClick={() => { setViewing(true); setName(''); }} className={ACTION_BTN}><span className="underline">V</span>iew</button>
+                    </>
+                )}
+                <button type="button" onClick={() => askClose(onClose)} disabled={busy} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+            </div>
+        </Modal>
+    );
+}
+
 /* ───────────────────────── Product Detail (legacy Trade 1.0) ─────────────────────────
    Opened from Find Product › Add New Product. Same fields and layout as the
    legacy window (PID, Product Name + Find Company, Bar Code, Packing, Re Order
@@ -278,8 +472,8 @@ const PD_VIEW_COLS = [
     { h: 'Bar Code', w: '12%' }, { h: 'Packing', w: '6%' }, { h: 'Re Order', w: '6%' }, { h: 'Expiry', w: '6%' }, { h: 'Status', w: '8%' },
 ];
 
-function ProductDetailWindow({ companies, initialName, askClose, onClose }: {
-    companies: any[]; initialName: string;
+function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose, onClose }: {
+    companies: any[]; reloadCompanies: () => Promise<void>; initialName: string;
     askClose: (fn: () => void, msg?: string) => void; onClose: () => void;
 }) {
     const [f, setF] = useState<ProdForm>({ ...EMPTY_PROD, name: initialName });
@@ -298,7 +492,6 @@ function ProductDetailWindow({ companies, initialName, askClose, onClose }: {
     const [search, setSearch] = useState('');
     // Find Company
     const [findCo, setFindCo] = useState(false);
-    const [coQuery, setCoQuery] = useState('');
 
     const loadPid = () => api.get('v1/products/items/next_pid/').then(({ data }) => setPid(data.pid)).catch(() => setPid('—'));
     useEffect(() => {
@@ -404,11 +597,6 @@ function ProductDetailWindow({ companies, initialName, askClose, onClose }: {
         rows.map((r) => [r.pid, r.name, r.company, r.category, r.barcode, r.packing, r.reorder_qty, r.expiry_apply ? 'Yes' : 'No',
             String(r.status).toUpperCase() === 'ACTIVE' ? 'Active' : 'Inactive']));
 
-    const coRows = useMemo(() => {
-        const q = coQuery.trim().toLowerCase();
-        return companies.filter((c) => !q || String(c.name).toLowerCase().includes(q));
-    }, [companies, coQuery]);
-    const pickCompany = (c: any) => { setF((p) => ({ ...p, company: String(c.id) })); setFindCo(false); };
 
     const PD_SELECT = `${COA_SELECT} h-9 text-[15px]`;
     const PD_EDIT = `${EDIT} h-9 w-full text-[15px]`;
@@ -427,7 +615,7 @@ function ProductDetailWindow({ companies, initialName, askClose, onClose }: {
 
                             <span className={LABEL}>Product Name</span>
                             <input ref={nameRef} value={f.name} onChange={set('name')} maxLength={255} className={PD_EDIT} />
-                            <button type="button" onClick={() => { setCoQuery(''); setFindCo(true); }}
+                            <button type="button" onClick={() => setFindCo(true)}
                                 className="h-9 whitespace-nowrap rounded-sm border border-slate-500 bg-gradient-to-b from-white to-[#e2e2e8] px-3 text-[13px] font-bold text-slate-800 shadow-sm hover:to-[#d4d4dc] active:translate-y-px">
                                 Find Company
                             </button>
@@ -525,22 +713,9 @@ function ProductDetailWindow({ companies, initialName, askClose, onClose }: {
             </div>
 
             {findCo && (
-                <Modal title="Find Company" onClose={() => setFindCo(false)} small>
-                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden bg-[#e4e4fb] p-3">
-                        <input autoFocus value={coQuery} onChange={(e) => setCoQuery(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter' && coRows[0]) pickCompany(coRows[0]); }}
-                            placeholder="Type the company name" className={`${EDIT} w-full`} />
-                        <div className="h-[320px] overflow-auto border border-slate-500 bg-white">
-                            {coRows.map((c) => (
-                                <div key={c.id} onClick={() => pickCompany(c)}
-                                    className={`cursor-pointer border-b border-slate-200 px-2 py-1 text-[13.5px] font-semibold hover:bg-indigo-50 ${String(c.id) === f.company ? 'bg-[#7dfa7d]' : ''}`}>
-                                    {c.name}
-                                </div>
-                            ))}
-                            {!coRows.length && <div className="px-3 py-4 text-center text-[13px] text-slate-500">{companies.length ? 'No company matches.' : 'Loading…'}</div>}
-                        </div>
-                    </div>
-                </Modal>
+                <FindCompanyWindow companies={companies} current={f.company} askClose={askClose} reload={reloadCompanies}
+                    onPick={(c) => { setF((p) => ({ ...p, company: String(c.id) })); setFindCo(false); }}
+                    onClose={() => setFindCo(false)} />
             )}
         </Modal>
     );
@@ -1134,23 +1309,23 @@ export default function TradeSaleInvoice() {
     const [fpSel, setFpSel] = useState('');
     const [showProdDetail, setShowProdDetail] = useState(false);
 
+    const loadCompanies = async () => {
+        const all: any[] = [];
+        try {
+            for (let page = 1; page <= 20; page++) {
+                const { data } = await api.get('v1/company/companies/', { params: { page, page_size: 100 } });
+                if (Array.isArray(data)) { all.push(...data); break; }
+                all.push(...(data.results || []));
+                if (!data.next) break;
+            }
+        } catch { /* company filter is optional */ }
+        setCompanies(all.sort((a, b) => String(a.name).localeCompare(String(b.name))));
+    };
+
     const openFindProduct = (name = '') => {
         setFpName(name); setFpBarcode(''); setFpSel('');
         setShowFindProd(true);
-        if (!companies.length) {
-            (async () => {
-                const all: any[] = [];
-                try {
-                    for (let page = 1; page <= 20; page++) {
-                        const { data } = await api.get('v1/company/companies/', { params: { page, page_size: 100 } });
-                        if (Array.isArray(data)) { all.push(...data); break; }
-                        all.push(...(data.results || []));
-                        if (!data.next) break;
-                    }
-                } catch { /* company filter is optional */ }
-                setCompanies(all.sort((a, b) => String(a.name).localeCompare(String(b.name))));
-            })();
-        }
+        if (!companies.length) loadCompanies();
         if (customer) {
             api.get('v1/sales/orders/customer_items/', { params: { customer: customer.id } })
                 .then(({ data }) => setHistRows(data)).catch(() => setHistRows([]));
@@ -2151,7 +2326,7 @@ export default function TradeSaleInvoice() {
 
             {/* ─── Product Detail (Find Product › Add New Product) ─── */}
             {showProdDetail && (
-                <ProductDetailWindow companies={companies} initialName={/^\d+$/.test(fpName.trim()) ? '' : fpName.trim()}
+                <ProductDetailWindow companies={companies} reloadCompanies={loadCompanies} initialName={/^\d+$/.test(fpName.trim()) ? '' : fpName.trim()}
                     askClose={askClose} onClose={() => setShowProdDetail(false)} />
             )}
 

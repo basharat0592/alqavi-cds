@@ -1,4 +1,6 @@
 from rest_framework import viewsets, permissions, status
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from modules.supplier.models import Supplier
 from modules.supplier.serializers import SupplierSerializer
@@ -26,9 +28,53 @@ class CompanyViewSet(viewsets.ModelViewSet):
             return None
         return super().paginate_queryset(queryset)
 
+    def _tenant(self):
+        # Super admins aren't tenant-scoped; the legacy import made the first
+        # superuser the owner, so their own registry is the one they work in.
+        user = self.request.user
+        tid = tenant_id_for(user)
+        if tid is None and Company.objects.filter(tenant_id=user.pk).exists():
+            tid = user.pk
+        return tid
+
+    def _check_name(self, serializer, tid, exclude=None):
+        name = (serializer.validated_data.get('name') or '').strip()
+        if not name:
+            raise ValidationError({'error': 'Enter the Company Name.'})
+        dup = Company.objects.filter(tenant_id=tid, name__iexact=name)
+        if exclude:
+            dup = dup.exclude(pk=exclude.pk)
+        if dup.exists():
+            raise ValidationError({'error': f'Company "{name}" already exists (code {dup.first().code}).'})
+        return name
+
     def perform_create(self, serializer):
-        tid = tenant_id_for(self.request.user)
-        serializer.save(**({'tenant_id': tid} if tid else {}))
+        tid = self._tenant()
+        name = self._check_name(serializer, tid)
+        serializer.save(name=name, **({'tenant_id': tid} if tid else {}))
+
+    def perform_update(self, serializer):
+        inst = serializer.instance
+        if 'name' in serializer.validated_data:
+            serializer.save(name=self._check_name(serializer, inst.tenant_id, exclude=inst))
+        else:
+            serializer.save()
+
+    @action(detail=False, methods=['get'])
+    def next_code(self, request):
+        """Company Code the next new company will get (legacy New Company window)."""
+        from django.db.models import Max
+        last = Company.objects.filter(tenant_id=self._tenant()).aggregate(m=Max('code'))['m']
+        return Response({'code': (last or 0) + 1})
+
+    def destroy(self, request, *args, **kwargs):
+        # Products keep their company link; never orphan them.
+        company = self.get_object()
+        used = company.products.count()
+        if used:
+            return Response({'error': f'{company.name} has {used} product(s) and cannot be deleted.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return super().destroy(request, *args, **kwargs)
 
 
 def _is_portal_login(user):
