@@ -29,10 +29,16 @@ export const savedInvoiceSize = (): InvoiceSize => {
     try { const v = localStorage.getItem(SIZE_KEY); return v === '80' || v === '58' ? v : 'a5'; } catch { return 'a5'; }
 };
 
-/* Business details (from the shop's own letterhead). */
+/* Business details (from the shop's letterhead and visiting card). */
+const C = { blue: '#2B2F8F', blueDeep: '#1F2370', green: '#14935C', yellow: '#FFD21F', sky: '#2F8FD8' };
+const CEO_UR = 'سید سجاد حسین';
+const PHONES = ['0335-1240190', '0355-5555190'];
+const SLOGAN_A_UR = 'مشہور اور با اعتماد';
+const SLOGAN_B_UR = 'ملکی و غیر ملکی کاسمیٹکس کا مرکز';
+const DISTRIBUTOR_UR = 'ڈسٹری بیوٹر آف';
+const DISTRIBUTES_UR = 'بائیو آملہ کمپنی، مدر کیئر کمپنی، فیس فریش کمپنی، سعید غنی کمپنی، آئش کمپنی، کلر آن کمپنی، سکین وائٹ کمپنی، ڈرما شائن کمپنی، سپر گریس کمپنی، برجین کمپنی، ایزی کلین کمپنی اور یونیورسل کمپنی کی پروڈکٹس کیلئے ہماری خدمات حاصل کریں۔ شکریہ';
 const NAME_UR = 'القوی ٹریڈرز';
 const TAGLINE_UR = 'کاسمیٹکس ڈیلر گلگت بلتستان';
-const SLOGAN_UR = 'مشہور اور با اعتماد ملکی و غیر ملکی کاسمیٹکس کا مرکز';
 const SHOP_GILGIT_UR = 'قاسمی مارکیٹ CMH روڈ خومر گلگت';
 const SHOP_SKARDU_UR = 'ابراہیم مارکیٹ کلفٹن پل سکردو';
 
@@ -183,27 +189,7 @@ function A5Sheet({ inv }: { inv: Invoice }) {
     return (
         <div className="inv sheet mx-auto bg-white shadow-xl" style={{ width: '198mm', minHeight: '136mm', padding: '0' }}>
             <div style={{ padding: '0 0 1mm' }}>
-                {/* Letterhead */}
-                <div className="flex items-center" style={{ gap: '4mm', height: '24mm' }}>
-                    <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" style={{ height: '21mm', width: 'auto' }} />
-                    <div className="flex flex-1 flex-col items-center justify-center" dir="rtl">
-                        <div className="ur-name" style={{ fontSize: '26pt', lineHeight: 1.15, color: '#2b2b2b' }}>{NAME_UR}</div>
-                        <div className="ur" style={{ fontSize: '10pt', lineHeight: 1.9, color: '#333' }}>{TAGLINE_UR}</div>
-                    </div>
-                    <div className="flex flex-col items-end" style={{ width: '48mm' }}>
-                        <div style={{ fontSize: '12pt', fontWeight: 800, letterSpacing: '0.12em', color: '#3d3f95' }}>SALE INVOICE</div>
-                        <table style={{ width: 'auto', fontSize: '8.5pt', marginTop: '1mm' }}>
-                            <tbody>
-                                <tr><td style={{ color: '#666', paddingRight: '2mm' }}>Invoice No</td><td style={{ fontWeight: 800, fontFamily: 'ui-monospace, monospace', fontSize: '10pt' }}>{inv.invoice_no}</td></tr>
-                                <tr><td style={{ color: '#666', paddingRight: '2mm' }}>Date</td><td style={{ fontWeight: 600 }}>{dmy(inv.date)}</td></tr>
-                            </tbody>
-                        </table>
-                        <div style={{ marginTop: '1mm' }}><Barcode value={inv.invoice_no} heightMm={7} moduleMm={0.25} /></div>
-                    </div>
-                </div>
-
-                {/* Shops banner */}
-                <Banner />
+                <CardHeader inv={inv} />
 
                 {/* Account */}
                 <div className="grid" style={{ gridTemplateColumns: '1.25fr 1.6fr 1fr', gap: '0 4mm', fontSize: '8.5pt', margin: '2mm 0 1.5mm', lineHeight: 1.45 }}>
@@ -215,7 +201,7 @@ function A5Sheet({ inv }: { inv: Invoice }) {
                 {/* Lines */}
                 <table style={{ fontSize: '8pt' }}>
                     <thead>
-                        <tr style={{ background: '#3d3f95', color: '#fff' }}>
+                        <tr style={{ background: C.blue, color: '#fff' }}>
                             {['#', 'PID', 'Product Name', 'Expiry', 'Unit', 'Qty', 'Bonus', 'T.P', 'Amount',
                               ...(anySpecial ? ['S.Disc'] : []), ...(anyShelf ? ['Shelf'] : []), 'Net Amount'].map((h, i) => (
                                 <th key={h} style={{ padding: '1.2mm 1.3mm', fontWeight: 700, textAlign: i <= 4 ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
@@ -242,38 +228,40 @@ function A5Sheet({ inv }: { inv: Invoice }) {
                     </tbody>
                 </table>
 
-                {/* Totals + signatures */}
-                <div className="flex" style={{ gap: '6mm', marginTop: '2.5mm', breakInside: 'avoid' }}>
+                {/* Totals (two short columns) + signatures — kept short so the sheet stays on one page */}
+                <div className="flex" style={{ gap: '4mm', marginTop: '2.5mm', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                     <div className="flex flex-1 flex-col justify-between" style={{ fontSize: '8.5pt' }}>
                         <div>
                             <b>Total Products = {qtyFmt(t.pieces)}</b>{t.bonus ? <span style={{ color: '#555' }}> (+{qtyFmt(t.bonus)} bonus)</span> : null}
                             <span style={{ color: '#555' }}> · {inv.lines.length} item{inv.lines.length === 1 ? '' : 's'}</span>
                         </div>
-                        <div className="flex" style={{ gap: '10mm', marginTop: '9mm' }}>
-                            <div style={{ flex: 1, borderTop: '0.25mm solid #333', paddingTop: '1mm', textAlign: 'center', color: '#444' }}>Customer Signature</div>
-                            <div style={{ flex: 1, borderTop: '0.25mm solid #333', paddingTop: '1mm', textAlign: 'center', color: '#444' }}>For Al-Qavi Traders</div>
-                        </div>
-                        <div className="ur" dir="rtl" style={{ fontSize: '7.5pt', color: '#555', lineHeight: 2, marginTop: '1mm', textAlign: 'center' }}>
-                            خریداری کا شکریہ
+                        <div className="flex" style={{ gap: '6mm', marginTop: '6mm' }}>
+                            <div style={{ flex: 1, borderTop: '0.25mm solid #333', paddingTop: '0.8mm', textAlign: 'center', color: '#444' }}>Customer Signature</div>
+                            <div style={{ flex: 1, borderTop: '0.25mm solid #333', paddingTop: '0.8mm', textAlign: 'center', color: '#444' }}>For Al-Qavi Traders</div>
                         </div>
                     </div>
-                    <table style={{ width: '64mm', fontSize: '8.5pt' }}>
+                    <table style={{ width: '56mm', fontSize: '8pt', alignSelf: 'flex-start' }}>
                         <tbody>
                             <TotRow k="Amount Billed" v={t.gross} />
                             {n(t.special) > 0 && <TotRow k="Special Discount" v={-n(t.special)} />}
                             {n(t.shelf) > 0 && <TotRow k="Shelf Rate" v={-n(t.shelf)} />}
                             {n(t.bill_disc) > 0 && <TotRow k="Bill Discount" v={-n(t.bill_disc)} />}
                             <TotRow k="Net Amount" v={t.net} bold />
+                        </tbody>
+                    </table>
+                    <table style={{ width: '56mm', fontSize: '8pt', alignSelf: 'flex-start' }}>
+                        <tbody>
                             <TotRow k="Previous Balance" v={t.prev_balance} />
                             <TotRow k="Total" v={t.total} />
                             <TotRow k="Paid Cash" v={-n(t.paid)} />
-                            <tr style={{ background: '#3d3f95', color: '#fff' }}>
-                                <td style={{ padding: '1.2mm 2mm', fontWeight: 800 }}>Net Balance</td>
-                                <td style={{ padding: '1.2mm 2mm', fontWeight: 800, textAlign: 'right', fontSize: '10.5pt' }}>{money(t.balance)}</td>
+                            <tr style={{ background: C.green, color: '#fff' }}>
+                                <td style={{ padding: '1mm 2mm', fontWeight: 800 }}>Net Balance</td>
+                                <td style={{ padding: '1mm 2mm', fontWeight: 800, textAlign: 'right', fontSize: '10pt' }}>{money(t.balance)}</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <DistributorBand />
             </div>
         </div>
     );
@@ -284,33 +272,71 @@ const cell = (right = false): React.CSSProperties => ({ padding: '1mm 1.3mm', te
 function TotRow({ k, v, bold }: { k: string; v: any; bold?: boolean }) {
     return (
         <tr style={{ borderBottom: '0.2mm solid #e1e1e8' }}>
-            <td style={{ padding: '0.8mm 2mm', color: bold ? '#111' : '#555', fontWeight: bold ? 800 : 500 }}>{k}</td>
-            <td style={{ padding: '0.8mm 2mm', textAlign: 'right', fontWeight: bold ? 800 : 600, fontVariantNumeric: 'tabular-nums' }}>{money(v)}</td>
+            <td style={{ padding: '0.7mm 2mm', color: bold ? '#111' : '#555', fontWeight: bold ? 800 : 500 }}>{k}</td>
+            <td style={{ padding: '0.7mm 2mm', textAlign: 'right', fontWeight: bold ? 800 : 600, fontVariantNumeric: 'tabular-nums' }}>{money(v)}</td>
         </tr>
     );
 }
 
-/* The shops strip from the letterhead: Gilgit shop | slogan | Skardu shop (right to left). */
-function Banner() {
-    const box = (text: string, point: 'left' | 'right') => (
-        <div className="ur flex items-center justify-center" dir="rtl"
-            style={{
-                background: '#2f2f33', color: '#fff', fontSize: '8pt', lineHeight: 1, height: '7.5mm', padding: '0 5mm', whiteSpace: 'nowrap',
-                clipPath: point === 'left' ? 'polygon(4mm 0, 100% 0, 100% 100%, 4mm 100%, 0 50%)' : 'polygon(0 0, calc(100% - 4mm) 0, 100% 50%, calc(100% - 4mm) 100%, 0 100%)',
-            }}>
-            <span style={{ transform: 'translateY(0.6mm)' }}>{text}</span>
+/* Header in the visiting card's design: royal-blue band, a white panel with a
+   curved edge holding the monogram, CEO and phones; the Urdu name in white,
+   the tagline in yellow, the slogan in two white pills joined by a yellow bar;
+   the invoice box (number, date, barcode) on the left of the band. */
+function CardHeader({ inv }: { inv: Invoice }) {
+    const pill = (text: string, cut: 'left' | 'right') => (
+        <div className="ur-name" style={{
+            background: '#fff', color: C.blueDeep, fontSize: '9.5pt', lineHeight: 1, padding: '1.3mm 4mm 1.9mm', whiteSpace: 'nowrap',
+            clipPath: cut === 'left' ? 'polygon(2.5mm 0, 100% 0, 100% 100%, 2.5mm 100%, 0 50%)' : 'polygon(0 0, calc(100% - 2.5mm) 0, 100% 50%, calc(100% - 2.5mm) 100%, 0 100%)',
+        }}>{text}</div>
+    );
+    return (
+        <div className="flex overflow-hidden" style={{ height: '33mm', borderRadius: '3mm', background: `linear-gradient(100deg, ${C.blueDeep}, ${C.blue} 55%)` }}>
+            {/* White logo panel with the card's curved edge */}
+            <div className="flex shrink-0 flex-col justify-center" style={{ width: '58mm', background: '#fff', borderRadius: '0 18mm 18mm 0', padding: '0 7mm 0 4mm', boxShadow: `1.2mm 0 0 0 ${C.yellow}` }}>
+                <img src="/brand/aqt-monogram-card.png" alt="Al-Qavi Traders" style={{ height: '14mm', width: 'auto', alignSelf: 'flex-start' }} />
+                <div className="flex items-center" style={{ gap: '1.5mm', marginTop: '1mm', marginBottom: '1.6mm' }}>
+                    <span style={{ background: C.sky, color: '#fff', fontSize: '6.5pt', fontWeight: 800, padding: '0.4mm 2.4mm 0.4mm 1.6mm', clipPath: 'polygon(0 0, calc(100% - 1.4mm) 0, 100% 50%, calc(100% - 1.4mm) 100%, 0 100%)' }}>CEO</span>
+                    <span className="ur" dir="rtl" style={{ fontSize: '8pt', lineHeight: 1.5, color: '#333' }}>{CEO_UR}</span>
+                </div>
+                <div style={{ fontSize: '8.5pt', fontWeight: 700, color: '#444', lineHeight: 1.3, fontVariantNumeric: 'tabular-nums' }}>
+                    {PHONES.map((ph) => <div key={ph}>{ph}</div>)}
+                </div>
+            </div>
+
+            {/* Invoice box */}
+            <div className="flex shrink-0 flex-col items-center justify-center" style={{ width: '44mm', margin: '2.5mm 0 2.5mm 4mm', background: '#fff', borderRadius: '2mm', padding: '1.5mm 2mm' }}>
+                <div style={{ fontSize: '9.5pt', fontWeight: 800, letterSpacing: '0.14em', color: C.blue }}>SALE INVOICE</div>
+                <div style={{ fontSize: '10.5pt', fontWeight: 800, fontFamily: 'ui-monospace, monospace', marginTop: '0.6mm' }}>{inv.invoice_no}</div>
+                <div style={{ fontSize: '8pt', color: '#555' }}>Date: <b style={{ color: '#111' }}>{dmy(inv.date)}</b></div>
+                <div style={{ marginTop: '1mm' }}><Barcode value={inv.invoice_no} heightMm={7} moduleMm={0.25} /></div>
+            </div>
+
+            {/* Name, tagline, slogan */}
+            <div className="flex min-w-0 flex-1 flex-col items-center justify-center" dir="rtl" style={{ padding: '0 3mm' }}>
+                <div className="ur-name" style={{ fontSize: '27pt', lineHeight: 1.05, color: '#fff' }}>{NAME_UR}</div>
+                <div className="ur-name" style={{ fontSize: '12.5pt', lineHeight: 1.35, color: C.yellow }}>{TAGLINE_UR}</div>
+                <div className="flex items-center" style={{ gap: '1.6mm', marginTop: '1.4mm' }}>
+                    {pill(SLOGAN_A_UR, 'left')}
+                    <div style={{ width: '6mm', height: '5mm', background: `repeating-linear-gradient(180deg, ${C.yellow} 0 0.7mm, ${C.blueDeep} 0.7mm 1.1mm)` }} />
+                    {pill(SLOGAN_B_UR, 'right')}
+                </div>
+                <div className="ur" style={{ fontSize: '7pt', lineHeight: 1.9, color: '#dfe2ff', marginTop: '0.6mm', whiteSpace: 'nowrap' }}>
+                    {SHOP_GILGIT_UR}<span style={{ color: C.yellow, margin: '0 2mm' }}>◆</span>{SHOP_SKARDU_UR}
+                </div>
+            </div>
         </div>
     );
-    const bar = <div style={{ width: '9mm', height: '4.5mm', background: 'linear-gradient(90deg, #2a2e8f, #8c8fd6)' }} />;
+}
+
+/* The card's green band: "Distributor of" tag and the companies we supply. */
+function DistributorBand() {
     return (
-        <div className="flex items-center justify-between" dir="rtl" style={{ gap: '2mm', margin: '1.5mm 0 0' }}>
-            {box(SHOP_GILGIT_UR, 'left')}
-            <div className="flex items-center" style={{ gap: '2mm' }}>
-                {bar}
-                <span className="ur" style={{ fontSize: '9pt', lineHeight: 1, whiteSpace: 'nowrap', transform: 'translateY(0.6mm)' }}>{SLOGAN_UR}</span>
-                <div style={{ width: '9mm', height: '4.5mm', background: 'linear-gradient(270deg, #2a2e8f, #8c8fd6)' }} />
+        <div className="flex items-stretch overflow-hidden" dir="rtl" style={{ marginTop: '2.5mm', background: C.green, borderRadius: '2mm', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+            <div className="ur flex shrink-0 items-center" style={{ background: C.sky, color: '#fff', fontSize: '8pt', lineHeight: 1, padding: '0 3mm 0 5mm' }}>
+                <span style={{ transform: 'translateY(0.5mm)' }}>{DISTRIBUTOR_UR}</span>
             </div>
-            {box(SHOP_SKARDU_UR, 'right')}
+            <div style={{ width: 0, height: 0, borderTop: '4.5mm solid transparent', borderBottom: '4.5mm solid transparent', borderRight: `3mm solid ${C.sky}`, alignSelf: 'center' }} />
+            <div className="ur" style={{ color: '#fff', fontSize: '7pt', lineHeight: 2, padding: '0.6mm 3mm 0.6mm 3mm', textAlign: 'justify' }}>{DISTRIBUTES_UR}</div>
         </div>
     );
 }
@@ -345,6 +371,11 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                 <div className="ur" dir="rtl" style={{ fontSize: `${fs}pt`, lineHeight: 1.9 }}>{TAGLINE_UR}</div>
                 <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1}pt`, lineHeight: 1.9 }}>{SHOP_GILGIT_UR}</div>
                 <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1}pt`, lineHeight: 1.9 }}>{SHOP_SKARDU_UR}</div>
+                <div className="flex items-center justify-center" style={{ gap: '1.5mm', marginTop: '0.5mm' }}>
+                    <span style={{ fontWeight: 800, fontSize: `${fs - 1}pt`, border: '0.3mm solid #000', padding: '0 1.2mm' }}>CEO</span>
+                    <span className="ur" dir="rtl" style={{ fontSize: `${fs}pt`, lineHeight: 1.7 }}>{CEO_UR}</span>
+                </div>
+                <div style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{PHONES.join('  ·  ')}</div>
             </div>
             {rule}
             <div style={{ textAlign: 'center', fontWeight: 800, letterSpacing: '0.1em' }}>SALE INVOICE</div>
@@ -388,6 +419,10 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                 <Barcode value={inv.invoice_no} heightMm={small ? 9 : 11} moduleMm={small ? 0.25 : 0.375} />
                 <div style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, letterSpacing: '0.15em', marginTop: '0.5mm' }}>{inv.invoice_no}</div>
                 <div className="ur" dir="rtl" style={{ lineHeight: 2.1, marginTop: '0.5mm' }}>خریداری کا شکریہ</div>
+            </div>
+            {rule}
+            <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1.5}pt`, lineHeight: 2, textAlign: 'center' }}>
+                <b>{DISTRIBUTOR_UR}:</b> {DISTRIBUTES_UR}
             </div>
         </div>
     );

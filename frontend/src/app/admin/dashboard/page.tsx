@@ -90,13 +90,13 @@ function MenuBar() {
         else openPopup(it.href);
     };
     return (
-        <div ref={ref} className="sticky top-0 z-30 flex flex-wrap items-center gap-1 border-b border-slate-200 bg-white/95 px-3 py-1.5 backdrop-blur">
+        <div ref={ref} className="sticky top-0 z-30 flex flex-wrap items-center gap-1 border-b-[3px] border-[#FFD21F] bg-[#2B2F8F] px-3 py-1.5">
             {MENUS.map((m) => (
                 <div key={m.title} className="relative">
                     <button
                         type="button"
                         onClick={() => setOpen(open === m.title ? null : m.title)}
-                        className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-[16px] font-semibold transition-colors ${open === m.title ? 'bg-[#7A1420] text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                        className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-[16px] font-semibold transition-colors ${open === m.title ? 'bg-[#FFD21F] text-[#1F2370]' : 'text-white hover:bg-white/15'}`}
                     >
                         {m.title}
                         <ChevronDown size={15} className={`transition-transform ${open === m.title ? 'rotate-180' : ''}`} />
@@ -108,7 +108,7 @@ function MenuBar() {
                                     key={it.label}
                                     type="button"
                                     onClick={() => go(it)}
-                                    className="block w-full px-4 py-2.5 text-left text-[15px] font-medium text-slate-600 hover:bg-[#7A1420]/5 hover:text-[#7A1420]"
+                                    className="block w-full px-4 py-2.5 text-left text-[15px] font-medium text-slate-600 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F]"
                                 >
                                     {it.label}
                                 </button>
@@ -126,13 +126,15 @@ type Btn = { name: string; href: string; icon: any };
 type Theme = { tile: string; icon: string; ring: string };
 type Group = { theme: Theme; buttons: Btn[] };
 
+/* Colours of the Al-Qavi visiting card: royal blue, green, yellow, sky blue and
+   the logo's orange. Each legacy column keeps its own colour. */
 const THEMES: Record<string, Theme> = {
-    product: { tile: 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900', icon: 'bg-amber-500 text-white', ring: 'hover:ring-amber-300' },
-    purchase: { tile: 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-900', icon: 'bg-yellow-500 text-white', ring: 'hover:ring-yellow-300' },
-    sale: { tile: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-900', icon: 'bg-emerald-500 text-white', ring: 'hover:ring-emerald-300' },
-    account: { tile: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200 text-cyan-900', icon: 'bg-cyan-500 text-white', ring: 'hover:ring-cyan-300' },
-    backup: { tile: 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900', icon: 'bg-rose-500 text-white', ring: 'hover:ring-rose-300' },
-    report: { tile: 'bg-sky-50 hover:bg-sky-100 border-sky-200 text-sky-900', icon: 'bg-sky-600 text-white', ring: 'hover:ring-sky-300' },
+    product: { tile: 'bg-[#eef0fb] hover:bg-[#e2e5f8] border-[#c9cdf0] text-[#1F2370]', icon: 'bg-[#2B2F8F] text-white', ring: 'hover:ring-[#9aa0e3]' },
+    purchase: { tile: 'bg-[#fff8d6] hover:bg-[#fff1b3] border-[#f1dd7a] text-[#5c4700]', icon: 'bg-[#FFD21F] text-[#1F2370]', ring: 'hover:ring-[#f1d24f]' },
+    sale: { tile: 'bg-[#e7f6ee] hover:bg-[#d6efe2] border-[#b2e0c6] text-[#0b5e38]', icon: 'bg-[#14935C] text-white', ring: 'hover:ring-[#7fcca1]' },
+    account: { tile: 'bg-[#e8f3fc] hover:bg-[#d8eafa] border-[#b8d9f3] text-[#124f80]', icon: 'bg-[#2F8FD8] text-white', ring: 'hover:ring-[#8cc0ea]' },
+    backup: { tile: 'bg-[#fdeee7] hover:bg-[#fbe1d5] border-[#f2c6b2] text-[#8a3a1b]', icon: 'bg-[#E9825A] text-white', ring: 'hover:ring-[#eda98a]' },
+    report: { tile: 'bg-white hover:bg-[#f3f4fc] border-[#c9cdf0] text-[#1F2370]', icon: 'bg-gradient-to-br from-[#2B2F8F] to-[#2F8FD8] text-white', ring: 'hover:ring-[#9aa0e3]' },
 };
 
 const COLUMNS: Group[] = [
@@ -266,18 +268,26 @@ export default function AdminDashboard() {
         // normal responsive layout.
         <FitStage width={1440} height={810} minViewport={1024}>
         <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white font-sans text-slate-800">
+            <style>{"@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&display=swap');"}</style>
             <MenuBar />
 
             <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-3 md:p-4 lg:grid-cols-[minmax(0,1.38fr)_minmax(0,1fr)] lg:gap-6 lg:p-5">
                         {/* ─── Left: brand + action grid ─── */}
                         <div className="flex min-h-0 flex-col overflow-hidden">
-                            <div className="mb-3 flex shrink-0 items-center gap-3">
-                                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#7A1420] to-[#C0392B] text-[15px] font-black text-white shadow-md">AQ</span>
-                                <div>
-                                    <h1 className="bg-gradient-to-r from-[#7A1420] to-[#C0392B] bg-clip-text text-[24px] font-black leading-none tracking-tight text-transparent md:text-[30px]">
-                                        AL-QAVI TRADER&apos;S
-                                    </h1>
-                                    <p className="mt-0.5 text-[10.5px] font-semibold uppercase tracking-[0.2em] text-slate-400">Trade 2.1 · Management Console</p>
+                            {/* Brand banner in the visiting card's style */}
+                            <div className="relative mb-3 flex h-[78px] shrink-0 items-stretch overflow-hidden rounded-2xl bg-gradient-to-r from-[#2B2F8F] to-[#1F2370] shadow-[0_8px_20px_-12px_rgba(31,35,112,0.8)]">
+                                <div className="flex w-[190px] shrink-0 items-center justify-center rounded-r-[60px] bg-white pr-4 shadow-[4px_0_0_0_#FFD21F]">
+                                    <img src="/brand/aqt-monogram-card.png" alt="Al-Qavi Traders" className="h-[58px] w-auto" />
+                                </div>
+                                <div className="flex min-w-0 flex-1 items-center justify-between gap-4 px-6">
+                                    <div className="min-w-0">
+                                        <h1 className="text-[28px] font-black leading-none tracking-tight text-white">AL-QAVI TRADER&apos;S</h1>
+                                        <p className="mt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-[#c9cdf0]">Trade 2.1 · Management Console</p>
+                                    </div>
+                                    <div className="shrink-0 text-right" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', serif" }}>
+                                        <div className="text-[30px] font-bold leading-[1.15] text-white">القوی ٹریڈرز</div>
+                                        <div className="text-[15px] font-bold leading-snug text-[#FFD21F]">کاسمیٹکس ڈیلر گلگت بلتستان</div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -298,7 +308,7 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Reports row */}
-                            <h2 className="mb-2 mt-4 flex shrink-0 items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                            <h2 className="mb-2 mt-4 flex shrink-0 items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-[#2B2F8F]">
                                 <BarChart3 size={15} /> Reports
                             </h2>
                             <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:min-h-0 lg:flex-[2] lg:grid-cols-3 lg:grid-rows-2 lg:gap-4">
@@ -311,12 +321,12 @@ export default function AdminDashboard() {
                         {/* ─── Right rail: Expiry + Low stock ─── */}
                         <div className="flex min-h-0 flex-col gap-3 overflow-hidden lg:gap-5">
                             {/* Expiry list */}
-                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-rose-50/60 px-3 py-1.5">
-                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-rose-700">
+                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
+                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-[#2B2F8F] px-3 py-1.5">
+                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-white">
                                         <CalendarClock size={16} /> Expiry List on / Before
                                     </h3>
-                                    <label className="relative flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[12.5px] font-semibold tabular-nums text-slate-700 focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-100">
+                                    <label className="relative flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[12.5px] font-semibold tabular-nums text-slate-700 focus-within:border-[#FFD21F] focus-within:ring-2 focus-within:ring-[#FFD21F]/40">
                                         {fmtPicker(before)}
                                         <ChevronDown size={14} className="text-slate-500" />
                                         {/* Native picker sits invisibly on top so the label can show the legacy format. */}
@@ -365,15 +375,15 @@ export default function AdminDashboard() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#1d3c8f]">
+                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#2B2F8F]">
                                     Total Records = {expiryRows.length}
                                 </div>
                             </section>
 
                             {/* Stock minimum range */}
-                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                <div className="shrink-0 border-b border-slate-100 bg-amber-50/60 px-3 py-2">
-                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-amber-700">
+                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
+                                <div className="shrink-0 bg-[#14935C] px-3 py-2">
+                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-white">
                                         <Boxes size={16} /> Stock Minimum Range List
                                     </h3>
                                 </div>
@@ -408,7 +418,7 @@ export default function AdminDashboard() {
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#1d3c8f]">
+                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#2B2F8F]">
                                     Total Records = {lowStockRows.length}
                                 </div>
                             </section>
