@@ -177,7 +177,7 @@ const REPORTS: Btn[] = [
     { name: 'Trial Balance / Income Statement', href: '/admin/reports', icon: BarChart3 },
 ];
 
-function ActionTile({ b, theme, big }: { b: Btn; theme: Theme; big?: boolean }) {
+function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: boolean; delay?: number }) {
     const Icon = b.icon;
     return (
         <Link
@@ -189,12 +189,13 @@ function ActionTile({ b, theme, big }: { b: Btn; theme: Theme; big?: boolean }) 
                 e.preventDefault();
                 openPopup(b.href);
             }}
-            className={`group flex items-center gap-3 rounded-xl border ${theme.tile} ${theme.ring} px-3.5 ${big ? 'py-3' : 'py-2.5'} lg:h-full shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}
+            style={{ animationDelay: `${delay}ms` }}
+            className={`aq-tile group flex items-center gap-3 rounded-xl border ${theme.tile} ${theme.ring} px-3 ${big ? 'py-2.5' : 'py-2'} lg:h-full shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}
         >
-            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${theme.icon} shadow-sm transition-transform duration-200 group-hover:scale-105`}>
-                <Icon size={20} strokeWidth={1.9} />
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${theme.icon} shadow-sm transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-110`}>
+                <Icon size={18} strokeWidth={1.9} />
             </span>
-            <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-tight tracking-tight">{b.name}</span>
+            <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight tracking-tight">{b.name}</span>
         </Link>
     );
 }
@@ -233,6 +234,32 @@ const pqty = (p: any) => Number(p.total_quantity ?? p.available_quantity ?? p.st
 const pmin = (p: any) => Number(p.min_count ?? p.min ?? 10);
 const pcompany = (p: any) => p.company_name || p.brand || (typeof p.company === 'string' ? p.company : '') || '—';
 
+/* Dashboard motion: hero entrance, a slow sheen, drifting blobs, staggered tiles. */
+const DASH_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&display=swap');
+@keyframes aq-pop { 0% { opacity: 0; transform: scale(.6) rotate(-8deg); } 70% { transform: scale(1.06) rotate(1deg); } 100% { opacity: 1; transform: none; } }
+@keyframes aq-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes aq-in-l { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+@keyframes aq-in-r { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes aq-line { from { width: 0; } to { width: 100%; } }
+@keyframes aq-sheen { 0%, 70% { transform: translateX(0); } 100% { transform: translateX(450%); } }
+@keyframes aq-drift { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-30px, 18px); } }
+@keyframes aq-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.aq-mono { animation: aq-pop .8s cubic-bezier(.2,.9,.3,1.2) both, aq-float 5s ease-in-out 1s infinite; }
+.aq-rise-l { animation: aq-in-l .7s .15s ease-out both; }
+.aq-rise-r { animation: aq-in-r .7s .25s ease-out both; }
+.aq-line { animation: aq-line 1s .6s ease-out both; }
+.aq-sheen { animation: aq-sheen 7s 1.2s ease-in-out infinite; }
+.aq-blob { animation: aq-drift 14s ease-in-out infinite; }
+.aq-blob-2 { animation-duration: 18s; animation-direction: reverse; }
+.aq-tile { animation: aq-rise .45s ease-out both; }
+.aq-hero:hover .aq-mono { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .aq-mono, .aq-rise-l, .aq-rise-r, .aq-line, .aq-sheen, .aq-blob, .aq-tile { animation: none !important; }
+  .aq-line { width: 100%; }
+}
+`;
+
 /* ───────────────────────── Page ───────────────────────── */
 export default function AdminDashboard() {
     const [lists, setLists] = useState<{ expiry: any[]; low_stock: any[] }>({ expiry: [], low_stock: [] });
@@ -267,61 +294,72 @@ export default function AdminDashboard() {
         // screen (same look on a laptop and a big monitor). Phones keep the
         // normal responsive layout.
         <FitStage width={1440} height={810} minViewport={1024}>
-        <div className="flex h-full min-h-0 flex-col overflow-hidden bg-white font-sans text-slate-800">
-            <style>{"@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&display=swap');"}</style>
+        <div className="flex min-h-full flex-col bg-white font-sans text-slate-800 lg:h-full lg:min-h-0 lg:overflow-hidden">
+            <style>{DASH_CSS}</style>
             <MenuBar />
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-hidden p-3 md:p-4 lg:grid-cols-[minmax(0,1.38fr)_minmax(0,1fr)] lg:gap-6 lg:p-5">
+            <div className="grid flex-1 grid-cols-1 gap-4 p-3 md:p-4 lg:min-h-0 lg:grid-cols-[minmax(0,1.38fr)_minmax(0,1fr)] lg:gap-6 lg:overflow-hidden lg:p-5">
                         {/* ─── Left: brand + action grid ─── */}
-                        <div className="flex min-h-0 flex-col overflow-hidden">
-                            {/* Brand banner in the visiting card's style */}
-                            <div className="relative mb-3 flex h-[78px] shrink-0 items-stretch overflow-hidden rounded-2xl bg-gradient-to-r from-[#2B2F8F] to-[#1F2370] shadow-[0_8px_20px_-12px_rgba(31,35,112,0.8)]">
-                                <div className="flex w-[190px] shrink-0 items-center justify-center rounded-r-[60px] bg-white pr-4 shadow-[4px_0_0_0_#FFD21F]">
-                                    <img src="/brand/aqt-monogram-card.png" alt="Al-Qavi Traders" className="h-[58px] w-auto" />
+                        <div className="flex flex-col lg:min-h-0 lg:overflow-hidden">
+                            {/* Brand hero in the visiting card's style */}
+                            <div style={{ containerType: 'inline-size' }} className="aq-hero relative mb-3 flex shrink-0 flex-col items-stretch overflow-hidden rounded-[22px] bg-gradient-to-br from-[#2B2F8F] via-[#262a85] to-[#1A1D63] shadow-[0_18px_40px_-20px_rgba(31,35,112,0.9)] sm:flex-row lg:h-[138px]">
+                                {/* drifting colour blobs + sheen */}
+                                <span aria-hidden className="aq-blob pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-[#2F8FD8]/35 blur-3xl" />
+                                <span aria-hidden className="aq-blob aq-blob-2 pointer-events-none absolute bottom-[-70px] left-[42%] h-44 w-44 rounded-full bg-[#14935C]/35 blur-3xl" />
+                                <span aria-hidden className="aq-sheen pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
+                                {/* card's green strip */}
+                                <span aria-hidden className="absolute inset-x-0 bottom-0 h-[6px] bg-gradient-to-r from-[#14935C] via-[#1fb070] to-[#14935C]" />
+
+                                <div className="relative z-10 flex shrink-0 items-center justify-center bg-white px-6 py-3 shadow-[5px_0_0_0_#FFD21F] sm:w-[clamp(170px,23cqw,250px)] sm:rounded-r-[90px] sm:py-0 sm:pr-[3cqw]">
+                                    <img src="/brand/aqt-monogram-card.png" alt="Al-Qavi Traders" className="aq-mono h-[64px] w-auto sm:h-[clamp(58px,8.6cqw,92px)]" />
                                 </div>
-                                <div className="flex min-w-0 flex-1 items-center justify-between gap-4 px-6">
-                                    <div className="min-w-0">
-                                        <h1 className="text-[28px] font-black leading-none tracking-tight text-white">AL-QAVI TRADER&apos;S</h1>
-                                        <p className="mt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-[#c9cdf0]">Trade 2.1 · Management Console</p>
+
+                                <div className="relative z-10 flex min-w-0 flex-1 flex-col items-center justify-center gap-3 px-5 py-4 text-center sm:flex-row sm:justify-between sm:gap-[2.5cqw] sm:px-[3cqw] sm:py-0 sm:text-left">
+                                    <div className="aq-rise-l min-w-0">
+                                        <h1 className="text-[30px] font-black leading-[0.95] tracking-tight text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.25)] sm:whitespace-nowrap sm:text-[clamp(22px,4.1cqw,46px)]">
+                                            AL-QAVI <span className="text-[#FFD21F]">TRADER&apos;S</span>
+                                        </h1>
+                                        <span aria-hidden className="aq-line mt-2 block h-[4px] rounded-full bg-gradient-to-r from-[#FFD21F] via-[#ffe680] to-transparent" />
+                                        <p className="mt-2 whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.28em] text-[#c9cdf0] sm:text-[clamp(8px,1.05cqw,12px)]">Trade 2.1 · Management Console</p>
                                     </div>
-                                    <div className="shrink-0 text-right" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', serif" }}>
-                                        <div className="text-[30px] font-bold leading-[1.15] text-white">القوی ٹریڈرز</div>
-                                        <div className="text-[15px] font-bold leading-snug text-[#FFD21F]">کاسمیٹکس ڈیلر گلگت بلتستان</div>
+                                    <div className="aq-rise-r shrink-0 text-center sm:text-right" dir="rtl" style={{ fontFamily: "'Noto Naskh Arabic', serif" }}>
+                                        <div className="text-[34px] font-bold leading-[1.1] text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.25)] sm:text-[clamp(24px,4.1cqw,46px)]">القوی ٹریڈرز</div>
+                                        <div className="mt-1 inline-block rounded-full bg-[#FFD21F] px-4 py-0.5 whitespace-nowrap text-[14px] font-bold leading-snug text-[#1F2370] sm:text-[clamp(11px,1.45cqw,16px)]">کاسمیٹکس ڈیلر گلگت بلتستان</div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Colour-coded button columns (matches the legacy layout) */}
-                            <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-4 lg:min-h-0 lg:flex-[4] lg:grid-rows-4 lg:gap-4">
+                            <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-4 lg:min-h-0 lg:flex-[4] lg:grid-rows-4 lg:gap-3">
                                 {COLUMNS.map((g, gi) => (
-                                    <div key={gi} className="flex flex-col gap-3 lg:row-span-3 lg:grid lg:grid-rows-3 lg:gap-4">
+                                    <div key={gi} className="flex flex-col gap-3 lg:row-span-3 lg:grid lg:grid-rows-3 lg:gap-3">
                                         {g.buttons.map((b) => (
-                                            <ActionTile key={b.name + b.href} b={b} theme={g.theme} />
+                                            <ActionTile key={b.name + b.href} b={b} theme={g.theme} delay={gi * 60 + g.buttons.indexOf(b) * 90} />
                                         ))}
                                     </div>
                                 ))}
-                                {BOTTOM_ROW.map(({ b, theme, span }) => (
+                                {BOTTOM_ROW.map(({ b, theme, span }, bi) => (
                                     <div key={b.name} className={span ? 'col-span-2' : ''}>
-                                        <ActionTile b={b} theme={theme} />
+                                        <ActionTile b={b} theme={theme} delay={300 + bi * 60} />
                                     </div>
                                 ))}
                             </div>
 
                             {/* Reports row */}
-                            <h2 className="mb-2 mt-4 flex shrink-0 items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-[#2B2F8F]">
+                            <h2 className="mb-1.5 mt-3 flex shrink-0 items-center gap-2 text-[13px] font-bold uppercase tracking-[0.15em] text-[#2B2F8F]">
                                 <BarChart3 size={15} /> Reports
                             </h2>
-                            <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:min-h-0 lg:flex-[2] lg:grid-cols-3 lg:grid-rows-2 lg:gap-4">
-                                {REPORTS.map((b) => (
-                                    <ActionTile key={b.name} b={b} theme={THEMES.report} big />
+                            <div className="grid shrink-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:min-h-0 lg:flex-[2] lg:grid-cols-3 lg:grid-rows-2 lg:gap-3">
+                                {REPORTS.map((b, ri) => (
+                                    <ActionTile key={b.name} b={b} theme={THEMES.report} big delay={420 + ri * 50} />
                                 ))}
                             </div>
                         </div>
 
                         {/* ─── Right rail: Expiry + Low stock ─── */}
-                        <div className="flex min-h-0 flex-col gap-3 overflow-hidden lg:gap-5">
+                        <div className="flex flex-col gap-3 lg:min-h-0 lg:gap-5 lg:overflow-hidden">
                             {/* Expiry list */}
-                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
+                            <section className="flex h-[380px] flex-col overflow-hidden rounded-xl border lg:h-auto lg:min-h-0 lg:flex-1 border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
                                 <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-[#2B2F8F] px-3 py-1.5">
                                     <h3 className="flex items-center gap-2 text-[14px] font-black text-white">
                                         <CalendarClock size={16} /> Expiry List on / Before
@@ -381,7 +419,7 @@ export default function AdminDashboard() {
                             </section>
 
                             {/* Stock minimum range */}
-                            <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
+                            <section className="flex h-[380px] flex-col overflow-hidden rounded-xl border lg:h-auto lg:min-h-0 lg:flex-1 border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
                                 <div className="shrink-0 bg-[#14935C] px-3 py-2">
                                     <h3 className="flex items-center gap-2 text-[14px] font-black text-white">
                                         <Boxes size={16} /> Stock Minimum Range List
