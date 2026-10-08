@@ -211,7 +211,8 @@ class Command(BaseCommand):
             company = comp_map.get(clean(r.get('CompID')))
             category = cat_map.get(clean(r.get('CategID')))
             barcode = clean(r.get('BarCode'))
-            barcode = barcode if barcode and barcode != '-' else None
+            from modules.products.views import clean_barcode
+            barcode = clean_barcode(barcode)
             if barcode and barcode in seen_barcodes:
                 barcode = None
             if barcode:

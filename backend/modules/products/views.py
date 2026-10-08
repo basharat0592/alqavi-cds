@@ -16,6 +16,15 @@ from core.scoping import (
 )
 
 
+# The legacy system typed '-' (or '.', '0') for "no bar code"; those are not codes.
+BARCODE_PLACEHOLDERS = {'-', '--', '.', '0', '00', 'na', 'n/a', 'none', 'nil'}
+
+
+def clean_barcode(v):
+    code = str(v or '').strip()
+    return None if not code or code.lower() in BARCODE_PLACEHOLDERS else code[:100]
+
+
 class IsSuperAdmin(permissions.BasePermission):
     """Allow only global Super Admins (they manage the cross-branch store catalog)."""
     message = 'Super Admin only.'
@@ -317,7 +326,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
 
         d = request.data
         name = (d.get('name') or '').strip()
-        barcode = (d.get('barcode') or '').strip() or None
+        barcode = clean_barcode(d.get('barcode'))
         status_v = (d.get('status') or '').strip().upper()
         exp_v = (d.get('expiry_apply') or '').strip().lower()
         try:
@@ -327,6 +336,12 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response({'error': 'Carton and Packing must be whole numbers.'}, status=400)
         if not name:
             return Response({'error': 'Enter the Product Name.'}, status=400)
+        if len(name) > 255:
+            return Response({'error': 'Product Name is too long (255 characters at most).'}, status=400)
+        if barcode and len(str(d.get('barcode')).strip()) > 100:
+            return Response({'error': 'Bar Code is too long (100 characters at most).'}, status=400)
+        if packing > 100000 or carton > 100000:
+            return Response({'error': 'Carton and Packing must be 100000 or less.'}, status=400)
         if packing < 1:
             return Response({'error': 'Packing must be 1 or more.'}, status=400)
         if carton < 1:
