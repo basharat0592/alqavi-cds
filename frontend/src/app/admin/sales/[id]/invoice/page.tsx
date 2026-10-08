@@ -179,8 +179,8 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                 <th className="py-1.5 px-3 text-center w-16">Qty</th>
                                 <th className="py-1.5 px-3 text-center w-16">Bonus</th>
                                 <th className="py-1.5 px-3 text-right w-24">Unit Price</th>
-                                <th className="py-1.5 px-3 text-right w-24">{hasShelf ? 'S.Disc' : 'Disc'}</th>
-                                {hasShelf && <th className="py-1.5 px-3 text-right w-24">Shelf</th>}
+                                <th className="py-1.5 px-3 text-right w-24">{hasShelf ? 'Special Disc' : 'Disc'}</th>
+                                {hasShelf && <th className="py-1.5 px-3 text-right w-24">Shelf Rent</th>}
                                 <th className="py-1.5 px-3 text-right w-28">Total</th>
                             </tr>
                         </thead>
@@ -235,7 +235,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                         )}
                         {hasShelf && (
                             <div className="flex justify-between">
-                                <span className="text-slate-500 font-bold uppercase text-[11px]">Shelf Rate</span>
+                                <span className="text-slate-500 font-bold uppercase text-[11px]">Shelf Rent</span>
                                 <span className="font-bold text-rose-600 tabular-nums">-{formatCurrency(shelfTotal)}</span>
                             </div>
                         )}
@@ -313,7 +313,7 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                                     bonus_units: bonus,
                                     unit_price: price,
                                     discount: disc,
-                                    shelf_rate: parseFloat(item.shelf_discount || 0) || 0,
+                                    shelf_rent: parseFloat(item.shelf_discount || 0) || 0,
                                     total: net,
                                 };
                             }),

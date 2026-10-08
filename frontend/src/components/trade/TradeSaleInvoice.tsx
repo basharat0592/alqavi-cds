@@ -109,13 +109,13 @@ const FP_STOCK_COLS = [
 const FP_HIST_COLS = [
     { h: 'PID', w: '7%' }, { h: 'Category', w: '10%' }, { h: 'Product', w: '21%' }, { h: 'Pack', w: '6%' },
     { h: 'Expiry Date', w: '10%' }, { h: 'Qty(U)', w: '7%' }, { h: 'Qty(B)', w: '7%' }, { h: 'T.P', w: '9%' },
-    { h: 'Special Disc %', w: '7%' }, { h: 'Shelf %', w: '6%' }, { h: 'Retail Rate', w: '10%' },
+    { h: 'Special Disc %', w: '7%' }, { h: 'Shelf Rent %', w: '6%' }, { h: 'Retail Rate', w: '10%' },
 ];
 
 /* Sale / Sale-Return Records grid (legacy column order). */
 const SR_COLS = [
     { h: 'SaleID', w: '9%' }, { h: 'Date Sale', w: '8%' }, { h: 'Staff', w: '10%' }, { h: 'Acc.ID', w: '8%' },
-    { h: 'Acc.Name', w: '13.5%' }, { h: 'Amount', w: '7.5%' }, { h: 'Special Disc', w: '6%' }, { h: 'Shelf', w: '5.5%' }, { h: 'Net.Amount', w: '7.5%' },
+    { h: 'Acc.Name', w: '13.5%' }, { h: 'Amount', w: '7.5%' }, { h: 'Special Disc', w: '6%' }, { h: 'Shelf Rent', w: '5.5%' }, { h: 'Net.Amount', w: '7.5%' },
     { h: 'Pre. Bal.', w: '7%' }, { h: 'Total', w: '6.5%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '6%' },
 ];
 
@@ -123,12 +123,12 @@ const SR_COLS = [
 const RET_COLS = [
     { h: 'SNo', w: '4.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '17%' }, { h: 'Expiry', w: '9.5%' },
     { h: 'Qty', w: '5%' }, { h: 'Bons', w: '5%' }, { h: 'TP', w: '7%' }, { h: 'Retail', w: '7%' },
-    { h: 'Sub Total', w: '8.5%' }, { h: 'Special Disc %', w: '5.5%' }, { h: 'Shelf %', w: '6%' }, { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
+    { h: 'Sub Total', w: '8.5%' }, { h: 'Special Disc %', w: '5.5%' }, { h: 'Shelf Rent %', w: '6%' }, { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
 ]
 const RR_HIST_COLS = [
     { h: 'Sale Inv.', w: '11%' }, { h: 'Date', w: '9.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '17.5%' },
     { h: 'Expiry', w: '9.5%' }, { h: 'Qty', w: '5%' }, { h: 'Bonus', w: '6%' }, { h: 'Returned', w: '7.5%' },
-    { h: 'TP', w: '7%' }, { h: 'Special Disc %', w: '6%' }, { h: 'Shelf%', w: '5.5%' }, { h: 'Retail', w: '9%' },
+    { h: 'TP', w: '7%' }, { h: 'Special Disc %', w: '6%' }, { h: 'Shelf Rent %', w: '5.5%' }, { h: 'Retail', w: '9%' },
 ]
 
 /* Lays a window body out at a design size (w x h) and scales it to exactly fit
@@ -166,12 +166,12 @@ const SHORTCUTS: [string, string][] = [
 /* Sale grid columns — legacy order and proportions (as % of the grid width, so
    they scale with the window); headers and values left-aligned like Trade 1.0. */
 // Long "Special Disc" headers wrap in a smaller font instead of being cut off.
-const thFit = (h: string) => (h.startsWith('Special') ? ' !whitespace-normal !text-[10.5px] !leading-tight' : '');
+const thFit = (h: string) => (h.startsWith('Special') || h.startsWith('Shelf Rent') ? ' !whitespace-normal !text-[10.5px] !leading-tight' : '');
 
 const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
     { h: 'SNo', w: '4%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '14.5%' }, { h: 'Expiry', w: '10%' },
     { h: 'Qty', w: '5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '6.5%' },
-    { h: 'Retail', w: '6.5%' }, { h: 'SubTotal', w: '8%' }, { h: 'Special Disc %', w: '6.5%' }, { h: 'Shelf%', w: '6%' },
+    { h: 'Retail', w: '6.5%' }, { h: 'SubTotal', w: '8%' }, { h: 'Special Disc %', w: '6.5%' }, { h: 'Shelf Rent %', w: '6%' },
     { h: 'Dis.Amt', w: '8.5%' }, { h: 'Net Amt', w: '12.5%' },
 ];
 
@@ -2015,10 +2015,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     <span className={LABEL}>Bon(U)</span>
                     <span className={LABEL}>Unit TP</span>
                     <span className={`${LABEL} text-[11px]`} title="Special Discount %">Special Disc %</span>
-                    <span className={LABEL} title="Shelf Rate % — what the shop charges to keep the product on its shelf">Shelf %</span>
+                    <span className={`${LABEL} text-[11px]`} title="Shelf Rent % — what the shop charges to keep the product on its shelf">Shelf Rent %</span>
                     <span className={LABEL}>Retail Rate</span>
                     <span className={LABEL} title="Special Discount amount">Disc Amt.</span>
-                    <span className={LABEL} title="Shelf Rate amount">Shelf Amt.</span>
+                    <span className={`${LABEL} text-[11px]`} title="Shelf Rent amount">Shelf Rent Amt.</span>
                     <span className={LABEL}>Sub Total</span>
 
                     <button type="button" onClick={() => openFindProduct()}
@@ -2169,7 +2169,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 <div className="grid shrink-0 grid-cols-[1fr_0.9fr_0.9fr_1fr_1fr_1.4fr] gap-3">
                     <Led label="Amount Billed" value={fmt(amountBilled)} />
                     <Led label="Special Disc" value={fmt(totalSpecial)} />
-                    <Led label="Shelf Rate" value={fmt(totalShelf)} />
+                    <Led label="Shelf Rent" value={fmt(totalShelf)} />
                     <Led label="Net Amount" value={fmt(netAmount)} />
                     <Led label="Prev. Bal" value={customer ? fmt(prevBal) : ''} />
                     <Led label="Net Balance" value={fmt(netBalance)} tone="yellow" />
@@ -2506,7 +2506,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         <table className="w-full border-collapse text-[12.5px] tabular-nums">
                             <thead>
                                 <tr className="border-y border-slate-400 bg-slate-50 text-left">
-                                    {['#', 'PID', 'Product', 'Expiry', 'Qty', 'Bon', 'TP', 'SubTotal', 'Special Disc', 'Shelf', 'Net'].map((h) => <th key={h} className="px-1.5 py-1">{h}</th>)}
+                                    {['#', 'PID', 'Product', 'Expiry', 'Qty', 'Bon', 'TP', 'SubTotal', 'Special Disc', 'Shelf Rent', 'Net'].map((h) => <th key={h} className="px-1.5 py-1">{h}</th>)}
                                 </tr>
                             </thead>
                             <tbody>
@@ -2524,7 +2524,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             </tbody>
                         </table>
                         <div className="ml-auto mt-3 w-72 space-y-0.5 text-[13px] tabular-nums">
-                            {[['Amount Billed', amountBilled], ['Special Discount', totalSpecial], ['Shelf Rate', totalShelf], ['Net Amount', netAmount], ['Prev. Balance', prevBal], ['Paid Cash', paid]].map(([k, v]) => (
+                            {[['Amount Billed', amountBilled], ['Special Discount', totalSpecial], ['Shelf Rent', totalShelf], ['Net Amount', netAmount], ['Prev. Balance', prevBal], ['Paid Cash', paid]].map(([k, v]) => (
                                 <div key={k as string} className="flex justify-between"><span className="text-slate-500">{k}</span><span>{fmt(v as number)}</span></div>
                             ))}
                             <div className="flex justify-between border-t border-slate-800 pt-1 text-[15px] font-black"><span>Net Balance</span><span>{fmt(netBalance)}</span></div>
@@ -2720,7 +2720,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         </div>
 
                         <div className="flex w-[330px] shrink-0 flex-col gap-2 overflow-hidden">
-                            {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['Special Disc', fmt(rbTotals.disc - rbTotals.shelf), 'green'], ['Shelf Amt', fmt(rbTotals.shelf), 'green'],
+                            {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['Special Disc', fmt(rbTotals.disc - rbTotals.shelf), 'green'], ['Shelf Rent', fmt(rbTotals.shelf), 'green'],
                               ['Net Amount', fmt(rbTotals.net), 'yellow'], ['Prev.Bal', fmt(rbPrev), 'yellow']].map(([label, value, tone]) => (
                                 <div key={label} className="grid grid-cols-[118px_1fr] items-center gap-2">
                                     <span className="text-[16px] font-black text-[#1b1f4b]">{label}</span>
@@ -2761,7 +2761,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sale Return (Random)</legend>
                                 <div className="grid grid-cols-[1.15fr_0.8fr_2fr_0.85fr_0.85fr_0.6fr_0.6fr] items-end gap-x-2 gap-y-0.5">
                                     <span className={LABEL}>Sale.Return Inv.</span><span className={LABEL}>Product ID</span><span className={LABEL}>Product Name</span>
-                                    <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={`${LABEL} text-[11px]`}>Special Disc %</span><span className={LABEL}>Shelf %</span>
+                                    <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={`${LABEL} text-[11px]`}>Special Disc %</span><span className={`${LABEL} text-[11px]`}>Shelf Rent %</span>
                                     <ReadBox value={rrPick?.invoice_no || ''} className="font-mono" />
                                     <ReadBox value={rrPick?.pid || ''} />
                                     <ReadBox value={rrPick?.name || ''} />
@@ -2856,7 +2856,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         {/* Right: totals, actions, history filters */}
                         <div className="flex w-[380px] shrink-0 flex-col gap-2 overflow-hidden">
                             <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-[#9da1d8] bg-[#ececfd] p-2.5">
-                                {[['Sale Amount', fmt(rrTotals.sale)], ['Special Disc Amount', fmt(rrTotals.disc - rrTotals.shelf)], ['Shelf Amount', fmt(rrTotals.shelf)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
+                                {[['Sale Amount', fmt(rrTotals.sale)], ['Special Disc Amount', fmt(rrTotals.disc - rrTotals.shelf)], ['Shelf Rent Amount', fmt(rrTotals.shelf)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
                                     <div key={label} className="flex flex-col gap-0.5">
                                         <span className={LABEL}>{label}</span>
                                         <div className="flex h-9 items-center justify-center rounded-md bg-black font-mono text-[18px] font-black tabular-nums text-[#3cff5a]">{value}</div>

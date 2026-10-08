@@ -420,14 +420,14 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         bonus / TP / special discount / shelf rate, and the balances."""
         from decimal import Decimal
         o = (scope_to_tenant(request.user, Order.objects.all(), 'tenant')
-             .select_related('customer__area', 'staff', 'salesperson').filter(pk=pk).first())
+             .select_related('customer__area__parent__parent', 'staff', 'salesperson').filter(pk=pk).first())
         if not o:
             return Response({'detail': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
         c = o.customer
         acc_id = c.username[4:] if (c and str(c.username).startswith('cust')) else ''
         z = Decimal('0')
         lines = []
-        for it in o.items.select_related('product__stock').order_by('id'):
+        for it in o.items.select_related('product__stock', 'batch').order_by('id'):
             p = it.product
             stock = getattr(p, 'stock', None) if p else None
             gross = Decimal(str(it.price or 0)) * (it.quantity or 0)
@@ -440,6 +440,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'expiry_date': it.expiry_date, 'unit': it.sale_unit or 'PIECE',
                 'packing': packing, 'carton': carton,
                 'qty': it.quantity, 'bonus': it.bonus_quantity, 'tp': it.price,
+                'retail': (it.batch.retail_price if it.batch_id else None) or (p.original_price if p else 0) or 0,
                 'gross': gross, 'special': disc - shelf, 'shelf': shelf, 'net': gross - disc,
                 'special_pct': round((disc - shelf) / gross * 100, 2) if gross else z,
                 'shelf_pct': round(shelf / gross * 100, 2) if gross else z,
@@ -453,9 +454,16 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         paid = Decimal(str(o.paid_at_sale if o.paid_at_sale is not None else (o.amount_paid or 0)))
         staff = o.staff.name if o.staff_id else (
             (o.salesperson.get_full_name() or o.salesperson.username) if o.salesperson_id else '')
+        # Region = the district above the customer's area (chosen when the account
+        # was opened): Skardu customers are served from Skardu, everyone else Gilgit.
+        district = c.area if c else None
+        while district is not None and not str(district.code or '').upper().startswith('D'):
+            district = district.parent
+        skardu = bool(district and 'skardu' in (district.name or '').lower())
         return Response({
             'id': str(o.id), 'invoice_no': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
-            'time': o.created_at, 'staff': staff,
+            'time': o.created_at, 'staff': staff, 'staff_cell': o.staff.cell if o.staff_id else '',
+            'region': {'code': 'SKD', 'name': 'Skardu'} if skardu else {'code': 'GLT', 'name': 'Gilgit'},
             'customer': {
                 'acc_id': acc_id,
                 'name': (f"{c.first_name or ''} {c.last_name or ''}".strip() if c else '') or o.customer_name,

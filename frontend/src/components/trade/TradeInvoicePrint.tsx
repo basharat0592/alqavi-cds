@@ -3,30 +3,29 @@
 /*
  * Trade 1.0 — printed Sale Invoice.
  *
- *   a5   Half an A4 sheet, landscape (A5 landscape, 210 x 148 mm): monogram,
- *        Urdu name + tagline, the shops banner, account / address / salesman,
- *        the lines with Unit, Bonus, Special Disc % and Shelf %, the totals
- *        and balance, signatures and a barcode of the invoice number.
- *   80 / 58  Thermal slip for a small receipt / label printer — the same
- *        content stacked in one narrow column, barcode at the foot.
+ *   a4   Full A4 portrait in the customer's legacy invoice layout (default).
+ *   a5   Half an A4 sheet, landscape (A5 landscape, 210 x 148 mm) in the
+ *        visiting card's colours.
+ *   80 / 58  Thermal slip for a small receipt printer — the same content
+ *        stacked in one narrow column.
  *
  * `@page` is document-wide, so only the chosen layout is rendered.
  */
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import api from '@/lib/axios';
-import { code128B } from '@/lib/code128';
 
-export type InvoiceSize = 'a5' | '80' | '58';
+export type InvoiceSize = 'a4' | 'a5' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
+    { v: 'a4', label: 'A4 (full page)' },
     { v: 'a5', label: 'Half A4 (landscape)' },
     { v: '80', label: 'Slip 80 mm' },
     { v: '58', label: 'Slip 58 mm' },
 ];
 const SIZE_KEY = 'trade.invoice.size';
 export const savedInvoiceSize = (): InvoiceSize => {
-    try { const v = localStorage.getItem(SIZE_KEY); return v === '80' || v === '58' ? v : 'a5'; } catch { return 'a5'; }
+    try { const v = localStorage.getItem(SIZE_KEY); return v === 'a5' || v === '80' || v === '58' ? v : 'a4'; } catch { return 'a4'; }
 };
 
 /* Business details (from the shop's letterhead and visiting card). */
@@ -38,17 +37,25 @@ const SLOGAN_B_UR = 'ملکی و غیر ملکی کاسمیٹکس کا مرکز'
 const DISTRIBUTOR_UR = 'ڈسٹری بیوٹر آف';
 const DISTRIBUTES_UR = 'بائیو آملہ کمپنی، مدر کیئر کمپنی، فیس فریش کمپنی، سعید غنی کمپنی، آئش کمپنی، کلر آن کمپنی، سکین وائٹ کمپنی، ڈرما شائن کمپنی، سپر گریس کمپنی، برجین کمپنی، ایزی کلین کمپنی اور یونیورسل کمپنی کی پروڈکٹس کیلئے ہماری خدمات حاصل کریں۔ شکریہ';
 const NAME_UR = 'القوی ٹریڈرز';
+// From the customer's legacy invoice (A4).
+const PROPRIETOR = 'Syed Sakhawat & Associates';
+const PROPRIETOR_PHONES = ['03138692190', '03351240190'];
+const SLOGAN_UR = 'مشہور اور با اعتماد ملکی و غیر ملکی کاسمیٹکس کا مرکز';
+const DISTRIBUTES_LIST_UR = 'بائیو آملہ کمپنی، مدر کیئر کمپنی، فیس فریش کمپنی، سعید غنی کمپنی، آئش کمپنی، کلر آن کمپنی، سکین وائٹ کمپنی، ڈرما شائن کمپنی، سپر گریس کمپنی، برجین کمپنی، ایزی کلین کمپنی اور یونیورسل کمپنی';
+const termsUr = (city: string) =>
+    `نوٹ:۔ تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں القوی ٹریڈرز ${city} سے لے رہے ہیں ان کو ایکسپائری سے تین مہینے پہلے تبدیل کرانا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیلی کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بشمول پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی فرق کی صورت میں فوراً اطلاع کریں بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ`;
 const TAGLINE_UR = 'کاسمیٹکس ڈیلر گلگت بلتستان';
 const SHOP_GILGIT_UR = 'قاسمی مارکیٹ CMH روڈ خومر گلگت';
 const SHOP_SKARDU_UR = 'ابراہیم مارکیٹ کلفٹن پل سکردو';
 
 type Line = {
     pid: string; name: string; expiry_date: string | null; unit: string; packing: number; carton: number;
-    qty: number; bonus: number; tp: number; gross: number; special: number; shelf: number; net: number;
+    qty: number; bonus: number; tp: number; retail: number; gross: number; special: number; shelf: number; net: number;
     special_pct: number; shelf_pct: number;
 };
 type Invoice = {
-    id: string; invoice_no: string; date: string; time: string; staff: string;
+    id: string; invoice_no: string; date: string; time: string; staff: string; staff_cell?: string;
+    region?: { code: string; name: string };
     customer: { acc_id: string; name: string; address: string; area: string; phone: string };
     lines: Line[];
     totals: { pieces: number; bonus: number; gross: number; special: number; shelf: number; bill_disc: number;
@@ -70,33 +77,12 @@ function unitLabel(l: Line) {
     return 'Pcs';
 }
 
-/* Sized in millimetres: `moduleMm` is the narrowest bar (0.25 mm = 2 dots on a
-   203 dpi thermal head; 0.375 mm = 3 dots), so scanners read it reliably. */
-function Barcode({ value, heightMm, moduleMm }: { value: string; heightMm: number; moduleMm: number }) {
-    const bars = useMemo(() => code128B(value), [value]);
-    if (!bars) return null;
-    const quiet = 10;
-    const total = bars.reduce((s, w) => s + w, 0) + quiet * 2;
-    let x = quiet;
-    const rects: JSX.Element[] = [];
-    bars.forEach((w, i) => {
-        if (i % 2 === 0) rects.push(<rect key={i} x={x} y={0} width={w} height={1} />);
-        x += w;
-    });
-    return (
-        <svg viewBox={`0 0 ${total} 1`} width={`${total * moduleMm}mm`} height={`${heightMm}mm`} preserveAspectRatio="none"
-            shapeRendering="crispEdges" aria-label={`Barcode ${value}`} style={{ display: 'block' }}>
-            <g fill="#000">{rects}</g>
-        </svg>
-    );
-}
-
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');`;
 
 export default function TradeInvoicePrint({ id }: { id: string }) {
     const [inv, setInv] = useState<Invoice | null>(null);
     const [err, setErr] = useState('');
-    const [size, setSize] = useState<InvoiceSize>('a5');
+    const [size, setSize] = useState<InvoiceSize>('a4');
     const [autoPrint, setAutoPrint] = useState(false);
     // A roll has no fixed page length: the slip's page is exactly as long as
     // its content (measured after layout), so the printer feeds no blank paper.
@@ -105,7 +91,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     useEffect(() => {
         const q = new URLSearchParams(window.location.search);
         const s = q.get('size');
-        setSize(s === 'a5' || s === '80' || s === '58' ? s : savedInvoiceSize());
+        setSize(s === 'a4' || s === 'a5' || s === '80' || s === '58' ? s : savedInvoiceSize());
         setAutoPrint(q.has('print'));
         api.get(`v1/sales/orders/${id}/trade_invoice/`)
             .then(({ data }) => setInv(data))
@@ -116,7 +102,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
 
     // Print once the data and the Urdu fonts are in (else the first print shows fallbacks).
     useEffect(() => {
-        if (!inv || !autoPrint || (size !== 'a5' && !slipH)) return;
+        if (!inv || !autoPrint || ((size === '80' || size === '58') && !slipH)) return;
         let done = false;
         const go = () => { if (!done) { done = true; setAutoPrint(false); window.print(); } };
         (document as any).fonts?.ready?.then(() => setTimeout(go, 250));
@@ -130,9 +116,11 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     };
 
     const slipW = size === '58' ? 54 : 74; // printable width in mm
-    const pageCss = size === 'a5'
-        ? '@page { size: A5 landscape; margin: 6mm; }'
-        : `@page { size: ${size}mm ${Math.max(60, Math.ceil(slipH) + 6)}mm; margin: 3mm 0; }`;
+    const pageCss = size === 'a4'
+        ? '@page { size: A4 portrait; margin: 8mm 8mm 10mm; @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 7.5pt sans-serif; color: #555; } }'
+        : size === 'a5'
+            ? '@page { size: A5 landscape; margin: 6mm; }'
+            : `@page { size: ${size}mm ${Math.max(60, Math.ceil(slipH) + 6)}mm; margin: 3mm 0; }`;
 
     return (
         <div className="min-h-screen bg-slate-200 py-6 print:bg-white print:py-0">
@@ -174,8 +162,181 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
             {err && <p className="no-print text-center text-[14px] font-semibold text-red-600">{err}</p>}
             {!inv && !err && <p className="no-print text-center text-[14px] text-slate-500">Loading invoice…</p>}
 
+            {inv && size === 'a4' && <A4Sheet inv={inv} />}
             {inv && size === 'a5' && <A5Sheet inv={inv} />}
-            {inv && size !== 'a5' && <Slip inv={inv} widthMm={slipW} onHeight={setSlipH} />}
+            {inv && (size === '80' || size === '58') && <Slip inv={inv} widthMm={slipW} onHeight={setSlipH} />}
+        </div>
+    );
+}
+
+/* ───────────────────────── A4 portrait (the customer's legacy invoice) ─────────────────────────
+   Monogram | Urdu name + "Sale Invoice" | Proprietor, region, phones, page box.
+   Invoice / customer / salesman details on the left; day, date, account,
+   address and area on the right in small type. Bordered item grid with
+   Special Disc and Shelf Rent, totals, the shops banner, distributors box,
+   the terms note and Store Manager / Saleman signatures. */
+const A4_CONTENT_H_MM = 297 - 8 - 10; // page height less the @page margins
+
+function A4Sheet({ inv }: { inv: Invoice }) {
+    const t = inv.totals;
+    const c = inv.customer;
+    const region = inv.region || { code: 'GLT', name: 'Gilgit' };
+    const ref = useRef<HTMLDivElement>(null);
+    const [pages, setPages] = useState(1);
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const measure = () => setPages(Math.max(1, Math.ceil((el.getBoundingClientRect().height * 25.4 / 96 - 1) / A4_CONTENT_H_MM)));
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+    const d = inv.date ? new Date(`${String(inv.date).slice(0, 10)}T00:00:00`) : null;
+    const longDate = d ? `${d.getDate()} - ${d.toLocaleDateString('en-GB', { month: 'long' })} - ${d.getFullYear()}` : '';
+    const day = d ? d.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
+    const info = (k: string, v: React.ReactNode) => (
+        <><span style={{ fontWeight: 600 }}>{k}</span><span style={{ fontWeight: 700 }}>{v}</span></>
+    );
+    const side = (k: string, v: React.ReactNode) => (
+        <><span style={{ color: '#555' }}>{k}</span><span style={{ fontWeight: 600 }}>{v || '—'}</span></>
+    );
+    const th = (h: string, right = false, w?: string) => (
+        <th style={{ border: '0.25mm solid #333', padding: '1mm 1.2mm', fontWeight: 700, textAlign: right ? 'right' : 'left', width: w, lineHeight: 1.15 }}>{h}</th>
+    );
+    const td = (v: React.ReactNode, right = false, bold = false) => (
+        <td style={{ borderLeft: '0.25mm solid #333', borderRight: '0.25mm solid #333', borderBottom: '0.15mm solid #bbb', padding: '0.9mm 1.2mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 700 : 400, verticalAlign: 'top', fontVariantNumeric: 'tabular-nums' }}>{v}</td>
+    );
+    return (
+        <div ref={ref} className="inv sheet mx-auto bg-white shadow-xl" style={{ width: '194mm', minHeight: `${A4_CONTENT_H_MM}mm`, fontSize: '9pt', color: '#111' }}>
+            {/* Letterhead */}
+            <div className="grid items-start" style={{ gridTemplateColumns: '50mm 1fr 52mm', gap: '3mm' }}>
+                <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" style={{ width: '46mm', height: 'auto', marginTop: '1mm' }} />
+                <div className="flex flex-col items-center text-center">
+                    <div className="ur-name" dir="rtl" style={{ fontSize: '30pt', lineHeight: 1.15, color: '#343434' }}>{NAME_UR}</div>
+                    <div className="ur" dir="rtl" style={{ fontSize: '9pt', lineHeight: 1.9, color: '#343434' }}>{TAGLINE_UR}</div>
+                    <div style={{ fontSize: '15pt', fontWeight: 800, marginTop: '0.5mm' }}>Sale Invoice</div>
+                </div>
+                <div style={{ fontSize: '8.5pt', lineHeight: 1.45 }}>
+                    <div style={{ fontWeight: 800 }}>Proprietor:</div>
+                    <div>{PROPRIETOR}</div>
+                    <div><b>{region.code}</b> · {region.name} Region</div>
+                    <div style={{ marginTop: '1mm', fontVariantNumeric: 'tabular-nums' }}>{PROPRIETOR_PHONES.map((p) => <div key={p}>{p}</div>)}</div>
+                    <div style={{ marginTop: '1.5mm', border: '0.3mm dashed #333', textAlign: 'center', padding: '0.6mm 0', fontWeight: 600 }}>Page - 1 of {pages}</div>
+                </div>
+            </div>
+
+            {/* Invoice + customer (left) | day, date, account, address, area (right, small) */}
+            <div className="grid" style={{ gridTemplateColumns: '1fr 70mm', gap: '4mm', margin: '2.5mm 0 2mm' }}>
+                <div className="grid" style={{ gridTemplateColumns: '30mm 1fr', rowGap: '0.8mm', fontSize: '9pt' }}>
+                    {info('Date Invoice:', longDate)}
+                    {info('Invoice No:', inv.invoice_no)}
+                    {info('Customer Name:', c.name)}
+                    {info('Customer Cell #:', c.phone || '—')}
+                    {info('Saleman:', inv.staff || '—')}
+                    {info('Saleman Cell #:', inv.staff_cell || '—')}
+                </div>
+                <div className="grid self-start" style={{ gridTemplateColumns: '16mm 1fr', rowGap: '0.5mm', fontSize: '7.5pt', lineHeight: 1.35, border: '0.25mm solid #999', borderRadius: '1mm', padding: '1.5mm 2mm' }}>
+                    {side('Day', day)}
+                    {side('Date', dmy(inv.date))}
+                    {side('Account', c.acc_id)}
+                    {side('Address', c.address)}
+                    {side('Area', c.area)}
+                </div>
+            </div>
+
+            {/* Items */}
+            <table style={{ fontSize: '8.5pt', borderCollapse: 'collapse', borderBottom: '0.25mm solid #333' }}>
+                <thead>
+                    <tr style={{ background: '#efefef' }}>
+                        {th('S.No', false, '8mm')}{th('PID', false, '12mm')}{th('Product Name')}{th('Qty', true, '12mm')}{th('Bon', true, '9mm')}
+                        {th('TP', true, '16mm')}{th('Retail', true, '16mm')}{th('Special Disc %', true, '14mm')}{th('Shelf Rent %', true, '13mm')}
+                        {th('Disc Amt', true, '17mm')}{th('Net Amount', true, '21mm')}
+                    </tr>
+                </thead>
+                <tbody>
+                    {inv.lines.map((l, i) => (
+                        <tr key={i}>
+                            {td(i + 1, true)}{td(l.pid)}{td(<>{l.name}{l.expiry_date ? <div style={{ color: '#666', fontSize: '6.5pt', whiteSpace: 'nowrap' }}>Exp {dmy(l.expiry_date)}</div> : null}</>)}
+                            {td(<>{qtyFmt(l.qty)}{unitLabel(l) !== 'Pcs' ? <div style={{ fontSize: '6.5pt', color: '#555' }}>{unitLabel(l)}</div> : null}</>, true)}
+                            {td(qtyFmt(l.bonus), true)}{td(money(l.tp), true)}{td(money(l.retail), true)}
+                            {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}
+                            {td(money(n(l.special) + n(l.shelf)), true)}{td(money(l.net), true, true)}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            {/* Totals */}
+            <div className="flex items-start justify-between" style={{ marginTop: '2mm', breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                <div style={{ fontSize: '9pt', paddingTop: '1mm' }}>
+                    <b>Total Products = {qtyFmt(t.pieces)}</b>{t.bonus ? <span style={{ color: '#555' }}> (+{qtyFmt(t.bonus)} bonus)</span> : null}
+                    <span style={{ color: '#555' }}> · {inv.lines.length} item{inv.lines.length === 1 ? '' : 's'}</span>
+                </div>
+                <table style={{ width: '82mm', fontSize: '8.5pt', border: '0.25mm solid #333' }}>
+                    <tbody>
+                        <A4Tot k="Amount" v={t.gross} />
+                        <A4Tot k="Special Discount" v={-n(t.special)} />
+                        <A4Tot k="Shelf Rent" v={-n(t.shelf)} />
+                        {n(t.bill_disc) > 0 && <A4Tot k="Bill Discount" v={-n(t.bill_disc)} />}
+                        <A4Tot k="Net Amount" v={t.net} bold />
+                        <A4Tot k="Previous Balance" v={t.prev_balance} />
+                        <A4Tot k="Total" v={t.total} />
+                        <A4Tot k="Paid" v={-n(t.paid)} />
+                        <A4Tot k="Balance" v={t.balance} bold shade />
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Footer: shops banner, distributors, terms, signatures */}
+            <div style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+                <div style={{ border: '0.35mm solid #222', padding: '1.6mm 2mm', marginTop: '4mm' }}><ShopsBanner /></div>
+                <div dir="rtl" style={{ border: '0.35mm solid #222', borderTop: 0, padding: '0.8mm 2mm', fontSize: '8pt' }}>
+                    <div dir="ltr" style={{ fontWeight: 700, borderBottom: '0.2mm solid #555', paddingBottom: '0.5mm' }}>Distributors:</div>
+                    <div className="ur" style={{ fontSize: '7.5pt', lineHeight: 2.05, backgroundImage: 'repeating-linear-gradient(transparent 0 5.6mm, #555 5.6mm 5.8mm)' }}>{DISTRIBUTES_LIST_UR}</div>
+                </div>
+                <div className="ur" dir="rtl" style={{ fontSize: '7.5pt', lineHeight: 2.1, marginTop: '1.5mm', textAlign: 'justify' }}>
+                    {termsUr(region.code === 'SKD' ? 'سکردو' : 'گلگت')}
+                </div>
+                <div className="flex justify-between" style={{ marginTop: '9mm', fontSize: '9pt', fontWeight: 700 }}>
+                    <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.8mm' }}>Store Manager</div>
+                    <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.8mm' }}>Saleman</div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function A4Tot({ k, v, bold, shade }: { k: string; v: any; bold?: boolean; shade?: boolean }) {
+    return (
+        <tr style={{ borderBottom: '0.15mm solid #bbb', background: shade ? '#efefef' : undefined }}>
+            <td style={{ padding: '0.8mm 2mm', fontWeight: bold ? 800 : 500 }}>{k}</td>
+            <td style={{ padding: '0.8mm 2mm', textAlign: 'right', fontWeight: bold ? 800 : 600, fontVariantNumeric: 'tabular-nums' }}>{money(v)}</td>
+        </tr>
+    );
+}
+
+/* The shops strip from the letterhead (4th picture): Gilgit shop | slogan | Skardu shop, right to left. */
+function ShopsBanner() {
+    const box = (text: string, point: 'left' | 'right') => (
+        <div className="ur flex items-center justify-center" dir="rtl"
+            style={{
+                background: '#2f2f33', color: '#fff', fontSize: '8pt', lineHeight: 1, height: '7mm', padding: '0 5mm', whiteSpace: 'nowrap',
+                clipPath: point === 'left' ? 'polygon(4mm 0, 100% 0, 100% 100%, 4mm 100%, 0 50%)' : 'polygon(0 0, calc(100% - 4mm) 0, 100% 50%, calc(100% - 4mm) 100%, 0 100%)',
+            }}>
+            <span style={{ transform: 'translateY(0.6mm)' }}>{text}</span>
+        </div>
+    );
+    const bar = (dir: string) => <div style={{ width: '9mm', height: '4.5mm', background: `linear-gradient(${dir}, #2a2e8f, #8c8fd6)` }} />;
+    return (
+        <div className="flex items-center justify-between" dir="rtl" style={{ gap: '2mm' }}>
+            {box(SHOP_GILGIT_UR, 'left')}
+            <div className="flex items-center" style={{ gap: '2mm' }}>
+                {bar('90deg')}
+                <span className="ur" style={{ fontSize: '9pt', lineHeight: 1, whiteSpace: 'nowrap', transform: 'translateY(0.6mm)' }}>{SLOGAN_UR}</span>
+                {bar('270deg')}
+            </div>
+            {box(SHOP_SKARDU_UR, 'right')}
         </div>
     );
 }
@@ -203,7 +364,7 @@ function A5Sheet({ inv }: { inv: Invoice }) {
                     <thead>
                         <tr style={{ background: C.blue, color: '#fff' }}>
                             {['#', 'PID', 'Product Name', 'Expiry', 'Unit', 'Qty', 'Bonus', 'T.P', 'Amount',
-                              ...(anySpecial ? ['Special Disc'] : []), ...(anyShelf ? ['Shelf'] : []), 'Net Amount'].map((h, i) => (
+                              ...(anySpecial ? ['Special Disc'] : []), ...(anyShelf ? ['Shelf Rent'] : []), 'Net Amount'].map((h, i) => (
                                 <th key={h} style={{ padding: '1.2mm 1.3mm', fontWeight: 700, textAlign: i <= 4 ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
                             ))}
                         </tr>
@@ -244,7 +405,7 @@ function A5Sheet({ inv }: { inv: Invoice }) {
                         <tbody>
                             <TotRow k="Amount Billed" v={t.gross} />
                             {n(t.special) > 0 && <TotRow k="Special Discount" v={-n(t.special)} />}
-                            {n(t.shelf) > 0 && <TotRow k="Shelf Rate" v={-n(t.shelf)} />}
+                            {n(t.shelf) > 0 && <TotRow k="Shelf Rent" v={-n(t.shelf)} />}
                             {n(t.bill_disc) > 0 && <TotRow k="Bill Discount" v={-n(t.bill_disc)} />}
                             <TotRow k="Net Amount" v={t.net} bold />
                         </tbody>
@@ -281,7 +442,7 @@ function TotRow({ k, v, bold }: { k: string; v: any; bold?: boolean }) {
 /* Header in the visiting card's design: royal-blue band, a white panel with a
    curved edge holding the monogram, CEO and phones; the Urdu name in white,
    the tagline in yellow, the slogan in two white pills joined by a yellow bar;
-   the invoice box (number, date, barcode) on the left of the band. */
+   the invoice box (number, date) on the left of the band. */
 function CardHeader({ inv }: { inv: Invoice }) {
     const pill = (text: string, cut: 'left' | 'right') => (
         <div className="ur-name" style={{
@@ -293,7 +454,7 @@ function CardHeader({ inv }: { inv: Invoice }) {
         <div className="flex overflow-hidden" style={{ height: '33mm', borderRadius: '3mm', background: `linear-gradient(100deg, ${C.blueDeep}, ${C.blue} 55%)` }}>
             {/* White logo panel with the card's curved edge */}
             <div className="flex shrink-0 flex-col justify-center" style={{ width: '58mm', background: '#fff', borderRadius: '0 18mm 18mm 0', padding: '0 7mm 0 4mm', boxShadow: `1.2mm 0 0 0 ${C.yellow}` }}>
-                <img src="/brand/aqt-monogram-card.png" alt="Al-Qavi Traders" style={{ height: '14mm', width: 'auto', alignSelf: 'flex-start' }} />
+                <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" style={{ height: '14mm', width: 'auto', alignSelf: 'flex-start' }} />
                 <div className="flex items-center" style={{ gap: '1.5mm', marginTop: '1mm', marginBottom: '1.6mm' }}>
                     <span style={{ background: C.sky, color: '#fff', fontSize: '6.5pt', fontWeight: 800, padding: '0.4mm 2.4mm 0.4mm 1.6mm', clipPath: 'polygon(0 0, calc(100% - 1.4mm) 0, 100% 50%, calc(100% - 1.4mm) 100%, 0 100%)' }}>CEO</span>
                     <span className="ur" dir="rtl" style={{ fontSize: '8pt', lineHeight: 1.5, color: '#333' }}>{CEO_UR}</span>
@@ -308,7 +469,6 @@ function CardHeader({ inv }: { inv: Invoice }) {
                 <div style={{ fontSize: '9.5pt', fontWeight: 800, letterSpacing: '0.14em', color: C.blue }}>SALE INVOICE</div>
                 <div style={{ fontSize: '10.5pt', fontWeight: 800, fontFamily: 'ui-monospace, monospace', marginTop: '0.6mm' }}>{inv.invoice_no}</div>
                 <div style={{ fontSize: '8pt', color: '#555' }}>Date: <b style={{ color: '#111' }}>{dmy(inv.date)}</b></div>
-                <div style={{ marginTop: '1mm' }}><Barcode value={inv.invoice_no} heightMm={7} moduleMm={0.25} /></div>
             </div>
 
             {/* Name, tagline, slogan */}
@@ -398,7 +558,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                     </div>
                     {(n(l.special) > 0 || n(l.shelf) > 0) && (
                         <div className="flex justify-between" style={{ fontSize: `${fs - 0.5}pt` }}>
-                            <span>{[n(l.special) > 0 ? `Special Disc ${pct(l.special_pct)}` : '', n(l.shelf) > 0 ? `Shelf ${pct(l.shelf_pct)}` : ''].filter(Boolean).join(' · ')}</span>
+                            <span>{[n(l.special) > 0 ? `Special Disc ${pct(l.special_pct)}` : '', n(l.shelf) > 0 ? `Shelf Rent ${pct(l.shelf_pct)}` : ''].filter(Boolean).join(' · ')}</span>
                             <span>-{money(n(l.special) + n(l.shelf))}</span>
                         </div>
                     )}
@@ -408,18 +568,14 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             <div style={{ fontWeight: 700 }}>Total Products = {qtyFmt(t.pieces)}{t.bonus ? ` (+${qtyFmt(t.bonus)} bonus)` : ''}</div>
             {row('Amount Billed', t.gross)}
             {n(t.special) > 0 && row('Special Discount', -n(t.special))}
-            {n(t.shelf) > 0 && row('Shelf Rate', -n(t.shelf))}
+            {n(t.shelf) > 0 && row('Shelf Rent', -n(t.shelf))}
             {n(t.bill_disc) > 0 && row('Bill Discount', -n(t.bill_disc))}
             {row('Net Amount', t.net, true)}
             {row('Previous Balance', t.prev_balance)}
             {row('Paid Cash', -n(t.paid))}
             <div style={{ borderTop: '0.4mm solid #000', marginTop: '1mm', paddingTop: '0.5mm' }}>{row('Net Balance', t.balance, true)}</div>
             {rule}
-            <div className="flex flex-col items-center">
-                <Barcode value={inv.invoice_no} heightMm={small ? 9 : 11} moduleMm={small ? 0.25 : 0.375} />
-                <div style={{ fontFamily: 'ui-monospace, monospace', fontWeight: 700, letterSpacing: '0.15em', marginTop: '0.5mm' }}>{inv.invoice_no}</div>
-                <div className="ur" dir="rtl" style={{ lineHeight: 2.1, marginTop: '0.5mm' }}>خریداری کا شکریہ</div>
-            </div>
+            <div className="ur text-center" dir="rtl" style={{ lineHeight: 2.1 }}>خریداری کا شکریہ</div>
             {rule}
             <div className="ur" dir="rtl" style={{ fontSize: `${fs - 1.5}pt`, lineHeight: 2, textAlign: 'center' }}>
                 <b>{DISTRIBUTOR_UR}:</b> {DISTRIBUTES_UR}
