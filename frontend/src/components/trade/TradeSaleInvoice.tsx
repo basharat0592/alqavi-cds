@@ -109,13 +109,13 @@ const FP_STOCK_COLS = [
 const FP_HIST_COLS = [
     { h: 'PID', w: '7%' }, { h: 'Category', w: '10%' }, { h: 'Product', w: '21%' }, { h: 'Pack', w: '6%' },
     { h: 'Expiry Date', w: '10%' }, { h: 'Qty(U)', w: '7%' }, { h: 'Qty(B)', w: '7%' }, { h: 'T.P', w: '9%' },
-    { h: 'TP %', w: '7%' }, { h: 'Shelf %', w: '6%' }, { h: 'Retail Rate', w: '10%' },
+    { h: 'Special Disc %', w: '7%' }, { h: 'Shelf %', w: '6%' }, { h: 'Retail Rate', w: '10%' },
 ];
 
 /* Sale / Sale-Return Records grid (legacy column order). */
 const SR_COLS = [
     { h: 'SaleID', w: '9%' }, { h: 'Date Sale', w: '8%' }, { h: 'Staff', w: '10%' }, { h: 'Acc.ID', w: '8%' },
-    { h: 'Acc.Name', w: '13.5%' }, { h: 'Amount', w: '7.5%' }, { h: 'S.Disc.', w: '6%' }, { h: 'Shelf', w: '5.5%' }, { h: 'Net.Amount', w: '7.5%' },
+    { h: 'Acc.Name', w: '13.5%' }, { h: 'Amount', w: '7.5%' }, { h: 'Special Disc', w: '6%' }, { h: 'Shelf', w: '5.5%' }, { h: 'Net.Amount', w: '7.5%' },
     { h: 'Pre. Bal.', w: '7%' }, { h: 'Total', w: '6.5%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '6%' },
 ];
 
@@ -123,12 +123,12 @@ const SR_COLS = [
 const RET_COLS = [
     { h: 'SNo', w: '4.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '17%' }, { h: 'Expiry', w: '9.5%' },
     { h: 'Qty', w: '5%' }, { h: 'Bons', w: '5%' }, { h: 'TP', w: '7%' }, { h: 'Retail', w: '7%' },
-    { h: 'Sub Total', w: '8.5%' }, { h: 'S.Dis %', w: '5.5%' }, { h: 'Shelf %', w: '6%' }, { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
+    { h: 'Sub Total', w: '8.5%' }, { h: 'Special Disc %', w: '5.5%' }, { h: 'Shelf %', w: '6%' }, { h: 'Dis.Amt', w: '8%' }, { h: 'Net Amt', w: '10.5%' },
 ]
 const RR_HIST_COLS = [
     { h: 'Sale Inv.', w: '11%' }, { h: 'Date', w: '9.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '17.5%' },
     { h: 'Expiry', w: '9.5%' }, { h: 'Qty', w: '5%' }, { h: 'Bonus', w: '6%' }, { h: 'Returned', w: '7.5%' },
-    { h: 'TP', w: '7%' }, { h: 'S.Disc%', w: '6%' }, { h: 'Shelf%', w: '5.5%' }, { h: 'Retail', w: '9%' },
+    { h: 'TP', w: '7%' }, { h: 'Special Disc %', w: '6%' }, { h: 'Shelf%', w: '5.5%' }, { h: 'Retail', w: '9%' },
 ]
 
 /* Lays a window body out at a design size (w x h) and scales it to exactly fit
@@ -165,10 +165,13 @@ const SHORTCUTS: [string, string][] = [
 
 /* Sale grid columns — legacy order and proportions (as % of the grid width, so
    they scale with the window); headers and values left-aligned like Trade 1.0. */
+// Long "Special Disc" headers wrap in a smaller font instead of being cut off.
+const thFit = (h: string) => (h.startsWith('Special') ? ' !whitespace-normal !text-[10.5px] !leading-tight' : '');
+
 const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
     { h: 'SNo', w: '4%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '14.5%' }, { h: 'Expiry', w: '10%' },
     { h: 'Qty', w: '5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '6.5%' },
-    { h: 'Retail', w: '6.5%' }, { h: 'SubTotal', w: '8%' }, { h: 'S.Disc%', w: '6.5%' }, { h: 'Shelf%', w: '6%' },
+    { h: 'Retail', w: '6.5%' }, { h: 'SubTotal', w: '8%' }, { h: 'Special Disc %', w: '6.5%' }, { h: 'Shelf%', w: '6%' },
     { h: 'Dis.Amt', w: '8.5%' }, { h: 'Net Amt', w: '12.5%' },
 ];
 
@@ -741,7 +744,7 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
 /* mode 'records': the dashboard's Sale Records button — the Sale / Sale-Return
    Records window on its own (Find Account, Chart of Account, Print and Sale
    Return all work from it); closing it closes the pop-up. */
-export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice' | 'records' }) {
+export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice' | 'records' | 'return' }) {
     // Customer
     const [customers, setCustomers] = useState<any[]>([]);
     const [customer, setCustomer] = useState<any | null>(null);
@@ -808,7 +811,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const discRef = useRef<HTMLInputElement>(null);
     const shelfRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${mode === 'records' ? 'Sale Records' : 'Sale Invoice'} )`; }, [mode]);
+    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${mode === 'records' ? 'Sale Records' : mode === 'return' ? 'Sale Return' : 'Sale Invoice'} )`; }, [mode]);
 
     const loadInvoiceNo = useCallback(() => {
         api.get('v1/sales/orders/next_invoice_no/')
@@ -1228,6 +1231,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Find Account serves the invoice and the Sale Records filter.
     const custTarget = useRef<'invoice' | 'records' | 'return'>('invoice');
     const closeFindCustomer = () => { setShowFindCust(false); setAddingCust(false); custTarget.current = 'invoice'; };
+    const [custSel, setCustSel] = useState(-1);
+    const custGridRef = useRef<HTMLDivElement>(null);
+    useEffect(() => { if (showFindCust) setCustSel(-1); }, [showFindCust]);
 
     // Saleman options — the legacy Staff list (all kept for Sale Records;
     // only active ones are offered on a new invoice).
@@ -1284,6 +1290,14 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         else { setCustQuery(custInput.trim()); setShowFindCust(true); }
     };
 
+    // Customers sit under Current assets › Accounts Receivable in the chart of accounts.
+    useEffect(() => {
+        if (showFindCust && !groups.length) api.get('v1/company/account-groups/').then(({ data }) => setGroups(data)).catch(() => {});
+    }, [showFindCust]); // eslint-disable-line react-hooks/exhaustive-deps
+    const custGroupNames = useMemo(() => ({
+        l2: groups.find((g) => g.code === 12)?.name || 'Current assets',
+        l3: groups.find((g) => g.code === CUSTOMER_GROUP)?.name || 'Accounts Receivable',
+    }), [groups]);
     const custMatches = useMemo(() => {
         const q = custQuery.trim().toLowerCase();
         const list = customers.filter((c) => c.is_active !== false);
@@ -1292,6 +1306,16 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             custCode(c).toLowerCase().includes(q) || custName(c).toLowerCase().includes(q) ||
             String(c.area_name || '').toLowerCase().includes(q) || String(c.phone || '').includes(q)).slice(0, 200);
     }, [customers, custQuery]);
+    const custGridKeys = (e: React.KeyboardEvent) => {
+        const n = custMatches.length;
+        if (!n) return;
+        if (e.key === 'Enter') { e.preventDefault(); pickCustomer(custMatches[custSel < 0 ? 0 : custSel]); return; }
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        e.preventDefault();
+        const i = Math.min(n - 1, Math.max(0, custSel + (e.key === 'ArrowDown' ? 1 : -1)));
+        setCustSel(i);
+        custGridRef.current?.querySelectorAll('tbody tr')[i]?.scrollIntoView({ block: 'nearest' });
+    };
 
     /* ── product ── */
     // Units of a batch already placed on this invoice (so we never oversell it).
@@ -1338,6 +1362,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const [stockLoading, setStockLoading] = useState(false);
     const [histRows, setHistRows] = useState<any[]>([]);
     const [fpSel, setFpSel] = useState('');
+    // Who asked for Find Product: the invoice entry row, or the Sale Return history filter.
+    const fpTarget = useRef<'invoice' | 'return'>('invoice');
     const [fpHistSel, setFpHistSel] = useState(-1);
     const fpStockRef = useRef<HTMLDivElement>(null);
     const fpHistRef = useRef<HTMLDivElement>(null);
@@ -1356,7 +1382,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         setCompanies(all.sort((a, b) => String(a.name).localeCompare(String(b.name))));
     };
 
-    const openFindProduct = (name = '') => {
+    const openFindProduct = (name = '', target: 'invoice' | 'return' = 'invoice') => {
+        fpTarget.current = target;
         setFpName(name); setFpBarcode(''); setFpSel(''); setFpHistSel(-1);
         setShowFindProd(true);
         if (!companies.length) loadCompanies();
@@ -1415,7 +1442,15 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             box.current?.querySelectorAll('tbody tr')[i]?.scrollIntoView({ block: 'nearest' });
         };
 
+    const pickForReturn = (pid: string) => {
+        fpTarget.current = 'invoice';
+        setShowFindProd(false);
+        setRrProduct(pid);
+        loadRrHistory(rrCust, rrInvoice, pid);
+    };
+
     const pickStockRow = async (r: any) => {
+        if (fpTarget.current === 'return') { pickForReturn(r.pid); return; }
         try {
             const { data } = await api.get('v1/products/items/sale_lookup/', { params: { code: r.pid } });
             const prod: LookupProduct | undefined = data.find((x: any) => x.id === r.product_id) || data[0];
@@ -1428,6 +1463,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Pick a history row: same product again, with the discount given last time.
     const pickHistoryRow = async (r: any) => {
         if (!r.pid) return;
+        if (fpTarget.current === 'return') { pickForReturn(r.pid); return; }
         try {
             const { data } = await api.get('v1/products/items/sale_lookup/', { params: { code: r.pid } });
             const prod: LookupProduct | undefined = data.find((x: any) => x.id === r.product_id) || data[0];
@@ -1693,12 +1729,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const [rrSaving, setRrSaving] = useState(false);
     const rrQtyRef = useRef<HTMLInputElement>(null);
 
-    const loadRrHistory = async (cust = rrCust, invoice = rrInvoice) => {
+    const loadRrHistory = async (cust = rrCust, invoice = rrInvoice, product = rrProduct) => {
         if (!cust) { toast.error('Find a customer first.'); return; }
         setRrHistLoading(true);
         try {
             const params: any = { customer: cust.id };
-            if (rrProduct.trim()) params.product = rrProduct.trim();
+            if (product.trim()) params.product = product.trim();
             if (invoice.trim()) params.invoice = invoice.trim();
             if (rrFromOn) params.date_from = rrFrom;
             if (rrToOn) params.date_to = rrTo;
@@ -1727,6 +1763,19 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         else { setRrCust(null); setRrCustInput(''); setRrPrev(0); }
     };
 
+    // The button always opens Find Account; Enter in the code box picks an exact code.
+    const openReturnFindAccount = () => {
+        custTarget.current = 'return';
+        setCustQuery('');
+        setShowFindCust(true);
+    };
+    // Standalone Sale Return window (dashboard): opens on load, closing it closes the pop-up.
+    useEffect(() => { if (mode === 'return') openReturnRandom(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const closeReturnRandom = () => {
+        if (mode !== 'return') { setRrOpen(false); return; }
+        window.close();
+        setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
+    };
     const findReturnCustomer = (input = rrCustInput) => {
         const q = input.trim().toLowerCase();
         const hit = q ? customers.find((c) => custCode(c).toLowerCase() === q) : null;
@@ -1902,7 +1951,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
 
     /* ── keyboard ── */
     useEffect(() => {
-        if (mode === 'records') return;
+        if (mode !== 'invoice') return;
         const h = (e: KeyboardEvent) => {
             if (e.key === 'F2') { e.preventDefault(); setShowFindCust(true); }
             else if (e.key === 'F3') { e.preventDefault(); openFpRef.current(); }
@@ -1928,7 +1977,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
 
             {/* The whole form scales to fill the window (bigger on big screens,
                 smaller on small ones) — always one glance, never a scrollbar. */}
-            <div className={mode === 'records' ? 'hidden' : 'print:hidden'}>
+            <div className={mode !== 'invoice' ? 'hidden' : 'print:hidden'}>
             <FitStage width={STAGE_W} height={STAGE_H} className="flex flex-col overflow-hidden">
             {/* Window caption */}
             <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1 print:hidden">
@@ -1965,7 +2014,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     <span className={LABEL}>{unit === 'CARTON' ? 'Pcs/Ctn' : 'Packing'}</span>
                     <span className={LABEL}>Bon(U)</span>
                     <span className={LABEL}>Unit TP</span>
-                    <span className={LABEL} title="Special Discount %">S.Disc %</span>
+                    <span className={`${LABEL} text-[11px]`} title="Special Discount %">Special Disc %</span>
                     <span className={LABEL} title="Shelf Rate % — what the shop charges to keep the product on its shelf">Shelf %</span>
                     <span className={LABEL}>Retail Rate</span>
                     <span className={LABEL} title="Special Discount amount">Disc Amt.</span>
@@ -2013,7 +2062,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <tr className="bg-gradient-to-b from-white to-[#e9e9f1] text-left text-[13px] font-bold text-slate-800">
                                         {GRID_COLS.map((c) => (
                                             <th key={c.h} style={c.w ? { width: c.w } : undefined}
-                                                className={`overflow-hidden whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 ${c.right ? 'text-right' : ''}`}>{c.h}</th>
+                                                className={`overflow-hidden whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 ${c.right ? 'text-right' : ''}${thFit(c.h)}`}>{c.h}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -2170,32 +2219,35 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             {/* ─── Find Customer (legacy "Find Account") ─── */}
             {showFindCust && (
                 <Modal title="Find Account" onClose={() => askClose(closeFindCustomer)} wide>
-                    <div className="flex items-center gap-2 border-b border-slate-200 p-3">
-                        <div className="relative flex-1">
-                            <Search size={15} className="absolute left-2.5 top-2 text-slate-400" />
-                            <input autoFocus value={custQuery} onChange={(e) => setCustQuery(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter' && custMatches[0]) pickCustomer(custMatches[0]); }}
-                                placeholder="Code, name, area or phone…" className={`${EDIT} w-full pl-8`} />
-                        </div>
+                    <div className="flex items-center gap-3 border-b border-[#9da1d8] bg-[#c9c9f9] px-4 py-3">
+                        <span className="text-[16px] font-semibold text-[#1b1f4b]">Account Name</span>
+                        <input autoFocus value={custQuery} onChange={(e) => { setCustQuery(e.target.value); setCustSel(-1); }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') { const c = custMatches[custSel] || custMatches[0]; if (c) pickCustomer(c); }
+                                else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') custGridKeys(e);
+                            }}
+                            placeholder="Name, code, area or phone" className={`${EDIT} h-9 flex-1 text-[15px]`} />
                         <button type="button" onClick={openAddCustomer} className={`${ACTION_BTN} shrink-0`}>
                             <span className="underline">A</span>dd New
                         </button>
                     </div>
-                    <div className="min-h-0 flex-1 overflow-auto">
-                        <table className="w-full text-[13px]">
-                            <thead className="sticky top-0 bg-slate-100 text-left text-slate-600">
-                                <tr><th className="px-3 py-1.5">Code</th><th className="px-3 py-1.5">Name</th><th className="px-3 py-1.5">Area</th><th className="px-3 py-1.5">Phone</th></tr>
+                    <div ref={custGridRef} tabIndex={0} onKeyDown={custGridKeys}
+                        className="min-h-0 flex-1 overflow-auto bg-[#8a8a8a] outline-none focus:ring-2 focus:ring-inset focus:ring-[#2f5bd3]">
+                        <table className="w-[94%] table-fixed border-collapse bg-white text-[13px]">
+                            <colgroup><col style={{ width: '13%' }} /><col style={{ width: '35%' }} /><col style={{ width: '18%' }} /><col style={{ width: '15%' }} /><col style={{ width: '19%' }} /></colgroup>
+                            <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                <tr>{['Account ID', 'Account Name', 'Area', 'Acc. 2nd Level', 'Acc. 3rd Level'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
                             </thead>
                             <tbody>
-                                {custMatches.map((c) => (
-                                    <tr key={c.id} onClick={() => pickCustomer(c)} className="cursor-pointer border-t border-slate-100 hover:bg-indigo-50">
-                                        <td className="px-3 py-1.5 font-mono tabular-nums">{custCode(c)}</td>
-                                        <td className="px-3 py-1.5 font-semibold">{custName(c)}</td>
-                                        <td className="px-3 py-1.5 text-slate-600">{c.area_name || '—'}</td>
-                                        <td className="px-3 py-1.5 text-slate-600">{c.phone || '—'}</td>
+                                {custMatches.map((c, i) => (
+                                    <tr key={c.id} onClick={() => setCustSel(i)} onDoubleClick={() => pickCustomer(c)} title="Click to select · Enter or double-click to pick"
+                                        className={`cursor-pointer ${custSel === i ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
+                                        {[custCode(c), custName(c), c.area_name || '', custGroupNames.l2, custGroupNames.l3].map((v, k) => (
+                                            <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono tabular-nums' : ''} ${k === 1 ? 'font-semibold' : ''}`}>{v}</td>
+                                        ))}
                                     </tr>
                                 ))}
-                                {!custMatches.length && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">No customers match.</td></tr>}
+                                {!custMatches.length && <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-400">No accounts match.</td></tr>}
                             </tbody>
                         </table>
                     </div>
@@ -2394,7 +2446,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 <table className="w-full min-w-[900px] table-fixed border-collapse bg-[#ffffcf] text-[13px]">
                                     <colgroup>{FP_HIST_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-[#ffe1b8] text-left">
-                                        <tr>{FP_HIST_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
+                                        <tr>{FP_HIST_COLS.map((c) => <th key={c.h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold${thFit(c.h)}`}>{c.h}</th>)}</tr>
                                     </thead>
                                     <tbody>
                                         {histShown.map((r, i) => (
@@ -2454,7 +2506,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         <table className="w-full border-collapse text-[12.5px] tabular-nums">
                             <thead>
                                 <tr className="border-y border-slate-400 bg-slate-50 text-left">
-                                    {['#', 'PID', 'Product', 'Expiry', 'Qty', 'Bon', 'TP', 'SubTotal', 'S.Disc', 'Shelf', 'Net'].map((h) => <th key={h} className="px-1.5 py-1">{h}</th>)}
+                                    {['#', 'PID', 'Product', 'Expiry', 'Qty', 'Bon', 'TP', 'SubTotal', 'Special Disc', 'Shelf', 'Net'].map((h) => <th key={h} className="px-1.5 py-1">{h}</th>)}
                                 </tr>
                             </thead>
                             <tbody>
@@ -2553,7 +2605,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             <table className="w-full min-w-[1080px] table-fixed border-collapse bg-white text-[13px]">
                                 <colgroup>{SR_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                 <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                    <tr>{SR_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
+                                    <tr>{SR_COLS.map((c) => <th key={c.h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold${thFit(c.h)}`}>{c.h}</th>)}</tr>
                                 </thead>
                                 <tbody>
                                     {(srRows || []).map((r, i) => (
@@ -2630,7 +2682,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 <table className="w-full table-fixed border-collapse bg-white text-[13px]">
                                     <colgroup>{RET_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                        <tr>{RET_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
+                                        <tr>{RET_COLS.map((c) => <th key={c.h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold${thFit(c.h)}`}>{c.h}</th>)}</tr>
                                     </thead>
                                     <tbody>
                                         {(rbLines || []).map((l, i) => (
@@ -2668,7 +2720,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         </div>
 
                         <div className="flex w-[330px] shrink-0 flex-col gap-2 overflow-hidden">
-                            {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['S.Disc Amt', fmt(rbTotals.disc - rbTotals.shelf), 'green'], ['Shelf Amt', fmt(rbTotals.shelf), 'green'],
+                            {[['Amt.Bonus', fmt(rbTotals.bonus), 'green'], ['Amt.Billed', fmt(rbTotals.billed), 'green'], ['Special Disc', fmt(rbTotals.disc - rbTotals.shelf), 'green'], ['Shelf Amt', fmt(rbTotals.shelf), 'green'],
                               ['Net Amount', fmt(rbTotals.net), 'yellow'], ['Prev.Bal', fmt(rbPrev), 'yellow']].map(([label, value, tone]) => (
                                 <div key={label} className="grid grid-cols-[118px_1fr] items-center gap-2">
                                     <span className="text-[16px] font-black text-[#1b1f4b]">{label}</span>
@@ -2700,7 +2752,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
 
             {/* ─── Sale Return (Random) (legacy) ─── */}
             {rrOpen && (
-                <Modal title="Sale Return" onClose={() => !rrSaving && askClose(() => setRrOpen(false))} full>
+                <Modal title="Sale Return" onClose={() => !rrSaving && askClose(closeReturnRandom)} full>
                     <FitBox w={1440} h={780}>
                     <div className="flex h-full gap-3 p-3">
                         {/* Left: entry + grids */}
@@ -2709,7 +2761,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 <legend className="px-1.5 text-[20px] font-black tracking-tight text-[#1f2bd6]">Sale Return (Random)</legend>
                                 <div className="grid grid-cols-[1.15fr_0.8fr_2fr_0.85fr_0.85fr_0.6fr_0.6fr] items-end gap-x-2 gap-y-0.5">
                                     <span className={LABEL}>Sale.Return Inv.</span><span className={LABEL}>Product ID</span><span className={LABEL}>Product Name</span>
-                                    <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={LABEL}>S.Disc %</span><span className={LABEL}>Shelf %</span>
+                                    <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={`${LABEL} text-[11px]`}>Special Disc %</span><span className={LABEL}>Shelf %</span>
                                     <ReadBox value={rrPick?.invoice_no || ''} className="font-mono" />
                                     <ReadBox value={rrPick?.pid || ''} />
                                     <ReadBox value={rrPick?.name || ''} />
@@ -2731,7 +2783,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <ReadBox value={rrPick ? ymd(rrPick.expiry_date) : ''} />
                                 </div>
                                 <div className="mt-2 grid grid-cols-[auto_150px_1fr_auto_1fr] items-center gap-x-2">
-                                    <button type="button" onClick={() => findReturnCustomer()}
+                                    <button type="button" onClick={openReturnFindAccount}
                                         className="h-8 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] px-3 text-[13px] font-bold text-slate-800 hover:to-[#d9d9e6]">Find Customer</button>
                                     <input value={rrCustInput} onChange={(e) => setRrCustInput(e.target.value)} placeholder="Code"
                                         onKeyDown={(e) => { if (e.key === 'Enter') findReturnCustomer(); }} className={`${EDIT} w-full`} />
@@ -2749,7 +2801,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 <table className="w-full table-fixed border-collapse bg-white text-[13px]">
                                     <colgroup>{RET_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                        <tr>{RET_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold">{c.h}</th>)}</tr>
+                                        <tr>{RET_COLS.map((c) => <th key={c.h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold${thFit(c.h)}`}>{c.h}</th>)}</tr>
                                     </thead>
                                     <tbody>
                                         {rrLines.map((l, i) => (
@@ -2774,7 +2826,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <table className="w-full table-fixed border-collapse bg-white text-[13px]">
                                         <colgroup>{RR_HIST_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                         <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                            <tr>{RR_HIST_COLS.map((c) => <th key={c.h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{c.h}</th>)}</tr>
+                                            <tr>{RR_HIST_COLS.map((c) => <th key={c.h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold${thFit(c.h)}`}>{c.h}</th>)}</tr>
                                         </thead>
                                         <tbody>
                                             {(rrHist || []).map((l) => (
@@ -2804,7 +2856,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         {/* Right: totals, actions, history filters */}
                         <div className="flex w-[380px] shrink-0 flex-col gap-2 overflow-hidden">
                             <div className="grid grid-cols-2 gap-x-3 gap-y-1 rounded-lg border border-[#9da1d8] bg-[#ececfd] p-2.5">
-                                {[['Sale Amount', fmt(rrTotals.sale)], ['S.Disc Amount', fmt(rrTotals.disc - rrTotals.shelf)], ['Shelf Amount', fmt(rrTotals.shelf)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
+                                {[['Sale Amount', fmt(rrTotals.sale)], ['Special Disc Amount', fmt(rrTotals.disc - rrTotals.shelf)], ['Shelf Amount', fmt(rrTotals.shelf)], ['Net Sale Amount', fmt(rrTotals.net)], ['Previous Bal', fmt(rrPrev)]].map(([label, value]) => (
                                     <div key={label} className="flex flex-col gap-0.5">
                                         <span className={LABEL}>{label}</span>
                                         <div className="flex h-9 items-center justify-center rounded-md bg-black font-mono text-[18px] font-black tabular-nums text-[#3cff5a]">{value}</div>
@@ -2840,18 +2892,18 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     {rrSaving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                                 </button>
                                 <button type="button" onClick={() => openSaleRecords({ type: 'return', cust: rrCust })} className={`${ACTION_BTN} !min-w-0`}><span className="underline">V</span>iew</button>
-                                <button type="button" onClick={() => askClose(() => setRrOpen(false))} disabled={rrSaving} className={`${ACTION_BTN} !min-w-0`}><span className="underline">C</span>ancel</button>
+                                <button type="button" onClick={() => askClose(closeReturnRandom)} disabled={rrSaving} className={`${ACTION_BTN} !min-w-0`}><span className="underline">C</span>ancel</button>
                             </div>
                             <ReadBox value={<span className="w-full text-center font-bold text-[#1f2bd6]">Total Products = {rrLines.length}</span>} />
 
                             <div className="flex flex-col gap-2 rounded-lg border border-[#e6b98a] bg-[#ffe3c7] p-2.5">
                                 <div className="grid grid-cols-[96px_1fr] items-center gap-2">
-                                    <button type="button" onClick={() => findReturnCustomer()} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Cust.</button>
+                                    <button type="button" onClick={openReturnFindAccount} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Cust.</button>
                                     <input value={rrCustInput} onChange={(e) => setRrCustInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') findReturnCustomer(); }} className={`${EDIT} w-full`} placeholder="Code" />
                                 </div>
                                 <ReadBox value={rrCust ? custName(rrCust) : ''} />
                                 <div className="grid grid-cols-[96px_1fr] items-center gap-2">
-                                    <button type="button" onClick={() => loadRrHistory()} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Product</button>
+                                    <button type="button" onClick={() => { if (rrProduct.trim()) loadRrHistory(); else if (!rrCust) toast.error('Find a customer first.'); else openFindProduct('', 'return'); }} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Product</button>
                                     <input value={rrProduct} onChange={(e) => setRrProduct(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') loadRrHistory(); }} className={`${EDIT} w-full`} placeholder="PID or name" />
                                 </div>
                                 <div className="grid grid-cols-[96px_1fr] items-center gap-2">

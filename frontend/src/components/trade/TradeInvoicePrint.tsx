@@ -203,7 +203,7 @@ function A5Sheet({ inv }: { inv: Invoice }) {
                     <thead>
                         <tr style={{ background: C.blue, color: '#fff' }}>
                             {['#', 'PID', 'Product Name', 'Expiry', 'Unit', 'Qty', 'Bonus', 'T.P', 'Amount',
-                              ...(anySpecial ? ['S.Disc'] : []), ...(anyShelf ? ['Shelf'] : []), 'Net Amount'].map((h, i) => (
+                              ...(anySpecial ? ['Special Disc'] : []), ...(anyShelf ? ['Shelf'] : []), 'Net Amount'].map((h, i) => (
                                 <th key={h} style={{ padding: '1.2mm 1.3mm', fontWeight: 700, textAlign: i <= 4 ? 'left' : 'right', whiteSpace: 'nowrap' }}>{h}</th>
                             ))}
                         </tr>
@@ -398,7 +398,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                     </div>
                     {(n(l.special) > 0 || n(l.shelf) > 0) && (
                         <div className="flex justify-between" style={{ fontSize: `${fs - 0.5}pt` }}>
-                            <span>{[n(l.special) > 0 ? `S.Disc ${pct(l.special_pct)}` : '', n(l.shelf) > 0 ? `Shelf ${pct(l.shelf_pct)}` : ''].filter(Boolean).join(' · ')}</span>
+                            <span>{[n(l.special) > 0 ? `Special Disc ${pct(l.special_pct)}` : '', n(l.shelf) > 0 ? `Shelf ${pct(l.shelf_pct)}` : ''].filter(Boolean).join(' · ')}</span>
                             <span>-{money(n(l.special) + n(l.shelf))}</span>
                         </div>
                     )}
