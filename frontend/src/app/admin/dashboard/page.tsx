@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-    Package, Boxes, CalendarClock, ShoppingCart, ScanLine, History, RefreshCcw,
+    Package, Boxes, CalendarClock, ShoppingCart, ScanLine, RefreshCcw,
     TrendingUp, RotateCcw, ClipboardList, CreditCard, ArrowDownLeft, ArrowUpRight,
     BookOpen, Database, KeyRound, Receipt, Wallet, BarChart3, FileText, Users,
     ChevronDown,
@@ -131,6 +131,7 @@ const THEMES: Record<string, Theme> = {
     purchase: { tile: 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 text-yellow-900', icon: 'bg-yellow-500 text-white', ring: 'hover:ring-yellow-300' },
     sale: { tile: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-900', icon: 'bg-emerald-500 text-white', ring: 'hover:ring-emerald-300' },
     account: { tile: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200 text-cyan-900', icon: 'bg-cyan-500 text-white', ring: 'hover:ring-cyan-300' },
+    backup: { tile: 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900', icon: 'bg-rose-500 text-white', ring: 'hover:ring-rose-300' },
     report: { tile: 'bg-sky-50 hover:bg-sky-100 border-sky-200 text-sky-900', icon: 'bg-sky-600 text-white', ring: 'hover:ring-sky-300' },
 };
 
@@ -139,26 +140,30 @@ const COLUMNS: Group[] = [
         { name: 'Product Detail', href: '/admin/products', icon: Package },
         { name: 'Stock', href: '/admin/inventory/list', icon: Boxes },
         { name: 'Update Rates / Expiry', href: '/admin/products', icon: CalendarClock },
-        { name: 'Backup Database', href: '/admin/settings', icon: Database },
     ] },
     { theme: THEMES.purchase, buttons: [
         { name: 'Purchase', href: '/admin/purchases/add', icon: ShoppingCart },
         { name: 'Purchase Order', href: '/admin/purchases', icon: ClipboardList },
         { name: 'Purchase Return', href: '/admin/purchases/returns', icon: RefreshCcw },
-        { name: 'Change Password', href: '/admin/settings', icon: KeyRound },
     ] },
     { theme: THEMES.sale, buttons: [
         { name: 'Sale', href: '/admin/trade/sale-invoice', icon: ScanLine },
         { name: 'Sale Records', href: '/admin/trade/sale-records', icon: TrendingUp },
         { name: 'Sale Return', href: '/admin/sale-returns', icon: RotateCcw },
-        { name: 'Orders', href: '/admin/orders', icon: History },
     ] },
     { theme: THEMES.account, buttons: [
         { name: 'Chart of Account', href: '/admin/payments', icon: BookOpen },
         { name: 'Receipt Voucher', href: '/admin/income', icon: ArrowDownLeft },
         { name: 'Payment Voucher', href: '/admin/payments', icon: Wallet },
-        { name: 'Expense Voucher', href: '/admin/expense', icon: ArrowUpRight },
     ] },
+];
+
+/* Bottom row, as in the legacy console: Backup DataBase spans the Product and
+   Purchase columns, then Change Password (Sale column) and Expense Voucher. */
+const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
+    { b: { name: 'Backup Database', href: '/admin/settings', icon: Database }, theme: THEMES.backup, span: true },
+    { b: { name: 'Change Password', href: '/admin/settings', icon: KeyRound }, theme: THEMES.sale },
+    { b: { name: 'Expense Voucher', href: '/admin/expense', icon: ArrowUpRight }, theme: THEMES.account },
 ];
 
 const REPORTS: Btn[] = [
@@ -277,12 +282,17 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Colour-coded button columns (matches the legacy layout) */}
-                            <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-4 lg:min-h-0 lg:flex-[4] lg:gap-4">
+                            <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-4 lg:min-h-0 lg:flex-[4] lg:grid-rows-4 lg:gap-4">
                                 {COLUMNS.map((g, gi) => (
-                                    <div key={gi} className="flex flex-col gap-3 lg:grid lg:grid-rows-4 lg:gap-4">
+                                    <div key={gi} className="flex flex-col gap-3 lg:row-span-3 lg:grid lg:grid-rows-3 lg:gap-4">
                                         {g.buttons.map((b) => (
                                             <ActionTile key={b.name + b.href} b={b} theme={g.theme} />
                                         ))}
+                                    </div>
+                                ))}
+                                {BOTTOM_ROW.map(({ b, theme, span }) => (
+                                    <div key={b.name} className={span ? 'col-span-2' : ''}>
+                                        <ActionTile b={b} theme={theme} />
                                     </div>
                                 ))}
                             </div>
