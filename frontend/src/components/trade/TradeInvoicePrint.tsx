@@ -478,10 +478,14 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const Head = (pno: number, total: number) => (
             <div style={part}>
                 <div style={{ textAlign: 'right', fontSize: '7.5pt', fontWeight: 700, lineHeight: 1, height: '3mm' }}>P. No {pno} of {total}</div>
-                <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 66mm', gap: '3mm' }}>
+                <div className="grid items-start" style={{ gridTemplateColumns: '56mm 1fr 58mm', gap: '3mm' }}>
                     <div>
                         <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', aspectRatio: '1137 / 571', height: 'auto', display: 'block', marginTop: '0.5mm' }} />
-                        <div style={{ fontSize: '8pt', marginTop: '1mm' }}>Acct No: <span style={{ fontWeight: 600 }}>{c.acc_id || '—'}</span></div>
+                        {pf.acct_no && <div style={{ fontSize: '7.6pt', marginTop: '1mm', lineHeight: 1.3 }}>
+                            <span style={{ color: '#333' }}>{pf.bank_name || 'Bank'} Account Num: </span>
+                            <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.acct_no}</b>
+                            {pf.bank_title && <div style={{ fontSize: '6.5pt', fontWeight: 400, color: '#444' }}>({pf.bank_title})</div>}
+                        </div>}
                     </div>
                     <div className="flex flex-col items-center text-center">
                         <img src="/brand/aqt-name-ur.png" alt={NAME_UR} loading="eager" style={{ width: '64mm', aspectRatio: '1398 / 486', height: 'auto', display: 'block' }} />
@@ -492,11 +496,6 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                         <div style={{ fontWeight: 600 }}>{pf.proprietor}</div>
                         <div>{region.name} Region</div>
                         <div style={{ marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums', lineHeight: 1.5 }}>
-                            {pf.acct_no && <div>
-                                <span style={{ color: '#333' }}>{pf.bank_name || 'Bank'} Account Num: </span>
-                                <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.acct_no}</b>
-                                {pf.bank_title && <span style={{ fontSize: '6.5pt', fontWeight: 400, color: '#444' }}> ({pf.bank_title})</span>}
-                            </div>}
                             <div>
                                 <span style={{ color: '#333' }}>Easypaisa: </span>
                                 <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.easypaisa || '—'}</b>
