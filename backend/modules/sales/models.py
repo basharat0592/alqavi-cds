@@ -89,13 +89,14 @@ class InvoiceProfile(models.Model):
     easypaisa = models.CharField(max_length=40, blank=True, default='')
     contact_no = models.CharField(max_length=40, blank=True, default='')
     whatsapp = models.CharField(max_length=40, blank=True, default='')
+    acct_no = models.CharField(max_length=60, blank=True, default='')  # company bank account no.
 
     class Meta:
         db_table = 'trade_invoice_profile'
 
     def as_dict(self):
         return {'proprietor': self.proprietor, 'phones': self.phones, 'easypaisa': self.easypaisa,
-                'contact_no': self.contact_no, 'whatsapp': self.whatsapp}
+                'contact_no': self.contact_no, 'whatsapp': self.whatsapp, 'acct_no': self.acct_no}
 
 
 class SalesStaff(models.Model):

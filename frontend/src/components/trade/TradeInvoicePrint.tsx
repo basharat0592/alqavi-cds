@@ -53,8 +53,8 @@ type Line = {
     qty: number; bonus: number; tp: number; retail: number; gross: number; special: number; shelf: number; net: number;
     special_pct: number; shelf_pct: number;
 };
-type Profile = { proprietor: string; phones: string; easypaisa: string; contact_no: string; whatsapp: string };
-const DEFAULT_PROFILE: Profile = { proprietor: 'Syed Sakhawat & Associates', phones: '03351240190, 03138692190', easypaisa: '', contact_no: '', whatsapp: '' };
+type Profile = { proprietor: string; phones: string; easypaisa: string; contact_no: string; whatsapp: string; acct_no?: string };
+const DEFAULT_PROFILE: Profile = { proprietor: 'Syed Sakhawat & Associates', phones: '03351240190, 03138692190', easypaisa: '', contact_no: '', whatsapp: '', acct_no: '' };
 
 type Invoice = {
     id: string; invoice_no: string; date: string; time: string; staff: string; staff_cell?: string;
@@ -167,7 +167,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     const slipW = size === '58' ? 54 : 74; // printable width in mm
     const pageCss = isSlip
         ? `@page { size: ${size}mm ${Math.max(60, Math.ceil(slipH) + 6)}mm; margin: 3mm 0; }`
-        : `@page { size: ${paper.w}mm ${paper.h}mm; margin: ${paper.m}mm; @top-right { content: "Page " counter(page) " of " counter(pages); font: 6.5pt sans-serif; color: #555; } }`;
+        : `@page { size: ${paper.w}mm ${paper.h}mm; margin: ${paper.m}mm; @top-right { content: "P. No " counter(page) " of " counter(pages); font: bold 8pt sans-serif; color: #000; } }`;
 
     return (
         <div className="min-h-screen bg-slate-200 py-6 print:bg-white print:py-0">
@@ -229,10 +229,10 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
                 <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
                     <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
                         <h2 className="mb-3 text-[16px] font-bold text-slate-800">Invoice details (printed under Proprietor)</h2>
-                        {([['proprietor', 'Proprietor'], ['easypaisa', 'Easypaisa No'], ['contact_no', 'Contact No']] as const).map(([k, label]) => (
+                        {([['proprietor', 'Proprietor'], ['easypaisa', 'Easypaisa No'], ['contact_no', 'Contact No'], ['acct_no', 'Acct No (bank)']] as const).map(([k, label]) => (
                             <label key={k} className="mb-2.5 grid grid-cols-[110px_1fr] items-center gap-2 text-[13px] font-semibold text-slate-600">
                                 {label}
-                                <input value={editPf[k]} onChange={(e) => setEditPf({ ...editPf, [k]: e.target.value })}
+                                <input value={editPf[k] || ''} onChange={(e) => setEditPf({ ...editPf, [k]: e.target.value })}
                                     className="h-9 rounded-md border border-slate-300 px-2.5 text-[14px] text-slate-900" />
                             </label>
                         ))}
@@ -338,6 +338,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                         <div className="grid" style={{ gridTemplateColumns: '19mm 1fr', marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums' }}>
                             <span style={{ color: '#333' }}>Easypaisa:</span><span style={{ fontWeight: 600 }}>{pf.easypaisa || '—'}</span>
                             <span style={{ color: '#333' }}>Contact No:</span><span style={{ fontWeight: 600 }}>{pf.contact_no || '—'}</span>
+                            <span style={{ color: '#333' }}>Acct No:</span><span style={{ fontWeight: 600 }}>{pf.acct_no || '—'}</span>
                         </div>
                     </div>
                 </div>
@@ -350,11 +351,11 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                     <thead><tr><td style={{ padding: 0 }}><div className="inv-spacer" style={{ height: hh }} /></td></tr></thead>
                     <tbody><tr><td style={{ padding: 0 }}>
                         <div className="grid" style={{ gridTemplateColumns: '1.05fr 1fr 1fr', columnGap: '4mm', rowGap: '0.7mm', margin: '2mm 0 1.6mm', fontSize: '7.8pt', lineHeight: 1.25 }}>
-                            {field('Inv. Date:', longDate)}
+                            {field('Day:', day)}
+                            {field('Inv. Date:', longDate, '17mm')}
                             {field('Print Time:', printTime, '17mm')}
-                            {field('Day:', day, '9mm')}
                             {field('Inv. No #:', inv.invoice_no)}
-                            <div className="col-span-2">{field('Company Acc. No #:', c.acc_id, '27mm')}</div>
+                            <div className="col-span-2">{field('Customer Acc. ID:', c.acc_id, '27mm')}</div>
                             {field('Shop Name:', c.name)}
                             {field('Area:', c.area, '17mm')}
                             {field('Address:', c.address, '13mm')}
@@ -386,7 +387,8 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                 <tr style={{ background: '#f4f4f4', fontWeight: 700 }}>
                                     <td colSpan={3} style={{ border: B, padding: '0.6mm 1.1mm' }}>Total ({inv.lines.length} item{inv.lines.length === 1 ? '' : 's'})</td>
                                     {td(cartons || '', true, true)}{td(qtyFmt(t.pieces), true, true)}{td(qtyFmt(t.bonus), true, true)}
-                                    <td colSpan={4} style={{ border: B }} />
+                                    <td colSpan={2} style={{ border: B }} />
+                                    {td(money(t.special), true, true)}{td(money(t.shelf), true, true)}
                                     {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}
                                 </tr>
                             </tbody>
@@ -397,12 +399,12 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                 <tbody>
                                     <tr>
                                         {sum('Previous Amount', t.prev_balance)}
-                                        <td style={{ border: B }} colSpan={2} />
-                                        {sum('Total Amount', t.gross, true)}
-                                    </tr>
-                                    <tr>
                                         {sum('Total Special Discount', n(t.special) + n(t.bill_disc))}
                                         {sum('Shelf Rent', t.shelf)}
+                                        {sum('Total Amount', n(t.gross) - n(t.special) - n(t.shelf) - n(t.bill_disc), true)}
+                                    </tr>
+                                    <tr>
+                                        <td style={{ border: B }} colSpan={2} />
                                         {sum('Advance Amount', t.paid)}
                                         <td style={{ border: B, padding: '1.1mm 2mm', background: '#ececec' }}>
                                             <div className="flex items-baseline justify-between" style={{ gap: '2mm' }}>
@@ -413,13 +415,6 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                     </tr>
                                 </tbody>
                             </table>
-                            <div style={{
-                                marginTop: '1.8mm', padding: '1.1mm 2mm', borderRadius: '1mm', fontSize: '7.8pt', fontWeight: 600, textAlign: 'center',
-                                border: `0.35mm solid ${due.owing ? '#c62828' : '#2e7d32'}`, color: due.owing ? '#c62828' : '#2e7d32',
-                                background: due.owing ? (due.overdue ? '#ffe5e5' : '#fff3f3') : '#eef8ef',
-                            }}>
-                                {due.owing ? '⚠ ' : '✓ '}{due.text}
-                            </div>
                         </div>
                     </td></tr></tbody>
                     <tfoot><tr><td style={{ padding: 0 }}><div className="inv-spacer" style={{ height: fh }} /></td></tr></tfoot>
@@ -436,6 +431,13 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 <div className="flex justify-between" style={{ marginTop: '6mm', fontSize: '8pt', fontWeight: 600 }}>
                     <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
                     <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Saleman</div>
+                </div>
+                <div style={{
+                    marginTop: '1.5mm', padding: '1mm 2mm', borderRadius: '1mm', fontSize: '7.8pt', fontWeight: 600, textAlign: 'center',
+                    border: `0.35mm solid ${due.owing ? '#c62828' : '#2e7d32'}`, color: due.owing ? '#c62828' : '#2e7d32',
+                    background: due.owing ? (due.overdue ? '#ffe5e5' : '#fff3f3') : '#eef8ef',
+                }}>
+                    {due.owing ? '⚠ ' : '✓ '}{due.text}
                 </div>
             </div>
         </div>
