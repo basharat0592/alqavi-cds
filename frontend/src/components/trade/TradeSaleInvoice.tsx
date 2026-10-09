@@ -68,17 +68,12 @@ const lineCartons = (l: Line) => {
 const lineNet = (l: Line) => lineGross(l) - lineDisc(l);
 const lineCost = (l: Line) => (l.qty + l.bonus) * l.cost;
 
-/* Browser-level close guard for the Trade pop-ups. The browser shows its own
-   "Leave site?" box (its wording can't be changed); closes the user already
-   confirmed in our own dialog skip it. */
-let allowUnload = false;
+/* No browser "Leave site?" box on the Trade pop-ups (not wanted); closing is
+   confirmed by our own "Do you want to Close the Form ?" dialog instead. */
 export function guardWindowClose() {
-    const h = (e: BeforeUnloadEvent) => { if (allowUnload) return; e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', h);
-    return () => window.removeEventListener('beforeunload', h);
+    return () => {};
 }
 export function closeTradeWindow() {
-    allowUnload = true;
     window.close();
     // Still open (not a pop-up): go back to the dashboard.
     setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
