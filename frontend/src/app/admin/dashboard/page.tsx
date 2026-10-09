@@ -51,7 +51,7 @@ const MENUS: Menu[] = [
     ] },
     { title: 'Accounts', items: [
         { label: 'Chart of Account', href: '/admin/trade/chart-of-account' },
-        { label: 'Receipt Voucher', href: '/admin/income' },
+        { label: 'Receipt Voucher', href: '/admin/trade/receipt-voucher' },
         { label: 'Payment Voucher', href: '/admin/payments' },
         { label: 'Expense Voucher', href: '/admin/expense' },
     ] },
@@ -155,7 +155,7 @@ const COLUMNS: Group[] = [
     ] },
     { theme: THEMES.account, buttons: [
         { name: 'Chart of Account', href: '/admin/trade/chart-of-account', icon: BookOpen },
-        { name: 'Receipt Voucher', href: '/admin/income', icon: ArrowDownLeft },
+        { name: 'Receipt Voucher', href: '/admin/trade/receipt-voucher', icon: ArrowDownLeft },
         { name: 'Payment Voucher', href: '/admin/payments', icon: Wallet },
     ] },
 ];

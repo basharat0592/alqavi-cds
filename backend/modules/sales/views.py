@@ -662,7 +662,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                     earliest_due = o.due_date
         # Trade 1.0 sale returns are credited to the customer.
         from .trade_returns import customer_return_credit
+        from .vouchers import customer_voucher_credit
         total -= customer_return_credit(cust_id, request.user)
+        total -= customer_voucher_credit(cust_id, request.user)
         return Response({
             'previous_balance': float(total),
             'due_date': earliest_due.isoformat() if earliest_due else None,

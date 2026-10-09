@@ -85,22 +85,22 @@ export function closeTradeWindow() {
 }
 
 /* ───────────────────────── small styled pieces ───────────────────────── */
-const LABEL = 'text-[13px] font-bold tracking-tight text-[#1b1f4b] whitespace-nowrap';
+export const LABEL = 'text-[13px] font-bold tracking-tight text-[#1b1f4b] whitespace-nowrap';
 // No width here: callers size each field (w-full in grids, fixed px in rows) so
 // two width utilities never fight over the same element.
-const FIELD = 'h-8 min-w-0 rounded-md border px-2.5 text-[13.5px] font-semibold tabular-nums outline-none transition-shadow';
-const EDIT = `${FIELD} border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200`;
-const READ = `${FIELD} border-slate-300 bg-[#ececf3] text-slate-700`;
+export const FIELD = 'h-8 min-w-0 rounded-md border px-2.5 text-[13.5px] font-semibold tabular-nums outline-none transition-shadow';
+export const EDIT = `${FIELD} border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200`;
+export const READ = `${FIELD} border-slate-300 bg-[#ececf3] text-slate-700`;
 
 const PANEL_BTN = 'h-9 rounded-md border bg-gradient-to-b text-[14.5px] font-bold shadow-sm active:translate-y-px';
-const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-md border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-4 text-[14px] font-bold text-slate-800 shadow-sm hover:to-[#ffcf9a] active:translate-y-px disabled:cursor-not-allowed disabled:border-slate-300 disabled:from-[#f3f3f6] disabled:to-[#e2e2e8] disabled:text-slate-400 disabled:shadow-none';
+export const ACTION_BTN = 'flex h-9 min-w-[104px] items-center justify-center rounded-md border border-[#c9a77a] bg-gradient-to-b from-[#fff3e2] to-[#ffdcb5] px-4 text-[14px] font-bold text-slate-800 shadow-sm hover:to-[#ffcf9a] active:translate-y-px disabled:cursor-not-allowed disabled:border-slate-300 disabled:from-[#f3f3f6] disabled:to-[#e2e2e8] disabled:text-slate-400 disabled:shadow-none';
 
 /* Design size of the form. FitStage scales it to fill the window in proportion
    to the screen; this is the smallest area the whole form needs. */
 const STAGE_W = 1240;
 const STAGE_H = 760;
 
-const COA_SELECT = `${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:opacity-60`;
+export const COA_SELECT = `${FIELD} w-full border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:opacity-60`;
 const COA_VIEW_COLS = [
     { h: 'Main Account', w: '8%' }, { h: '2nd Level Acc.', w: '12%' }, { h: '3rd Level Acc.', w: '11%' },
     { h: 'Account ID', w: '8%' }, { h: 'Acc. Name', w: '18%' }, { h: 'Area', w: '10%' },
@@ -197,12 +197,12 @@ const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
     { h: 'Dis.Amt', w: '8.5%' }, { h: 'Net Amt', w: '9.5%' },
 ];
 
-function ReadBox({ value, className = '' }: { value: React.ReactNode; className?: string }) {
+export function ReadBox({ value, className = '' }: { value: React.ReactNode; className?: string }) {
     const sized = /(^|\s)(w-|flex-)/.test(className);
     return <div className={`${READ} ${sized ? '' : 'w-full'} flex items-center overflow-hidden whitespace-nowrap ${className}`}>{value}</div>;
 }
 
-function Led({ label, value, tone = 'green' }: { label: string; value: string; tone?: 'green' | 'yellow' }) {
+export function Led({ label, value, tone = 'green' }: { label: string; value: string; tone?: 'green' | 'yellow' }) {
     return (
         <div className="min-w-0">
             <div className="mb-0.5 text-[16px] font-black tracking-tight text-[#1b1f4b]">{label}</div>
@@ -219,7 +219,7 @@ const modalStack: number[] = [];
 let modalSeq = 0;
 
 /* Legacy-style Yes/No confirmation ("Conformation" box). Esc = No, Enter = Yes. */
-function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo: () => void }) {
+export function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo: () => void }) {
     const yesRef = useRef(onYes); yesRef.current = onYes;
     const noRef = useRef(onNo); noRef.current = onNo;
     useEffect(() => {
@@ -258,7 +258,7 @@ function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo
     );
 }
 
-function Modal({ title, onClose, children, wide = false, large = false, xl = false, small = false, full = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; large?: boolean; xl?: boolean; small?: boolean; full?: boolean }) {
+export function Modal({ title, onClose, children, wide = false, large = false, xl = false, small = false, full = false }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean; large?: boolean; xl?: boolean; small?: boolean; full?: boolean }) {
     // How many windows are already open (the first one dims the screen; windows
     // behind a newer one dim a little more).
     const [depth] = useState(() => modalStack.length);

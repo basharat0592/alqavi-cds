@@ -41,6 +41,43 @@ def _settlement_alert(due_date, remaining):
     return False, 0, (0 <= (due_date - today).days <= 3)
 
 
+class Voucher(models.Model):
+    """Trade 1.0 accounting voucher (Receipt for now). Lines in VoucherLine."""
+    voucher_no = models.CharField(max_length=20, unique=True, db_index=True)
+    vtype = models.CharField(max_length=20, default='receipt')
+    date = models.DateField()
+    staff = models.ForeignKey('sales.SalesStaff', on_delete=models.SET_NULL, null=True, blank=True, related_name='vouchers')
+    chq_no = models.CharField(max_length=40, blank=True, default='')
+    chq_date = models.DateField(null=True, blank=True)
+    bank = models.CharField(max_length=80, blank=True, default='')
+    detail = models.CharField(max_length=255, blank=True, default='')
+    total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='created_vouchers')
+    created_at = models.DateTimeField(auto_now_add=True)
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_vouchers')
+
+    class Meta:
+        db_table = 'trade_vouchers'
+        ordering = ['-date', '-id']
+
+
+class VoucherLine(models.Model):
+    voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE, related_name='lines')
+    line = models.PositiveIntegerField(default=1)
+    account = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='voucher_lines')
+    debit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    credit = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    # Customer receipts: the part not applied to unpaid invoices (customer credit).
+    unallocated = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    detail = models.CharField(max_length=255, blank=True, default='')
+
+    class Meta:
+        db_table = 'trade_voucher_lines'
+        ordering = ['voucher', 'line']
+
+
 class InvoiceProfile(models.Model):
     """Proprietor block printed on the Trade 1.0 sale invoice (one per Admin)."""
     tenant = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
