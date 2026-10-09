@@ -21,7 +21,7 @@ import {
     guardWindowClose, closeTradeWindow,
 } from '@/components/trade/TradeSaleInvoice';
 
-type Acc = {
+export type Acc = {
     id: number; acc_id: string; name: string; group: number; group_name: string; level2_name: string;
     area_name: string | null; status: string;
 };
@@ -32,10 +32,10 @@ const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', {
 const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (iso: string | null) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
 // Money is received into Cash-Bank-Cheque (1204) or a bank / card account (2203).
-const isCashBank = (a: Acc) => a.group === 1204 || a.group === 2203;
+export const isCashBank = (a: Acc) => a.group === 1204 || a.group === 2203;
 
 /* Legacy Find Account: Account ID | Account Name | Area | Acc. 2nd Level | Acc. 3rd Level. */
-function FindAccountWindow({ accounts, cashOnly, initial, askClose, onPick, onClose, onAddNew }: {
+export function FindAccountWindow({ accounts, cashOnly, initial, askClose, onPick, onClose, onAddNew }: {
     accounts: Acc[] | null; cashOnly: boolean; initial: string;
     askClose: (fn: () => void, msg?: string) => void; onPick: (a: Acc) => void; onClose: () => void; onAddNew: () => void;
 }) {

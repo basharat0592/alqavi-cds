@@ -50,8 +50,53 @@ def account_balance(acc, user):
             if rem > 0:
                 total += rem
         return total - customer_return_credit(acc.customer_id, user) - customer_voucher_credit(acc.customer_id, user)
+    if acc.supplier_id:
+        # What we still owe the supplier on their purchases (positive = payable).
+        from .models import PurchaseOrder
+        owed = Z
+        for po in scope_to_tenant(user, PurchaseOrder.objects.filter(supplier_id=acc.supplier_id)
+                                  .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant').only('total_amount', 'paid_amount'):
+            rem = _d(po.total_amount) - _d(po.paid_amount)
+            if rem > 0:
+                owed += rem
+        extra = VoucherLine.objects.filter(account=acc, voucher__legacy=False).aggregate(u=Sum('unallocated'))['u'] or Z
+        return owed - extra
     agg = VoucherLine.objects.filter(account=acc).aggregate(d=Sum('debit'), c=Sum('credit'))
     return (agg['d'] or Z) - (agg['c'] or Z)
+
+
+def _allocate_to_purchases(supplier_id, amount, voucher, user, method):
+    """Settle the supplier's unpaid purchases (oldest first); returns the rest."""
+    from modules.payments.models import TransactionPayment
+    from modules.payments import services
+    from .models import PurchaseOrder
+    left = amount
+    pos = (scope_to_tenant(user, PurchaseOrder.objects.filter(supplier_id=supplier_id)
+                           .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant').order_by('order_date', 'id'))
+    for po in pos.select_for_update():
+        if left <= 0:
+            break
+        due = _d(po.total_amount) - _d(po.paid_amount)
+        if due <= 0:
+            continue
+        had = services.confirmed_paid_total('purchaseorder', po.id)
+        if _d(po.paid_amount) > had:
+            base = TransactionPayment.objects.create(
+                source_type='purchaseorder', source_id=str(po.id), amount=_d(po.paid_amount) - had, method='cash',
+                paid_at=po.updated_at, reference=po.purchase_number, note='Paid at purchase', status='confirmed',
+                direction='outbound', created_by=user if user.is_staff else None,
+                warehouse_id=po.warehouse_id, tenant_id=getattr(po, 'tenant_id', None))
+            services.record_installment(base)
+        pay = min(due, left)
+        tp = TransactionPayment.objects.create(
+            source_type='purchaseorder', source_id=str(po.id), amount=pay, method=method,
+            paid_at=datetime.datetime.combine(voucher.date, datetime.time(12, 0)),
+            reference=voucher.voucher_no, note=f'Payment Voucher {voucher.voucher_no}', status='confirmed',
+            direction='outbound', created_by=user if user.is_staff else None,
+            warehouse_id=po.warehouse_id, tenant_id=getattr(po, 'tenant_id', None))
+        services.record_installment(tp)
+        left -= pay
+    return left
 
 
 def _allocate_to_orders(customer_id, amount, voucher, user, method):
@@ -120,6 +165,53 @@ class VoucherViewSet(viewsets.ViewSet):
         return Response({'balance': account_balance(acc, request.user)})
 
     def create(self, request):
+        if request.data.get('vtype') == 'payment':
+            return self._create_payment(request)
+        return self._create_receipt(request)
+
+    def _create_payment(self, request):
+        """Payment voucher. Body: {vtype:'payment', date?, pay_to, pay_from, amount,
+        staff?, detail?}. Debits Payment to (supplier / expense / customer ...),
+        credits Payment from (cash / bank). Paying a supplier settles their
+        unpaid purchases; paying a customer adds to what they owe."""
+        from modules.company.models import LedgerAccount
+        d = request.data
+        accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant')
+        to = accounts.filter(pk=d.get('pay_to')).first() if d.get('pay_to') else None
+        frm = accounts.filter(pk=d.get('pay_from')).first() if d.get('pay_from') else None
+        amt = _d(d.get('amount')).quantize(Decimal('0.01'))
+        if not to:
+            return Response({'detail': 'Choose the Payment to account.'}, status=400)
+        if not frm:
+            return Response({'detail': 'Choose the Payment from account (cash / bank).'}, status=400)
+        if to.pk == frm.pk:
+            return Response({'detail': 'Payment to and Payment from cannot be the same account.'}, status=400)
+        if amt <= 0:
+            return Response({'detail': 'Enter the amount.'}, status=400)
+        try:
+            vdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        if vdate > datetime.date.today():
+            return Response({'detail': 'The voucher date cannot be in the future.'}, status=400)
+        staff = SalesStaff.objects.filter(pk=d.get('staff')).first() if d.get('staff') else None
+        detail = str(d.get('detail') or '').strip()[:255]
+        method = 'cash' if frm.name.lower().startswith('cash') else 'bank_transfer'
+        tid = tenant_id_for(request.user) or frm.tenant_id
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=self.next_no(vdate), vtype='payment', date=vdate, staff=staff,
+                                       detail=detail, total=amt, created_by=request.user, tenant_id=tid)
+            unalloc = Z
+            if to.supplier_id:
+                unalloc = _allocate_to_purchases(to.supplier_id, amt, v, request.user, method)
+            elif to.customer_id:
+                unalloc = -amt  # money paid out to a customer is owed back by them
+            VoucherLine.objects.create(voucher=v, line=1, account=to, debit=amt, unallocated=unalloc,
+                                       detail=detail or f'Paid to {to.name}')
+            VoucherLine.objects.create(voucher=v, line=2, account=frm, credit=amt, detail=detail or f'Payment {v.voucher_no}')
+        return Response({'id': v.id, 'voucher_no': v.voucher_no, 'total': amt}, status=status.HTTP_201_CREATED)
+
+    def _create_receipt(self, request):
         """Receipt voucher. Body: {date?, receipt_as (cash/bank account id), staff?,
         chq_no?, chq_date?, bank?, detail?, lines: [{account, amount}]}"""
         from modules.company.models import LedgerAccount
@@ -170,7 +262,9 @@ class VoucherViewSet(viewsets.ViewSet):
     def list(self, request):
         """View Receipt Voucher Detail: ?voucher_no=, ?date_from=, ?date_to= — one row per line."""
         p = request.query_params
-        qs = self._qs().filter(vtype='receipt')
+        qs = self._qs().filter(vtype=p.get('vtype') or 'receipt')
+        if p.get('account'):
+            qs = qs.filter(lines__account_id=p['account']).distinct()
         if p.get('voucher_no'):
             qs = qs.filter(voucher_no__icontains=p['voucher_no'].strip())
         if p.get('date_from'):
