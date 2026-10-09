@@ -14,6 +14,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import api from '@/lib/axios';
+import { toJpeg } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
 
 export type InvoiceSize = 'a4' | 'a5' | 'letter' | 'legal' | 'custom' | '80' | '58';
@@ -116,6 +118,46 @@ function dueInfo(inv: Invoice) {
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');`;
 
 /* `token`: the public shared link (no login) — read only, no admin buttons. */
+/* Printing goes through a real PDF: every sheet is captured as an image at
+   ~300 dpi and placed on a page of the exact paper size. A printer prints a
+   PDF scaled to the paper as one picture, so nothing can shift or be cut off
+   (printing the web page directly let some printers / settings push the
+   content down and drop the footer). */
+const PX_PER_MM = 96 / 25.4;
+async function buildPdf(paperMm: { w: number; h: number } | null) {
+    const sheets = Array.from(document.querySelectorAll<HTMLElement>('.inv-page'));
+    if (!sheets.length) throw new Error('Nothing to print yet.');
+    await (document as any).fonts?.ready;
+    let pdf: jsPDF | null = null;
+    for (const el of sheets) {
+        const wMm = paperMm ? paperMm.w : el.offsetWidth / PX_PER_MM;
+        const hMm = paperMm ? paperMm.h : el.offsetHeight / PX_PER_MM;
+        const img = await toJpeg(el, {
+            quality: 0.95, pixelRatio: 3, backgroundColor: '#ffffff', cacheBust: false,
+            style: { margin: '0', boxShadow: 'none' },
+        });
+        const orientation = wMm > hMm ? 'landscape' : 'portrait';
+        if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [wMm, hMm], orientation, compress: true });
+        else pdf.addPage([wMm, hMm], orientation);
+        pdf.addImage(img, 'JPEG', 0, 0, wMm, hMm, undefined, 'FAST');
+    }
+    return pdf!;
+}
+function printPdfBlob(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
+    frame.src = url;
+    frame.onload = () => {
+        setTimeout(() => {
+            try { frame.contentWindow?.focus(); frame.contentWindow?.print(); }
+            catch { window.open(url, '_blank'); }
+        }, 300);
+    };
+    document.body.appendChild(frame);
+    setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 10 * 60 * 1000);
+}
+
 export default function TradeInvoicePrint({ id, token }: { id?: string; token?: string }) {
     const [inv, setInv] = useState<Invoice | null>(null);
     const [err, setErr] = useState('');
@@ -185,11 +227,27 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     useEffect(() => guardWindowClose(), []);
 
     const isSlip = size === '80' || size === '58';
+    const [busy, setBusy] = useState(false);
+    const makePdf = () => buildPdf(isSlip ? null : { w: paper.w, h: paper.h });
+    const printNow = async () => {
+        if (busy) return;
+        setBusy(true);
+        try { printPdfBlob((await makePdf()).output('blob')); }
+        catch (e: any) { setErr(e?.message || 'Could not prepare the print.'); }
+        finally { setBusy(false); }
+    };
+    const downloadPdf = async () => {
+        if (busy || !inv) return;
+        setBusy(true);
+        try { (await makePdf()).save(`Invoice-${inv.invoice_no}.pdf`); }
+        catch (e: any) { setErr(e?.message || 'Could not make the PDF.'); }
+        finally { setBusy(false); }
+    };
     // Print once the data and the Urdu fonts are in (else the first print shows fallbacks).
     useEffect(() => {
         if (!inv || !autoPrint || (isSlip && !slipH)) return;
         let done = false;
-        const go = () => { if (!done) { done = true; setAutoPrint(false); window.print(); } };
+        const go = () => { if (!done) { done = true; setAutoPrint(false); printNow(); } };
         const imgs = Array.from(document.images).map((im) => (im.complete ? Promise.resolve() : new Promise((r) => { im.onload = im.onerror = () => r(null); })));
         Promise.all([(document as any).fonts?.ready, ...imgs]).then(() => setTimeout(go, 300));
         const t = setTimeout(go, 6000);
@@ -268,9 +326,13 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                     Invoice details
                 </button>
                 </>}
-                <button type="button" onClick={() => window.print()} disabled={!inv}
+                <button type="button" onClick={downloadPdf} disabled={!inv || busy}
+                    className="h-8 rounded-md border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                    PDF
+                </button>
+                <button type="button" onClick={() => printNow()} disabled={!inv || busy}
                     className="flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
-                    <Printer size={14} /> Print
+                    <Printer size={14} /> {busy ? 'Preparing…' : 'Print'}
                 </button>
                 <button type="button" onClick={() => { if (window.confirm('Do you want to Close the Form ?')) closeTradeWindow(); }} className="flex h-8 items-center gap-1 rounded-md border border-slate-300 px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
                     <X size={14} /> Close
@@ -332,12 +394,13 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     // bottom, the first sheet the customer details, the last one the totals.
     const mRef = useRef<HTMLDivElement>(null);
     const [pages, setPages] = useState<number[][]>([inv.lines.map((_, i) => i)]);
+    const [layoutTick, setLayoutTick] = useState(0);
     useLayoutEffect(() => {
         const el = mRef.current;
         if (!el) return;
         const h = (sel: string) => (el.querySelector(sel) as HTMLElement | null)?.getBoundingClientRect().height || 0;
         const pxPerMm = 96 / 25.4;
-        const avail = (pageH - paper.m * 2) * pxPerMm - h('[data-m=head]') - h('[data-m=foot]') - 6;
+        const avail = (pageH - paper.m * 2) * pxPerMm - h('[data-m=head]') - h('[data-m=foot]') - 14;
         const thead = h('[data-m=mtable] thead');
         const details = h('[data-m=details]');
         const tail = h('[data-m=total]') + h('[data-m=summary]');
@@ -356,7 +419,33 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
             if (i >= rows.length) { out.push([]); break; } // totals alone on a last sheet
         }
         setPages(out.length ? out : [[]]);
-    }, [inv, zoom, pageH, paper.m]);
+    }, [inv, zoom, pageH, paper.m, layoutTick]);
+    // Fonts and images arriving can change heights: measure again when they do.
+    useEffect(() => {
+        const el = mRef.current;
+        if (!el) return;
+        const bump = () => setLayoutTick((t) => t + 1);
+        (document as any).fonts?.ready?.then(bump);
+        el.querySelectorAll('img').forEach((im) => { if (!im.complete) im.addEventListener('load', bump, { once: true }); });
+        const ro = new ResizeObserver(bump);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, [inv]);
+    // Safety net: a sheet whose rows overflow its body passes its last row on to
+    // the next sheet, until every sheet fits. Nothing can run into the footer.
+    const bodyRefs = useRef<(HTMLDivElement | null)[]>([]);
+    useLayoutEffect(() => {
+        for (let pi = 0; pi < pages.length; pi++) {
+            const b = bodyRefs.current[pi];
+            if (!b || b.scrollHeight <= b.clientHeight + 1) continue;
+            if (!pages[pi].length) continue;
+            const next = pages.map((x) => [...x]);
+            const moved = next[pi].pop()!;
+            if (pi + 1 < next.length) next[pi + 1].unshift(moved); else next.push([moved]);
+            setPages(next);
+            return;
+        }
+    }, [pages]);
     const d = inv.date ? new Date(`${String(inv.date).slice(0, 10)}T00:00:00`) : null;
     const longDate = d ? `${d.getDate()} - ${d.toLocaleDateString('en-GB', { month: 'long' })} - ${d.getFullYear()}` : '';
     const day = d ? d.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
@@ -391,11 +480,11 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 <div style={{ textAlign: 'right', fontSize: '7.5pt', fontWeight: 700, lineHeight: 1, height: '3mm' }}>P. No {pno} of {total}</div>
                 <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 66mm', gap: '3mm' }}>
                     <div>
-                        <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', height: 'auto', marginTop: '0.5mm' }} />
+                        <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', aspectRatio: '1137 / 571', height: 'auto', display: 'block', marginTop: '0.5mm' }} />
                         <div style={{ fontSize: '8pt', marginTop: '1mm' }}>Acct No: <span style={{ fontWeight: 600 }}>{c.acc_id || '—'}</span></div>
                     </div>
                     <div className="flex flex-col items-center text-center">
-                        <img src="/brand/aqt-name-ur.png" alt={NAME_UR} loading="eager" style={{ width: '64mm', height: 'auto' }} />
+                        <img src="/brand/aqt-name-ur.png" alt={NAME_UR} loading="eager" style={{ width: '64mm', aspectRatio: '1398 / 486', height: 'auto', display: 'block' }} />
                         <div style={{ fontSize: '14pt', fontWeight: 800, marginTop: '0.8mm' }}>Sale Invoice</div>
                     </div>
                     <div style={{ fontSize: '7.8pt', lineHeight: 1.45 }}>
@@ -489,10 +578,10 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const Foot = (
             <div style={part}>
                 <div style={{ border: '0.35mm solid #222', padding: '1.3mm 2mm', marginTop: '2mm' }}>
-                    <img src="/brand/inv-shops-banner.png" alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
+                    <img src="/brand/inv-shops-banner.png" alt="" style={{ width: '100%', aspectRatio: '2960 / 112', height: 'auto', display: 'block' }} />
                 </div>
                 <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: '7.3pt', lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
-                <img src={region.code === 'SKD' ? '/brand/inv-terms-skd.png' : '/brand/inv-terms-glt.png'} alt="" style={{ width: '100%', height: 'auto', display: 'block', marginTop: '0.8mm' }} />
+                <img src={region.code === 'SKD' ? '/brand/inv-terms-skd.png' : '/brand/inv-terms-glt.png'} alt="" style={{ width: '100%', aspectRatio: '3024 / 216', height: 'auto', display: 'block', marginTop: '0.8mm' }} />
                 <div className="flex justify-between" style={{ marginTop: '6mm', fontSize: '8pt', fontWeight: 600 }}>
                     <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
                     <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Saleman</div>
@@ -527,7 +616,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                     <div key={pi} className="inv sheet inv-page mx-auto mb-6 flex flex-col overflow-hidden bg-white shadow-xl"
                         style={{ width: `${paper.w}mm`, height: `${pageH}mm`, padding: `${paper.m}mm`, boxSizing: 'border-box' }}>
                         {Head(pi + 1, pages.length)}
-                        <div style={{ ...part, flex: 1, minHeight: 0 }}>
+                        <div ref={(el) => { bodyRefs.current[pi] = el; }} style={{ ...part, flex: 1, minHeight: 0, overflow: 'hidden' }}>
                             {pi === 0 && Details}
                             {(idx.length > 0 || last) && (
                                 <table style={tbl}>
@@ -583,7 +672,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
         <div className="ur" dir="rtl" style={{ background: '#000', color: '#fff', fontSize: `${fs - 0.5}pt`, lineHeight: 1.9, padding: '0 2mm', textAlign: 'center', marginTop: '0.8mm' }}>{text}</div>
     );
     return (
-        <div ref={ref} className="inv sheet mx-auto bg-white shadow-xl" style={{ width: `${widthMm}mm`, padding: '1mm 0', fontSize: `${fs}pt`, lineHeight: 1.35, color: '#000' }}>
+        <div ref={ref} className="inv sheet inv-page mx-auto bg-white shadow-xl" style={{ width: `${widthMm}mm`, padding: '1mm 0', fontSize: `${fs}pt`, lineHeight: 1.35, color: '#000' }}>
             {/* Header — as on the page invoice */}
             <div className="flex flex-col items-center text-center">
                 <img src="/brand/aqt-monogram-black.png" alt="Al-Qavi Traders" style={{ width: small ? '30mm' : '40mm', height: 'auto' }} />
