@@ -26,6 +26,7 @@ import {
     Modal, ConfirmBox, ReadBox, Led, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT, closeTradeWindow, ReturnFindProductWindow,
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
+import FitStage from '@/components/trade/FitStage';
 
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -40,8 +41,8 @@ type Prod = { id: string; code: string; name: string; company: string; packing: 
 type Line = { product: Prod; qty: number; bonus: number; expiry: string | null; pur: number; sale: number; retail: number };
 const EMPTY = { qtyC: '', qtyU: '', bonus: '', value: '', pur: '', retail: '', sr: '', sale: '' };
 
-const SMALL = `${EDIT} h-8 w-full text-right`;
-const RO = `${FIELD} flex h-8 w-full items-center justify-end border-[#e6b98a] bg-[#ffe3c7] text-slate-800`;
+const SMALL = `${EDIT} h-7 w-full px-1.5 text-right !text-[12px] !font-normal`;
+const RO = `${FIELD} flex h-7 w-full items-center justify-end border-[#e6b98a] bg-[#ffe3c7] px-1.5 !text-[12px] !font-normal text-slate-800`;
 
 export default function TradePurchase() {
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
@@ -257,29 +258,30 @@ export default function TradePurchase() {
     const vRows = view?.rows || [];
 
     const closeWindow = () => askClose(closeTradeWindow, lines.length ? 'The purchase is not saved. Do you want to Close the Form ?' : undefined);
-    const lbl = 'whitespace-nowrap text-[12.5px] font-bold text-[#1b1f4b]';
-    const findBtn = 'h-8 shrink-0 rounded-md border border-[#c9b85a] bg-gradient-to-b from-[#ffffd6] to-[#f4ef9c] px-3 text-[13px] font-bold text-slate-800 shadow-sm hover:to-[#ece27a] active:translate-y-px';
+    const lbl = 'whitespace-nowrap text-[11.5px] font-medium text-[#1b1f4b]';
+    const findBtn = 'h-7 shrink-0 rounded-md border border-[#c9b85a] bg-gradient-to-b from-[#ffffd6] to-[#f4ef9c] px-2.5 text-[12px] font-semibold text-slate-800 shadow-sm hover:to-[#ece27a] active:translate-y-px';
 
     return (
-        <div className="min-h-screen bg-[#c9c9f9] font-sans text-slate-900">
-            <div className="flex items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1">
+        <div className="h-screen overflow-hidden bg-[#c9c9f9] font-sans text-slate-900">
+            <FitStage width={1360} height={720} className="flex flex-col overflow-hidden">
+            <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[10px] font-black text-white">AQ</span>
                 <span className="text-[13px] font-semibold text-slate-800">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( Purchase Product )</span>
             </div>
 
-            <div className="p-2.5">
+            <div className="flex min-h-0 flex-1 flex-col p-2">
                 {/* Product entry */}
-                <div className="rounded-lg border border-[#9da1d8] bg-[#d9d9fb] p-2.5">
+                <div className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#d9d9fb] p-2">
                     <div className="grid grid-cols-[110px_150px_auto_auto_150px_minmax(0,1.4fr)_minmax(0,1fr)] items-center gap-2">
                         <button type="button" onClick={() => setFindProd(true)} className={findBtn}>Find Product</button>
                         <input ref={codeRef} value={code} onChange={(ev) => { setCode(ev.target.value); if (prod) setProd(null); }}
                             onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (code.trim()) loadProduct(code.trim()); else setFindProd(true); } }}
-                            placeholder="PID / bar code" className={`${EDIT} h-8 w-full`} />
+                            placeholder="PID / bar code" className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
                         <span className={`${lbl} pl-1`}>Exp Date</span>
                         <input type="checkbox" checked={expOn} onChange={(ev) => setExpOn(ev.target.checked)} title="Product has an expiry date" className="h-4 w-4 accent-[#3b3f8f]" />
                         <input type="date" value={exp} disabled={!expOn} onChange={(ev) => ev.target.value && setExp(ev.target.value)}
-                            className={`${FIELD} h-8 w-full ${expOn ? 'border-emerald-300 bg-[#e3fbe3]' : 'border-slate-300 bg-[#ececf3] text-slate-400'}`} />
-                        <div className={`${RO} !justify-start font-bold`} title={prod?.name}>{prod?.name || ''}</div>
+                            className={`${FIELD} h-7 w-full !text-[12px] !font-normal ${expOn ? 'border-emerald-300 bg-[#e3fbe3]' : 'border-slate-300 bg-[#ececf3] text-slate-400'}`} />
+                        <div className={`${RO} !justify-start !font-semibold`} title={prod?.name}>{prod?.name || ''}</div>
                         <div className={`${RO} !justify-start`} title={prod?.company}>{prod?.company || ''}</div>
                     </div>
                     <div className="mt-2 grid grid-cols-[repeat(14,minmax(0,1fr))] items-end gap-1.5">
@@ -304,41 +306,41 @@ export default function TradePurchase() {
                     </div>
                 </div>
 
-                <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_250px] gap-2.5">
-                    <div className="flex min-w-0 flex-col gap-2.5">
+                <div className="mt-2 grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_230px] gap-2">
+                    <div className="flex min-h-0 min-w-0 flex-col gap-2">
                         {/* Supplier + bill */}
-                        <div className="grid grid-cols-[minmax(0,1fr)_170px] gap-2.5 rounded-lg border border-[#9da1d8] bg-[#d9d9fb] p-2.5">
+                        <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_150px] gap-2 rounded-lg border border-[#9da1d8] bg-[#d9d9fb] p-2">
                             <div className="flex flex-col gap-2">
                                 <div className="grid grid-cols-[96px_140px_auto_150px_minmax(0,1fr)] items-center gap-2">
                                     <button type="button" onClick={() => setFinder({ target: 'sup', q: '' })} className={findBtn}>Find Supp</button>
                                     <input value={supCode} onChange={(ev) => { setSupCode(ev.target.value); if (sup) setSup(null); }}
-                                        onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); resolveSup('sup'); } }} placeholder="Supplier ID" className={`${EDIT} h-8 w-full`} />
+                                        onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); resolveSup('sup'); } }} placeholder="Supplier ID" className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
                                     <span className={lbl}>Date</span>
-                                    <input type="date" value={date} max={today()} onChange={(ev) => ev.target.value && setDate(ev.target.value)} className={`${EDIT} h-8 w-full`} />
-                                    <ReadBox value={sup ? sup.name : ''} className="h-8" />
+                                    <input type="date" value={date} max={today()} onChange={(ev) => ev.target.value && setDate(ev.target.value)} className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
+                                    <ReadBox value={sup ? sup.name : ''} className="h-7 !text-[12px] !font-normal" />
                                 </div>
                                 <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,1.6fr)] items-end gap-2">
                                     {['Bill.No', 'Extra Disc', 'Freight', 'Extra Tax Amt', 'Paid Cash', 'Staff'].map((h) => <span key={h} className={lbl}>{h}</span>)}
-                                    <input value={billNo} onChange={(ev) => setBillNo(ev.target.value)} maxLength={50} className={`${EDIT} h-8 w-full`} />
+                                    <input value={billNo} onChange={(ev) => setBillNo(ev.target.value)} maxLength={50} className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
                                     <input value={extraDisc} onChange={(ev) => setExtraDisc(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
                                     <input value={freight} onChange={(ev) => setFreight(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
                                     <input value={tax} onChange={(ev) => setTax(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
                                     <input value={paid} onChange={(ev) => setPaid(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
-                                    <select value={staffId} onChange={(ev) => setStaffId(ev.target.value)} className={`${COA_SELECT} h-8`}>
+                                    <select value={staffId} onChange={(ev) => setStaffId(ev.target.value)} className={`${COA_SELECT} h-7 !text-[12px] !font-normal`}>
                                         <option value="">Select any one</option>
                                         {staff.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                                     </select>
                                 </div>
                             </div>
                             <button type="button" onClick={showHistory}
-                                className="rounded-md border border-emerald-500 bg-gradient-to-b from-[#d6ffd6] to-[#a8f0a8] px-2 text-[14px] font-black leading-tight text-[#0b3d0b] shadow-sm hover:to-[#8fe68f]">
+                                className="rounded-md border border-emerald-500 bg-gradient-to-b from-[#d6ffd6] to-[#a8f0a8] px-2 text-[12.5px] font-bold leading-tight text-[#0b3d0b] shadow-sm hover:to-[#8fe68f]">
                                 Show Previous Purchase History
                             </button>
                         </div>
 
                         {/* Lines */}
-                        <div className="h-[240px] overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
-                            <table className="w-full table-fixed border-collapse bg-white text-[12px]">
+                        <div className="min-h-0 flex-[3] overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
+                            <table className="w-full table-fixed border-collapse bg-white text-[11.5px]">
                                 <colgroup>{[4.5, 7, 22, 6.5, 6, 7, 6, 9.5, 8, 8, 8, 9.5].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
                                     <tr>{['SNo', 'PID', 'Product Name', 'Carton', 'Pack', 'Qty(U)', 'Bonus', 'Exp.Date', 'Pur.Rate', 'Sale Rate', 'Retail.Rate', 'Sub Total'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1 font-semibold">{h}</th>)}</tr>
@@ -348,7 +350,7 @@ export default function TradePurchase() {
                                         <tr key={i} onClick={() => setSel(i)} className={`cursor-pointer tabular-nums ${sel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
                                             {[i + 1, l.product.code, l.product.name, cartonsOf(l) || '', l.product.packing, fmt(l.qty), l.bonus || '', dmy(l.expiry),
                                               fmt(l.pur), fmt(l.sale), fmt(l.retail), fmt(l.qty * l.pur)].map((v, k) => (
-                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 && k !== 7 ? 'text-right' : ''} ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 && k !== 7 ? 'text-right' : ''} `}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -358,8 +360,8 @@ export default function TradePurchase() {
                         </div>
 
                         {/* Previous purchase history */}
-                        <div className="h-[170px] overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
-                            <table className="w-full table-fixed border-collapse bg-[#ffffcf] text-[12px]">
+                        <div className="min-h-0 flex-[2] overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
+                            <table className="w-full table-fixed border-collapse bg-[#ffffcf] text-[11.5px]">
                                 <colgroup>{[10, 8.5, 18, 6.5, 20, 6, 6, 8.5, 8, 8.5].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 bg-[#ffe1b8] text-left">
                                     <tr>{['Pur.Inv', 'Date', 'Supplier', 'PID', 'Product Name', 'Qty', 'Bonus', 'Exp.Date', 'Pur.Rate', 'Sale Rate'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1 font-semibold">{h}</th>)}</tr>
@@ -376,11 +378,11 @@ export default function TradePurchase() {
                                 </tbody>
                             </table>
                         </div>
-                        {history.length > 0 && <div className="-mt-1.5 text-[12px] font-semibold text-[#1f2bd6]">Previous purchases of {histLabel}: {history.length} line(s)</div>}
+                        {history.length > 0 && <div className="-mt-1 shrink-0 text-[11px] text-[#1f2bd6]">Previous purchases of {histLabel}: {history.length} line(s)</div>}
                     </div>
 
                     {/* Right panel */}
-                    <div className="flex flex-col gap-2">
+                    <div className="flex min-h-0 flex-col gap-1.5 [&_.text-\[16px\]]:!text-[13px] [&_.text-\[22px\]]:!text-[18px] [&_.h-10]:!h-8">
                         <Led label="Amt purchase" value={fmt(amtPurchase)} />
                         <Led label="Amt Bonus" value={fmt(amtBonus)} />
                         <Led label="Net Amount" value={fmt(net)} />
@@ -405,6 +407,8 @@ export default function TradePurchase() {
                     </div>
                 </div>
             </div>
+
+            </FitStage>
 
             {findProd && (
                 <ReturnFindProductWindow companies={companies} askClose={askClose}
