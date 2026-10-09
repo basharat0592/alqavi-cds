@@ -120,9 +120,9 @@ const FP_HIST_COLS = [
 
 /* Sale / Sale-Return Records grid (legacy column order). */
 const SR_COLS = [
-    { h: 'SaleID', w: '9%' }, { h: 'Date Sale', w: '8%' }, { h: 'Staff', w: '10%' }, { h: 'Acc.ID', w: '8%' },
-    { h: 'Acc.Name', w: '13.5%' }, { h: 'Amount', w: '7.5%' }, { h: 'Special Disc', w: '6%' }, { h: 'Shelf Rent', w: '5.5%' }, { h: 'Net.Amount', w: '7.5%' },
-    { h: 'Pre. Bal.', w: '7%' }, { h: 'Total', w: '6.5%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '6%' },
+    { h: 'SaleID', w: '7.5%' }, { h: 'Date Sale', w: '8.5%' }, { h: 'Staff', w: '7%' }, { h: 'Acc.ID', w: '8%' },
+    { h: 'Acc.Name', w: '12.5%' }, { h: 'Carton', w: '4.5%' }, { h: 'Amount', w: '7%' }, { h: 'Special Disc', w: '6%' }, { h: 'Shelf Rent', w: '5.5%' },
+    { h: 'Net.Amount', w: '7.5%' }, { h: 'Pre. Bal.', w: '6.5%' }, { h: 'Total', w: '7%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '7%' },
 ];
 
 /* Sale return grids (legacy column order). */
@@ -175,10 +175,10 @@ const SHORTCUTS: [string, string][] = [
 const thFit = (h: string) => (h.startsWith('Special') || h.startsWith('Shelf Rent') ? ' !whitespace-normal !text-[10.5px] !leading-tight' : '');
 
 const GRID_COLS: { h: string; w?: string; right?: boolean }[] = [
-    { h: 'SNo', w: '4%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '13%' }, { h: 'Expiry', w: '9%' },
-    { h: 'Qty', w: '5%' }, { h: 'Carton', w: '6.5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '6.5%' },
-    { h: 'Retail', w: '6.5%' }, { h: 'SubTotal', w: '8%' }, { h: 'Special Disc %', w: '5.5%' }, { h: 'Shelf Rent %', w: '5.5%' },
-    { h: 'Dis.Amt', w: '8.5%' }, { h: 'Net Amt', w: '10%' },
+    { h: 'SNo', w: '3.5%' }, { h: 'PID', w: '6.5%' }, { h: 'Product Name', w: '17%' }, { h: 'Expiry', w: '10%' },
+    { h: 'Carton', w: '5.5%' }, { h: 'Qty', w: '4.5%' }, { h: 'Bonus', w: '5.5%' }, { h: 'TP', w: '6%' },
+    { h: 'Retail', w: '6%' }, { h: 'SubTotal', w: '7.5%' }, { h: 'Special Disc %', w: '5%' }, { h: 'Shelf Rent %', w: '5%' },
+    { h: 'Dis.Amt', w: '8.5%' }, { h: 'Net Amt', w: '9.5%' },
 ];
 
 function ReadBox({ value, className = '' }: { value: React.ReactNode; className?: string }) {
@@ -2061,12 +2061,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         <div className="min-h-0 flex-1 overflow-auto">
                             {/* Widths are inline on <col> AND the header cells so the
                                 fixed layout can never collapse Product Name. */}
-                            <table className="w-full table-fixed border-collapse border-b border-slate-500 text-[13px]">
+                            <table className="w-full table-fixed border-collapse border-b border-slate-500 text-[12px]">
                                 <colgroup>
                                     {GRID_COLS.map((c) => <col key={c.h} style={c.w ? { width: c.w } : undefined} />)}
                                 </colgroup>
                                 <thead className="sticky top-0 z-10">
-                                    <tr className="bg-gradient-to-b from-white to-[#e9e9f1] text-left text-[13px] font-bold text-slate-800">
+                                    <tr className="bg-gradient-to-b from-white to-[#e9e9f1] text-left text-[12px] font-bold text-slate-800">
                                         {GRID_COLS.map((c) => (
                                             <th key={c.h} style={c.w ? { width: c.w } : undefined}
                                                 className={`overflow-hidden whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 ${c.right ? 'text-right' : ''}${thFit(c.h)}`}>{c.h}</th>
@@ -2077,10 +2077,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     {lines.map((l, i) => (
                                         <tr key={i} onClick={() => setSelected(i)} onDoubleClick={() => editLine(i)}
                                             className={`cursor-pointer tabular-nums ${selected === i ? 'bg-[#2f5bd3] text-white' : i % 2 ? 'bg-[#f6f7ff]' : 'bg-white'} hover:outline hover:outline-1 hover:outline-[#2f5bd3]`}>
-                                            {[i + 1, l.code, l.name, ymd(l.expiry), fmt(l.qty), lineCartons(l), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
+                                            {[i + 1, l.code, l.name, ymd(l.expiry), lineCartons(l), fmt(l.qty), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
                                               fmt(lineGross(l)), l.discPct ? fmt(l.discPct) : '', l.shelfPct ? fmt(l.shelfPct) : '', lineDisc(l) ? fmt(lineDisc(l)) : '', fmt(lineNet(l))].map((v, k) => (
                                                 <td key={k} title={k === 2 ? String(v) : undefined}
-                                                    className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
+                                                    className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold tracking-tight' : ''} ${k === 3 ? 'text-[11px] tracking-tight' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -2619,9 +2619,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                         <tr key={r.sale_id + i} onClick={() => { setSrSel(r.sale_id); setSrChoice('print'); setSrAction(r); }}
                                             className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
                                             title={`${r.sale_id} — click for Print / Sale Return`}>
-                                            {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
+                                            {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, num(r.cartons) ? fmt(num(r.cartons)) : '', fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
                                               fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
-                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 4 ? 'font-semibold' : ''}`}>{v}</td>
+                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 1 ? 'text-[11.5px] tracking-tight' : ''} ${k === 4 ? 'text-[12px] font-semibold tracking-tight' : ''} ${k === 2 ? 'text-[12px]' : ''} ${k >= 5 ? 'text-[12px]' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -2635,6 +2635,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <tfoot className="sticky bottom-0 bg-[#ececfd] font-bold tabular-nums">
                                         <tr>
                                             <td colSpan={5} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">Totals</td>
+                                            <td className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r.cartons), 0)) || ''}</td>
                                             {(['amount', 'disc', 'shelf', 'net'] as const).map((k) => (
                                                 <td key={k} className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r[k]), 0))}</td>
                                             ))}

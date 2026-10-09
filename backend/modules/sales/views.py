@@ -562,8 +562,15 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             line_disc=Coalesce(Sum('items__discount'), z, output_field=money),
             line_shelf=Coalesce(Sum('items__shelf_discount'), z, output_field=money),
         ).order_by('-sale_date', '-created_at')
+        orders = list(qs[:3000])
+        # Cartons sold on each invoice (lines entered by carton).
+        cartons = {}
+        for oid, q, per in (OrderItem.objects.filter(order__in=orders, sale_unit='CARTON')
+                            .values_list('order_id', 'quantity', 'product__carton_qty')):
+            if per:
+                cartons[oid] = cartons.get(oid, 0) + (q or 0) // per
         rows = []
-        for o in qs[:3000]:
+        for o in orders:
             net = Decimal(str(o.total_amount or 0))
             pre = Decimal(str(o.prev_balance or 0))
             paid = Decimal(str(o.paid_at_sale if o.paid_at_sale is not None else (o.amount_paid or 0)))
@@ -573,7 +580,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             rows.append({
                 'id': str(o.id), 'sale_id': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
                 'customer_id': o.customer_id,
-                'staff': staff_name, 'acc_id': code, 'acc_name': name,
+                'staff': staff_name, 'acc_id': code, 'acc_name': name, 'cartons': cartons.get(o.id, 0),
                 # Disc. = Special Discount (+ any bill discount); Shelf shown on its own.
                 'amount': o.gross, 'disc': o.line_disc - o.line_shelf + Decimal(str(o.discount or 0)),
                 'shelf': o.line_shelf, 'net': net,
