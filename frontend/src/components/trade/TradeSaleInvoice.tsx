@@ -746,6 +746,101 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
     );
 }
 
+/* ───────────────────────── Find Product for Sale Return (legacy Trade 1.0) ─────────────────────────
+   Every product (not only what is in stock): Company Name / Product Name /
+   Product Bar Code filters; grid PID, Product Name, Pack, Company, Category.
+   Click selects, Enter or double-click picks; Add New Product opens Product
+   Detail. Works with or without a customer chosen. */
+function ReturnFindProductWindow({ companies, askClose, onPick, onAddNew, onClose }: {
+    companies: any[]; askClose: (fn: () => void, msg?: string) => void;
+    onPick: (r: any) => void; onAddNew: (name: string) => void; onClose: () => void;
+}) {
+    const [all, setAll] = useState<any[] | null>(null);
+    const [company, setCompany] = useState('');
+    const [name, setName] = useState('');
+    const [barcode, setBarcode] = useState('');
+    const [sel, setSel] = useState(-1);
+    const gridRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        api.get('v1/products/items/trade_list/')
+            .then(({ data }) => setAll(data.filter((r: any) => String(r.status).toUpperCase() === 'ACTIVE')))
+            .catch(() => { toast.error('Could not load products.'); setAll([]); });
+    }, []);
+    const rows = useMemo(() => {
+        const q = name.trim().toLowerCase();
+        const bc = barcode.trim().toLowerCase();
+        return (all || []).filter((r) =>
+            (!company || String(r.company_id) === company) &&
+            (!q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q)) &&
+            (!bc || String(r.barcode || '').toLowerCase() === bc));
+    }, [all, company, name, barcode]);
+    useEffect(() => { setSel(-1); }, [company, name, barcode]);
+    const keys = (e: React.KeyboardEvent) => {
+        if (!rows.length) return;
+        if (e.key === 'Enter') { e.preventDefault(); onPick(rows[sel < 0 ? 0 : sel]); return; }
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        e.preventDefault();
+        const i = Math.min(rows.length - 1, Math.max(0, sel + (e.key === 'ArrowDown' ? 1 : -1)));
+        setSel(i);
+        gridRef.current?.querySelectorAll('tbody tr')[i]?.scrollIntoView({ block: 'nearest' });
+    };
+    return (
+        <Modal title="Find Product" onClose={() => askClose(onClose)} xl>
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[#c9c9f9] p-3">
+                <div className="grid shrink-0 grid-cols-[1.5fr_1.15fr_auto] gap-3">
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-x-3 gap-y-2 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 py-3">
+                        <span className={LABEL}>Company Name</span>
+                        <select value={company} onChange={(e) => setCompany(e.target.value)} className={COA_SELECT}>
+                            <option value="">Select any one</option>
+                            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                        <span className={LABEL}>Product Name</span>
+                        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={keys}
+                            placeholder="Name or PID" className={`${EDIT} w-full`} />
+                    </div>
+                    <div className="flex items-center gap-3 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 py-3">
+                        <span className={`${LABEL} leading-tight`}>Product<br />Bar Code</span>
+                        <input value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={keys}
+                            placeholder="Scan or type" className={`${FIELD} w-full border-slate-400 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-200`} />
+                    </div>
+                    <div className="flex flex-col justify-center gap-2">
+                        <button type="button" onClick={() => onAddNew(/^\d+$/.test(name.trim()) ? '' : name.trim())} className={`${ACTION_BTN} min-w-[170px]`}>
+                            <span><span className="underline">A</span>dd New Product</span>
+                        </button>
+                        <button type="button" onClick={() => askClose(onClose)}
+                            className="flex h-9 min-w-[170px] items-center justify-center rounded-md border border-slate-400 bg-gradient-to-b from-[#f1f1f4] to-[#d6d6de] px-4 text-[14px] font-bold text-slate-700 shadow-sm hover:to-[#c9c9d4]">
+                            <span className="underline">C</span>ancel
+                        </button>
+                    </div>
+                </div>
+                <div ref={gridRef} tabIndex={0} onKeyDown={keys}
+                    className="min-h-0 flex-1 overflow-auto border border-slate-500 bg-[#8a8a8a] outline-none focus:ring-2 focus:ring-inset focus:ring-[#2f5bd3]">
+                    <table className="w-[72%] min-w-[640px] table-fixed border-collapse bg-white text-[12.5px]">
+                        <colgroup><col style={{ width: '10%' }} /><col style={{ width: '44%' }} /><col style={{ width: '10%' }} /><col style={{ width: '20%' }} /><col style={{ width: '16%' }} /></colgroup>
+                        <thead className="sticky top-0 z-10 bg-[#ffe1b8] text-left">
+                            <tr>{['PID', 'Product Name', 'Pack', 'Company', 'Category'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
+                        </thead>
+                        <tbody>
+                            {rows.slice(0, 500).map((r, i) => (
+                                <tr key={r.id} onClick={() => setSel(i)} onDoubleClick={() => onPick(r)} title="Click to select · Enter or double-click to pick"
+                                    className={`cursor-pointer tabular-nums ${sel === i ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
+                                    {[r.pid, r.name, r.packing, r.company, r.category].map((v, k) => (
+                                        <td key={k} title={String(v ?? '')} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{v}</td>
+                                    ))}
+                                </tr>
+                            ))}
+                            {!rows.length && <tr><td colSpan={5} className="px-3 py-4 text-center text-slate-500">{all ? 'No product matches.' : 'Loading…'}</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="shrink-0 text-[12.5px] font-semibold text-[#1f2bd6]">
+                    {all ? `${rows.length} product(s)${rows.length > 500 ? ' — showing the first 500, type to narrow' : ''}` : ''} · click a row, then Enter (or double-click) to pick it
+                </div>
+            </div>
+        </Modal>
+    );
+}
+
 /* ───────────────────────── main window ───────────────────────── */
 /* mode 'records': the dashboard's Sale Records button — the Sale / Sale-Return
    Records window on its own (Find Account, Chart of Account, Print and Sale
@@ -1782,6 +1877,15 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         window.close();
         setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
     };
+    // Sale Return › Find Product: all products, with or without a customer.
+    const [showRrFindProd, setShowRrFindProd] = useState(false);
+    const openRrFindProduct = () => { if (!companies.length) loadCompanies(); setShowRrFindProd(true); };
+    const pickRrFindProduct = (r: any) => {
+        setShowRrFindProd(false);
+        setRrProduct(r.pid);
+        if (rrCust) loadRrHistory(rrCust, rrInvoice, r.pid);
+        else toast(`${r.pid} — ${r.name} selected. Now find the customer.`, { icon: 'ℹ️' });
+    };
     const findReturnCustomer = (input = rrCustInput) => {
         const q = input.trim().toLowerCase();
         const hit = q ? customers.find((c) => custCode(c).toLowerCase() === q) : null;
@@ -2486,6 +2590,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             )}
 
             {/* ─── Product Detail (Find Product › Add New Product) ─── */}
+            {showRrFindProd && (
+                <ReturnFindProductWindow companies={companies} askClose={askClose}
+                    onPick={pickRrFindProduct} onClose={() => setShowRrFindProd(false)}
+                    onAddNew={(nm) => { setFpName(nm); setShowProdDetail(true); }} />
+            )}
+
             {showProdDetail && (
                 <ProductDetailWindow companies={companies} reloadCompanies={loadCompanies} initialName={/^\d+$/.test(fpName.trim()) ? '' : fpName.trim()}
                     askClose={askClose} onClose={() => setShowProdDetail(false)} />
@@ -2911,7 +3021,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 </div>
                                 <ReadBox value={rrCust ? custName(rrCust) : ''} />
                                 <div className="grid grid-cols-[96px_1fr] items-center gap-2">
-                                    <button type="button" onClick={() => { if (rrProduct.trim()) loadRrHistory(); else if (!rrCust) toast.error('Find a customer first.'); else openFindProduct('', 'return'); }} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Product</button>
+                                    <button type="button" onClick={() => { if (rrProduct.trim() && rrCust) loadRrHistory(); else openRrFindProduct(); }} className="h-8 rounded border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] text-[13px] font-semibold text-slate-800">Find Product</button>
                                     <input value={rrProduct} onChange={(e) => setRrProduct(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') loadRrHistory(); }} className={`${EDIT} w-full`} placeholder="PID or name" />
                                 </div>
                                 <div className="grid grid-cols-[96px_1fr] items-center gap-2">
