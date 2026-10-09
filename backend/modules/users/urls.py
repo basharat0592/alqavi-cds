@@ -2,7 +2,9 @@
 Users module API URLs.
 """
 from django.urls import path
-from . import views, invite_views
+from . import views
+from . import invite_views
+from .backup import trade_backup
 
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
@@ -35,6 +37,7 @@ urlpatterns = [
     path('profile/', views.get_profile, name='user-profile'),
     path('trade-password/users/', views.trade_password_users, name='trade-password-users'),
     path('trade-password/change/', views.trade_change_password, name='trade-password-change'),
+    path('trade-backup/', trade_backup, name='trade-backup'),
     path('create/', views.create_user, name='user-create'),
 
     # Role Management (literal — must precede <str:user_id>)

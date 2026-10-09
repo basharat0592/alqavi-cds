@@ -33,7 +33,7 @@ const MENUS: Menu[] = [
     { title: 'File', items: [
         { label: 'Dashboard', href: '/admin/dashboard', inPlace: true },
         { label: 'Full Admin View', href: '/admin/products', inPlace: true },
-        { label: 'Backup Database', href: '/admin/settings' },
+        { label: 'Backup Database', href: '/admin/trade/backup' },
         { label: 'Logout', action: 'logout' },
     ] },
     { title: 'Product', items: [
@@ -163,7 +163,7 @@ const COLUMNS: Group[] = [
 /* Bottom row, as in the legacy console: Backup DataBase spans the Product and
    Purchase columns, then Change Password (Sale column) and Expense Voucher. */
 const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
-    { b: { name: 'Backup Database', href: '/admin/settings', icon: Database }, theme: THEMES.backup, span: true },
+    { b: { name: 'Backup Database', href: '/admin/trade/backup', icon: Database }, theme: THEMES.backup, span: true },
     { b: { name: 'Change Password', href: '/admin/trade/change-password', icon: KeyRound }, theme: THEMES.sale },
     { b: { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight }, theme: THEMES.account },
 ];
