@@ -167,6 +167,8 @@ class VoucherViewSet(viewsets.ViewSet):
     def create(self, request):
         if request.data.get('vtype') == 'payment':
             return self._create_payment(request)
+        if request.data.get('vtype') == 'expense':
+            return self._create_expense(request)
         return self._create_receipt(request)
 
     def _create_payment(self, request):
@@ -210,6 +212,46 @@ class VoucherViewSet(viewsets.ViewSet):
                                        detail=detail or f'Paid to {to.name}')
             VoucherLine.objects.create(voucher=v, line=2, account=frm, credit=amt, detail=detail or f'Payment {v.voucher_no}')
         return Response({'id': v.id, 'voucher_no': v.voucher_no, 'total': amt}, status=status.HTTP_201_CREATED)
+
+    def _create_expense(self, request):
+        """Expense voucher. Body: {vtype:'expense', date?, expense_by (cash / bank),
+        staff?, lines: [{account, amount, detail?}]}. Debits each expense
+        account, credits Expense by with the total."""
+        from modules.company.models import LedgerAccount
+        d = request.data
+        accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant')
+        by = accounts.filter(pk=d.get('expense_by')).first() if d.get('expense_by') else None
+        if not by:
+            return Response({'detail': 'Choose the Expense by account (cash / bank).'}, status=400)
+        lines = []
+        for x in d.get('lines') or []:
+            acc = accounts.filter(pk=x.get('account')).first()
+            amt = _d(x.get('amount')).quantize(Decimal('0.01'))
+            if not acc:
+                return Response({'detail': 'One of the expense accounts was not found.'}, status=400)
+            if amt <= 0:
+                return Response({'detail': f'Enter an amount for {acc.name}.'}, status=400)
+            if acc.pk == by.pk:
+                return Response({'detail': 'An expense account cannot be the same as Expense by.'}, status=400)
+            lines.append((acc, amt, str(x.get('detail') or '').strip()[:255]))
+        if not lines:
+            return Response({'detail': 'Add at least one expense with an amount.'}, status=400)
+        try:
+            vdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        if vdate > datetime.date.today():
+            return Response({'detail': 'The voucher date cannot be in the future.'}, status=400)
+        staff = SalesStaff.objects.filter(pk=d.get('staff')).first() if d.get('staff') else None
+        total = sum((a for _, a, _ in lines), Z)
+        tid = tenant_id_for(request.user) or by.tenant_id
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=self.next_no(vdate), vtype='expense', date=vdate, staff=staff,
+                                       detail=lines[0][2], total=total, created_by=request.user, tenant_id=tid)
+            for i, (acc, amt, det) in enumerate(lines, 1):
+                VoucherLine.objects.create(voucher=v, line=i, account=acc, debit=amt, detail=det or f'Expense {acc.name}')
+            VoucherLine.objects.create(voucher=v, line=len(lines) + 1, account=by, credit=total, detail=f'Expense {v.voucher_no}')
+        return Response({'id': v.id, 'voucher_no': v.voucher_no, 'total': total}, status=status.HTTP_201_CREATED)
 
     def _create_receipt(self, request):
         """Receipt voucher. Body: {date?, receipt_as (cash/bank account id), staff?,

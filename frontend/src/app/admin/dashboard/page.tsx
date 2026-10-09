@@ -53,7 +53,7 @@ const MENUS: Menu[] = [
         { label: 'Chart of Account', href: '/admin/trade/chart-of-account' },
         { label: 'Receipt Voucher', href: '/admin/trade/receipt-voucher' },
         { label: 'Payment Voucher', href: '/admin/trade/payment-voucher' },
-        { label: 'Expense Voucher', href: '/admin/expense' },
+        { label: 'Expense Voucher', href: '/admin/trade/expense-voucher' },
     ] },
     { title: 'Setup', items: [
         { label: 'System Settings', href: '/admin/settings' },
@@ -165,7 +165,7 @@ const COLUMNS: Group[] = [
 const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
     { b: { name: 'Backup Database', href: '/admin/settings', icon: Database }, theme: THEMES.backup, span: true },
     { b: { name: 'Change Password', href: '/admin/settings', icon: KeyRound }, theme: THEMES.sale },
-    { b: { name: 'Expense Voucher', href: '/admin/expense', icon: ArrowUpRight }, theme: THEMES.account },
+    { b: { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight }, theme: THEMES.account },
 ];
 
 const REPORTS: Btn[] = [
