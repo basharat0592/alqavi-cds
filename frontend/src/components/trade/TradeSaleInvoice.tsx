@@ -845,7 +845,7 @@ function ReturnFindProductWindow({ companies, askClose, onPick, onAddNew, onClos
 /* mode 'records': the dashboard's Sale Records button — the Sale / Sale-Return
    Records window on its own (Find Account, Chart of Account, Print and Sale
    Return all work from it); closing it closes the pop-up. */
-export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice' | 'records' | 'return' }) {
+export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice' | 'records' | 'return' | 'coa' }) {
     // Customer
     const [customers, setCustomers] = useState<any[]>([]);
     const [customer, setCustomer] = useState<any | null>(null);
@@ -912,7 +912,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const discRef = useRef<HTMLInputElement>(null);
     const shelfRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${mode === 'records' ? 'Sale Records' : mode === 'return' ? 'Sale Return' : 'Sale Invoice'} )`; }, [mode]);
+    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${mode === 'records' ? 'Sale Records' : mode === 'return' ? 'Sale Return' : mode === 'coa' ? 'Chart of Account' : 'Sale Invoice'} )`; }, [mode]);
 
     const loadInvoiceNo = useCallback(() => {
         api.get('v1/sales/orders/next_invoice_no/')
@@ -973,9 +973,11 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         setAreas(all.filter((a) => a.is_active !== false).sort((a, b) => String(a.name).localeCompare(String(b.name))));
     };
 
-    const openAddCustomer = () => {
+    // From Find Account a new account is a customer by default; the dashboard's
+    // Chart of Account button (mode 'coa') starts with no level chosen.
+    const openAddCustomer = (blank = false) => {
         const q = custQuery.trim();
-        setCoa({ ...EMPTY_COA, main: '1', l2: '12', l3: String(CUSTOMER_GROUP), name: q && !/^\d+$/.test(q) ? q : '' });
+        setCoa(blank ? { ...EMPTY_COA } : { ...EMPTY_COA, main: '1', l2: '12', l3: String(CUSTOMER_GROUP), name: q && !/^\d+$/.test(q) ? q : '' });
         setCoaList(null);
         setCoaSel(null);
         setAddingCust(true);
@@ -1313,7 +1315,13 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 area: coa.area || null, status: coa.status || 'active',
             });
             toast.success(`Account ${data.acc_id} — ${name} saved.`);
-            if (data.customer_record) {
+            if (data.customer_record && mode === 'coa') {
+                // Standalone Chart of Account: keep the window open for the next account.
+                setCustomers((cs) => [data.customer_record, ...cs]);
+                setCoa((c) => ({ ...c, name: '', cell: '', contact: '', address: '' }));
+                api.get('v1/company/ledger-accounts/next_id/', { params: { group: coa.l3 } })
+                    .then(({ data: n }) => setNextAccId(n.acc_id || '')).catch(() => {});
+            } else if (data.customer_record) {
                 // A receivables account is a customer: put it straight on the invoice.
                 setCustomers((cs) => [data.customer_record, ...cs]);
                 setAddingCust(false);
@@ -1872,6 +1880,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     };
     // Standalone Sale Return window (dashboard): opens on load, closing it closes the pop-up.
     useEffect(() => { if (mode === 'return') openReturnRandom(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { if (mode === 'coa') openAddCustomer(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const closeCoaWindow = () => {
+        if (mode !== 'coa') { setAddingCust(false); return; }
+        window.close();
+        setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
+    };
     const closeReturnRandom = () => {
         if (mode !== 'return') { setRrOpen(false); return; }
         window.close();
@@ -2338,7 +2352,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') custGridKeys(e);
                             }}
                             placeholder="Name, code, area or phone" className={`${EDIT} h-9 flex-1 text-[15px]`} />
-                        <button type="button" onClick={openAddCustomer} className={`${ACTION_BTN} shrink-0`}>
+                        <button type="button" onClick={() => openAddCustomer()} className={`${ACTION_BTN} shrink-0`}>
                             <span className="underline">A</span>dd New
                         </button>
                     </div>
@@ -2371,7 +2385,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
 
             {/* ─── Chart of Account — entry window (Find Account › Add New) ─── */}
             {addingCust && (
-                <Modal title="Chart of Account" onClose={() => !savingCust && askClose(() => setAddingCust(false))} wide>
+                <Modal title="Chart of Account" onClose={() => !savingCust && askClose(closeCoaWindow)} wide>
                     <div className="min-h-0 flex-1 overflow-auto bg-[#e4e4fb] p-4">
                         {coaForm(coa, setCoa, nextAccId, saveNewCustomer, true)}
                     </div>
@@ -2380,7 +2394,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             {savingCust ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
                         <button type="button" onClick={viewAccounts} className={ACTION_BTN}><span className="underline">V</span>iew</button>
-                        <button type="button" onClick={() => askClose(() => setAddingCust(false))} disabled={savingCust} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                        <button type="button" onClick={() => askClose(closeCoaWindow)} disabled={savingCust} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                     </div>
                 </Modal>
             )}

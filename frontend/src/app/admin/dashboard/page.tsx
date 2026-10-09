@@ -50,7 +50,7 @@ const MENUS: Menu[] = [
         { label: 'Orders', href: '/admin/orders' },
     ] },
     { title: 'Accounts', items: [
-        { label: 'Chart of Account', href: '/admin/payments' },
+        { label: 'Chart of Account', href: '/admin/trade/chart-of-account' },
         { label: 'Receipt Voucher', href: '/admin/income' },
         { label: 'Payment Voucher', href: '/admin/payments' },
         { label: 'Expense Voucher', href: '/admin/expense' },
@@ -154,7 +154,7 @@ const COLUMNS: Group[] = [
         { name: 'Sale Return', href: '/admin/trade/sale-return', icon: RotateCcw },
     ] },
     { theme: THEMES.account, buttons: [
-        { name: 'Chart of Account', href: '/admin/payments', icon: BookOpen },
+        { name: 'Chart of Account', href: '/admin/trade/chart-of-account', icon: BookOpen },
         { name: 'Receipt Voucher', href: '/admin/income', icon: ArrowDownLeft },
         { name: 'Payment Voucher', href: '/admin/payments', icon: Wallet },
     ] },
