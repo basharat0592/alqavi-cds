@@ -661,9 +661,9 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
                             <span className={LABEL}>Bar Code</span>
                             <input value={f.barcode} onChange={set('barcode')} maxLength={100} className={PD_EDIT} />
                             <span className={LABEL}>Carton</span>
-                            <input value={f.carton} onChange={digits('carton')} inputMode="numeric" placeholder="pcs / carton" title="Pieces in one carton" className={PD_EDIT} />
+                            <input value={f.carton} onChange={digits('carton')} inputMode="numeric" maxLength={6} placeholder="pcs" title="Pieces in one carton" className={`${EDIT} h-9 w-[110px] text-right text-[15px]`} />
                             <span className={LABEL}>Packing</span>
-                            <input value={f.packing} onChange={digits('packing')} inputMode="numeric" placeholder="pcs / pack" title="Pieces in one pack" className={PD_EDIT} />
+                            <input value={f.packing} onChange={digits('packing')} inputMode="numeric" maxLength={6} placeholder="pcs" title="Pieces in one pack" className={`${EDIT} h-9 w-[110px] text-right text-[15px]`} />
                             <span className="col-span-2" />
                             <span className={`col-span-4 -mt-1.5 text-[12.5px] font-semibold ${cartonN >= 1 && packN >= 1 && cartonN < packN ? 'text-red-600' : 'text-[#1f2bd6]'}`}>{cartonHint}</span>
 
@@ -708,7 +708,15 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
                 </fieldset>
 
                 {viewing && (
-                    <div className="min-h-[160px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
+                    <div tabIndex={0} title="Click a row (or use ↑ / ↓) to load it for Update"
+                        onKeyDown={(e) => {
+                            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+                            e.preventDefault();
+                            const at = rows.findIndex((r) => r.id === sel?.id);
+                            const i = Math.min(rows.length - 1, Math.max(0, at + (e.key === 'ArrowDown' ? 1 : -1)));
+                            if (rows[i]) { pickRow(rows[i]); (e.currentTarget.querySelectorAll('tbody tr')[i] as HTMLElement)?.scrollIntoView({ block: 'nearest' }); }
+                        }}
+                        className="min-h-[160px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad] outline-none focus:ring-2 focus:ring-inset focus:ring-[#2f5bd3]">
                         <table className="w-full min-w-[900px] table-fixed border-collapse bg-white text-[13px]">
                             <colgroup>{PD_VIEW_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                             <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
@@ -856,7 +864,7 @@ function ReturnFindProductWindow({ companies, askClose, onPick, onAddNew, onClos
 /* mode 'records': the dashboard's Sale Records button — the Sale / Sale-Return
    Records window on its own (Find Account, Chart of Account, Print and Sale
    Return all work from it); closing it closes the pop-up. */
-export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice' | 'records' | 'return' | 'coa' }) {
+export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice' | 'records' | 'return' | 'coa' | 'product' }) {
     // Customer
     const [customers, setCustomers] = useState<any[]>([]);
     const [customer, setCustomer] = useState<any | null>(null);
@@ -923,7 +931,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const discRef = useRef<HTMLInputElement>(null);
     const shelfRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${mode === 'records' ? 'Sale Records' : mode === 'return' ? 'Sale Return' : mode === 'coa' ? 'Chart of Account' : 'Sale Invoice'} )`; }, [mode]);
+    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${mode === 'records' ? 'Sale Records' : mode === 'return' ? 'Sale Return' : mode === 'coa' ? 'Chart of Account' : mode === 'product' ? 'Product Detail' : 'Sale Invoice'} )`; }, [mode]);
 
     const loadInvoiceNo = useCallback(() => {
         api.get('v1/sales/orders/next_invoice_no/')
@@ -1885,6 +1893,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Standalone Sale Return window (dashboard): opens on load, closing it closes the pop-up.
     useEffect(() => { if (mode === 'return') openReturnRandom(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => { if (mode === 'coa') openAddCustomer(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // Dashboard › Product Detail: the window on its own; closing it closes the pop-up.
+    useEffect(() => { if (mode === 'product') { loadCompanies(); setFpName(''); setShowProdDetail(true); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
     const closeCoaWindow = () => {
         if (mode !== 'coa') { setAddingCust(false); return; }
         closeTradeWindow();
@@ -2621,7 +2631,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
 
             {showProdDetail && (
                 <ProductDetailWindow companies={companies} reloadCompanies={loadCompanies} initialName={/^\d+$/.test(fpName.trim()) ? '' : fpName.trim()}
-                    askClose={askClose} onClose={() => setShowProdDetail(false)} />
+                    askClose={askClose} onClose={() => (mode === 'product' ? closeTradeWindow() : setShowProdDetail(false))} />
             )}
 
             {/* ─── Invoice preview (F9) → save / print ─── */}

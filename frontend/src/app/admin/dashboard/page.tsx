@@ -37,7 +37,7 @@ const MENUS: Menu[] = [
         { label: 'Logout', action: 'logout' },
     ] },
     { title: 'Product', items: [
-        { label: 'Product Detail', href: '/admin/products' },
+        { label: 'Product Detail', href: '/admin/trade/product-detail' },
         { label: 'Add Product', href: '/admin/products/add' },
         { label: 'Stock', href: '/admin/inventory/list' },
         { label: 'Update Rates / Expiry', href: '/admin/products' },
@@ -139,7 +139,7 @@ const THEMES: Record<string, Theme> = {
 
 const COLUMNS: Group[] = [
     { theme: THEMES.product, buttons: [
-        { name: 'Product Detail', href: '/admin/products', icon: Package },
+        { name: 'Product Detail', href: '/admin/trade/product-detail', icon: Package },
         { name: 'Stock', href: '/admin/inventory/list', icon: Boxes },
         { name: 'Update Rates / Expiry', href: '/admin/products', icon: CalendarClock },
     ] },
