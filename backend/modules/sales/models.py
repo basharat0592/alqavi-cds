@@ -90,13 +90,17 @@ class InvoiceProfile(models.Model):
     contact_no = models.CharField(max_length=40, blank=True, default='')
     whatsapp = models.CharField(max_length=40, blank=True, default='')
     acct_no = models.CharField(max_length=60, blank=True, default='')  # company bank account no.
+    bank_name = models.CharField(max_length=40, blank=True, default='')   # e.g. UBL
+    bank_title = models.CharField(max_length=80, blank=True, default='')  # account title
+    easypaisa_name = models.CharField(max_length=80, blank=True, default='')
 
     class Meta:
         db_table = 'trade_invoice_profile'
 
     def as_dict(self):
         return {'proprietor': self.proprietor, 'phones': self.phones, 'easypaisa': self.easypaisa,
-                'contact_no': self.contact_no, 'whatsapp': self.whatsapp, 'acct_no': self.acct_no}
+                'contact_no': self.contact_no, 'whatsapp': self.whatsapp, 'acct_no': self.acct_no,
+                'bank_name': self.bank_name, 'bank_title': self.bank_title, 'easypaisa_name': self.easypaisa_name}
 
 
 class SalesStaff(models.Model):

@@ -425,7 +425,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         tid = tenant_id_for(request.user) or request.user.pk
         prof = self._invoice_profile(tid)
         if request.method == 'PATCH':
-            for k, n in (('proprietor', 150), ('phones', 120), ('easypaisa', 40), ('contact_no', 40), ('whatsapp', 40), ('acct_no', 60)):
+            for k, n in (('proprietor', 150), ('phones', 120), ('easypaisa', 40), ('contact_no', 40), ('whatsapp', 40), ('acct_no', 60), ('bank_name', 40), ('bank_title', 80), ('easypaisa_name', 80)):
                 if k in request.data:
                     setattr(prof, k, str(request.data.get(k) or '').strip()[:n])
             if not prof.proprietor:

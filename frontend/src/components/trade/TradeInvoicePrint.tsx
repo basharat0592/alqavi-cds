@@ -53,7 +53,23 @@ type Line = {
     qty: number; bonus: number; tp: number; retail: number; gross: number; special: number; shelf: number; net: number;
     special_pct: number; shelf_pct: number;
 };
-type Profile = { proprietor: string; phones: string; easypaisa: string; contact_no: string; whatsapp: string; acct_no?: string };
+/* "Bio oil 60ml" -> "Bio oil" + small "60ml" (sizes / weights in small type). */
+const SIZE_RE = /(\d+(?:\.\d+)?\s?(?:ml|mg|gm|g|kg|ltr|l|pcs?)(?![a-z]))/gi;
+function nameWithSize(name: string) {
+    const parts = String(name || '').split(SIZE_RE);
+    return parts.map((p, i) => (i % 2 ? <span key={i} style={{ fontSize: '5.8pt', color: '#444' }}>{p}</span> : p));
+}
+function WaIcon() {
+    return (
+        <svg viewBox="0 0 24 24" width="10" height="10" aria-label="WhatsApp" style={{ flexShrink: 0 }}>
+            <path fill="#25D366" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z" />
+            <path fill="#fff" d="M17.3 14.6c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.2-.6.1a7.6 7.6 0 0 1-3.8-3.3c-.3-.5.3-.5.8-1.6.1-.2 0-.4 0-.5l-.9-2c-.2-.5-.4-.5-.6-.5h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3z" />
+        </svg>
+    );
+}
+
+type Profile = { proprietor: string; phones: string; easypaisa: string; contact_no: string; whatsapp: string; acct_no?: string;
+    bank_name?: string; bank_title?: string; easypaisa_name?: string };
 const DEFAULT_PROFILE: Profile = { proprietor: 'Syed Sakhawat & Associates', phones: '03351240190, 03138692190', easypaisa: '', contact_no: '', whatsapp: '', acct_no: '' };
 
 type Invoice = {
@@ -200,10 +216,10 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
 
     return (
         <div className="min-h-screen bg-slate-200 py-6 print:bg-white print:py-0">
-            <style>{`${FONTS}
+            <style>{`${isSlip ? FONTS : ''}
                 ${pageCss}
                 .inv * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                .inv { font-family: 'Inter', system-ui, sans-serif; color: #111; }
+                .inv { font-family: var(--font-inter), 'Inter', system-ui, sans-serif; color: #111; }
                 .ur-name { font-family: 'Noto Naskh Arabic', serif; font-weight: 700; }
                 .ur { font-family: 'Noto Nastaliq Urdu', serif; }
                 .inv table { border-collapse: collapse; width: 100%; }
@@ -265,7 +281,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                 <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
                     <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
                         <h2 className="mb-3 text-[16px] font-bold text-slate-800">Invoice details (printed under Proprietor)</h2>
-                        {([['proprietor', 'Proprietor'], ['easypaisa', 'Easypaisa No'], ['contact_no', 'Contact No']] as const).map(([k, label]) => (
+                        {([['proprietor', 'Proprietor'], ['bank_name', 'Bank (e.g. UBL)'], ['acct_no', 'Bank Account No'], ['bank_title', 'Account Title'], ['easypaisa', 'Easypaisa No'], ['easypaisa_name', 'Easypaisa Name'], ['contact_no', 'Contact (WhatsApp)']] as const).map(([k, label]) => (
                             <label key={k} className="mb-2.5 grid grid-cols-[110px_1fr] items-center gap-2 text-[13px] font-semibold text-slate-600">
                                 {label}
                                 <input value={editPf[k] || ''} onChange={(e) => setEditPf({ ...editPf, [k]: e.target.value })}
@@ -302,8 +318,6 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
 const B = '0.3mm solid #222';
 const SOLE_DISTRIBUTORS = 'SOLE DISTRIBUTORS of Mother Care, BNB Cosmetics, Baba Cosmetics, Doctor Paste, Bio Amla, Kidi Diapers, '
     + 'Santex Ladies Pads, Aish, Face Fresh, Luvel, Amour Diapers, Grace, Pink and White, Perfume — and products of all companies are available at reasonable prices.';
-const termsUr = (city: string) =>
-    `نوٹ:۔ تمام دکاندار حضرات اس بات کو نوٹ کر لیں کہ جتنی بھی چیزیں القوی ٹریڈرز ${city} سے لے رہے ہیں ان کو ایکسپائری سے تین مہینے پہلے تبدیل کرانا ہوگا۔ زائد المیعاد یا خراب ہونے کے بعد کمپنی تبدیلی کی ذمہ دار نہیں ہوگی۔ امپورٹڈ چیزیں بشمول پرفیوم، باڈی سپرے اور خراب شدہ سامان کی تبدیلی یا واپسی نہیں ہوگی۔ رسید کے بغیر کسی بھی نمائندے کو رقم ادا نہ کریں۔ سامان اور بل میں کسی بھی فرق کی صورت میں فوراً اطلاع کریں بصورت دیگر کمپنی کسی قسم کے کلیم یا نقصانات کی ذمہ دار نہیں ہوگی۔ آپ کے تعاون کا شکریہ`;
 
 function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m: number } }) {
     const t = inv.totals;
@@ -375,7 +389,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const Head = (pno: number, total: number) => (
             <div style={part}>
                 <div style={{ textAlign: 'right', fontSize: '7.5pt', fontWeight: 700, lineHeight: 1, height: '3mm' }}>P. No {pno} of {total}</div>
-                <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 56mm', gap: '3mm' }}>
+                <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 66mm', gap: '3mm' }}>
                     <div>
                         <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', height: 'auto', marginTop: '0.5mm' }} />
                         <div style={{ fontSize: '8pt', marginTop: '1mm' }}>Acct No: <span style={{ fontWeight: 600 }}>{c.acc_id || '—'}</span></div>
@@ -388,9 +402,21 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                         <div style={{ fontWeight: 800, fontSize: '8.5pt' }}>Proprietor:</div>
                         <div style={{ fontWeight: 600 }}>{pf.proprietor}</div>
                         <div>{region.name} Region</div>
-                        <div className="grid" style={{ gridTemplateColumns: '19mm 1fr', marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums' }}>
-                            <span style={{ color: '#333' }}>Easypaisa:</span><span style={{ fontWeight: 600 }}>{pf.easypaisa || '—'}</span>
-                            <span style={{ color: '#333' }}>Contact No:</span><span style={{ fontWeight: 600 }}>{pf.contact_no || '—'}</span>
+                        <div style={{ marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums', lineHeight: 1.5 }}>
+                            {pf.acct_no && <div>
+                                <span style={{ color: '#333' }}>{pf.bank_name || 'Bank'} Account Num: </span>
+                                <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.acct_no}</b>
+                                {pf.bank_title && <span style={{ fontSize: '6.5pt', fontWeight: 400, color: '#444' }}> ({pf.bank_title})</span>}
+                            </div>}
+                            <div>
+                                <span style={{ color: '#333' }}>Easypaisa: </span>
+                                <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.easypaisa || '—'}</b>
+                                {pf.easypaisa_name && <span style={{ fontSize: '6.5pt', fontWeight: 400, color: '#444' }}> ({pf.easypaisa_name})</span>}
+                            </div>
+                            <div className="flex items-center" style={{ gap: '1mm' }}>
+                                <WaIcon /><span style={{ color: '#333' }}>Contact: </span>
+                                <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.contact_no || '—'}</b>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -410,7 +436,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                             {field('Print Time:', printTime, '17mm')}
                             {field('Saleman Name:', inv.staff)}
                             {field('Cell No:', inv.staff_cell, '17mm')}
-                            {field('Due Date:', <span style={{ color: due.owing ? '#c62828' : undefined }}>{dmy(due.dueDate)}</span>, '17mm')}
+                            {field('Due Date:', <span style={{ color: '#fff', background: due.owing ? '#c62828' : '#2e7d32', fontWeight: 800, fontSize: '9pt', padding: '0.2mm 1.6mm', borderRadius: '0.8mm' }}>{dmy(due.dueDate)}</span>, '17mm')}
                         </div>
     );
     const Thead = (
@@ -425,7 +451,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const Row = (l: Line, i: number) => (
                                     <tr key={i} data-m="row">
                                         {td(i + 1, true)}{td(l.pid)}
-                                        {td(<>{l.name}{l.expiry_date ? <span style={{ color: '#666', fontSize: '6.3pt' }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
+                                        {td(<>{nameWithSize(l.name)}{l.expiry_date ? <span style={{ color: '#666', fontSize: '6.3pt' }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
                                         {td(isCarton(l) ? cartonCount(l).replace(' Ctn', '') : '', true)}
                                         {td(qtyFmt(l.qty), true)}{td(qtyFmt(l.bonus), true)}{td(money(l.tp), true)}{td(money(l.retail), true)}
                                         {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}{td(money(l.net), true, true)}
@@ -436,8 +462,8 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                     <td colSpan={3} style={{ border: B, padding: '0.6mm 1.1mm' }}>Total ({inv.lines.length} item{inv.lines.length === 1 ? '' : 's'})</td>
                                     {td(cartons || '', true, true)}{td(qtyFmt(t.pieces), true, true)}{td(qtyFmt(t.bonus), true, true)}
                                     <td colSpan={2} style={{ border: B }} />
-                                    {td(<>{money(t.special)}{n(t.gross) > 0 && <div style={{ fontSize: '6.3pt', fontWeight: 400, color: '#555' }}>{qtyFmt(n(t.special) / n(t.gross) * 100)}%</div>}</>, true, true)}
-                                    {td(<>{money(t.shelf)}{n(t.gross) > 0 && <div style={{ fontSize: '6.3pt', fontWeight: 400, color: '#555' }}>{qtyFmt(n(t.shelf) / n(t.gross) * 100)}%</div>}</>, true, true)}
+                                    {td(`${money(inv.lines.reduce((a, l) => a + n(l.special_pct), 0))}%`, true, true)}
+                                    {td(`${money(inv.lines.reduce((a, l) => a + n(l.shelf_pct), 0))}%`, true, true)}
                                     {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}
                                 </tr>
     );
@@ -462,11 +488,11 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     );
     const Foot = (
             <div style={part}>
-                <div style={{ border: '0.35mm solid #222', padding: '1.3mm 2mm', marginTop: '2mm' }}><ShopsBanner /></div>
-                <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: '7.3pt', lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
-                <div className="ur" dir="rtl" style={{ fontSize: '6.8pt', lineHeight: 1.95, marginTop: '0.8mm', textAlign: 'justify' }}>
-                    {termsUr(region.code === 'SKD' ? 'سکردو' : 'گلگت')}
+                <div style={{ border: '0.35mm solid #222', padding: '1.3mm 2mm', marginTop: '2mm' }}>
+                    <img src="/brand/inv-shops-banner.png" alt="" style={{ width: '100%', height: 'auto', display: 'block' }} />
                 </div>
+                <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: '7.3pt', lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
+                <img src={region.code === 'SKD' ? '/brand/inv-terms-skd.png' : '/brand/inv-terms-glt.png'} alt="" style={{ width: '100%', height: 'auto', display: 'block', marginTop: '0.8mm' }} />
                 <div className="flex justify-between" style={{ marginTop: '6mm', fontSize: '8pt', fontWeight: 600 }}>
                     <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
                     <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Saleman</div>
@@ -516,31 +542,6 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 );
             })}
         </>
-    );
-}
-
-/* The shops strip from the letterhead: Gilgit shop | slogan | Skardu shop, right to left. */
-function ShopsBanner() {
-    const box = (text: string, point: 'left' | 'right') => (
-        <div className="ur flex items-center justify-center" dir="rtl"
-            style={{
-                background: '#2f2f33', color: '#fff', fontSize: '8pt', lineHeight: 1, height: '7mm', padding: '0 5mm', whiteSpace: 'nowrap',
-                clipPath: point === 'left' ? 'polygon(4mm 0, 100% 0, 100% 100%, 4mm 100%, 0 50%)' : 'polygon(0 0, calc(100% - 4mm) 0, 100% 50%, calc(100% - 4mm) 100%, 0 100%)',
-            }}>
-            <span style={{ transform: 'translateY(0.6mm)' }}>{text}</span>
-        </div>
-    );
-    const bar = (dir: string) => <div style={{ width: '9mm', height: '4.5mm', background: `linear-gradient(${dir}, #2a2e8f, #8c8fd6)` }} />;
-    return (
-        <div className="flex items-center justify-between" dir="rtl" style={{ gap: '2mm' }}>
-            {box(SHOP_GILGIT_UR, 'left')}
-            <div className="flex items-center" style={{ gap: '2mm' }}>
-                {bar('90deg')}
-                <span className="ur" style={{ fontSize: '9pt', lineHeight: 1, whiteSpace: 'nowrap', transform: 'translateY(0.6mm)' }}>{SLOGAN_UR}</span>
-                {bar('270deg')}
-            </div>
-            {box(SHOP_SKARDU_UR, 'right')}
-        </div>
     );
 }
 
