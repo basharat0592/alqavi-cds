@@ -52,6 +52,8 @@ class Voucher(models.Model):
     bank = models.CharField(max_length=80, blank=True, default='')
     detail = models.CharField(max_length=255, blank=True, default='')
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    # Imported from the legacy Trade VoucherDetail (re-import replaces only these).
+    legacy = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                    related_name='created_vouchers')
     created_at = models.DateTimeField(auto_now_add=True)
