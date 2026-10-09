@@ -164,7 +164,7 @@ const COLUMNS: Group[] = [
    Purchase columns, then Change Password (Sale column) and Expense Voucher. */
 const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
     { b: { name: 'Backup Database', href: '/admin/settings', icon: Database }, theme: THEMES.backup, span: true },
-    { b: { name: 'Change Password', href: '/admin/settings', icon: KeyRound }, theme: THEMES.sale },
+    { b: { name: 'Change Password', href: '/admin/trade/change-password', icon: KeyRound }, theme: THEMES.sale },
     { b: { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight }, theme: THEMES.account },
 ];
 

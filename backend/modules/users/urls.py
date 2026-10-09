@@ -33,6 +33,8 @@ urlpatterns = [
     # User Management (literal)
     path('', views.list_users, name='user-list'),
     path('profile/', views.get_profile, name='user-profile'),
+    path('trade-password/users/', views.trade_password_users, name='trade-password-users'),
+    path('trade-password/change/', views.trade_change_password, name='trade-password-change'),
     path('create/', views.create_user, name='user-create'),
 
     # Role Management (literal — must precede <str:user_id>)

@@ -946,3 +946,50 @@ def signup_rider(request):
         'email': rider.email
     }, status=status.HTTP_201_CREATED)
 
+
+
+# ==================== TRADE 1.0 CHANGE PASSWORD ====================
+
+def _trade_login_users(actor):
+    """Staff logins the actor may pick in the Trade 1.0 Change Password window:
+    every staff login of the actor's tenant (all of them for the platform operator)."""
+    from django.db.models import Q
+    qs = User.objects.filter(is_staff=True, is_active=True)
+    tid = tenant_id_for(actor)
+    if tid is not None:
+        qs = qs.filter(Q(pk=tid) | Q(tenant_id=tid))
+    return qs.order_by('username')
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def trade_password_users(request):
+    """User ID list for the Trade 1.0 Change Password window."""
+    return Response([{'id': u.pk, 'username': u.username, 'name': u.get_full_name()}
+                     for u in _trade_login_users(request.user)])
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def trade_change_password(request):
+    """Body: {user, old_password, new_password, confirm_password}. The old password
+    of the chosen login must be right; the new one is set and logged."""
+    d = request.data
+    user = _trade_login_users(request.user).filter(pk=d.get('user')).first()
+    if not user:
+        return Response({'detail': 'Select the User ID.'}, status=400)
+    old, new, confirm = (str(d.get(k) or '') for k in ('old_password', 'new_password', 'confirm_password'))
+    if not check_password(old, user.password):
+        return Response({'detail': 'Old Password is not correct.'}, status=400)
+    if len(new) < 6:
+        return Response({'detail': 'The New Password must be at least 6 characters.'}, status=400)
+    if new != confirm:
+        return Response({'detail': 'New Password and Confirm password do not match.'}, status=400)
+    if new == old:
+        return Response({'detail': 'The New Password is the same as the old one.'}, status=400)
+    user.set_password(new)
+    user.plain_password = new
+    user.save()
+    UserActivityLog.objects.create(user=request.user, action='password_change',
+                                   description=f'Changed password for user: {user.username}')
+    return Response({'message': 'Password changed'})
