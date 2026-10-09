@@ -68,6 +68,22 @@ const lineCartons = (l: Line) => {
 const lineNet = (l: Line) => lineGross(l) - lineDisc(l);
 const lineCost = (l: Line) => (l.qty + l.bonus) * l.cost;
 
+/* Browser-level close guard for the Trade pop-ups. The browser shows its own
+   "Leave site?" box (its wording can't be changed); closes the user already
+   confirmed in our own dialog skip it. */
+let allowUnload = false;
+export function guardWindowClose() {
+    const h = (e: BeforeUnloadEvent) => { if (allowUnload) return; e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', h);
+    return () => window.removeEventListener('beforeunload', h);
+}
+export function closeTradeWindow() {
+    allowUnload = true;
+    window.close();
+    // Still open (not a pop-up): go back to the dashboard.
+    setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
+}
+
 /* ───────────────────────── small styled pieces ───────────────────────── */
 const LABEL = 'text-[13px] font-bold tracking-tight text-[#1b1f4b] whitespace-nowrap';
 // No width here: callers size each field (w-full in grids, fixed px in rows) so
@@ -1362,13 +1378,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             .catch(() => setPrevBal(0));
     }, [customer]);
 
-    // Don't let a refresh/close silently drop an unsaved invoice.
-    useEffect(() => {
-        if (!lines.length) return;
-        const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
-        window.addEventListener('beforeunload', h);
-        return () => window.removeEventListener('beforeunload', h);
-    }, [lines.length]);
+    // Closing the pop-up with the browser's own X (or refreshing) asks first,
+    // like every window's own Close / Cancel. Our confirmed closes pass through.
+    useEffect(() => guardWindowClose(), []);
 
     /* ── customer ── */
     const pickCustomer = (c: any) => {
@@ -1691,8 +1703,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const closeWindow = () => {
         askClose(() => {
             setLines([]);
-            // Defer so the cleared lines drop the unsaved-invoice guard first.
-            setTimeout(() => window.close(), 0);
+            closeTradeWindow();
         }, lines.length ? 'The invoice is not saved. Do you want to Close the Form ?' : undefined);
     };
 
@@ -1733,9 +1744,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     useEffect(() => { if (mode === 'records') openSaleRecords(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
     const closeSaleRecords = () => {
         if (mode !== 'records') { setShowView(false); return; }
-        window.close();
-        // Not a pop-up (opened in a tab): go back to the dashboard instead.
-        setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
+        closeTradeWindow();
     };
 
     /* ═══ Sale returns (legacy "Sale Return Complete Bill" / "Sale Return (Random)") ═══
@@ -1883,13 +1892,11 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     useEffect(() => { if (mode === 'coa') openAddCustomer(true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
     const closeCoaWindow = () => {
         if (mode !== 'coa') { setAddingCust(false); return; }
-        window.close();
-        setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
+        closeTradeWindow();
     };
     const closeReturnRandom = () => {
         if (mode !== 'return') { setRrOpen(false); return; }
-        window.close();
-        setTimeout(() => { if (!window.closed) window.location.href = '/admin/dashboard'; }, 200);
+        closeTradeWindow();
     };
     // Sale Return › Find Product: all products, with or without a customer.
     const [showRrFindProd, setShowRrFindProd] = useState(false);

@@ -14,6 +14,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import api from '@/lib/axios';
+import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
 
 export type InvoiceSize = 'a4' | 'a5' | 'letter' | 'legal' | 'custom' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
@@ -137,6 +138,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     }, [id]);
 
     useEffect(() => { if (inv) document.title = `Invoice ${inv.invoice_no}`; }, [inv]);
+    useEffect(() => guardWindowClose(), []);
 
     const isSlip = size === '80' || size === '58';
     // Print once the data and the Urdu fonts are in (else the first print shows fallbacks).
@@ -213,7 +215,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
                     className="flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
                     <Printer size={14} /> Print
                 </button>
-                <button type="button" onClick={() => window.close()} className="flex h-8 items-center gap-1 rounded-md border border-slate-300 px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
+                <button type="button" onClick={() => { if (window.confirm('Do you want to Close the Form ?')) closeTradeWindow(); }} className="flex h-8 items-center gap-1 rounded-md border border-slate-300 px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
                     <X size={14} /> Close
                 </button>
             </div>
