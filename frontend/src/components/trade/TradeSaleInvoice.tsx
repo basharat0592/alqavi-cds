@@ -2621,7 +2621,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                             title={`${r.sale_id} — click for Print / Sale Return`}>
                                             {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, num(r.cartons) ? fmt(num(r.cartons)) : '', fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
                                               fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
-                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 1 ? 'text-[11.5px] tracking-tight' : ''} ${k === 4 ? 'text-[12px] font-semibold tracking-tight' : ''} ${k === 2 ? 'text-[12px]' : ''} ${k >= 5 ? 'text-[12px]' : ''}`}>{v}</td>
+                                                <td key={k} title={String(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 text-[11px] font-normal tracking-tight">{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -2632,7 +2632,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     )}
                                 </tbody>
                                 {srRows && srRows.length > 0 && (
-                                    <tfoot className="sticky bottom-0 bg-[#ececfd] font-bold tabular-nums">
+                                    <tfoot className="sticky bottom-0 bg-[#ececfd] text-[11.5px] font-semibold tabular-nums">
                                         <tr>
                                             <td colSpan={5} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">Totals</td>
                                             <td className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r.cartons), 0)) || ''}</td>
