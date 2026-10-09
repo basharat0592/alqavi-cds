@@ -313,6 +313,145 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             })
         return Response(out)
 
+    # ── Trade 1.0 "Update Rates and Expiry Date" window ──
+
+    @staticmethod
+    def _rate_row(p, b, today):
+        stock = getattr(p, 'stock', None)
+        sp = getattr(stock, 'product', None)
+        exp = b.expiry_date if b else p.expiry_date
+        if str(p.status).upper() != 'ACTIVE':
+            state = 'Inactive'
+        elif exp and exp < today:
+            state = 'Expired'
+        elif exp and (exp - today).days <= 90:
+            state = 'Near Expiry'
+        else:
+            state = 'Active'
+        return {
+            'batch_id': str(b.id) if b else '', 'product_id': str(p.id), 'pid': p.sku or '',
+            'category': p.category.name if p.category_id else '', 'name': p.product_name,
+            'pack': max(1, int(getattr(stock, 'items_per_carton', None) or 1)), 'carton': p.carton_qty or 0,
+            'expiry_apply': p.expiry_apply, 'expiry_date': exp,
+            'qty': b.quantity if b else int(p.total_quantity or 0),
+            'pur_rate': (b.cost_price if b else None) or p.cost_price or 0,
+            'sale_rate': (b.selling_price if b else None) or p.selling_price or 0,
+            'retail_rate': (b.retail_price if b else None) or p.original_price or 0,
+            'company': sp.company.name if (sp and sp.company_id) else '', 'status': state,
+        }
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
+    def rate_expiry_list(self, request):
+        """Stock batches for the Update Rates and Expiry Date › View grid (one row
+        per batch; a product with no batch shows once with its own rates).
+        Filters: ?company, ?quantity (available|zero|negative), ?category, ?pid,
+        ?name, ?expiry_apply (yes|no), ?expiry_date, ?pur_rate, ?expired_after,
+        ?expired_before."""
+        from datetime import date
+        from decimal import Decimal, InvalidOperation
+        f = request.query_params
+        qs = self.get_queryset().select_related('category', 'stock__product__company')
+        if f.get('company'):
+            qs = qs.filter(stock__product__company_id=f['company'])
+        if f.get('category'):
+            qs = qs.filter(category_id=f['category'])
+        if f.get('pid'):
+            qs = qs.filter(Q(sku__iexact=f['pid'].strip()) | Q(barcode__iexact=f['pid'].strip()))
+        if f.get('name'):
+            qs = qs.filter(product_name__icontains=f['name'].strip())
+        if f.get('expiry_apply') in ('yes', 'no'):
+            qs = qs.filter(expiry_apply=f['expiry_apply'] == 'yes')
+        products = list(qs.order_by('product_name')[:5000])
+        by_product = {}
+        for b in ProductBatch.objects.filter(product__in=products).order_by('expiry_date', 'created_at'):
+            by_product.setdefault(b.product_id, []).append(b)
+        today = date.today()
+        rows = []
+        for p in products:
+            for b in by_product.get(p.id) or [None]:
+                rows.append(self._rate_row(p, b, today))
+
+        def day(k):
+            try:
+                return date.fromisoformat(str(f.get(k))[:10]) if f.get(k) else None
+            except ValueError:
+                return None
+        qf = f.get('quantity')
+        if qf == 'available':
+            rows = [r for r in rows if r['qty'] > 0]
+        elif qf == 'zero':
+            rows = [r for r in rows if r['qty'] == 0]
+        elif qf == 'negative':
+            rows = [r for r in rows if r['qty'] < 0]
+        exact, after, before = day('expiry_date'), day('expired_after'), day('expired_before')
+        if exact:
+            rows = [r for r in rows if r['expiry_date'] == exact]
+        if after:
+            rows = [r for r in rows if r['expiry_date'] and r['expiry_date'] >= after]
+        if before:
+            rows = [r for r in rows if r['expiry_date'] and r['expiry_date'] <= before]
+        if f.get('pur_rate'):
+            try:
+                pr = Decimal(f['pur_rate'])
+                rows = [r for r in rows if Decimal(str(r['pur_rate'])) == pr]
+            except InvalidOperation:
+                pass
+        return Response(rows)
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
+    def rate_expiry_update(self, request):
+        """Body: {product, batch?, date?, staff?, expiry_date?, pur_rate, sale_rate,
+        retail_rate}. Updates the batch (or the product when it has no batch) and
+        makes these the product's current rates; logs the change."""
+        from datetime import date
+        from decimal import Decimal, InvalidOperation
+        from django.db.models import Min
+        from .models import RateExpiryUpdate
+        d = request.data
+        p = self.get_queryset().select_related('category', 'stock__product__company').filter(pk=d.get('product')).first()
+        if not p:
+            return Response({'detail': 'Product not found.'}, status=400)
+        b = ProductBatch.objects.filter(pk=d.get('batch'), product=p).first() if d.get('batch') else None
+        try:
+            pur, sale, retail = (Decimal(str(d.get(k) or 0)).quantize(Decimal('0.01')) for k in ('pur_rate', 'sale_rate', 'retail_rate'))
+        except InvalidOperation:
+            return Response({'detail': 'Enter the rates as numbers.'}, status=400)
+        if pur <= 0 or sale <= 0 or retail <= 0:
+            return Response({'detail': 'Enter the Pur.Rate, Sale Rate and Retail Rate.'}, status=400)
+        try:
+            exp = date.fromisoformat(str(d['expiry_date'])[:10]) if d.get('expiry_date') else None
+            on = date.fromisoformat(str(d['date'])[:10]) if d.get('date') else date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        if p.expiry_apply and not exp:
+            return Response({'detail': 'Choose the expiry date.'}, status=400)
+        staff = ''
+        if d.get('staff'):
+            from modules.sales.models import SalesStaff
+            s = SalesStaff.objects.filter(pk=d['staff']).first()
+            staff = s.name if s else ''
+        with transaction.atomic():
+            old = (b.expiry_date, b.cost_price, b.selling_price, b.retail_price) if b else \
+                (p.expiry_date, p.cost_price or 0, p.selling_price or 0, p.original_price or 0)
+            new_exp = exp if p.expiry_apply else old[0]
+            if b:
+                ProductBatch.objects.filter(pk=b.pk).update(expiry_date=new_exp, cost_price=pur,
+                                                            selling_price=sale, retail_price=retail)
+            p.cost_price, p.selling_price, p.original_price = pur, sale, retail
+            if b:
+                p.expiry_date = ProductBatch.objects.filter(product=p, quantity__gt=0, expiry_date__isnull=False) \
+                    .aggregate(m=Min('expiry_date'))['m']
+            else:
+                p.expiry_date = new_exp
+            p.save()
+            RateExpiryUpdate.objects.create(
+                product=p, batch=b, date=on, staff=staff, old_expiry=old[0], new_expiry=new_exp,
+                old_cost=old[1] or 0, new_cost=pur, old_sale=old[2] or 0, new_sale=sale,
+                old_retail=old[3] or 0, new_retail=retail)
+        if b:
+            b.refresh_from_db()
+        return Response(self._rate_row(p, b, date.today()))
+
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
     def trade_save(self, request):
         """Save the Product Detail form (multipart). No ``id`` -> new product with

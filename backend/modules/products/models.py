@@ -293,3 +293,24 @@ class StoreProduct(BaseModel):
 
     def __str__(self):
         return self.name
+
+
+class RateExpiryUpdate(BaseModel):
+    """One change made in the Trade 1.0 "Update Rates and Expiry Date" window:
+    the batch (or product) edited, the old and new rates / expiry, the date and
+    the staff member."""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='rate_updates')
+    batch = models.ForeignKey(ProductBatch, on_delete=models.SET_NULL, null=True, blank=True, related_name='rate_updates')
+    date = models.DateField()
+    staff = models.CharField(max_length=120, blank=True, default='')
+    old_expiry = models.DateField(null=True, blank=True)
+    new_expiry = models.DateField(null=True, blank=True)
+    old_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    new_cost = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    old_sale = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    new_sale = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    old_retail = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    new_retail = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'product_rate_expiry_updates'

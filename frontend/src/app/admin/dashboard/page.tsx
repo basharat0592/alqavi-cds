@@ -40,7 +40,7 @@ const MENUS: Menu[] = [
         { label: 'Product Detail', href: '/admin/trade/product-detail' },
         { label: 'Add Product', href: '/admin/products/add' },
         { label: 'Stock', href: '/admin/inventory/list' },
-        { label: 'Update Rates / Expiry', href: '/admin/products' },
+        { label: 'Update Rates / Expiry', href: '/admin/trade/update-rates' },
     ] },
     { title: 'Sale', items: [
         { label: 'Sale Invoice', href: '/admin/trade/sale-invoice' },
@@ -141,7 +141,7 @@ const COLUMNS: Group[] = [
     { theme: THEMES.product, buttons: [
         { name: 'Product Detail', href: '/admin/trade/product-detail', icon: Package },
         { name: 'Stock', href: '/admin/inventory/list', icon: Boxes },
-        { name: 'Update Rates / Expiry', href: '/admin/products', icon: CalendarClock },
+        { name: 'Update Rates / Expiry', href: '/admin/trade/update-rates', icon: CalendarClock },
     ] },
     { theme: THEMES.purchase, buttons: [
         { name: 'Purchase', href: '/admin/trade/purchase', icon: ShoppingCart },

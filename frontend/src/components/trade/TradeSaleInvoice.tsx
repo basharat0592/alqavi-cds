@@ -218,11 +218,20 @@ let modalSeq = 0;
 export function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => void; onNo: () => void }) {
     const yesRef = useRef(onYes); yesRef.current = onYes;
     const noRef = useRef(onNo); noRef.current = onNo;
+    const yesBtn = useRef<HTMLButtonElement>(null);
+    useEffect(() => {
+        // Focus Yes after the opening key press has finished, or that Enter
+        // would press Yes straight away.
+        const f = setTimeout(() => yesBtn.current?.focus(), 0);
+        return () => clearTimeout(f);
+    }, []);
     useEffect(() => {
         const id = ++modalSeq;
         modalStack.push(id);
+        // The Enter that opened the box may still be on its way to window — ignore it.
+        const t0 = performance.now();
         const h = (e: KeyboardEvent) => {
-            if (modalStack[modalStack.length - 1] !== id) return;
+            if (modalStack[modalStack.length - 1] !== id || e.timeStamp < t0) return;
             if (e.key === 'Escape') { e.preventDefault(); noRef.current(); }
             else if (e.key === 'Enter') { e.preventDefault(); yesRef.current(); }
         };
@@ -244,7 +253,7 @@ export function ConfirmBox({ msg, onYes, onNo }: { msg: string; onYes: () => voi
                     <p className="text-[15px] font-medium text-slate-800">{msg}</p>
                 </div>
                 <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3">
-                    <button type="button" autoFocus onClick={onYes}
+                    <button ref={yesBtn} type="button" onClick={onYes}
                         className="h-9 min-w-[96px] rounded-md border border-[#3b3f8f] bg-[#3b3f8f] px-4 text-[14px] font-bold text-white hover:bg-[#2f3278]">Yes</button>
                     <button type="button" onClick={onNo}
                         className="h-9 min-w-[96px] rounded-md border border-slate-300 bg-white px-4 text-[14px] font-bold text-slate-700 hover:bg-slate-100">No</button>
