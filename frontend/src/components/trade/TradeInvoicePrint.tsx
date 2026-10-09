@@ -196,7 +196,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     const slipW = size === '58' ? 54 : 74; // printable width in mm
     const pageCss = isSlip
         ? `@page { size: ${size}mm ${Math.max(60, Math.ceil(slipH) + 6)}mm; margin: 3mm 0; }`
-        : `@page { size: ${paper.w}mm ${paper.h}mm; margin: ${paper.m}mm; @top-right { content: "P. No " counter(page) " of " counter(pages); font: bold 8pt sans-serif; color: #000; } }`;
+        : `@page { size: ${paper.w}mm ${paper.h}mm; margin: 0; }`;
 
     return (
         <div className="min-h-screen bg-slate-200 py-6 print:bg-white print:py-0">
@@ -209,12 +209,9 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                 .inv table { border-collapse: collapse; width: 100%; }
                 .inv thead { display: table-header-group; }
                 .inv tr { break-inside: avoid; }
-                .inv-spacer { display: none; }
                 @media print {
-                    .inv-spacer { display: block; }
-                    .inv-head { position: fixed; top: 0; left: 0; }
-                    .inv-foot { position: fixed; bottom: 0; left: 0; }
-                    .sheet-page { min-height: 0 !important; }
+                    .inv-page { margin: 0 !important; box-shadow: none !important; break-after: page; page-break-after: always; }
+                    .inv-page:last-of-type { break-after: auto; page-break-after: auto; }
                     html, body { background: #fff !important; }
                     .no-print { display: none !important; }
                     .sheet { box-shadow: none !important; margin: 0 !important; }
@@ -314,24 +311,38 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const pf = inv.profile || DEFAULT_PROFILE;
     const region = inv.region || { code: 'GLT', name: 'Gilgit' };
     const contentW = paper.w - paper.m * 2;
-    const contentH = paper.h - paper.m * 2;
     const zoom = contentW / DESIGN_W;
-    const headRef = useRef<HTMLDivElement>(null);
-    const footRef = useRef<HTMLDivElement>(null);
-    const [hh, setHh] = useState(0);
-    const [fh, setFh] = useState(0);
+    const pageH = paper.h - 1; // a hair under the paper so a sheet never spills onto the next
+    // Rows are split into sheets by their measured heights (a hidden copy is laid
+    // out first): every sheet gets the header at the top and the footer at the
+    // bottom, the first sheet the customer details, the last one the totals.
+    const mRef = useRef<HTMLDivElement>(null);
+    const [pages, setPages] = useState<number[][]>([inv.lines.map((_, i) => i)]);
     useLayoutEffect(() => {
-        const measure = () => {
-            // Spacers sit inside the zoomed body, so they take the unzoomed height.
-            if (headRef.current) setHh(headRef.current.getBoundingClientRect().height / zoom);
-            if (footRef.current) setFh(footRef.current.getBoundingClientRect().height / zoom);
-        };
-        measure();
-        const ro = new ResizeObserver(measure);
-        if (headRef.current) ro.observe(headRef.current);
-        if (footRef.current) ro.observe(footRef.current);
-        return () => ro.disconnect();
-    }, [zoom]);
+        const el = mRef.current;
+        if (!el) return;
+        const h = (sel: string) => (el.querySelector(sel) as HTMLElement | null)?.getBoundingClientRect().height || 0;
+        const pxPerMm = 96 / 25.4;
+        const avail = (pageH - paper.m * 2) * pxPerMm - h('[data-m=head]') - h('[data-m=foot]') - 6;
+        const thead = h('[data-m=mtable] thead');
+        const details = h('[data-m=details]');
+        const tail = h('[data-m=total]') + h('[data-m=summary]');
+        const rows = Array.from(el.querySelectorAll('[data-m=row]')).map((r) => r.getBoundingClientRect().height);
+        const out: number[][] = [];
+        let i = 0;
+        for (let guard = 0; guard < 500; guard++) {
+            const cap = avail - thead - (out.length === 0 ? details : 0);
+            const rest = rows.slice(i).reduce((a, b) => a + b, 0);
+            if (rest + tail <= cap) { out.push(rows.slice(i).map((_, k) => i + k)); break; }
+            let used = 0, j = i;
+            while (j < rows.length && used + rows[j] <= cap) { used += rows[j]; j++; }
+            if (j === i && i < rows.length) j = i + 1;
+            out.push(Array.from({ length: j - i }, (_, k) => i + k));
+            i = j;
+            if (i >= rows.length) { out.push([]); break; } // totals alone on a last sheet
+        }
+        setPages(out.length ? out : [[]]);
+    }, [inv, zoom, pageH, paper.m]);
     const d = inv.date ? new Date(`${String(inv.date).slice(0, 10)}T00:00:00`) : null;
     const longDate = d ? `${d.getDate()} - ${d.toLocaleDateString('en-GB', { month: 'long' })} - ${d.getFullYear()}` : '';
     const day = d ? d.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
@@ -361,10 +372,9 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     );
     const part = { width: `${DESIGN_W}mm`, zoom, fontSize: '8pt', color: '#111' } as React.CSSProperties;
 
-    return (
-        <div className="inv sheet sheet-page mx-auto flex flex-col bg-white shadow-xl" style={{ width: `${contentW}mm`, minHeight: `${contentH}mm` }}>
-            {/* Header — fixed at the top of every printed page */}
-            <div ref={headRef} className="inv-head bg-white" style={part}>
+    const Head = (pno: number, total: number) => (
+            <div style={part}>
+                <div style={{ textAlign: 'right', fontSize: '7.5pt', fontWeight: 700, lineHeight: 1, height: '3mm' }}>P. No {pno} of {total}</div>
                 <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 56mm', gap: '3mm' }}>
                     <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', height: 'auto', marginTop: '0.5mm' }} />
                     <div className="flex flex-col items-center text-center">
@@ -384,13 +394,9 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 </div>
                 <div style={{ borderBottom: '0.4mm solid #222', margin: '1.5mm 0 0' }} />
             </div>
-
-            {/* Body */}
-            <div className="flex-1" style={part}>
-                <table className="inv-frame" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead><tr><td style={{ padding: 0 }}><div className="inv-spacer" style={{ height: hh }} /></td></tr></thead>
-                    <tbody><tr><td style={{ padding: 0 }}>
-                        <div className="grid" style={{ gridTemplateColumns: '1.05fr 1fr 1fr', columnGap: '4mm', rowGap: '0.7mm', margin: '2mm 0 1.6mm', fontSize: '7.8pt', lineHeight: 1.25 }}>
+    );
+    const Details = (
+        <div className="grid" style={{ gridTemplateColumns: '1.05fr 1fr 1fr', columnGap: '4mm', rowGap: '0.7mm', margin: '2mm 0 1.6mm', fontSize: '7.8pt', lineHeight: 1.25 }}>
                             {field('Inv. No #:', inv.invoice_no)}
                             {field('Inv. Date:', longDate, '17mm')}
                             {field('Day:', day, '17mm')}
@@ -404,8 +410,8 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                             {field('Cell No:', inv.staff_cell, '17mm')}
                             {field('Due Date:', <span style={{ color: due.owing ? '#c62828' : undefined }}>{dmy(due.dueDate)}</span>, '17mm')}
                         </div>
-
-                        <table style={{ fontSize: '7.5pt', width: '100%', borderCollapse: 'collapse' }}>
+    );
+    const Thead = (
                             <thead>
                                 <tr style={{ background: '#ececec' }}>
                                     {th('S.No', false, '8mm')}{th('PID', false, '11mm')}{th('Product Name')}{th('Carton', true, '12mm')}{th('Qty', true, '10mm')}
@@ -413,27 +419,26 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                     {th('Shelf Rent %', true, '12mm')}{th('Net Amount', true, '20mm')}
                                 </tr>
                             </thead>
-                            <tbody>
-                                {inv.lines.map((l, i) => (
-                                    <tr key={i}>
+    );
+    const Row = (l: Line, i: number) => (
+                                    <tr key={i} data-m="row">
                                         {td(i + 1, true)}{td(l.pid)}
                                         {td(<>{l.name}{l.expiry_date ? <span style={{ color: '#666', fontSize: '6.3pt' }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
                                         {td(isCarton(l) ? cartonCount(l).replace(' Ctn', '') : '', true)}
                                         {td(qtyFmt(l.qty), true)}{td(qtyFmt(l.bonus), true)}{td(money(l.tp), true)}{td(money(l.retail), true)}
                                         {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}{td(money(l.net), true, true)}
                                     </tr>
-                                ))}
-                                <tr style={{ background: '#f4f4f4', fontWeight: 700 }}>
+    );
+    const Total = (
+                                <tr data-m="total" style={{ background: '#f4f4f4', fontWeight: 700 }}>
                                     <td colSpan={3} style={{ border: B, padding: '0.6mm 1.1mm' }}>Total ({inv.lines.length} item{inv.lines.length === 1 ? '' : 's'})</td>
                                     {td(cartons || '', true, true)}{td(qtyFmt(t.pieces), true, true)}{td(qtyFmt(t.bonus), true, true)}
                                     <td colSpan={2} style={{ border: B }} />
                                     {td(money(t.special), true, true)}{td(money(t.shelf), true, true)}
                                     {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}
                                 </tr>
-                            </tbody>
-                        </table>
-
-                        <div style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+    );
+    const Summary = (
                             <table style={{ marginTop: '2mm', fontSize: '8pt', width: '100%', borderCollapse: 'collapse' }}>
                                 <tbody>
                                     <tr>
@@ -453,14 +458,9 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                     </tr>
                                 </tbody>
                             </table>
-                        </div>
-                    </td></tr></tbody>
-                    <tfoot><tr><td style={{ padding: 0 }}><div className="inv-spacer" style={{ height: fh }} /></td></tr></tfoot>
-                </table>
-            </div>
-
-            {/* Footer — fixed at the bottom of every printed page */}
-            <div ref={footRef} className="inv-foot bg-white" style={part}>
+    );
+    const Foot = (
+            <div style={part}>
                 <div style={{ border: '0.35mm solid #222', padding: '1.3mm 2mm', marginTop: '2mm' }}><ShopsBanner /></div>
                 <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: '7.3pt', lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
                 <div className="ur" dir="rtl" style={{ fontSize: '6.8pt', lineHeight: 1.95, marginTop: '0.8mm', textAlign: 'justify' }}>
@@ -478,7 +478,43 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                     {due.owing ? '⚠ ' : '✓ '}{due.text}
                 </div>
             </div>
-        </div>
+    );
+    const tbl = { fontSize: '7.5pt', width: '100%', borderCollapse: 'collapse' } as React.CSSProperties;
+
+    return (
+        <>
+            {/* Hidden copy used only to measure heights for splitting into sheets */}
+            <div ref={mRef} aria-hidden className="inv no-print" style={{ position: 'absolute', left: -10000, top: 0, visibility: 'hidden', width: `${contentW}mm` }}>
+                <div data-m="head">{Head(1, 1)}</div>
+                <div style={part}>
+                    <div data-m="details">{Details}</div>
+                    <table data-m="mtable" style={tbl}>{Thead}<tbody>{inv.lines.map(Row)}{Total}</tbody></table>
+                    <div data-m="summary">{Summary}</div>
+                </div>
+                <div data-m="foot">{Foot}</div>
+            </div>
+
+            {pages.map((idx, pi) => {
+                const last = pi === pages.length - 1;
+                return (
+                    <div key={pi} className="inv sheet inv-page mx-auto mb-6 flex flex-col overflow-hidden bg-white shadow-xl"
+                        style={{ width: `${paper.w}mm`, height: `${pageH}mm`, padding: `${paper.m}mm`, boxSizing: 'border-box' }}>
+                        {Head(pi + 1, pages.length)}
+                        <div style={{ ...part, flex: 1, minHeight: 0 }}>
+                            {pi === 0 && Details}
+                            {(idx.length > 0 || last) && (
+                                <table style={tbl}>
+                                    {Thead}
+                                    <tbody>{idx.map((i) => Row(inv.lines[i], i))}{last && Total}</tbody>
+                                </table>
+                            )}
+                            {last && <div>{Summary}</div>}
+                        </div>
+                        {Foot}
+                    </div>
+                );
+            })}
+        </>
     );
 }
 
