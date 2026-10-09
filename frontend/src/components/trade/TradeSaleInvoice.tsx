@@ -2060,6 +2060,13 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 }
             }
             toast.success(`Invoice ${no} saved.`);
+            // Send the invoice to the customer's WhatsApp from the business number
+            // (only does anything once WhatsApp Business is connected on the server).
+            if (order?.id) {
+                api.post(`v1/sales/orders/${order.id}/send_whatsapp_invoice/`, { base: window.location.origin })
+                    .then(({ data }) => toast.success(data.message))
+                    .catch(() => { /* not connected / no number: share from the invoice page */ });
+            }
             if (print && order?.id) {
                 const url = `/admin/trade/invoice/${order.id}?print=1&size=${printSize}`;
                 if (printWin && !printWin.closed) printWin.location.href = url;

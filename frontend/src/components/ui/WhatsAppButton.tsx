@@ -7,7 +7,7 @@ import cmsService, { SiteSettings } from '@/services/cms.service';
 
 const WhatsAppButton = () => {
     const pathname = usePathname();
-    const isAdminPage = pathname?.startsWith('/admin');
+    const isAdminPage = pathname?.startsWith('/admin') || pathname?.startsWith('/invoice/');
     const [settings, setSettings] = useState<SiteSettings | null>(null);
 
     useEffect(() => {

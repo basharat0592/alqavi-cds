@@ -99,7 +99,8 @@ function dueInfo(inv: Invoice) {
 
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');`;
 
-export default function TradeInvoicePrint({ id }: { id: string }) {
+/* `token`: the public shared link (no login) — read only, no admin buttons. */
+export default function TradeInvoicePrint({ id, token }: { id?: string; token?: string }) {
     const [inv, setInv] = useState<Invoice | null>(null);
     const [err, setErr] = useState('');
     const [size, setSize] = useState<InvoiceSize>('a4');
@@ -111,6 +112,34 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
     // Proprietor block (Easypaisa, contact …) — edited here, kept on the server.
     const [editPf, setEditPf] = useState<Profile | null>(null);
     const [savingPf, setSavingPf] = useState(false);
+    // Sharing: WhatsApp from the business number (when connected), else manual.
+    const [sharing, setSharing] = useState(false);
+    const [shareMsg, setShareMsg] = useState('');
+    const shareInfo = async () => (await api.get(`v1/sales/orders/${id}/share_link/`, { params: { base: window.location.origin } })).data;
+    const sendWhatsApp = async () => {
+        if (!id || sharing) return;
+        setSharing(true); setShareMsg('');
+        try {
+            const { data } = await api.post(`v1/sales/orders/${id}/send_whatsapp_invoice/`, { base: window.location.origin });
+            setShareMsg(data.message);
+        } catch (e: any) {
+            const d = e?.response?.data || {};
+            // Not connected / no number: open WhatsApp with the message ready to send.
+            if (d.text) {
+                window.open(`https://wa.me/${d.phone || ''}?text=${encodeURIComponent(d.text)}`, '_blank');
+                setShareMsg(d.phone ? `${d.message} Opened WhatsApp to send it yourself.` : `${d.message} Opened WhatsApp — choose the contact.`);
+            } else setShareMsg(d.detail || 'Could not share the invoice.');
+        } finally { setSharing(false); }
+    };
+    const shareManual = async () => {
+        if (!id) return;
+        try {
+            const d = await shareInfo();
+            if ((navigator as any).share) { await (navigator as any).share({ title: `Invoice ${inv?.invoice_no}`, text: d.text, url: d.url }); return; }
+            await navigator.clipboard.writeText(d.url);
+            setShareMsg('Invoice link copied — paste it in any chat.');
+        } catch { /* cancelled */ }
+    };
     const savePf = async () => {
         if (!editPf || savingPf) return;
         setSavingPf(true);
@@ -131,10 +160,10 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
             if (c && n(c.w) >= 50 && n(c.h) >= 50) setCustom({ w: n(c.w), h: n(c.h) });
         } catch { /* default */ }
         setAutoPrint(q.has('print'));
-        api.get(`v1/sales/orders/${id}/trade_invoice/`)
+        api.get(token ? `v1/sales/public-invoice/${token}/` : `v1/sales/orders/${id}/trade_invoice/`)
             .then(({ data }) => setInv(data))
             .catch((e) => setErr(e?.response?.data?.detail || 'Could not load the invoice.'));
-    }, [id]);
+    }, [id, token]);
 
     useEffect(() => { if (inv) document.title = `Invoice ${inv.invoice_no}`; }, [inv]);
     useEffect(() => guardWindowClose(), []);
@@ -212,10 +241,20 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
                     </span>
                 )}
                 <span className="mx-1 h-6 w-px bg-slate-200" />
+                {!token && <>
+                <button type="button" onClick={sendWhatsApp} disabled={!inv || sharing}
+                    className="h-8 rounded-md bg-[#25D366] px-3 text-[13px] font-bold text-white hover:bg-[#1eb457] disabled:opacity-50">
+                    {sharing ? 'Sending…' : 'WhatsApp'}
+                </button>
+                <button type="button" onClick={shareManual} disabled={!inv}
+                    className="h-8 rounded-md border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                    Share
+                </button>
                 <button type="button" onClick={() => setEditPf({ ...DEFAULT_PROFILE, ...(inv?.profile || {}) })} disabled={!inv}
                     className="h-8 rounded-md border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                     Invoice details
                 </button>
+                </>}
                 <button type="button" onClick={() => window.print()} disabled={!inv}
                     className="flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
                     <Printer size={14} /> Print
@@ -229,7 +268,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
                 <div className="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
                     <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-2xl">
                         <h2 className="mb-3 text-[16px] font-bold text-slate-800">Invoice details (printed under Proprietor)</h2>
-                        {([['proprietor', 'Proprietor'], ['easypaisa', 'Easypaisa No'], ['contact_no', 'Contact No'], ['acct_no', 'Acct No (bank)']] as const).map(([k, label]) => (
+                        {([['proprietor', 'Proprietor'], ['easypaisa', 'Easypaisa No'], ['contact_no', 'Contact No']] as const).map(([k, label]) => (
                             <label key={k} className="mb-2.5 grid grid-cols-[110px_1fr] items-center gap-2 text-[13px] font-semibold text-slate-600">
                                 {label}
                                 <input value={editPf[k] || ''} onChange={(e) => setEditPf({ ...editPf, [k]: e.target.value })}
@@ -244,6 +283,7 @@ export default function TradeInvoicePrint({ id }: { id: string }) {
                     </div>
                 </div>
             )}
+            {shareMsg && <p className="no-print -mt-2 mb-3 text-center text-[13px] font-semibold text-slate-700">{shareMsg}</p>}
             {err && <p className="no-print text-center text-[14px] font-semibold text-red-600">{err}</p>}
             {!inv && !err && <p className="no-print text-center text-[14px] text-slate-500">Loading invoice…</p>}
 
@@ -299,10 +339,10 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const due = dueInfo(inv);
     const remaining = n(t.prev_balance) + n(t.gross) - n(t.special) - n(t.shelf) - n(t.bill_disc) - n(t.paid);
     const cartons = inv.lines.reduce((s, l) => s + (isCarton(l) ? Math.floor(l.qty / l.carton) : 0), 0);
-    const field = (k: string, v: React.ReactNode, kw = '24mm') => (
-        <div className="flex min-w-0" style={{ gap: '1.5mm' }}>
+    const field = (k: string, v: React.ReactNode, kw = '24mm', prominent = false) => (
+        <div className="flex min-w-0 items-baseline" style={{ gap: '1.5mm' }}>
             <span style={{ width: kw, flexShrink: 0, color: '#333' }}>{k}</span>
-            <span className="min-w-0 flex-1" style={{ fontWeight: 600 }}>{v || '—'}</span>
+            <span className="min-w-0 flex-1" style={prominent ? { fontWeight: 800, fontSize: '10.5pt' } : { fontWeight: 400 }}>{v || '—'}</span>
         </div>
     );
     const th = (h: string, right = false, w?: string) => (
@@ -338,7 +378,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                         <div className="grid" style={{ gridTemplateColumns: '19mm 1fr', marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums' }}>
                             <span style={{ color: '#333' }}>Easypaisa:</span><span style={{ fontWeight: 600 }}>{pf.easypaisa || '—'}</span>
                             <span style={{ color: '#333' }}>Contact No:</span><span style={{ fontWeight: 600 }}>{pf.contact_no || '—'}</span>
-                            <span style={{ color: '#333' }}>Acct No:</span><span style={{ fontWeight: 600 }}>{pf.acct_no || '—'}</span>
+                            <span style={{ color: '#333' }}>Acct No:</span><span style={{ fontWeight: 600 }}>{c.acc_id || '—'}</span>
                         </div>
                     </div>
                 </div>
@@ -351,19 +391,18 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                     <thead><tr><td style={{ padding: 0 }}><div className="inv-spacer" style={{ height: hh }} /></td></tr></thead>
                     <tbody><tr><td style={{ padding: 0 }}>
                         <div className="grid" style={{ gridTemplateColumns: '1.05fr 1fr 1fr', columnGap: '4mm', rowGap: '0.7mm', margin: '2mm 0 1.6mm', fontSize: '7.8pt', lineHeight: 1.25 }}>
-                            {field('Day:', day)}
-                            {field('Inv. Date:', longDate, '17mm')}
-                            {field('Print Time:', printTime, '17mm')}
                             {field('Inv. No #:', inv.invoice_no)}
-                            <div className="col-span-2">{field('Customer Acc. ID:', c.acc_id, '27mm')}</div>
-                            {field('Shop Name:', c.name)}
+                            {field('Inv. Date:', longDate, '17mm')}
+                            {field('Day:', day, '17mm')}
+                            {field('Shop Name:', c.name, '24mm', true)}
                             {field('Area:', c.area, '17mm')}
-                            {field('Address:', c.address, '13mm')}
+                            {field('Address:', c.address, '17mm')}
                             {field('Customer Name:', c.contact)}
-                            <div className="col-span-2">{field('C. Cell No:', c.phone, '17mm')}</div>
+                            {field('C. Cell No:', c.phone, '17mm')}
+                            {field('Print Time:', printTime, '17mm')}
                             {field('Saleman Name:', inv.staff)}
                             {field('Cell No:', inv.staff_cell, '17mm')}
-                            {field('Due Date:', <span style={{ color: due.owing ? '#c62828' : undefined }}>{dmy(due.dueDate)}</span>, '13mm')}
+                            {field('Due Date:', <span style={{ color: due.owing ? '#c62828' : undefined }}>{dmy(due.dueDate)}</span>, '17mm')}
                         </div>
 
                         <table style={{ fontSize: '7.5pt', width: '100%', borderCollapse: 'collapse' }}>
@@ -401,15 +440,14 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                         {sum('Previous Amount', t.prev_balance)}
                                         {sum('Total Special Discount', n(t.special) + n(t.bill_disc))}
                                         {sum('Shelf Rent', t.shelf)}
-                                        {sum('Total Amount', n(t.gross) - n(t.special) - n(t.shelf) - n(t.bill_disc), true)}
+                                        {sum('Advance Amount', t.paid)}
                                     </tr>
                                     <tr>
-                                        <td style={{ border: B }} colSpan={2} />
-                                        {sum('Advance Amount', t.paid)}
-                                        <td style={{ border: B, padding: '1.1mm 2mm', background: '#ececec' }}>
-                                            <div className="flex items-baseline justify-between" style={{ gap: '2mm' }}>
-                                                <span style={{ fontWeight: 700 }}>Total Remaining Balance</span>
-                                                <span style={{ fontWeight: 800, fontSize: '10pt', fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</span>
+                                        <td colSpan={2} style={{ border: B }} />
+                                        <td colSpan={2} style={{ border: '0.6mm solid #000', padding: '1.6mm 2.5mm', background: '#111' }}>
+                                            <div className="flex items-baseline justify-between" style={{ gap: '3mm', color: '#fff' }}>
+                                                <span style={{ fontWeight: 800, fontSize: '10pt', letterSpacing: '0.02em' }}>Total Remaining Balance</span>
+                                                <span style={{ fontWeight: 900, fontSize: '14pt', fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</span>
                                             </div>
                                         </td>
                                     </tr>

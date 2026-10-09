@@ -438,11 +438,36 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         """Everything the printed Trade 1.0 sale invoice shows (half-A4 landscape
         and the 80 mm slip): account, address, salesman, per line PID / unit /
         bonus / TP / special discount / shelf rate, and the balances."""
-        from decimal import Decimal
         o = (scope_to_tenant(request.user, Order.objects.all(), 'tenant')
              .select_related('customer__area__parent__parent', 'staff', 'salesperson').filter(pk=pk).first())
         if not o:
             return Response({'detail': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(self.trade_invoice_payload(o, request.user))
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAdminUser])
+    def share_link(self, request, pk=None):
+        """Token for the public invoice page (/invoice/<token>) plus the customer's
+        WhatsApp number and a ready message, for the Share buttons."""
+        from .invoice_share import share_info
+        o = scope_to_tenant(request.user, Order.objects.all(), 'tenant').select_related('customer').filter(pk=pk).first()
+        if not o:
+            return Response({'detail': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(share_info(o, request.query_params.get('base') or ''))
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def send_whatsapp_invoice(self, request, pk=None):
+        """Send the invoice link to the customer on WhatsApp from the Al-Qavi
+        Traders business number (WhatsApp Cloud API)."""
+        from .invoice_share import send_invoice_whatsapp
+        o = scope_to_tenant(request.user, Order.objects.all(), 'tenant').select_related('customer').filter(pk=pk).first()
+        if not o:
+            return Response({'detail': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
+        ok, msg, info = send_invoice_whatsapp(o, request.data.get('base') or '', request.data.get('to') or '')
+        return Response({'sent': ok, 'message': msg, **info}, status=200 if ok else 400)
+
+    @staticmethod
+    def trade_invoice_payload(o, user=None):
+        from decimal import Decimal
         c = o.customer
         acc_id = c.username[4:] if (c and str(c.username).startswith('cust')) else ''
         z = Decimal('0')
@@ -480,11 +505,11 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         while district is not None and not str(district.code or '').upper().startswith('D'):
             district = district.parent
         skardu = bool(district and 'skardu' in (district.name or '').lower())
-        return Response({
+        return {
             'id': str(o.id), 'invoice_no': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
             'time': o.created_at, 'staff': staff, 'staff_cell': o.staff.cell if o.staff_id else '',
             'region': {'code': 'SKD', 'name': 'Skardu'} if skardu else {'code': 'GLT', 'name': 'Gilgit'},
-            'profile': self._invoice_profile(o.tenant_id or tenant_id_for(request.user) or request.user.pk).as_dict(),
+            'profile': OrderViewSet._invoice_profile(o.tenant_id or (tenant_id_for(user) if user else None) or (user.pk if user else None)).as_dict(),
             'customer': {
                 'acc_id': acc_id,
                 'contact': (getattr(getattr(c, 'ledger_account', None), 'contact_person', '') if c else '') or '',
@@ -500,7 +525,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'net': net, 'prev_balance': prev, 'total': prev + net, 'paid': paid,
                 'balance': prev + net - paid,
             },
-        })
+        }
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])
     def sale_records(self, request):

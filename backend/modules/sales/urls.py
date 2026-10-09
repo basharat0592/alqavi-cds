@@ -6,6 +6,7 @@ from .views import (
 )
 from .trade_returns import TradeSaleReturnViewSet
 from .vouchers import VoucherViewSet
+from .invoice_share import public_invoice
 from .reports import (
     report_by_area, report_by_user, report_statements, report_returns_summary,
     report_delivery, report_ledger,
@@ -22,6 +23,7 @@ router.register(r'supplier/dashboard', SupplierDashboardViewSet, basename='suppl
 
 urlpatterns = [
     # Grouped analytics
+    path('public-invoice/<str:token>/', public_invoice, name='public-invoice'),
     path('reports/by-area/', report_by_area, name='report-by-area'),
     path('reports/by-user/', report_by_user, name='report-by-user'),
     path('reports/statements/', report_statements, name='report-statements'),
