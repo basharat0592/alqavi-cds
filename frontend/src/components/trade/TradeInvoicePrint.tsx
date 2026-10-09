@@ -376,7 +376,10 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
             <div style={part}>
                 <div style={{ textAlign: 'right', fontSize: '7.5pt', fontWeight: 700, lineHeight: 1, height: '3mm' }}>P. No {pno} of {total}</div>
                 <div className="grid items-start" style={{ gridTemplateColumns: '48mm 1fr 56mm', gap: '3mm' }}>
-                    <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', height: 'auto', marginTop: '0.5mm' }} />
+                    <div>
+                        <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', height: 'auto', marginTop: '0.5mm' }} />
+                        <div style={{ fontSize: '8pt', marginTop: '1mm' }}>Acct No: <span style={{ fontWeight: 600 }}>{c.acc_id || '—'}</span></div>
+                    </div>
                     <div className="flex flex-col items-center text-center">
                         <img src="/brand/aqt-name-ur.png" alt={NAME_UR} loading="eager" style={{ width: '64mm', height: 'auto' }} />
                         <div style={{ fontSize: '14pt', fontWeight: 800, marginTop: '0.8mm' }}>Sale Invoice</div>
@@ -388,7 +391,6 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                         <div className="grid" style={{ gridTemplateColumns: '19mm 1fr', marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums' }}>
                             <span style={{ color: '#333' }}>Easypaisa:</span><span style={{ fontWeight: 600 }}>{pf.easypaisa || '—'}</span>
                             <span style={{ color: '#333' }}>Contact No:</span><span style={{ fontWeight: 600 }}>{pf.contact_no || '—'}</span>
-                            <span style={{ color: '#333' }}>Acct No:</span><span style={{ fontWeight: 600 }}>{c.acc_id || '—'}</span>
                         </div>
                     </div>
                 </div>
@@ -434,30 +436,29 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                     <td colSpan={3} style={{ border: B, padding: '0.6mm 1.1mm' }}>Total ({inv.lines.length} item{inv.lines.length === 1 ? '' : 's'})</td>
                                     {td(cartons || '', true, true)}{td(qtyFmt(t.pieces), true, true)}{td(qtyFmt(t.bonus), true, true)}
                                     <td colSpan={2} style={{ border: B }} />
-                                    {td(money(t.special), true, true)}{td(money(t.shelf), true, true)}
+                                    {td(<>{money(t.special)}{n(t.gross) > 0 && <div style={{ fontSize: '6.3pt', fontWeight: 400, color: '#555' }}>{qtyFmt(n(t.special) / n(t.gross) * 100)}%</div>}</>, true, true)}
+                                    {td(<>{money(t.shelf)}{n(t.gross) > 0 && <div style={{ fontSize: '6.3pt', fontWeight: 400, color: '#555' }}>{qtyFmt(n(t.shelf) / n(t.gross) * 100)}%</div>}</>, true, true)}
                                     {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}
                                 </tr>
     );
     const Summary = (
-                            <table style={{ marginTop: '2mm', fontSize: '8pt', width: '100%', borderCollapse: 'collapse' }}>
-                                <tbody>
-                                    <tr>
-                                        {sum('Previous Amount', t.prev_balance)}
-                                        {sum('Total Special Discount', n(t.special) + n(t.bill_disc))}
-                                        {sum('Shelf Rent', t.shelf)}
-                                        {sum('Advance Amount', t.paid)}
-                                    </tr>
-                                    <tr>
-                                        <td colSpan={2} style={{ border: B }} />
-                                        <td colSpan={2} style={{ border: '0.6mm solid #000', padding: '1.6mm 2.5mm', background: '#111' }}>
-                                            <div className="flex items-baseline justify-between" style={{ gap: '3mm', color: '#fff' }}>
-                                                <span style={{ fontWeight: 800, fontSize: '10pt', letterSpacing: '0.02em' }}>Total Remaining Balance</span>
-                                                <span style={{ fontWeight: 900, fontSize: '14pt', fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+            <table style={{ marginTop: '2mm', fontSize: '7.5pt', width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '32%' }} /></colgroup>
+                <tbody>
+                    <tr>
+                        {([['Prev Amount', t.prev_balance], ['Special Disc', n(t.special) + n(t.bill_disc)], ['Shelf Rent', t.shelf], ['Advance Amount', t.paid]] as const).map(([k, v]) => (
+                            <td key={k} style={{ border: B, padding: '1mm 1.8mm', verticalAlign: 'top' }}>
+                                <div style={{ color: '#333' }}>{k}</div>
+                                <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(v)}</div>
+                            </td>
+                        ))}
+                        <td style={{ border: '0.6mm solid #000', padding: '1mm 2.2mm', background: '#111', color: '#fff', verticalAlign: 'top' }}>
+                            <div style={{ fontWeight: 700 }}>Total Remaining Balance</div>
+                            <div style={{ textAlign: 'right', fontWeight: 900, fontSize: '12.5pt', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
     );
     const Foot = (
             <div style={part}>
