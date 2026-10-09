@@ -21,6 +21,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import { pn, tip } from '@/lib/productName';
 import { openPopup } from '@/lib/popup';
 import {
     Modal, ConfirmBox, ReadBox, Led, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT, closeTradeWindow, ReturnFindProductWindow,
@@ -281,7 +282,7 @@ export default function TradePurchase() {
                         <input type="checkbox" checked={expOn} onChange={(ev) => setExpOn(ev.target.checked)} title="Product has an expiry date" className="h-4 w-4 accent-[#3b3f8f]" />
                         <input type="date" value={exp} disabled={!expOn} onChange={(ev) => ev.target.value && setExp(ev.target.value)}
                             className={`${FIELD} h-7 w-full !text-[12px] !font-normal ${expOn ? 'border-emerald-300 bg-[#e3fbe3]' : 'border-slate-300 bg-[#ececf3] text-slate-400'}`} />
-                        <div className={`${RO} !justify-start !font-semibold`} title={prod?.name}>{prod?.name || ''}</div>
+                        <div className={`${RO} !justify-start !font-semibold`} title={prod?.name}>{pn(prod?.name)}</div>
                         <div className={`${RO} !justify-start`} title={prod?.company}>{prod?.company || ''}</div>
                     </div>
                     <div className="mt-2 grid grid-cols-[repeat(14,minmax(0,1fr))] items-end gap-1.5">
@@ -348,9 +349,9 @@ export default function TradePurchase() {
                                 <tbody>
                                     {lines.map((l, i) => (
                                         <tr key={i} onClick={() => setSel(i)} className={`cursor-pointer tabular-nums ${sel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
-                                            {[i + 1, l.product.code, l.product.name, cartonsOf(l) || '', l.product.packing, fmt(l.qty), l.bonus || '', dmy(l.expiry),
+                                            {[i + 1, l.product.code, pn(l.product.name), cartonsOf(l) || '', l.product.packing, fmt(l.qty), l.bonus || '', dmy(l.expiry),
                                               fmt(l.pur), fmt(l.sale), fmt(l.retail), fmt(l.qty * l.pur)].map((v, k) => (
-                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 && k !== 7 ? 'text-right' : ''} `}>{v}</td>
+                                                <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 && k !== 7 ? 'text-right' : ''} `}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -369,8 +370,8 @@ export default function TradePurchase() {
                                 <tbody>
                                     {history.map((h, i) => (
                                         <tr key={i} className="tabular-nums">
-                                            {[h.purchase_no, dmy(h.date), h.supplier, h.pid, h.name, fmt(num(h.qty)), num(h.bonus) || '', dmy(h.expiry_date), fmt(num(h.pur_rate)), fmt(num(h.sale_rate))].map((v, k) => (
-                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-0.5 ${k >= 5 && k !== 7 ? 'text-right' : ''}`}>{v}</td>
+                                            {[h.purchase_no, dmy(h.date), h.supplier, h.pid, pn(h.name), fmt(num(h.qty)), num(h.bonus) || '', dmy(h.expiry_date), fmt(num(h.pur_rate)), fmt(num(h.sale_rate))].map((v, k) => (
+                                                <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-0.5 ${k >= 5 && k !== 7 ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -434,8 +435,8 @@ export default function TradePurchase() {
                                 <tbody>
                                     {vRows.map((r, i) => (
                                         <tr key={i} className={`tabular-nums ${i > 0 && vRows[i - 1].purchase_no !== r.purchase_no ? 'border-t-2 border-t-slate-400' : ''}`}>
-                                            {[r.purchase_no, dmy(r.date), r.bill_no, r.supplier, r.pid, r.name, fmt(num(r.qty)), num(r.bonus) || '', dmy(r.expiry_date), fmt(num(r.pur_rate)), fmt(num(r.sale_rate)), fmt(num(r.sub_total))].map((v, k) => (
-                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 6 && k !== 8 ? 'text-right' : ''}`}>{v}</td>
+                                            {[r.purchase_no, dmy(r.date), r.bill_no, r.supplier, r.pid, pn(r.name), fmt(num(r.qty)), num(r.bonus) || '', dmy(r.expiry_date), fmt(num(r.pur_rate)), fmt(num(r.sale_rate)), fmt(num(r.sub_total))].map((v, k) => (
+                                                <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 6 && k !== 8 ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}

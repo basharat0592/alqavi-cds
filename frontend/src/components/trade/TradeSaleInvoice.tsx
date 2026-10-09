@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, Loader2, Printer, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import { pn, tip } from '@/lib/productName';
 import * as XLSX from 'xlsx';
 import { orderService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
@@ -726,9 +727,9 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
                                 {rows.map((r) => (
                                     <tr key={r.id} onClick={() => pickRow(r)}
                                         className={`cursor-pointer tabular-nums ${sel?.id === r.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
-                                        {[r.pid, r.name, r.company, r.category, r.barcode, r.carton ?? '', r.packing, r.expiry_apply ? 'Yes' : 'No',
+                                        {[r.pid, pn(r.name), r.company, r.category, r.barcode, r.carton ?? '', r.packing, r.expiry_apply ? 'Yes' : 'No',
                                             String(r.status).toUpperCase() === 'ACTIVE' ? 'Active' : 'Inactive'].map((v, k) => (
-                                            <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 1 ? 'font-semibold' : ''}`}>{v}</td>
+                                            <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 1 ? 'font-semibold' : ''}`}>{v}</td>
                                         ))}
                                     </tr>
                                 ))}
@@ -843,8 +844,8 @@ export function ReturnFindProductWindow({ companies, askClose, onPick, onAddNew,
                             {rows.slice(0, 500).map((r, i) => (
                                 <tr key={r.id} onClick={() => setSel(i)} onDoubleClick={() => onPick(r)} title="Click to select · Enter or double-click to pick"
                                     className={`cursor-pointer tabular-nums ${sel === i ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
-                                    {[r.pid, r.name, r.packing, r.company, r.category].map((v, k) => (
-                                        <td key={k} title={String(v ?? '')} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{v}</td>
+                                    {[r.pid, pn(r.name), r.packing, r.company, r.category].map((v, k) => (
+                                        <td key={k} title={tip(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{v}</td>
                                     ))}
                                 </tr>
                             ))}
@@ -2214,7 +2215,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     {lines.map((l, i) => (
                                         <tr key={i} onClick={() => setSelected(i)} onDoubleClick={() => editLine(i)}
                                             className={`cursor-pointer tabular-nums ${selected === i ? 'bg-[#2f5bd3] text-white' : i % 2 ? 'bg-[#f6f7ff]' : 'bg-white'} hover:outline hover:outline-1 hover:outline-[#2f5bd3]`}>
-                                            {[i + 1, l.code, l.name, ymd(l.expiry), lineCartons(l), fmt(l.qty), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
+                                            {[i + 1, l.code, pn(l.name), ymd(l.expiry), lineCartons(l), fmt(l.qty), l.bonus ? fmt(l.bonus) : '', fmt(l.tp), fmt(l.retail),
                                               fmt(lineGross(l)), l.discPct ? fmt(l.discPct) : '', l.shelfPct ? fmt(l.shelfPct) : '', lineDisc(l) ? fmt(lineDisc(l)) : '', fmt(lineNet(l))].map((v, k) => (
                                                 <td key={k} title={k === 2 ? String(v) : undefined}
                                                     className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold tracking-tight' : ''} ${k === 3 ? 'text-[11px] tracking-tight' : ''} ${GRID_COLS[k].right ? 'text-right' : ''}`}>{v}</td>
@@ -2387,7 +2388,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <tr key={c.id} onClick={() => setCustSel(i)} onDoubleClick={() => pickCustomer(c)} title="Click to select · Enter or double-click to pick"
                                         className={`cursor-pointer ${custSel === i ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
                                         {[custCode(c), custName(c), c.area_name || '', custGroupNames.l2, custGroupNames.l3].map((v, k) => (
-                                            <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono tabular-nums' : ''} ${k === 1 ? 'font-semibold' : ''}`}>{v}</td>
+                                            <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono tabular-nums' : ''} ${k === 1 ? 'font-semibold' : ''}`}>{v}</td>
                                         ))}
                                     </tr>
                                 ))}
@@ -2434,7 +2435,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                         <tr key={a.id} onClick={() => pickCoaRow(a)}
                                             className={`cursor-pointer ${coaSel?.id === a.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
                                             {[a.main_name, a.level2_name, a.group_name, a.acc_id, a.name, a.area_name || '', a.cell_no || '-', a.contact_person || '0', a.address || ''].map((v, k) => (
-                                                <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 3 ? 'font-mono' : ''}`}>{v}</td>
+                                                <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 3 ? 'font-mono' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -2492,7 +2493,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                         <tr key={r.a.id} onClick={() => pickAreaRow(r)}
                                             className={`cursor-pointer ${areaSel?.a.id === r.a.id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
                                             {[r.dist?.name || '', r.main?.name || '', r.id, r.a.name].map((v, k) => (
-                                                <td key={k} title={String(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{v}</td>
+                                                <td key={k} title={tip(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -2567,8 +2568,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                             <tr key={r.batch_id} onClick={() => setFpSel(r.batch_id)} onDoubleClick={() => pickStockRow(r)}
                                                 className={`cursor-pointer tabular-nums ${fpSel === r.batch_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
                                                 title="Click to select · Enter or double-click to add">
-                                                {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), fmt(num(r.tp)), fmt(num(r.retail)), r.company].map((v, k) => (
-                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                {[r.pid, r.category, pn(r.name), r.pack, ymd(r.expiry_date), fmt(num(r.qty)), fmt(num(r.tp)), fmt(num(r.retail)), r.company].map((v, k) => (
+                                                    <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
                                             </tr>
                                         ))}
@@ -2597,8 +2598,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                             <tr key={i} onClick={() => setFpHistSel(i)} onDoubleClick={() => pickHistoryRow(r)}
                                                 className={`cursor-pointer tabular-nums ${fpHistSel === i ? 'bg-[#7dfa7d]' : 'hover:bg-[#fff3a6]'}`}
                                                 title={`Invoice ${r.invoice_no} · ${String(r.date).slice(0, 10)} — Enter or double-click to sell again`}>
-                                                {[r.pid, r.category, r.name, r.pack, ymd(r.expiry_date), fmt(num(r.qty)), r.bonus ? fmt(num(r.bonus)) : '', fmt(num(r.tp)), num(r.tp_pct) ? fmt(num(r.tp_pct)) : '', num(r.shelf_pct) ? fmt(num(r.shelf_pct)) : '', fmt(num(r.retail))].map((v, k) => (
-                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                {[r.pid, r.category, pn(r.name), r.pack, ymd(r.expiry_date), fmt(num(r.qty)), r.bonus ? fmt(num(r.bonus)) : '', fmt(num(r.tp)), num(r.tp_pct) ? fmt(num(r.tp_pct)) : '', num(r.shelf_pct) ? fmt(num(r.shelf_pct)) : '', fmt(num(r.retail))].map((v, k) => (
+                                                    <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
                                             </tr>
                                         ))}
@@ -2663,7 +2664,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 {lines.map((l, i) => (
                                     <tr key={i} className="border-b border-slate-200">
                                         <td className="px-1.5 py-1">{i + 1}</td><td className="px-1.5 py-1">{l.code}</td>
-                                        <td className="px-1.5 py-1 font-medium">{l.name}</td><td className="px-1.5 py-1">{ymd(l.expiry)}</td>
+                                        <td className="px-1.5 py-1 font-medium">{pn(l.name)}</td><td className="px-1.5 py-1">{ymd(l.expiry)}</td>
                                         <td className="px-1.5 py-1 text-right">{fmt(l.qty)}</td><td className="px-1.5 py-1 text-right">{l.bonus ? fmt(l.bonus) : ''}</td>
                                         <td className="px-1.5 py-1 text-right">{fmt(l.tp)}</td><td className="px-1.5 py-1 text-right">{fmt(lineGross(l))}</td>
                                         <td className="px-1.5 py-1 text-right">{lineSpecial(l) ? fmt(lineSpecial(l)) : ''}</td><td className="px-1.5 py-1 text-right">{lineShelf(l) ? fmt(lineShelf(l)) : ''}</td>
@@ -2764,7 +2765,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                             title={`${r.sale_id} — click for Print / Sale Return`}>
                                             {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, num(r.cartons) ? fmt(num(r.cartons)) : '', fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
                                               fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
-                                                <td key={k} title={String(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 text-[11px] font-normal tracking-tight">{v}</td>
+                                                <td key={k} title={tip(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 text-[11px] font-normal tracking-tight">{v}</td>
                                             ))}
                                         </tr>
                                     ))}
@@ -2838,10 +2839,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <tbody>
                                         {(rbLines || []).map((l, i) => (
                                             <tr key={l.order_item} className="tabular-nums">
-                                                {[i + 1, l.pid, l.name, ymd(l.expiry_date), l.remaining_qty, l.remaining_bonus, fmt(num(l.tp)), fmt(num(l.retail)),
+                                                {[i + 1, l.pid, pn(l.name), ymd(l.expiry_date), l.remaining_qty, l.remaining_bonus, fmt(num(l.tp)), fmt(num(l.retail)),
                                                   fmt(retLineGross(l, l.remaining_qty)), fmt(num(l.disc_pct)), num(l.shelf_pct) ? fmt(num(l.shelf_pct)) : '', fmt(retLineDisc(l, l.remaining_qty)),
                                                   fmt(retLineGross(l, l.remaining_qty) - retLineDisc(l, l.remaining_qty))].map((v, k) => (
-                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                    <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
                                             </tr>
                                         ))}
@@ -2915,7 +2916,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <span className={LABEL}>Sale Rate</span><span className={LABEL}>Retail Rate</span><span className={`${LABEL} text-[11px]`}>Special Disc %</span><span className={`${LABEL} text-[11px]`}>Shelf Rent %</span>
                                     <ReadBox value={rrPick?.invoice_no || ''} className="font-mono" />
                                     <ReadBox value={rrPick?.pid || ''} />
-                                    <ReadBox value={rrPick?.name || ''} />
+                                    <ReadBox value={pn(rrPick?.name)} />
                                     <ReadBox value={rrPick ? fmt(num(rrPick.tp)) : ''} className="justify-end" />
                                     <ReadBox value={rrPick ? fmt(num(rrPick.retail)) : ''} className="justify-end" />
                                     <ReadBox value={rrPick ? fmt(num(rrPick.disc_pct)) : ''} className="justify-end" />
@@ -2957,10 +2958,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     <tbody>
                                         {rrLines.map((l, i) => (
                                             <tr key={i} onClick={() => setRrSel(i)} className={`cursor-pointer tabular-nums ${rrSel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
-                                                {[i + 1, l.pid, l.name, ymd(l.expiry_date), l.ret_qty, l.ret_bonus || '', fmt(num(l.tp)), fmt(num(l.retail)),
+                                                {[i + 1, l.pid, pn(l.name), ymd(l.expiry_date), l.ret_qty, l.ret_bonus || '', fmt(num(l.tp)), fmt(num(l.retail)),
                                                   fmt(retLineGross(l, l.ret_qty)), fmt(num(l.disc_pct)), num(l.shelf_pct) ? fmt(num(l.shelf_pct)) : '', fmt(retLineDisc(l, l.ret_qty)),
                                                   fmt(retLineGross(l, l.ret_qty) - retLineDisc(l, l.ret_qty))].map((v, k) => (
-                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
+                                                    <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>
                                                 ))}
                                             </tr>
                                         ))}
@@ -2984,9 +2985,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                                 <tr key={l.order_item} onClick={() => pickRrLine(l)}
                                                     className={`cursor-pointer tabular-nums ${rrPick?.order_item === l.order_item ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
                                                     title="Click to return from this line">
-                                                    {[l.invoice_no, ymd(String(l.date)), l.pid, l.name, ymd(l.expiry_date), l.qty, l.bonus || '', l.returned_qty || '',
+                                                    {[l.invoice_no, ymd(String(l.date)), l.pid, pn(l.name), ymd(l.expiry_date), l.qty, l.bonus || '', l.returned_qty || '',
                                                       fmt(num(l.tp)), num(l.disc_pct) ? fmt(num(l.disc_pct)) : '', num(l.shelf_pct) ? fmt(num(l.shelf_pct)) : '', fmt(num(l.retail))].map((v, k) => (
-                                                        <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 3 ? 'font-semibold' : ''}`}>{v}</td>
+                                                        <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 0 ? 'font-mono' : ''} ${k === 3 ? 'font-semibold' : ''}`}>{v}</td>
                                                     ))}
                                                 </tr>
                                             ))}

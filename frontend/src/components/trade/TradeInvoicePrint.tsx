@@ -14,6 +14,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import api from '@/lib/axios';
+import { pn } from '@/lib/productName';
 import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
@@ -55,12 +56,6 @@ type Line = {
     qty: number; bonus: number; tp: number; retail: number; gross: number; special: number; shelf: number; net: number;
     special_pct: number; shelf_pct: number;
 };
-/* "Bio oil 60ml" -> "Bio oil" + small "60ml" (sizes / weights in small type). */
-const SIZE_RE = /(\d+(?:\.\d+)?\s?(?:ml|mg|gm|g|kg|ltr|l|pcs?)(?![a-z]))/gi;
-function nameWithSize(name: string) {
-    const parts = String(name || '').split(SIZE_RE);
-    return parts.map((p, i) => (i % 2 ? <span key={i} style={{ fontSize: '5.8pt', color: '#444' }}>{p}</span> : p));
-}
 function WaIcon() {
     return (
         <svg viewBox="0 0 24 24" width="10" height="10" aria-label="WhatsApp" style={{ flexShrink: 0 }}>
@@ -539,7 +534,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const Row = (l: Line, i: number) => (
                                     <tr key={i} data-m="row">
                                         {td(i + 1, true)}{td(l.pid)}
-                                        {td(<>{nameWithSize(l.name)}{l.expiry_date ? <span style={{ color: '#666', fontSize: '6.3pt' }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
+                                        {td(<>{pn(l.name, '5.8pt')}{l.expiry_date ? <span style={{ color: '#666', fontSize: '6.3pt' }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
                                         {td(isCarton(l) ? cartonCount(l).replace(' Ctn', '') : '', true)}
                                         {td(qtyFmt(l.qty), true)}{td(qtyFmt(l.bonus), true)}{td(money(l.tp), true)}{td(money(l.retail), true)}
                                         {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}{td(money(l.net), true, true)}
@@ -699,7 +694,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             {rule}
             {inv.lines.map((l, i) => (
                 <div key={i} style={{ marginBottom: '1.1mm', breakInside: 'avoid' }}>
-                    <div style={{ fontWeight: 600 }}>{i + 1}. {l.name}</div>
+                    <div style={{ fontWeight: 600 }}>{i + 1}. {pn(l.name)}</div>
                     <div className="flex justify-between">
                         <span>
                             {isCarton(l) ? `Carton ${cartonCount(l)} = ${qtyFmt(l.qty)} pcs` : `Piece ${qtyFmt(l.qty)} pcs`} × {money(l.tp)}

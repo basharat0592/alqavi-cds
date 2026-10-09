@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import { pn, tip } from '@/lib/productName';
 import { openPopup } from '@/lib/popup';
 import {
     Modal, ConfirmBox, ReadBox, LABEL, FIELD, EDIT, ACTION_BTN, closeTradeWindow, ReturnFindProductWindow,
@@ -207,7 +208,7 @@ export default function TradePurchaseOrder() {
                             onKeyDown={(ev) => { if (ev.key === 'Enter') { ev.preventDefault(); if (code.trim()) loadProduct(code.trim()); else setFindProd(true); } }}
                             placeholder="PID / bar code" className={IN} />
                         <span className={lbl}>Product</span>
-                        <div className={`${RO} !font-semibold`} title={prod?.name}>{prod?.name || ''}</div>
+                        <div className={`${RO} !font-semibold`} title={prod?.name}>{pn(prod?.name)}</div>
                         <span className={lbl}>Available Stock</span>
                         <div className={`${RO} justify-end`}>{prod ? fmt(num(prod.stock)) : ''}</div>
 
@@ -242,8 +243,8 @@ export default function TradePurchaseOrder() {
                                     <tbody>
                                         {lines.map((l, i) => (
                                             <tr key={i} onClick={() => !viewing && setSel(i)} className={`tabular-nums ${!viewing ? 'cursor-pointer' : ''} ${sel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
-                                                {[i + 1, l.pid, l.name, cartons(l), fmt(l.qty), fmt(l.rate), fmt(l.qty * l.rate)].map((v, k) => (
-                                                    <td key={k} title={String(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 ? 'text-right' : ''}`}>{v}</td>
+                                                {[i + 1, l.pid, pn(l.name), cartons(l), fmt(l.qty), fmt(l.rate), fmt(l.qty * l.rate)].map((v, k) => (
+                                                    <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 ? 'text-right' : ''}`}>{v}</td>
                                                 ))}
                                             </tr>
                                         ))}
@@ -315,7 +316,7 @@ export default function TradePurchaseOrder() {
                                         <tr key={o.id} onClick={() => setVSel(i)} onDoubleClick={() => openOrder(o)} title="Click to select · Enter or double-click to open"
                                             className={`cursor-pointer tabular-nums ${vSel === i ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}>
                                             {[o.order_no, dmy(o.date), o.supplier_acc, o.supplier, o.lines.length, fmt(num(o.amount))].map((v, k) => (
-                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 4 ? 'text-right' : ''}`}>{v}</td>
+                                                <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 4 ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
