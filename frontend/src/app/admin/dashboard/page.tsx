@@ -145,7 +145,7 @@ const COLUMNS: Group[] = [
     ] },
     { theme: THEMES.purchase, buttons: [
         { name: 'Purchase', href: '/admin/trade/purchase', icon: ShoppingCart },
-        { name: 'Purchase Order', href: '/admin/purchases', icon: ClipboardList },
+        { name: 'Purchase Order', href: '/admin/trade/purchase-order', icon: ClipboardList },
         { name: 'Purchase Return', href: '/admin/purchases/returns', icon: RefreshCcw },
     ] },
     { theme: THEMES.sale, buttons: [

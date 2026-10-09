@@ -21,6 +21,9 @@ from .models import PurchaseOrder, PurchaseOrderItem, SalesStaff, Voucher, Vouch
 
 Z = Decimal('0')
 LEGACY_LAST_PURCHASE = 'P26000059'
+LEGACY_LAST_ORDER = 'K26000002'
+ORDER_NOTE = 'Trade Purchase Order'
+LEGACY_ORDER_NOTE = 'Legacy Trade purchase order'
 LEGACY_NOTE = 'Legacy Trade purchase'
 
 
@@ -31,11 +34,12 @@ def _d(v):
         return Z
 
 
-def next_purchase_no(date=None):
+def next_purchase_no(date=None, letter='P'):
     yy = (date or datetime.date.today()).strftime('%y')
-    prefix = f'P{yy}'
+    prefix = f'{letter}{yy}'
     last = PurchaseOrder.objects.filter(purchase_number__startswith=prefix).aggregate(m=Max('purchase_number'))['m']
-    nums = [int(x[3:]) for x in (last, LEGACY_LAST_PURCHASE) if x and x.startswith(prefix) and x[3:].isdigit()]
+    legacy = LEGACY_LAST_ORDER if letter == 'K' else LEGACY_LAST_PURCHASE
+    nums = [int(x[3:]) for x in (last, legacy) if x and x.startswith(prefix) and x[3:].isdigit()]
     return f'{prefix}{(max(nums) if nums else 0) + 1:06d}'
 
 
@@ -84,7 +88,7 @@ class TradePurchaseViewSet(viewsets.ViewSet):
         """View Purchase Detail: ?purchase_no, ?supplier (ledger account id), ?date_from, ?date_to."""
         from modules.company.models import LedgerAccount
         p = request.query_params
-        qs = self._qs().exclude(status='CANCELLED').filter(purchase_number__startswith='P')
+        qs = self._qs().filter(purchase_number__startswith='P', status='RECEIVED')
         if p.get('purchase_no'):
             qs = qs.filter(purchase_number__icontains=p['purchase_no'].strip())
         if p.get('supplier'):
@@ -207,3 +211,83 @@ class TradePurchaseViewSet(viewsets.ViewSet):
                 vno = v.voucher_no
         return Response({'id': po.id, 'purchase_no': po.purchase_number, 'voucher_no': vno, 'net': net},
                         status=status.HTTP_201_CREATED)
+
+
+class TradePurchaseOrderViewSet(viewsets.ViewSet):
+    """Trade 1.0 Purchase Order: products to order from a supplier (K-numbered
+    PurchaseOrder, status PENDING). No stock, rate or balance change."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def _qs(self):
+        return scope_to_tenant(self.request.user, PurchaseOrder.objects.filter(purchase_number__startswith='K'), 'tenant')
+
+    @action(detail=False, methods=['get'])
+    def next_no(self, request):
+        return Response({'order_no': next_purchase_no(letter='K')})
+
+    def list(self, request):
+        """View Purchase Order Detail: ?order_no, ?supplier (ledger account id), ?date_from, ?date_to."""
+        from modules.company.models import LedgerAccount
+        p = request.query_params
+        qs = self._qs()
+        if p.get('order_no'):
+            qs = qs.filter(purchase_number__icontains=p['order_no'].strip())
+        if p.get('supplier'):
+            acc = LedgerAccount.objects.filter(pk=p['supplier']).first()
+            qs = qs.filter(supplier_id=acc.supplier_id if acc else None)
+        if p.get('date_from'):
+            qs = qs.filter(order_date__date__gte=p['date_from'])
+        if p.get('date_to'):
+            qs = qs.filter(order_date__date__lte=p['date_to'])
+        out = []
+        for po in qs.select_related('supplier__ledger_account').prefetch_related('items__product').order_by('-order_date', '-id')[:300]:
+            acc = getattr(po.supplier, 'ledger_account', None) if po.supplier_id else None
+            lines = [{'pid': (it.product.sku or '') if it.product else '', 'name': it.product.name if it.product else 'Deleted product',
+                      'qty': it.quantity, 'pur_rate': it.price, 'sub_total': _d(it.price) * (it.quantity or 0)}
+                     for it in po.items.all()]
+            out.append({'id': po.id, 'order_no': po.purchase_number, 'date': po.order_date.date() if po.order_date else None,
+                        'supplier_acc': acc.acc_id if acc else '',
+                        'supplier': (acc.name if acc else '') or (po.supplier.name if po.supplier_id else ''),
+                        'amount': po.total_amount, 'lines': lines})
+        return Response(out)
+
+    def create(self, request):
+        """Body: {supplier (ledger account id), date?, lines: [{product, qty, pur_rate?}]}"""
+        from modules.company.models import LedgerAccount
+        from modules.products.models import Product
+        d = request.data
+        sup = (scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant').filter(pk=d.get('supplier')).first()
+               if d.get('supplier') else None)
+        if not sup or not sup.supplier_id:
+            return Response({'detail': 'Find the supplier first.'}, status=400)
+        try:
+            odate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        products = scope_to_tenant(request.user, Product.objects.all(), 'tenant').select_related('stock__product')
+        prepared = []
+        for x in d.get('lines') or []:
+            p = products.filter(pk=x.get('product')).first()
+            if not p or not getattr(p, 'stock', None) or not p.stock.product_id:
+                return Response({'detail': 'One of the products was not found.'}, status=400)
+            qty = int(_d(x.get('qty')))
+            if qty <= 0:
+                return Response({'detail': f'Enter a quantity for {p.product_name}.'}, status=400)
+            raw = x.get('pur_rate')
+            rate = _d(raw if raw not in (None, '') else p.cost_price).quantize(Decimal('0.01'))
+            prepared.append((p, qty, max(rate, Z)))
+        if not prepared:
+            return Response({'detail': 'Add at least one product.'}, status=400)
+        total = sum((r * q for _, q, r in prepared), Z)
+        with transaction.atomic():
+            po = PurchaseOrder.objects.create(
+                purchase_number=next_purchase_no(odate, 'K'), supplier_id=sup.supplier_id,
+                warehouse_id=prepared[0][0].warehouse_id, tenant_id=tenant_id_for(request.user) or sup.tenant_id,
+                created_by=request.user, total_amount=total, status='PENDING', is_inventory_synced=True,
+                payment_status='UNPAID', payment_method='CREDIT', notes=ORDER_NOTE)
+            PurchaseOrder.objects.filter(pk=po.pk).update(order_date=datetime.datetime.combine(odate, datetime.datetime.now().time()))
+            for p, qty, rate in prepared:
+                PurchaseOrderItem.objects.create(purchase_order=po, product=p.stock.product, packaging_type='SINGLE',
+                                                 items_per_carton=p.carton_qty or 1, quantity=qty, bonus_quantity=0,
+                                                 price=rate, selling_price=0, retail_rate=0)
+        return Response({'id': po.id, 'order_no': po.purchase_number, 'amount': total}, status=status.HTTP_201_CREATED)

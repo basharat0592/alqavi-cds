@@ -54,8 +54,9 @@ def account_balance(acc, user):
         # What we still owe the supplier on their purchases (positive = payable).
         from .models import PurchaseOrder
         owed = Z
-        for po in scope_to_tenant(user, PurchaseOrder.objects.filter(supplier_id=acc.supplier_id)
-                                  .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant').only('total_amount', 'paid_amount'):
+        # Only received purchases are owed - purchase orders (K...) are not bills.
+        for po in scope_to_tenant(user, PurchaseOrder.objects.filter(supplier_id=acc.supplier_id, status='RECEIVED'), 'tenant') \
+                .only('total_amount', 'paid_amount'):
             rem = _d(po.total_amount) - _d(po.paid_amount)
             if rem > 0:
                 owed += rem
@@ -71,8 +72,8 @@ def _allocate_to_purchases(supplier_id, amount, voucher, user, method):
     from modules.payments import services
     from .models import PurchaseOrder
     left = amount
-    pos = (scope_to_tenant(user, PurchaseOrder.objects.filter(supplier_id=supplier_id)
-                           .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant').order_by('order_date', 'id'))
+    pos = (scope_to_tenant(user, PurchaseOrder.objects.filter(supplier_id=supplier_id, status='RECEIVED'), 'tenant')
+           .order_by('order_date', 'id'))
     for po in pos.select_for_update():
         if left <= 0:
             break
