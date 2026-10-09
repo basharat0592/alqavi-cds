@@ -144,7 +144,7 @@ const COLUMNS: Group[] = [
         { name: 'Update Rates / Expiry', href: '/admin/products', icon: CalendarClock },
     ] },
     { theme: THEMES.purchase, buttons: [
-        { name: 'Purchase', href: '/admin/purchases/add', icon: ShoppingCart },
+        { name: 'Purchase', href: '/admin/trade/purchase', icon: ShoppingCart },
         { name: 'Purchase Order', href: '/admin/purchases', icon: ClipboardList },
         { name: 'Purchase Return', href: '/admin/purchases/returns', icon: RefreshCcw },
     ] },

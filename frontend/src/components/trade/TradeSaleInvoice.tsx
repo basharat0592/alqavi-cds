@@ -770,7 +770,7 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
    Product Bar Code filters; grid PID, Product Name, Pack, Company, Category.
    Click selects, Enter or double-click picks; Add New Product opens Product
    Detail. Works with or without a customer chosen. */
-function ReturnFindProductWindow({ companies, askClose, onPick, onAddNew, onClose }: {
+export function ReturnFindProductWindow({ companies, askClose, onPick, onAddNew, onClose }: {
     companies: any[]; askClose: (fn: () => void, msg?: string) => void;
     onPick: (r: any) => void; onAddNew: (name: string) => void; onClose: () => void;
 }) {
