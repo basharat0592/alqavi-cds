@@ -359,15 +359,15 @@ class TradeDamageViewSet(viewsets.ViewSet):
 # ───────────────────────── District / Main Area ─────────────────────────
 
 class TradeAreaViewSet(viewsets.ViewSet):
-    """Trade 1.0 New District (?level=district, codes D1, D2 …) and New Main Area
-    (?level=main, codes M1, M2 …, each under a district). Sub areas (A…) stay
-    in the Chart of Account › Sub Area window."""
+    """Trade 1.0 New District (?level=district, codes D1, D2 …), New Main Area
+    (?level=main, M1, M2 …, under a district) and Sub Area (?level=sub, A1, A2 …,
+    under a main area)."""
     permission_classes = [permissions.IsAdminUser]
-    PREFIX = {'district': 'D', 'main': 'M'}
+    PREFIX = {'district': 'D', 'main': 'M', 'sub': 'A'}
 
     def _level(self, request):
         lv = request.query_params.get('level') or (request.data.get('level') if request.method in ('POST', 'PATCH') else None)
-        return 'main' if lv == 'main' else 'district'
+        return lv if lv in ('main', 'sub') else 'district'
 
     def _tid(self):
         u = self.request.user
@@ -385,28 +385,40 @@ class TradeAreaViewSet(viewsets.ViewSet):
         return max([self._num(c) or 0 for c in self._qs(level).values_list('code', flat=True)] or [0]) + 1
 
     def _row(self, a):
-        return {'id': a.id, 'code': self._num(a.code), 'name': a.name,
-                'district': str(a.parent_id) if a.parent_id else '', 'district_name': a.parent.name if a.parent_id else ''}
+        r = {'id': a.id, 'code': self._num(a.code), 'name': a.name}
+        if a.code.startswith('A'):   # sub area: parent = main area, its parent = district
+            m = a.parent
+            d = m.parent if m else None
+            r.update(main=str(m.id) if m else '', main_name=m.name if m else '',
+                     district=str(d.id) if d else '', district_name=d.name if d else '')
+        else:
+            r.update(district=str(a.parent_id) if a.parent_id else '', district_name=a.parent.name if a.parent_id else '')
+        return r
 
     @action(detail=False, methods=['get'])
     def next_code(self, request):
         return Response({'code': self._next(self._level(request))})
 
     def list(self, request):
-        return Response([self._row(a) for a in self._qs(self._level(request)).select_related('parent')])
+        return Response([self._row(a) for a in self._qs(self._level(request)).select_related('parent__parent')])
 
     def _fields(self, request, level, exclude=None):
         from modules.company.models import Area
         name = _clean(request.data.get('name'), 120)
         if not name:
-            return None, 'Enter the District Name.' if level == 'district' else 'Enter the Main Area Name.'
-        if Area.objects.filter(tenant_id=self._tid(), name__iexact=name).exclude(pk=exclude).exists():
+            return None, {'district': 'Enter the District Name.', 'main': 'Enter the Main Area Name.',
+                          'sub': 'Enter the Sub Area Name.'}[level]
+        if self._qs(level).filter(name__iexact=name).exclude(pk=exclude).exists():
             return None, f'{name} already exists.'
         parent = None
         if level == 'main':
             parent = self._qs('district').filter(pk=request.data.get('district') or 0).first()
             if not parent:
                 return None, 'Select the District.'
+        if level == 'sub':
+            parent = self._qs('main').filter(pk=request.data.get('main') or 0).first()
+            if not parent:
+                return None, 'Select the Main Area.'
         return {'name': name, 'parent': parent}, None
 
     def create(self, request):
@@ -428,7 +440,7 @@ class TradeAreaViewSet(viewsets.ViewSet):
         if err:
             return Response({'detail': err}, status=400)
         a.name = f['name']
-        if level == 'main':
+        if level != 'district':
             a.parent = f['parent']
         a.save()
         return Response(self._row(a))
@@ -446,4 +458,194 @@ class TradeAreaViewSet(viewsets.ViewSet):
         if used:
             return Response({'detail': f'{a.name} is used by {used} account(s) — it cannot be deleted.'}, status=400)
         a.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+# ───────────────────────── Chart of Accounts 2nd / 3rd Level ─────────────────────────
+
+class TradeAccountGroupViewSet(viewsets.ViewSet):
+    """Chart of Accounts 2nd Level (?level=2: Sub Account Code under a Main
+    Account, e.g. 12 Current assets) and 3rd Level (?level=3: e.g. 1202 Accounts
+    Receivables under a 2nd-level account). Main accounts (1 Assets … 5
+    Expences) are fixed."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def _level(self, request):
+        lv = request.query_params.get('level') or (request.data.get('level') if request.method in ('POST', 'PATCH') else None)
+        return 3 if str(lv) == '3' else 2
+
+    def _qs(self, level=None):
+        from modules.company.models import AccountGroup
+        qs = scope_to_tenant(self.request.user, AccountGroup.objects.all(), 'tenant')
+        return qs.filter(level=level) if level else qs
+
+    @staticmethod
+    def _row(g):
+        p = g.parent
+        r = {'id': g.id, 'code': g.code, 'name': g.name, 'level': g.level}
+        if g.level == 2:
+            r.update(main=str(p.id) if p else '', main_name=p.name if p else '')
+        else:
+            m = p.parent if p else None
+            r.update(sub=str(p.id) if p else '', sub_name=p.name if p else '',
+                     main=str(m.id) if m else '', main_name=m.name if m else '')
+        return r
+
+    def _next(self, level, parent):
+        if not parent:
+            return ''
+        last = self._qs(level).filter(parent=parent).aggregate(m=Max('code'))['m']
+        return (last + 1) if last else (parent.code * (10 if level == 2 else 100) + 1)
+
+    @staticmethod
+    def _used(g):
+        return g.children.count() + g.accounts.count()
+
+    @action(detail=False, methods=['get'])
+    def next_code(self, request):
+        """Code the next account gets: ?parent (main / 2nd-level id); blank until one is chosen."""
+        level = self._level(request)
+        parent = self._qs(level - 1).filter(pk=request.query_params.get('parent') or 0).first()
+        return Response({'code': self._next(level, parent)})
+
+    @action(detail=False, methods=['get'])
+    def mains(self, request):
+        return Response([{'id': g.id, 'code': g.code, 'name': g.name} for g in self._qs(1).order_by('code')])
+
+    def list(self, request):
+        level = self._level(request)
+        return Response([self._row(g) for g in self._qs(level).select_related('parent__parent').order_by('code')])
+
+    def _parent(self, request, level):
+        key = 'main' if level == 2 else 'sub'
+        p = self._qs(level - 1).filter(pk=request.data.get(key) or 0).first()
+        return p, (None if p else ('Select the Main Account.' if level == 2 else 'Select the Account 2nd Level.'))
+
+    def create(self, request):
+        from modules.company.models import AccountGroup
+        level = self._level(request)
+        name = _clean(request.data.get('name'), 150)
+        if not name:
+            return Response({'detail': 'Enter the account name.'}, status=400)
+        parent, err = self._parent(request, level)
+        if err:
+            return Response({'detail': err}, status=400)
+        if self._qs(level).filter(parent=parent, name__iexact=name).exists():
+            return Response({'detail': f'{name} already exists under {parent.name}.'}, status=400)
+        with transaction.atomic():
+            g = AccountGroup.objects.create(code=self._next(level, parent), name=name, level=level, parent=parent,
+                                            tenant_id=tenant_id_for(request.user) or parent.tenant_id)
+        return Response(self._row(g), status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk=None):
+        level = self._level(request)
+        g = self._qs(level).filter(pk=pk).first()
+        if not g:
+            return Response({'detail': 'Not found.'}, status=404)
+        name = _clean(request.data.get('name'), 150)
+        if not name:
+            return Response({'detail': 'Enter the account name.'}, status=400)
+        parent, err = self._parent(request, level)
+        if err:
+            return Response({'detail': err}, status=400)
+        if parent.id != g.parent_id and self._used(g):
+            # The code carries the parent's code (1202 under 12), so a used account keeps its parent.
+            return Response({'detail': f'{g.name} is in use, its parent account cannot be changed.'}, status=400)
+        g.name = name
+        if parent.id != g.parent_id:
+            g.parent = parent
+            g.code = self._next(level, parent)
+        g.save()
+        return Response(self._row(g))
+
+    def destroy(self, request, pk=None):
+        level = self._level(request)
+        g = self._qs(level).filter(pk=pk).first()
+        if not g:
+            return Response({'detail': 'Not found.'}, status=404)
+        used = self._used(g)
+        if used:
+            return Response({'detail': f'{g.name} has {used} account(s) under it, it cannot be deleted.'}, status=400)
+        g.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ───────────────────────── Financial Year ─────────────────────────
+
+class TradeFinancialYearViewSet(viewsets.ViewSet):
+    """Trade 1.0 New Financial Year: S.No, Year Title, From / To Date, Status.
+    One year is Active at a time; dates may not overlap."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def _qs(self):
+        from .models import FinancialYear
+        return scope_to_tenant(self.request.user, FinancialYear.objects.all(), 'tenant')
+
+    @staticmethod
+    def _row(y):
+        return {'id': y.id, 'code': y.sno, 'name': y.title, 'title': y.title, 'from_date': y.from_date,
+                'to_date': y.to_date, 'status': y.status}
+
+    @action(detail=False, methods=['get'])
+    def next_code(self, request):
+        return Response({'code': (self._qs().aggregate(m=Max('sno'))['m'] or 0) + 1})
+
+    def list(self, request):
+        return Response([self._row(y) for y in self._qs().order_by('sno')])
+
+    def _fields(self, d, exclude=None):
+        title = _clean(d.get('title'), 40)
+        st = str(d.get('status') or '').lower()
+        try:
+            f = datetime.date.fromisoformat(str(d.get('from_date'))[:10])
+            t = datetime.date.fromisoformat(str(d.get('to_date'))[:10])
+        except ValueError:
+            return None, 'Choose the From Date and To Date.'
+        if not title:
+            return None, 'Enter the Year Title.'
+        if st not in ('active', 'inactive'):
+            return None, 'Select the Status.'
+        if t < f:
+            return None, 'To Date is before From Date.'
+        if self._qs().filter(from_date__lte=t, to_date__gte=f).exclude(pk=exclude).exists():
+            return None, 'These dates overlap another financial year.'
+        return {'title': title, 'from_date': f, 'to_date': t, 'status': st}, None
+
+    def _only_active(self, y):
+        if y.status == 'active':
+            self._qs().exclude(pk=y.pk).filter(status='active').update(status='inactive')
+
+    def create(self, request):
+        from .models import FinancialYear
+        f, err = self._fields(request.data)
+        if err:
+            return Response({'detail': err}, status=400)
+        with transaction.atomic():
+            y = FinancialYear.objects.create(sno=(self._qs().aggregate(m=Max('sno'))['m'] or 0) + 1,
+                                             tenant_id=tenant_id_for(request.user) or request.user.pk, **f)
+            self._only_active(y)
+        return Response(self._row(y), status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk=None):
+        y = self._qs().filter(pk=pk).first()
+        if not y:
+            return Response({'detail': 'Not found.'}, status=404)
+        f, err = self._fields(request.data, exclude=y.pk)
+        if err:
+            return Response({'detail': err}, status=400)
+        with transaction.atomic():
+            for k, v in f.items():
+                setattr(y, k, v)
+            y.save()
+            self._only_active(y)
+        return Response(self._row(y))
+
+    def destroy(self, request, pk=None):
+        y = self._qs().filter(pk=pk).first()
+        if not y:
+            return Response({'detail': 'Not found.'}, status=404)
+        if y.status == 'active':
+            return Response({'detail': 'The Active financial year cannot be deleted.'}, status=400)
+        y.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

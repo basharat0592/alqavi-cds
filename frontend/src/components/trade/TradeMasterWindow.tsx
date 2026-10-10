@@ -24,6 +24,11 @@ import FitStage from '@/components/trade/FitStage';
 export type MasterField = {
     key: string; label: string; required?: boolean; max?: number; half?: boolean;
     options?: { value: string; label: string }[]; placeholder?: string; digits?: boolean;
+    type?: 'date';
+    // Options that depend on another box (Main Area follows District); `resets`
+    // clears those boxes when this one changes.
+    optionsFn?: (form: Record<string, string>) => { value: string; label: string }[];
+    resets?: string[];
 };
 export type MasterCol = { h: string; key: string; w: number; fmt?: (v: any) => string };
 
@@ -37,6 +42,9 @@ export type MasterConfig = {
     url: string;                    // list / create; `${url}${id}/` patch / delete
     nextCodeUrl: string;
     params?: Record<string, string>;   // sent with every request (e.g. ?level=main)
+    codeParent?: string;               // the code depends on this box (sent as ?parent=)
+    search?: { label: string; keys: string[] };   // search box under the View list
+    keepOrder?: boolean;               // list as the server sends it (not by code)
     exportName: string;
     stage: { width: number; height: number };
 };
@@ -72,10 +80,22 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
     const refs = useRef<(HTMLInputElement | HTMLSelectElement | null)[]>([]);
     const gridRef = useRef<HTMLDivElement>(null);
 
-    const loadCode = () => api.get(cfg.nextCodeUrl, { params: cfg.params }).then(({ data }) => setNextCode(String(data.code ?? ''))).catch(() => setNextCode(''));
+    const parentVal = cfg.codeParent ? form[cfg.codeParent] : '';
+    const loadCode = (parent = parentVal) => {
+        if (cfg.codeParent && !parent) { setNextCode(''); return; }
+        api.get(cfg.nextCodeUrl, { params: { ...cfg.params, ...(cfg.codeParent ? { parent } : {}) } })
+            .then(({ data }) => setNextCode(String(data.code ?? ''))).catch(() => setNextCode(''));
+    };
     useEffect(() => { loadCode(); setTimeout(() => refs.current[0]?.focus(), 50); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { if (cfg.codeParent) loadCode(parentVal); }, [parentVal]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const sorted = useMemo(() => (rows ? [...rows].sort((a, b) => (Number(a.code) || 1e9) - (Number(b.code) || 1e9)) : []), [rows]);
+    const [q, setQ] = useState('');
+    const sorted = useMemo(() => {
+        if (!rows) return [];
+        const list = cfg.keepOrder ? [...rows] : [...rows].sort((a, b) => (Number(a.code) || 1e9) - (Number(b.code) || 1e9));
+        const s = q.trim().toLowerCase();
+        return s && cfg.search ? list.filter((r) => cfg.search!.keys.some((k) => String(r[k] ?? '').toLowerCase().includes(s))) : list;
+    }, [rows, q, cfg.keepOrder, cfg.search]);
     const reload = async () => {
         try { setRows(await loadAll(cfg.url, cfg.params)); } catch { toast.error('Could not load the list.'); setRows((r) => r || []); }
     };
@@ -87,9 +107,9 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
     };
     const view = async () => { setSel(null); setForm(empty); await reload(); setTimeout(() => gridRef.current?.focus(), 0); };
 
-    const set = (k: string, digits?: boolean) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const set = (k: string, digits?: boolean, resets?: string[]) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const v = digits ? e.target.value.replace(/[^\d\- +]/g, '') : e.target.value;
-        setForm((f) => ({ ...f, [k]: v }));
+        setForm((f) => ({ ...f, [k]: v, ...Object.fromEntries((resets || []).map((x) => [x, ''])) }));
     };
     const complete = cfg.fields.every((f) => !f.required || form[f.key].trim());
     const changed = !!sel && cfg.fields.some((f) => form[f.key].trim() !== valueOf(sel, f.key).trim());
@@ -168,10 +188,14 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
     const fieldEl = (f: MasterField) => {
         const i = ++idx;
         const ref = (el: HTMLInputElement | HTMLSelectElement | null) => { refs.current[i] = el; };
-        return f.options ? (
-            <select ref={ref} value={form[f.key]} onChange={set(f.key)} onKeyDown={enter(i)} className={`${IN} !px-1.5`}>
+        const opts = f.optionsFn ? f.optionsFn(form) : f.options;
+        if (f.type === 'date') {
+            return <input ref={ref} type="date" value={form[f.key]} onChange={set(f.key)} onKeyDown={enter(i)} className={IN} />;
+        }
+        return opts ? (
+            <select ref={ref} value={form[f.key]} onChange={set(f.key, false, f.resets)} onKeyDown={enter(i)} className={`${IN} !px-1.5`}>
                 <option value="">Select any One</option>
-                {f.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
         ) : (
             <input ref={ref} value={form[f.key]} onChange={set(f.key, f.digits)} onKeyDown={enter(i)} maxLength={f.max} placeholder={f.placeholder}
@@ -238,9 +262,15 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-3">
+                        {rows && cfg.search && (
+                            <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[#1b1f4b]">
+                                {cfg.search.label}
+                                <input value={q} onChange={(e) => setQ(e.target.value)} className={`${EDIT} h-8 w-[170px] !text-[12.5px] !font-normal`} />
+                            </label>
+                        )}
                         {rows && (
                             <>
-                                <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {rows.length}</span>} className="h-8 w-[190px] !text-[12.5px] !font-normal" />
+                                <ReadBox value={<span className="text-[#1f2bd6]">Total Records = {sorted.length}</span>} className="h-8 w-[190px] !text-[12.5px] !font-normal" />
                                 <button type="button" onClick={exportRows} disabled={!rows.length} className={`${ACTION_BTN} !h-8 !text-[13px]`}>Export</button>
                             </>
                         )}

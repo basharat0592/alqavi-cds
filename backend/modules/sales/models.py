@@ -860,3 +860,19 @@ class DamageStockItem(models.Model):
     class Meta:
         db_table = 'trade_damage_stock_items'
         ordering = ['line']
+
+
+class FinancialYear(models.Model):
+    """Trade 1.0 Financial Year (legacy FinancialYear): S.No, title, from / to
+    date and status — one year is Active at a time."""
+    sno = models.PositiveIntegerField()
+    title = models.CharField(max_length=40)
+    from_date = models.DateField()
+    to_date = models.DateField()
+    status = models.CharField(max_length=10, default='active')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_financial_years')
+
+    class Meta:
+        db_table = 'trade_financial_years'
+        ordering = ['sno']

@@ -26,7 +26,7 @@ import FitStage from '@/components/trade/FitStage';
 /* ───────────────────────── Top menu bar (File / Product / …) ───────────────────────── */
 // `inPlace` links navigate this window; every other item opens its screen in a
 // pop-up window, like the legacy desktop app.
-type MenuLink = { label?: string; href?: string; action?: 'logon' | 'logoff' | 'exit' | 'about'; inPlace?: boolean; disabled?: boolean; sub?: boolean; sep?: boolean };
+type MenuLink = { label?: string; href?: string; action?: 'logon' | 'logoff' | 'exit' | 'about'; inPlace?: boolean; disabled?: boolean; sub?: boolean; sep?: boolean; children?: MenuLink[] };
 type Menu = { title: string; items: MenuLink[] };
 
 // Same menus as the legacy Trade 1.0 console. Screens not built yet are greyed out.
@@ -63,14 +63,21 @@ const MENUS: Menu[] = [
     { title: 'Accounts', items: [
         { label: 'District', href: '/admin/trade/district' },
         { label: 'Main Area', href: '/admin/trade/main-area' },
-        { label: 'Sub Area', disabled: true },
-        { label: 'Accounts 2nd Level', disabled: true },
-        { label: 'Accounts 3rd Level', disabled: true },
+        { label: 'Sub Area', href: '/admin/trade/sub-area' },
+        { label: 'Accounts 2nd Level', href: '/admin/trade/accounts-2nd-level' },
+        { label: 'Accounts 3rd Level', href: '/admin/trade/accounts-3rd-level' },
         { label: 'Chart of Accounts', href: '/admin/trade/chart-of-account' },
         SEP,
-        { label: 'Financial Year', disabled: true },
+        { label: 'Financial Year', href: '/admin/trade/financial-year' },
         SEP,
-        { label: 'Opening entries', disabled: true, sub: true },
+        { label: 'Opening entries', sub: true, children: [
+            { label: 'Opening Stock ( Add )', disabled: true },
+            { label: 'Opening Stock ( Less )', disabled: true },
+            SEP,
+            { label: 'Opening Assets', disabled: true },
+            { label: 'Opening Receivable', disabled: true },
+            { label: 'Opening Liabilities', disabled: true },
+        ] },
         SEP,
         { label: 'Receipt Voucher', href: '/admin/trade/receipt-voucher' },
         SEP,
@@ -113,8 +120,11 @@ function MenuBar() {
         return () => document.removeEventListener('mousedown', h);
     }, []);
     const [about, setAbout] = useState(false);
+    const [flyout, setFlyout] = useState<string | null>(null);   // open sub-menu (Opening entries ›)
+    useEffect(() => { setFlyout(null); }, [open]);
     const go = (it: MenuLink) => {
         if (it.disabled || it.sep) return;
+        if (it.children) { setFlyout((f) => (f === it.label ? null : it.label!)); return; }
         setOpen(null);
         if (it.action === 'about') { setAbout(true); return; }
         if (it.action === 'logon' || it.action === 'logoff') { authService.logout(); router.push('/login'); return; }
@@ -141,21 +151,35 @@ function MenuBar() {
                         <ChevronDown size={15} className={`transition-transform ${open === m.title ? 'rotate-180' : ''}`} />
                     </button>
                     {open === m.title && (
-                        <div className="absolute left-0 top-full mt-1 w-72 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-150">
+                        <div className="absolute left-0 top-full mt-1 w-72 rounded-xl border border-slate-100 bg-white py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-150">
                             {m.items.map((it, i) => (it.sep ? (
                                 <div key={`sep${i}`} className="mx-3 my-1 border-t border-slate-200" />
                             ) : (
-                                <button
-                                    key={it.label}
-                                    type="button"
-                                    onClick={() => go(it)}
-                                    disabled={it.disabled}
-                                    title={it.disabled ? 'Not available yet' : undefined}
-                                    className="flex w-full items-center px-4 py-1.5 text-left text-[14px] font-normal text-slate-700 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300"
-                                >
-                                    <span className="flex-1 whitespace-pre">{it.label}</span>
-                                    {it.sub && <ChevronRight size={14} className="shrink-0" />}
-                                </button>
+                                <div key={it.label} className="relative" onMouseEnter={() => setFlyout(it.children ? it.label! : null)}>
+                                    <button
+                                        type="button"
+                                        onClick={() => go(it)}
+                                        disabled={it.disabled}
+                                        title={it.disabled ? 'Not available yet' : undefined}
+                                        className={`flex w-full items-center px-4 py-1.5 text-left text-[14px] font-normal hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300 ${flyout === it.label ? 'bg-[#2B2F8F]/10 text-[#2B2F8F]' : 'text-slate-700'}`}
+                                    >
+                                        <span className="flex-1 whitespace-pre">{it.label}</span>
+                                        {it.sub && <ChevronRight size={14} className="shrink-0" />}
+                                    </button>
+                                    {it.children && flyout === it.label && (
+                                        <div className="absolute left-full top-0 z-40 ml-1 w-64 rounded-xl border border-slate-100 bg-white py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.3)]">
+                                            {it.children.map((c, k) => (c.sep ? (
+                                                <div key={`csep${k}`} className="mx-3 my-1 border-t border-slate-200" />
+                                            ) : (
+                                                <button key={c.label} type="button" onClick={() => go(c)} disabled={c.disabled}
+                                                    title={c.disabled ? 'Not available yet' : undefined}
+                                                    className="flex w-full items-center px-4 py-1.5 text-left text-[14px] font-normal text-slate-700 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300">
+                                                    <span className="flex-1 whitespace-pre">{c.label}</span>
+                                                </button>
+                                            )))}
+                                        </div>
+                                    )}
+                                </div>
                             )))}
                         </div>
                     )}

@@ -23,7 +23,9 @@ class Area(models.Model):
     class Meta:
         db_table = 'areas'
         ordering = ['name']
-        unique_together = [('tenant', 'name'), ('tenant', 'code')]
+        # Names may repeat across levels (legacy has a district and a sub area both
+        # called "Gilgit"); the code (D1 / M1 / A39) is what is unique.
+        unique_together = [('tenant', 'code')]
 
     def __str__(self):
         return f"{self.name} ({self.code})"
