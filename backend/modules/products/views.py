@@ -230,6 +230,23 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'retail': b.retail_price or p.original_price or 0,
                 'company': sp.company.name if (sp and sp.company_id) else '',
             })
+        # Products with nothing in stock yet (e.g. just added in Product Detail)
+        # still show — once, with Qty 0 — so they can be found and recalled.
+        stocked = {r['product_id'] for r in rows}
+        for p in (qs.exclude(id__in=list(stocked))
+                  .select_related('category', 'stock__product__company').order_by('product_name')[:1000]):
+            stock = getattr(p, 'stock', None)
+            sp = getattr(stock, 'product', None)
+            rows.append({
+                'batch_id': '', 'product_id': str(p.id), 'pid': p.sku or '',
+                'category': p.category.name if p.category_id else '',
+                'name': p.product_name, 'barcode': p.barcode or '',
+                'pack': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
+                'expiry_date': None, 'qty': max(0, int(p.total_quantity or 0)),
+                'tp': p.selling_price or 0, 'retail': p.original_price or 0,
+                'company': sp.company.name if (sp and sp.company_id) else '',
+            })
+        rows.sort(key=lambda r: ((r['name'] or '').lower(), r['expiry_date'] is None, str(r['expiry_date'] or '')))
         return Response(rows)
 
     @action(detail=False, methods=['get'])
