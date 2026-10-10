@@ -42,6 +42,7 @@ const PAPER: Record<string, { w: number; h: number; m: number }> = {
     letter: { w: 216, h: 279, m: 5 }, legal: { w: 216, h: 356, m: 5 },
 };
 const DESIGN_W = 200; // A4 width less 5 mm margins
+const A5_DESIGN_W = 190; // half A4: drawn narrower, so it prints larger on the small sheet
 
 /* Business details (the customer's legacy invoice, letterhead and visiting card). */
 const NAME_UR = 'القوی ٹریڈرز';
@@ -382,7 +383,15 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const pf = inv.profile || DEFAULT_PROFILE;
     const region = inv.region || { code: 'GLT', name: 'Gilgit' };
     const contentW = paper.w - paper.m * 2;
-    const zoom = contentW / DESIGN_W;
+    // Half A4 (A5, fed upright): a compact layout drawn narrower and with larger
+    // type, so on the small sheet it reads like the A4 invoice instead of a
+    // shrunken copy of it.
+    const compact = paper.w < 170;
+    const designW = compact ? A5_DESIGN_W : DESIGN_W;
+    const zoom = contentW / designW;
+    const k = compact ? 1.1 : 1;
+    const fs = (pt: number) => `${+(pt * k).toFixed(2)}pt`;
+    const mm = (a4: number, a5: number) => `${compact ? a5 : a4}mm`;
     const pageH = paper.h - 1; // a hair under the paper so a sheet never spills onto the next
     // Rows are split into sheets by their measured heights (a hidden copy is laid
     // out first): every sheet gets the header at the top and the footer at the
@@ -451,14 +460,18 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const field = (k: string, v: React.ReactNode, kw = '24mm', prominent = false) => (
         <div className="flex min-w-0 items-baseline" style={{ gap: '1.5mm' }}>
             <span style={{ width: kw, flexShrink: 0, color: '#333' }}>{k}</span>
-            <span className="min-w-0 flex-1" style={prominent ? { fontWeight: 800, fontSize: '10.5pt' } : { fontWeight: 400 }}>{v || '—'}</span>
+            <span className="min-w-0 flex-1" style={prominent ? { fontWeight: 800, fontSize: compact ? fs(9.2) : fs(10.5), lineHeight: 1.15 } : { fontWeight: 400 }}>{v || '—'}</span>
         </div>
     );
     const th = (h: string, right = false, w?: string) => (
-        <th style={{ border: B, padding: '0.8mm 1.1mm', fontWeight: 700, textAlign: right ? 'right' : 'left', width: w, lineHeight: 1.1 }}>{h}</th>
+        <th style={{ border: B, padding: compact ? '0.7mm 0.8mm' : '0.8mm 1.1mm', fontWeight: 700, textAlign: right ? 'right' : 'left', width: w, lineHeight: 1.1 }}>{h}</th>
     );
     const td = (v: React.ReactNode, right = false, bold = false) => (
-        <td style={{ border: B, padding: '0.5mm 1.1mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 600 : 400, verticalAlign: 'top', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25 }}>{v}</td>
+        <td style={{
+            border: B, padding: compact ? '0.5mm 0.8mm' : '0.5mm 1.1mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 600 : 400, verticalAlign: 'top', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25,
+            // Half A4: one line a row (a very long name ends in "…"), so more rows fit.
+            ...(compact ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : {}),
+        }}>{v}</td>
     );
     const sum = (k: string, v: any, strong = false) => (
         <td style={{ border: B, padding: '1.1mm 2mm' }}>
@@ -468,37 +481,37 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
             </div>
         </td>
     );
-    const part = { width: `${DESIGN_W}mm`, zoom, fontSize: '8pt', color: '#111' } as React.CSSProperties;
+    const part = { width: `${designW}mm`, zoom, fontSize: fs(8), color: '#111' } as React.CSSProperties;
 
     const Head = (pno: number, total: number) => (
             <div style={part}>
-                <div style={{ textAlign: 'right', fontSize: '7.5pt', fontWeight: 700, lineHeight: 1, height: '3mm' }}>P. No {pno} of {total}</div>
-                <div className="grid items-start" style={{ gridTemplateColumns: '56mm 1fr 58mm', gap: '3mm' }}>
+                <div style={{ textAlign: 'right', fontSize: fs(7.5), fontWeight: 700, lineHeight: 1, height: '3mm' }}>P. No {pno} of {total}</div>
+                <div className="grid items-start" style={{ gridTemplateColumns: `${mm(56, 46)} 1fr ${mm(58, 52)}`, gap: '3mm' }}>
                     <div>
-                        <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: '44mm', aspectRatio: '1137 / 571', height: 'auto', display: 'block', marginTop: '0.5mm' }} />
-                        {pf.acct_no && <div style={{ fontSize: '7.6pt', marginTop: '1mm', lineHeight: 1.3 }}>
+                        <img src="/brand/aqt-monogram.png" alt="Al-Qavi Traders" loading="eager" style={{ width: mm(44, 36), aspectRatio: '1137 / 571', height: 'auto', display: 'block', marginTop: '0.5mm' }} />
+                        {pf.acct_no && <div style={{ fontSize: fs(7.6), marginTop: '1mm', lineHeight: 1.3 }}>
                             <span style={{ color: '#333' }}>{pf.bank_name || 'Bank'} Account Num: </span>
-                            <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.acct_no}</b>
-                            {pf.bank_title && <div style={{ fontSize: '6.5pt', fontWeight: 400, color: '#444' }}>({pf.bank_title})</div>}
+                            <b style={{ fontSize: fs(8.6), fontWeight: 800 }}>{pf.acct_no}</b>
+                            {pf.bank_title && <div style={{ fontSize: fs(6.5), fontWeight: 400, color: '#444' }}>({pf.bank_title})</div>}
                         </div>}
                     </div>
                     <div className="flex flex-col items-center text-center">
-                        <img src="/brand/aqt-name-ur.png" alt={NAME_UR} loading="eager" style={{ width: '64mm', aspectRatio: '1398 / 486', height: 'auto', display: 'block' }} />
-                        <div style={{ fontSize: '14pt', fontWeight: 800, marginTop: '0.8mm' }}>Sale Invoice</div>
+                        <img src="/brand/aqt-name-ur.png" alt={NAME_UR} loading="eager" style={{ width: mm(64, 54), aspectRatio: '1398 / 486', height: 'auto', display: 'block' }} />
+                        <div style={{ fontSize: fs(14), fontWeight: 800, marginTop: '0.8mm' }}>Sale Invoice</div>
                     </div>
-                    <div style={{ fontSize: '7.8pt', lineHeight: 1.45 }}>
-                        <div style={{ fontWeight: 800, fontSize: '8.5pt' }}>Proprietor:</div>
+                    <div style={{ fontSize: fs(7.8), lineHeight: 1.45 }}>
+                        <div style={{ fontWeight: 800, fontSize: fs(8.5) }}>Proprietor:</div>
                         <div style={{ fontWeight: 600 }}>{pf.proprietor}</div>
                         <div>{region.name} Region</div>
                         <div style={{ marginTop: '0.8mm', fontVariantNumeric: 'tabular-nums', lineHeight: 1.5 }}>
                             <div>
                                 <span style={{ color: '#333' }}>Easypaisa: </span>
-                                <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.easypaisa || '—'}</b>
-                                {pf.easypaisa_name && <span style={{ fontSize: '6.5pt', fontWeight: 400, color: '#444' }}> ({pf.easypaisa_name})</span>}
+                                <b style={{ fontSize: fs(8.6), fontWeight: 800 }}>{pf.easypaisa || '—'}</b>
+                                {pf.easypaisa_name && <span style={{ fontSize: fs(6.5), fontWeight: 400, color: '#444' }}> ({pf.easypaisa_name})</span>}
                             </div>
                             <div className="flex items-center" style={{ gap: '1mm' }}>
                                 <WaIcon /><span style={{ color: '#333' }}>Contact: </span>
-                                <b style={{ fontSize: '8.6pt', fontWeight: 800 }}>{pf.contact_no || '—'}</b>
+                                <b style={{ fontSize: fs(8.6), fontWeight: 800 }}>{pf.contact_no || '—'}</b>
                             </div>
                         </div>
                     </div>
@@ -507,7 +520,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
             </div>
     );
     const Details = (
-        <div className="grid" style={{ gridTemplateColumns: '1.05fr 1fr 1fr', columnGap: '4mm', rowGap: '0.7mm', margin: '2mm 0 1.6mm', fontSize: '7.8pt', lineHeight: 1.25 }}>
+        <div className="grid" style={{ gridTemplateColumns: compact ? '1.4fr 1fr 0.85fr' : '1.05fr 1fr 1fr', columnGap: '4mm', rowGap: '0.7mm', margin: '2mm 0 1.6mm', fontSize: fs(7.8), lineHeight: 1.25 }}>
                             {field('Inv. No #:', inv.invoice_no)}
                             {field('Inv. Date:', longDate, '17mm')}
                             {field('Day:', day, '17mm')}
@@ -519,22 +532,22 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                             {field('Print Time:', printTime, '17mm')}
                             {field('Saleman Name:', inv.staff)}
                             {field('Cell No:', inv.staff_cell, '17mm')}
-                            {field('Due Date:', <span style={{ color: '#fff', background: due.owing ? '#c62828' : '#2e7d32', fontWeight: 800, fontSize: '9pt', padding: '0.2mm 1.6mm', borderRadius: '0.8mm' }}>{dmy(due.dueDate)}</span>, '17mm')}
+                            {field('Due Date:', <span style={{ color: '#fff', background: due.owing ? '#c62828' : '#2e7d32', fontWeight: 800, fontSize: fs(9), padding: '0.2mm 1.6mm', borderRadius: '0.8mm' }}>{dmy(due.dueDate)}</span>, '17mm')}
                         </div>
     );
     const Thead = (
                             <thead>
                                 <tr style={{ background: '#ececec' }}>
-                                    {th('S.No', false, '8mm')}{th('PID', false, '11mm')}{th('Product Name')}{th('Carton', true, '12mm')}{th('Qty', true, '10mm')}
-                                    {th('Bon', true, '8mm')}{th('TP', true, '15mm')}{th('Retail', true, '15mm')}{th('Special Disc %', true, '13mm')}
-                                    {th('Shelf Rent %', true, '12mm')}{th('Net Amount', true, '20mm')}
+                                    {th('S.No', false, mm(8, 8.5))}{th('PID', false, mm(11, 11.5))}{th('Product Name')}{th('Carton', true, mm(12, 11))}{th('Qty', true, mm(10, 9))}
+                                    {th('Bon', true, mm(8, 7.5))}{th('TP', true, mm(15, 15.5))}{th('Retail', true, mm(15, 15.5))}{th('Special Disc %', true, mm(13, 14))}
+                                    {th('Shelf Rent %', true, mm(12, 13))}{th('Net Amount', true, mm(20, 21))}
                                 </tr>
                             </thead>
     );
     const Row = (l: Line, i: number) => (
                                     <tr key={i} data-m="row">
                                         {td(i + 1, true)}{td(l.pid)}
-                                        {td(<>{pn(l.name, '5.8pt')}{l.expiry_date ? <span style={{ color: '#666', fontSize: '6.3pt' }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
+                                        {td(<>{pn(l.name, fs(5.8))}{l.expiry_date ? <span style={{ color: '#666', fontSize: compact ? fs(5.4) : fs(6.3) }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
                                         {td(isCarton(l) ? cartonCount(l).replace(' Ctn', '') : '', true)}
                                         {td(qtyFmt(l.qty), true)}{td(qtyFmt(l.bonus), true)}{td(money(l.tp), true)}{td(money(l.retail), true)}
                                         {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}{td(money(l.net), true, true)}
@@ -545,13 +558,13 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                     <td colSpan={3} style={{ border: B, padding: '0.6mm 1.1mm' }}>Total ({inv.lines.length} item{inv.lines.length === 1 ? '' : 's'})</td>
                                     {td(cartons || '', true, true)}{td(qtyFmt(t.pieces), true, true)}{td(qtyFmt(t.bonus), true, true)}
                                     <td colSpan={2} style={{ border: B }} />
-                                    {td(`${money(inv.lines.reduce((a, l) => a + n(l.special_pct), 0))}%`, true, true)}
-                                    {td(`${money(inv.lines.reduce((a, l) => a + n(l.shelf_pct), 0))}%`, true, true)}
+                                    {td(<span style={compact ? { fontSize: fs(6.3) } : undefined}>{money(inv.lines.reduce((a, l) => a + n(l.special_pct), 0))}%</span>, true, true)}
+                                    {td(<span style={compact ? { fontSize: fs(6.3) } : undefined}>{money(inv.lines.reduce((a, l) => a + n(l.shelf_pct), 0))}%</span>, true, true)}
                                     {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}
                                 </tr>
     );
     const Summary = (
-            <table style={{ marginTop: '2mm', fontSize: '7.5pt', width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <table style={{ marginTop: '2mm', fontSize: fs(7.5), width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <colgroup><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '32%' }} /></colgroup>
                 <tbody>
                     <tr>
@@ -563,7 +576,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                         ))}
                         <td style={{ border: '0.6mm solid #000', padding: '1mm 2.2mm', background: '#111', color: '#fff', verticalAlign: 'top' }}>
                             <div style={{ fontWeight: 700 }}>Total Remaining Balance</div>
-                            <div style={{ textAlign: 'right', fontWeight: 900, fontSize: '12.5pt', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</div>
+                            <div style={{ textAlign: 'right', fontWeight: 900, fontSize: fs(12.5), lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</div>
                         </td>
                     </tr>
                 </tbody>
@@ -574,14 +587,14 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 <div style={{ border: '0.35mm solid #222', padding: '1.3mm 2mm', marginTop: '2mm' }}>
                     <img src="/brand/inv-shops-banner.png" alt="" style={{ width: '100%', aspectRatio: '2960 / 112', height: 'auto', display: 'block' }} />
                 </div>
-                <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: '7.3pt', lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
+                <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: fs(7.3), lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
                 <img src={region.code === 'SKD' ? '/brand/inv-terms-skd.png' : '/brand/inv-terms-glt.png'} alt="" style={{ width: '100%', aspectRatio: '3024 / 216', height: 'auto', display: 'block', marginTop: '0.8mm' }} />
-                <div className="flex justify-between" style={{ marginTop: '6mm', fontSize: '8pt', fontWeight: 600 }}>
-                    <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
-                    <div style={{ width: '58mm', borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Saleman</div>
+                <div className="flex justify-between" style={{ marginTop: mm(6, 4), fontSize: fs(8), fontWeight: 600 }}>
+                    <div style={{ width: mm(58, 48), borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
+                    <div style={{ width: mm(58, 48), borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Saleman</div>
                 </div>
                 <div style={{
-                    marginTop: '1.5mm', padding: '1mm 2mm', borderRadius: '1mm', fontSize: '7.8pt', fontWeight: 600, textAlign: 'center',
+                    marginTop: '1.5mm', padding: '1mm 2mm', borderRadius: '1mm', fontSize: fs(7.8), fontWeight: 600, textAlign: 'center',
                     border: `0.35mm solid ${due.owing ? '#c62828' : '#2e7d32'}`, color: due.owing ? '#c62828' : '#2e7d32',
                     background: due.owing ? (due.overdue ? '#ffe5e5' : '#fff3f3') : '#eef8ef',
                 }}>
@@ -589,7 +602,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 </div>
             </div>
     );
-    const tbl = { fontSize: '7.5pt', width: '100%', borderCollapse: 'collapse' } as React.CSSProperties;
+    const tbl = { fontSize: fs(7.5), width: '100%', borderCollapse: 'collapse', tableLayout: compact ? 'fixed' : undefined } as React.CSSProperties;
 
     return (
         <>
