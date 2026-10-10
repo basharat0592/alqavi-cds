@@ -26,7 +26,7 @@ import FitStage from '@/components/trade/FitStage';
 /* ───────────────────────── Top menu bar (File / Product / …) ───────────────────────── */
 // `inPlace` links navigate this window; every other item opens its screen in a
 // pop-up window, like the legacy desktop app.
-type MenuLink = { label: string; href?: string; action?: 'logout'; inPlace?: boolean };
+type MenuLink = { label: string; href?: string; action?: 'logout'; inPlace?: boolean; disabled?: boolean };
 type Menu = { title: string; items: MenuLink[] };
 
 const MENUS: Menu[] = [
@@ -39,7 +39,7 @@ const MENUS: Menu[] = [
     { title: 'Product', items: [
         { label: 'Product Detail', href: '/admin/trade/product-detail' },
         { label: 'Add Product', href: '/admin/products/add' },
-        { label: 'Stock', href: '/admin/inventory/list' },
+        { label: 'Stock', href: '/admin/inventory/list', disabled: true },
         { label: 'Update Rates / Expiry', href: '/admin/trade/update-rates' },
     ] },
     { title: 'Sale', items: [
@@ -85,7 +85,7 @@ function MenuBar() {
     const go = (it: MenuLink) => {
         setOpen(null);
         if (it.action === 'logout') { authService.logout(); router.push('/login'); return; }
-        if (!it.href) return;
+        if (!it.href || it.disabled) return;
         if (it.inPlace) router.push(it.href);
         else openPopup(it.href);
     };
@@ -108,7 +108,9 @@ function MenuBar() {
                                     key={it.label}
                                     type="button"
                                     onClick={() => go(it)}
-                                    className="block w-full px-4 py-2.5 text-left text-[15px] font-medium text-slate-600 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F]"
+                                    disabled={it.disabled}
+                                    title={it.disabled ? 'Not available yet' : undefined}
+                                    className="block w-full px-4 py-2.5 text-left text-[15px] font-medium text-slate-600 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300"
                                 >
                                     {it.label}
                                 </button>
@@ -122,7 +124,7 @@ function MenuBar() {
 }
 
 /* ───────────────────────── Action button grid ───────────────────────── */
-type Btn = { name: string; href: string; icon: any };
+type Btn = { name: string; href: string; icon: any; disabled?: boolean };
 type Theme = { tile: string; icon: string; ring: string };
 type Group = { theme: Theme; buttons: Btn[] };
 
@@ -140,13 +142,13 @@ const THEMES: Record<string, Theme> = {
 const COLUMNS: Group[] = [
     { theme: THEMES.product, buttons: [
         { name: 'Product Detail', href: '/admin/trade/product-detail', icon: Package },
-        { name: 'Stock', href: '/admin/inventory/list', icon: Boxes },
+        { name: 'Stock', href: '/admin/inventory/list', icon: Boxes, disabled: true },
         { name: 'Update Rates / Expiry', href: '/admin/trade/update-rates', icon: CalendarClock },
     ] },
     { theme: THEMES.purchase, buttons: [
         { name: 'Purchase', href: '/admin/trade/purchase', icon: ShoppingCart },
         { name: 'Purchase Order', href: '/admin/trade/purchase-order', icon: ClipboardList },
-        { name: 'Purchase Return', href: '/admin/purchases/returns', icon: RefreshCcw },
+        { name: 'Purchase Return', href: '/admin/purchases/returns', icon: RefreshCcw, disabled: true },
     ] },
     { theme: THEMES.sale, buttons: [
         { name: 'Sale', href: '/admin/trade/sale-invoice', icon: ScanLine },
@@ -179,6 +181,18 @@ const REPORTS: Btn[] = [
 
 function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: boolean; delay?: number }) {
     const Icon = b.icon;
+    if (b.disabled) {
+        // Not built yet — shown greyed out and does nothing.
+        return (
+            <div aria-disabled="true" title="Not available yet" style={{ animationDelay: `${delay}ms` }}
+                className={`aq-tile flex cursor-not-allowed select-none items-center gap-3 rounded-xl border border-slate-200 bg-slate-100 px-3 ${big ? 'py-2.5' : 'py-2'} lg:h-full text-slate-400 opacity-70`}>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-400">
+                    <Icon size={18} strokeWidth={1.9} />
+                </span>
+                <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight tracking-tight">{b.name}</span>
+            </div>
+        );
+    }
     return (
         <Link
             href={b.href}
