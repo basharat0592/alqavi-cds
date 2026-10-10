@@ -566,24 +566,25 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                 </tr>
     );
     const Summary = (
-            <table style={{ marginTop: '1.5mm', fontSize: fs(7.5), width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <colgroup>{[16, 16.5, 15.5, 20, 32].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+            <table style={{ marginTop: '1.5mm', fontSize: fs(6.8), width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup>{[19, 19.5, 15, 15, 31.5].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                 <tbody>
                     <tr>
-                        {([['Prev Amount', t.prev_balance], ['Special Disc', n(t.special) + n(t.bill_disc)], ['Shelf Rent', t.shelf], ['Advance Amount', t.paid]] as const).map(([k, v]) => (
+                        {([['Prev Amount', t.prev_balance], ['Special Disc', n(t.special) + n(t.bill_disc)], ['Shelf Rent', t.shelf], ['Adv Amount', t.paid]] as const).map(([k, v]) => (
                             <td key={k} style={{ border: B, padding: '0.6mm 1.5mm', verticalAlign: 'middle' }}>
-                                <div className="flex items-baseline justify-between" style={{ gap: '1mm' }}>
-                                    <span style={{ color: '#333', whiteSpace: 'nowrap' }}>{k}</span>
-                                    <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{money(v)}</span>
+                                {/* The number never shrinks; the label gives way first. */}
+                                <div className="flex items-baseline justify-between" style={{ gap: '1.2mm' }}>
+                                    <span style={{ color: '#333', whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{k}</span>
+                                    <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', flexShrink: 0, fontWeight: 600 }}>{money(v)}</span>
                                 </div>
                             </td>
                         ))}
                         <td style={{ border: B, padding: '0.5mm 1.5mm', verticalAlign: 'middle' }}>
                             <div className="flex items-center justify-between" style={{ gap: '1.5mm' }}>
-                                <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Total Remaining Balance</span>
+                                <span style={{ fontWeight: 700, fontSize: fs(6.4), whiteSpace: 'nowrap', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>T. Remaining Balance</span>
                                 <span style={{
-                                    color: '#fff', background: remaining > 0.005 ? '#c62828' : '#2e7d32', fontWeight: 800, fontSize: fs(10),
-                                    padding: '0.2mm 1.8mm', borderRadius: '0.8mm', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.25,
+                                    color: '#fff', background: remaining > 0.005 ? '#c62828' : '#2e7d32', fontWeight: 800, fontSize: fs(9),
+                                    padding: '0.2mm 1.4mm', borderRadius: '0.8mm', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.25, flexShrink: 0,
                                 }}>{money(remaining)}</span>
                             </div>
                         </td>
