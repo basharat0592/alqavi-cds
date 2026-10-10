@@ -108,7 +108,11 @@ class SalesStaff(models.Model):
     just who booked the sale, chosen on the Sale Invoice."""
     name = models.CharField(max_length=120)
     cell = models.CharField(max_length=40, blank=True, default='')
+    cnic = models.CharField(max_length=20, blank=True, default='')
+    manager_cell1 = models.CharField(max_length=40, blank=True, default='')
+    manager_cell2 = models.CharField(max_length=40, blank=True, default='')
     status = models.CharField(max_length=10, default='active')
+    # Legacy StaffID — the "Salesman Code" (1, 2, 3 …); new staff get the next one.
     legacy_id = models.PositiveIntegerField(null=True, blank=True)
     tenant = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
@@ -814,3 +818,42 @@ class TradeSaleReturnItem(models.Model):
 
     class Meta:
         db_table = 'trade_sale_return_items'
+
+
+class DamageStock(models.Model):
+    """Trade 1.0 Damage Stock (Add) / Un-Damage Stock (Less) invoice.
+    add  (D-numbered): units leave saleable stock into damaged stock; voucher
+         Demage Inventory debit / Inventory credit at purchase rate.
+    less (U-numbered): damaged units go back into stock; the reverse voucher."""
+    KINDS = [('add', 'Damage Stock (Add)'), ('less', 'Damage Stock (Less)')]
+    number = models.CharField(max_length=20, unique=True, db_index=True)
+    kind = models.CharField(max_length=4, choices=KINDS)
+    date = models.DateField()
+    staff = models.ForeignKey(SalesStaff, on_delete=models.SET_NULL, null=True, blank=True, related_name='damage_stocks')
+    total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    voucher = models.ForeignKey(Voucher, on_delete=models.SET_NULL, null=True, blank=True, related_name='damage_stocks')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='created_damage_stocks')
+    created_at = models.DateTimeField(auto_now_add=True)
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_damage_stocks')
+
+    class Meta:
+        db_table = 'trade_damage_stock'
+        ordering = ['-date', '-id']
+
+
+class DamageStockItem(models.Model):
+    damage = models.ForeignKey(DamageStock, on_delete=models.CASCADE, related_name='items')
+    line = models.PositiveIntegerField(default=1)
+    product = models.ForeignKey('products.Product', on_delete=models.PROTECT, related_name='damage_items')
+    batch = models.ForeignKey('products.ProductBatch', on_delete=models.SET_NULL, null=True, blank=True, related_name='damage_items')
+    expiry_date = models.DateField(null=True, blank=True)
+    qty = models.IntegerField(default=0)   # pieces
+    pur_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    sale_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    retail_rate = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    class Meta:
+        db_table = 'trade_damage_stock_items'
+        ordering = ['line']

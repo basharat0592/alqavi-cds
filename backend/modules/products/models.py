@@ -31,6 +31,9 @@ class MainCategory(BaseModel):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
+        if self.code is None:
+            last = Category.objects.filter(tenant_id=self.tenant_id).aggregate(m=models.Max('code'))['m'] or 0
+            self.code = last + 1
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -49,6 +52,8 @@ class Category(BaseModel):
     slug = models.SlugField(max_length=255, blank=True)
     description = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ACTIVE')
+    # Legacy Trade 1.0 "Product Type Code" (CategID): 1, 2, 3 … per tenant, assigned on save.
+    code = models.PositiveIntegerField(null=True, blank=True)
     # Owning Admin (tenant) — per-Admin categories. NULL = global/shared (the
     # supplier & storefront taxonomy). Name & slug are unique per-tenant (Meta).
     tenant = models.ForeignKey(

@@ -33,15 +33,15 @@ type Menu = { title: string; items: MenuLink[] };
 const SEP: MenuLink = { sep: true };
 const MENUS: Menu[] = [
     { title: 'File', items: [
-        { label: 'Sale Man', disabled: true },
+        { label: 'Sale Man', href: '/admin/trade/staff' },
         SEP,
         { label: 'Log On', action: 'logon' },
         { label: 'Log Off', action: 'logoff' },
         { label: 'Exit', action: 'exit' },
     ] },
     { title: 'Product', items: [
-        { label: 'Companies', disabled: true },
-        { label: 'Product Category', disabled: true },
+        { label: 'Companies', href: '/admin/trade/companies' },
+        { label: 'Product Category', href: '/admin/trade/product-category' },
         { label: 'Product Detail', href: '/admin/trade/product-detail' },
         SEP,
         { label: 'Purchase Order', href: '/admin/trade/purchase-order' },
@@ -49,8 +49,8 @@ const MENUS: Menu[] = [
         { label: 'Purchase Stock', href: '/admin/trade/purchase' },
         { label: 'Purchase Return', disabled: true },
         SEP,
-        { label: 'Product Stock Damage', disabled: true },
-        { label: 'Product Stock Damage Reverse', disabled: true },
+        { label: 'Product Stock Damage', href: '/admin/trade/damage-stock' },
+        { label: 'Product Stock Damage Reverse', href: '/admin/trade/damage-reverse' },
         SEP,
         { label: 'Update Rates /  Expiry Date', href: '/admin/trade/update-rates' },
     ] },

@@ -105,7 +105,7 @@ const COA_VIEW_COLS = [
 
 /* Download rows as an Excel workbook (.xlsx). Numeric-looking IDs/codes are
    kept as text so leading digits and long codes stay exactly as shown. */
-function downloadXlsx(name: string, sheet: string, head: string[], rows: any[][]) {
+export function downloadXlsx(name: string, sheet: string, head: string[], rows: any[][]) {
     const data = [head, ...rows.map((r) => r.map((v) => (v === null || v === undefined ? '' : String(v))))];
     const ws = XLSX.utils.aoa_to_sheet(data);
     // Fit each column to its longest value (capped), like the legacy export.
