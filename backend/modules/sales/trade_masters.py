@@ -209,6 +209,7 @@ def _line_row(it, d):
     return {
         'damage_id': d.id, 'number': d.number, 'kind': d.kind, 'date': d.date, 'line': it.line,
         'pid': p.sku or '', 'name': p.product_name, 'carton': p.carton_qty or 0,
+        'category': p.category.name if p.category_id else '',
         'pack': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
         'expiry_date': it.expiry_date, 'qty': it.qty, 'pur_rate': it.pur_rate, 'sale_rate': it.sale_rate,
         'retail_rate': it.retail_rate, 'sub_total': _d(it.pur_rate) * it.qty,
@@ -660,14 +661,23 @@ class TradeFinancialYearViewSet(viewsets.ViewSet):
 # Dr / Inventory Cr), both at the purchase rate.
 
 CAPITAL_ACC = '31010001'
-OPENING_LETTER = {'oadd': 'B', 'oles': 'C'}
-LEGACY_LAST_OPENING = 'B24000027'
+STOCK_SHORT_EXCESS_ACC = '58010001'
+CASH_ACC = '12040001'
+CASH_SHORT_EXCESS_ACC = '58010002'
+# kind: (letter, last legacy number, voucher detail, voucher type, other account, stock comes in)
+STOCK_KINDS = {
+    'oadd': ('B', 'B24000027', 'OpStock Add', 'opening_stock_add', CAPITAL_ACC, True),
+    'oles': ('C', '', 'OpStock Less', 'opening_stock_less', CAPITAL_ACC, False),
+    'sexc': ('H', 'H26000048', 'Stock Excess ', 'stock_access', STOCK_SHORT_EXCESS_ACC, True),
+    'ssho': ('G', 'G26000023', 'Stock Short', 'stock_short', STOCK_SHORT_EXCESS_ACC, False),
+}
 
 
 def next_opening_no(kind, date=None):
-    prefix = f'{OPENING_LETTER[kind]}{(date or datetime.date.today()).strftime("%y")}'
+    letter, legacy = STOCK_KINDS[kind][0], STOCK_KINDS[kind][1]
+    prefix = f'{letter}{(date or datetime.date.today()).strftime("%y")}'
     last = DamageStock.objects.filter(number__startswith=prefix).aggregate(m=Max('number'))['m']
-    nums = [int(x[3:]) for x in (last, LEGACY_LAST_OPENING) if x and x.startswith(prefix) and x[3:].isdigit()]
+    nums = [int(x[3:]) for x in (last, legacy) if x and x.startswith(prefix) and x[3:].isdigit()]
     return f'{prefix}{(max(nums) if nums else 0) + 1:06d}'
 
 
@@ -679,7 +689,7 @@ class TradeOpeningStockViewSet(viewsets.ViewSet):
 
     def _kind(self, request):
         k = request.query_params.get('kind') or (request.data.get('kind') if request.method == 'POST' else None)
-        return 'oles' if k in ('oles', 'less') else 'oadd'
+        return k if k in STOCK_KINDS else 'oadd'
 
     @action(detail=False, methods=['get'])
     def next_no(self, request):
@@ -696,7 +706,7 @@ class TradeOpeningStockViewSet(viewsets.ViewSet):
         if q.get('date_to'):
             qs = qs.filter(date__lte=q['date_to'])
         items = (DamageStockItem.objects.filter(damage__in=qs)
-                 .select_related('damage__staff', 'damage__voucher', 'product__stock'))
+                 .select_related('damage__staff', 'damage__voucher', 'product__stock', 'product__category'))
         if q.get('pid'):
             items = items.filter(Q(product__sku__iexact=q['pid'].strip()) | Q(product__barcode__iexact=q['pid'].strip()))
         out = []
@@ -714,6 +724,7 @@ class TradeOpeningStockViewSet(viewsets.ViewSet):
         from modules.products.models import Product, ProductBatch
         d = request.data
         kind = self._kind(request)
+        incoming = STOCK_KINDS[kind][5]
         try:
             ddate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
         except ValueError:
@@ -733,7 +744,7 @@ class TradeOpeningStockViewSet(viewsets.ViewSet):
                 qty = int(_d(x.get('qty')))
                 if qty <= 0:
                     return Response({'detail': f'Enter Qty (U) for {p.product_name}.'}, status=400)
-                if kind == 'oadd':
+                if incoming:
                     pur, sale, retail = (_d(x.get(k)).quantize(Decimal('0.01')) for k in ('pur_rate', 'sale_rate', 'retail_rate'))
                     if pur <= 0:
                         return Response({'detail': f'Enter the Pur.Rate for {p.product_name}.'}, status=400)
@@ -770,7 +781,7 @@ class TradeOpeningStockViewSet(viewsets.ViewSet):
                                              bill_no=_clean(d.get('bill_no'), 50), total=total,
                                              created_by=request.user, tenant_id=tid)
             for i, (p, batch, exp, qty, pur, sale, retail) in enumerate(prepared, 1):
-                if kind == 'oadd':
+                if incoming:
                     batch = ProductBatch.objects.create(product=p, expiry_date=exp, quantity=0, cost_price=pur,
                                                         selling_price=sale or p.selling_price or 0,
                                                         retail_price=retail or p.original_price or 0)
@@ -779,17 +790,17 @@ class TradeOpeningStockViewSet(viewsets.ViewSet):
                                                            **({'original_price': retail} if retail else {}))
                 DamageStockItem.objects.create(damage=doc, line=i, product=p, batch=batch, expiry_date=exp, qty=qty,
                                                pur_rate=pur, sale_rate=sale, retail_rate=retail)
-                _move_stock(p, batch, qty if kind == 'oadd' else -qty)
+                _move_stock(p, batch, qty if incoming else -qty)
 
-            cap = accounts.filter(acc_id=CAPITAL_ACC).first()
+            _, _, text, vtype, other_acc, _ = STOCK_KINDS[kind]
+            cap = accounts.filter(acc_id=other_acc).first()
             inv = accounts.filter(acc_id=INVENTORY_ACC).first()
             if cap and inv and total > 0:
                 from .vouchers import VoucherViewSet
-                label = f'{"OpStock Add" if kind == "oadd" else "OpStock Less"}-{doc.number}'
-                v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(ddate),
-                                           vtype='opening_stock_add' if kind == 'oadd' else 'opening_stock_less',
+                label = f'{text}-{doc.number}'
+                v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(ddate), vtype=vtype,
                                            date=ddate, staff=staff, detail=label, total=total, created_by=request.user, tenant_id=tid)
-                dr, cr = (inv, cap) if kind == 'oadd' else (cap, inv)
+                dr, cr = (inv, cap) if incoming else (cap, inv)
                 VoucherLine.objects.create(voucher=v, line=1, account=dr, debit=total, credit=Z, detail=label)
                 VoucherLine.objects.create(voucher=v, line=2, account=cr, debit=Z, credit=total, detail=label)
                 doc.voucher = v
@@ -907,3 +918,59 @@ class TradeOpeningVoucherViewSet(viewsets.ViewSet):
                 VoucherLine.objects.create(voucher=v, line=n, account=cap, detail=detail,
                                            debit=amt if side == 'credit' else Z, credit=amt if side == 'debit' else Z)
         return Response({'voucher_no': v.voucher_no, 'total': total}, status=status.HTTP_201_CREATED)
+
+
+
+# ───────────────────────── Cash Access (Excess) / Cash Short ─────────────────────────
+
+class TradeCashShortExcessViewSet(viewsets.ViewSet):
+    """Cash Access (excess: Cash Dr / 58010002 Cr) and Cash Short (58010002 Dr /
+    Cash Cr) vouchers: an amount, date and staff."""
+    permission_classes = [permissions.IsAdminUser]
+    KINDS = {'access': ('cash_access', 'Cash Access'), 'short': ('cash_short', 'Cash Short')}
+
+    def _kind(self, request):
+        k = request.query_params.get('kind') or (request.data.get('kind') if request.method == 'POST' else None)
+        return 'short' if k == 'short' else 'access'
+
+    def list(self, request):
+        """View Cash Access / Short Voucher: ?kind, ?voucher_no, ?date_from, ?date_to."""
+        q = request.query_params
+        vtype, _ = self.KINDS[self._kind(request)]
+        qs = scope_to_tenant(request.user, Voucher.objects.filter(vtype=vtype), 'tenant').select_related('staff')
+        if q.get('voucher_no'):
+            qs = qs.filter(voucher_no__icontains=q['voucher_no'].strip())
+        if q.get('date_from'):
+            qs = qs.filter(date__gte=q['date_from'])
+        if q.get('date_to'):
+            qs = qs.filter(date__lte=q['date_to'])
+        return Response([{'voucher_no': v.voucher_no, 'date': v.date, 'amount': v.total, 'detail': v.detail,
+                          'staff': v.staff.name if v.staff_id else ''} for v in qs.order_by('-date', '-id')[:2000]])
+
+    def create(self, request):
+        from modules.company.models import LedgerAccount
+        from .vouchers import VoucherViewSet
+        d = request.data
+        kind = self._kind(request)
+        vtype, label = self.KINDS[kind]
+        amt = _d(d.get('amount')).quantize(Decimal('0.01'))
+        if amt <= 0:
+            return Response({'detail': 'Enter the Amount.'}, status=400)
+        try:
+            vdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant')
+        cash = accounts.filter(acc_id=CASH_ACC).first()
+        se = accounts.filter(acc_id=CASH_SHORT_EXCESS_ACC).first()
+        if not cash or not se:
+            return Response({'detail': 'The Cash (12040001) or Cash Short/Excess (58010002) account is missing.'}, status=400)
+        staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+        dr, cr = (cash, se) if kind == 'access' else (se, cash)
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(vdate), vtype=vtype, date=vdate, staff=staff,
+                                       detail=label, total=amt, created_by=request.user,
+                                       tenant_id=tenant_id_for(request.user) or cash.tenant_id)
+            VoucherLine.objects.create(voucher=v, line=1, account=dr, debit=amt, credit=Z, detail=label)
+            VoucherLine.objects.create(voucher=v, line=2, account=cr, debit=Z, credit=amt, detail=label)
+        return Response({'voucher_no': v.voucher_no, 'amount': amt}, status=status.HTTP_201_CREATED)

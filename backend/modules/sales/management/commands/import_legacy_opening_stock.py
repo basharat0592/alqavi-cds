@@ -1,11 +1,11 @@
-"""Import legacy Trade opening stock (B…) and damage (D…) invoices as history.
+"""Import legacy Trade opening stock (B…), damage (D…) and stock access / short (H… / G…) invoices as history.
 
 Reads OpStockDemAmt.csv (headers) + OpStockDem.csv (lines) from mdb-export.
-Each becomes a DamageStock (kind 'oadd' for B, 'add' for D, legacy=True) with
+Each becomes a DamageStock (kind 'oadd' for B, 'add' for D, 'sexc' for H stock
+access, 'ssho' for G stock short; legacy=True) with
 its lines, linked to the legacy voucher already imported ("OpStock Add-B…",
 "Demage Stock-D…"). Stock is not moved — the legacy stock was brought over
-as it stood. Re-running replaces only these imported rows. Other prefixes
-(G / H: stock and cash short / excess) are skipped.
+as it stood. Re-running replaces only these imported rows.
 
   python manage.py import_legacy_opening_stock --dir /tmp/legacy_dump [--tenant admin]
 """
@@ -21,7 +21,8 @@ from django.db import transaction
 from modules.products.models import Product
 from modules.sales.models import DamageStock, DamageStockItem, SalesStaff, Voucher
 
-KINDS = {'B': ('oadd', 'OpStock Add'), 'D': ('add', 'Demage Stock')}
+KINDS = {'B': ('oadd', 'OpStock Add'), 'D': ('add', 'Demage Stock'),
+         'H': ('sexc', 'Stock Access '), 'G': ('ssho', 'Stock Short')}
 
 
 def _money(v):
@@ -75,7 +76,7 @@ class Command(BaseCommand):
                     if num[:1] not in KINDS or DamageStock.objects.filter(number=num).exists():
                         continue
                     kind, label = KINDS[num[:1]]
-                    v = Voucher.objects.filter(tenant=tenant, detail=f'{label}-{num}').first()
+                    v = Voucher.objects.filter(tenant=tenant, detail__endswith=f'-{num}').first()  # wording varies (Stock Access / Stock Excess)
                     sid = int(h['StaffID']) if str(h.get('StaffID') or '').strip().isdigit() else None
                     doc = DamageStock.objects.create(
                         number=num, kind=kind, date=_date(h.get('OSDRDate')) or datetime.date.today(),

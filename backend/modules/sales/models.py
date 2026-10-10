@@ -833,7 +833,8 @@ class DamageStock(models.Model):
          Demage Inventory debit / Inventory credit at purchase rate.
     less (U-numbered): damaged units go back into stock; the reverse voucher."""
     KINDS = [('add', 'Damage Stock (Add)'), ('less', 'Damage Stock (Less)'),
-             ('oadd', 'Opening Stock (Add)'), ('oles', 'Opening Stock (Less)')]
+             ('oadd', 'Opening Stock (Add)'), ('oles', 'Opening Stock (Less)'),
+             ('sexc', 'Stock Access (Excess)'), ('ssho', 'Stock Short')]
     number = models.CharField(max_length=20, unique=True, db_index=True)
     kind = models.CharField(max_length=4, choices=KINDS)
     date = models.DateField()

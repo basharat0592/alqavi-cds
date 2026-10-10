@@ -259,7 +259,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         code = (request.query_params.get('code') or '').strip()
         q = (request.query_params.get('q') or '').strip()
         qs = (self.get_queryset().filter(status='ACTIVE')
-              .select_related('stock__product__company'))
+              .select_related('stock__product__company', 'category'))
         if code:
             qs = qs.filter(Q(sku__iexact=code) | Q(barcode__iexact=code))
         elif q:
@@ -284,6 +284,7 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'company': sp.company.name if (sp and sp.company_id) else '',
                 'packing': max(1, int(getattr(stock, 'items_per_carton', None) or 1)),
                 'carton': p.carton_qty or 0, 'expiry_apply': p.expiry_apply,
+                'category': p.category.name if p.category_id else '',
                 'stock': int(p.total_quantity or 0),
                 'cost_price': p.cost_price or 0, 'selling_price': p.selling_price or 0,
                 'retail_price': p.original_price or 0,

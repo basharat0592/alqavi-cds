@@ -1,7 +1,9 @@
 "use client";
 
 /*
- * Trade 1.0 — Opening Stock (Add) and Opening Stock (Less).
+ * Trade 1.0 — Opening Stock (Add) / (Less), and Short / Excess › Stock Access
+ * (excess, H-numbered, like Opening Stock Add with a GRoup column) / Stock Short
+ * (G-numbered, like Opening Stock Less, pink window).
  *
  * Add: Find Product (same window as in Sale) / PID → product, company; Expiry
  * Date (when the product has expiry), Qty (U), Pur.Rate / Sale Rate / Retail
@@ -35,10 +37,25 @@ const inYear = () => { const d = new Date(); d.setFullYear(d.getFullYear() + 1);
 
 type Lot = { key: string; batch: string; expiry_date: string | null; quantity: number; cost_price: any; selling_price: any; retail_price: any };
 type Prod = {
-    id: string; code: string; name: string; company: string; packing: number; stock: number; expiryApply: boolean;
+    id: string; code: string; name: string; company: string; group: string; packing: number; stock: number; expiryApply: boolean;
     cost: number; sale: number; retail: number; lots: Lot[];
 };
+export type StockKind = 'oadd' | 'oles' | 'sexc' | 'ssho';
+const CFG: Record<StockKind, {
+    incoming: boolean; win: string; legend: string; what: string; invLabel: string; viewTitle: string; viewId: string; bg: string; group?: boolean;
+}> = {
+    oadd: { incoming: true, win: '(Opening Stock)', legend: 'Opening Stock\u00a0\u00a0(Add)', what: 'Opening Stock (Add)', invLabel: 'Opening Stock Add. Inv',
+        viewTitle: 'View Opening Stock Detail', viewId: 'Opening.Inv ID', bg: '#c9c9f9' },
+    oles: { incoming: false, win: '(Opening Stock (Less) )', legend: 'Opening Stock\u00a0\u00a0(Less)', what: 'Opening Stock (Less)', invLabel: 'Op.Stock Less Inv.No',
+        viewTitle: 'View Opening Stock (Less) Detail', viewId: 'Op.Less Inv ID', bg: '#c9c9f9' },
+    sexc: { incoming: true, win: '(Stock Excess)', legend: 'Stock Access', what: 'Stock Access', invLabel: 'Stock Access  Inv',
+        viewTitle: 'View Stock Access  Detail', viewId: 'Stock Access.Inv ID', bg: '#c9c9f9', group: true },
+    ssho: { incoming: false, win: '( Stock Short )', legend: 'Stock\u00a0\u00a0Short', what: 'Stock Short', invLabel: 'Stock Short Inv.No',
+        viewTitle: 'View Stock Short  Detail', viewId: 'Short.Inv ID', bg: '#f5c2c2' },
+};
+
 type Line = {
+    group?: string;
     productId?: string; batch?: string; number?: string; date: string; pid: string; name: string; pack: number;
     expiry: string | null; qty: number; pur: number; sale: number; retail: number; bill: string; staff: string;
 };
@@ -48,9 +65,10 @@ const GREY = `${FIELD} flex h-7 w-full items-center justify-end border-slate-300
 const IN = `${EDIT} h-7 w-full !text-[12px] !font-normal`;
 const OFF = `${FIELD} h-7 w-full border-slate-300 bg-[#ececf3] !px-1.5 !text-[12px] !font-normal text-slate-400`;
 
-export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
-    const add = kind === 'oadd';
-    const WIN = add ? '(Opening Stock)' : '(Opening Stock (Less) )';
+export default function TradeOpeningStock({ kind }: { kind: StockKind }) {
+    const C = CFG[kind];
+    const add = C.incoming;
+    const WIN = C.win;
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
     const askClose = (fn: () => void, msg = 'Do you want to Close the Form ?') => setAsk({ msg, yes: fn });
     useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ${WIN}`; }, [WIN]);
@@ -112,7 +130,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
             if (!lots.length && num(p.stock) > 0) lots = [{ key: 'p', batch: '', expiry_date: null, quantity: num(p.stock), cost_price: p.cost_price, selling_price: p.selling_price, retail_price: p.retail_price }];
             if (!add && !lots.length) toast.error(`${p.name} has no stock to take out.`);
             setProd({
-                id: p.id, code: p.code, name: p.name, company: p.company, packing: num(p.packing) || 1, stock: num(p.stock),
+                id: p.id, code: p.code, name: p.name, company: p.company, group: p.category || '', packing: num(p.packing) || 1, stock: num(p.stock),
                 expiryApply: !!p.expiry_apply, cost: num(p.cost_price), sale: num(p.selling_price), retail: num(p.retail_price), lots,
             });
             setCode(p.code); setLotKey(lots[0]?.key || ''); setQty('');
@@ -131,13 +149,13 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
         if (add) {
             if (num(pur) <= 0) { toast.error('Enter the Pur.Rate.'); return; }
             if (prod.expiryApply && !exp) { toast.error('Choose the Expiry Date.'); return; }
-            line = { productId: prod.id, date, pid: prod.code, name: prod.name, pack: prod.packing, expiry: prod.expiryApply ? exp : null,
+            line = { productId: prod.id, date, pid: prod.code, group: prod.group, name: prod.name, pack: prod.packing, expiry: prod.expiryApply ? exp : null,
                 qty: q, pur: num(pur), sale: num(sale), retail: num(retail), bill: billNo, staff: staffName };
         } else {
             if (!lot) { toast.error('This product has no stock.'); return; }
             const left = lotLeft(lot);
             if (q > left) { toast.error(`Only ${left} in stock${lot.expiry_date ? ` (exp ${dmy(lot.expiry_date)})` : ''}.`); qtyRef.current?.select(); return; }
-            line = { productId: prod.id, batch: lot.batch || undefined, date, pid: prod.code, name: prod.name, pack: prod.packing,
+            line = { productId: prod.id, batch: lot.batch || undefined, date, pid: prod.code, group: prod.group, name: prod.name, pack: prod.packing,
                 expiry: lot.expiry_date, qty: q, pur: num(lot.cost_price), sale: num(lot.selling_price), retail: num(lot.retail_price), bill: billNo, staff: staffName };
         }
         setLines((ls) => [...ls, line]);
@@ -166,7 +184,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
         if (saving || viewing) return;
         if (!lines.length) { toast.error('Add a product.'); return; }
         setAsk({
-            msg: `Save ${add ? 'Opening Stock (Add)' : 'Opening Stock (Less)'} ${invNo} (${lines.length} item${lines.length === 1 ? '' : 's'}, ${fmt(amount)}) ?`,
+            msg: `Save ${C.what} ${invNo} (${lines.length} item${lines.length === 1 ? '' : 's'}, ${fmt(amount)}) ?`,
             yes: async () => {
                 setSaving(true);
                 try {
@@ -204,7 +222,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
             const { data } = await api.get('v1/sales/trade-opening-stock/', { params });
             setViewing(true); setSel(-1); setProd(null); setCode(''); setQty(''); setLotKey('');
             setLines(data.map((r: any) => ({
-                number: r.number, date: String(r.date).slice(0, 10), pid: r.pid, name: r.name, pack: num(r.pack), expiry: r.expiry_date,
+                number: r.number, date: String(r.date).slice(0, 10), pid: r.pid, group: r.category || '', name: r.name, pack: num(r.pack), expiry: r.expiry_date,
                 qty: num(r.qty), pur: num(r.pur_rate), sale: num(r.sale_rate), retail: num(r.retail_rate), bill: r.bill_no || '', staff: r.staff || '',
             })));
             const vs = Array.from(new Set(data.map((r: any) => r.voucher_no).filter(Boolean)));
@@ -226,14 +244,16 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
 
     const lbl = 'whitespace-nowrap text-[12px] font-medium text-[#1b1f4b]';
     const findBtn = 'h-7 shrink-0 whitespace-nowrap rounded-md border border-[#c9b85a] bg-gradient-to-b from-[#ffffd6] to-[#f4ef9c] px-2.5 text-[12px] font-semibold text-slate-800 shadow-sm hover:to-[#ece27a] active:translate-y-px disabled:opacity-50';
+    // Stock Access shows the product's GRoup (category) where the others show Packing.
+    const mid = C.group ? 'GRoup' : 'Packing';
     const heads = add
-        ? ['Inv.No', 'Date', 'SNo', 'PID', 'Product Name', 'Packing', 'Qty(U)', 'Exp.Date', 'Pur.Rate', 'Sale Rate', 'Retail.Rate', 'Sub Total', 'Bill no', 'Staff']
+        ? ['Inv.No', 'Date', 'SNo', 'PID', ...(C.group ? [mid, 'Product Name'] : ['Product Name', mid]), 'Qty(U)', 'Exp.Date', 'Pur.Rate', 'Sale Rate', 'Retail.Rate', 'Sub Total', 'Bill no', 'Staff']
         : ['Inv.No', 'Date', 'SNo', 'PID', 'Product Name', 'Packing', 'Exp.Date', 'Qty', 'P/Rate', 'S/Rate', 'R/Rate', 'Sub Total'];
-    const widths = add ? [8, 7, 4, 5, 19, 5, 5, 7, 6, 6, 6, 8, 6, 8] : [9, 9, 4, 6, 23, 6, 9, 6, 7, 7, 7, 9];
+    const widths = add ? (C.group ? [8, 7, 4, 5, 7, 18, 5, 7, 6, 6, 6, 8, 5, 8] : [8, 7, 4, 5, 19, 5, 5, 7, 6, 6, 6, 8, 6, 8]) : [9, 9, 4, 6, 23, 6, 9, 6, 7, 7, 7, 9];
     const cells = (l: Line, i: number) => (add
-        ? [l.number || invNo, dmy(l.date), i + 1, l.pid, pn(l.name), l.pack, fmt(l.qty), dmy(l.expiry), fmt(l.pur), fmt(l.sale), fmt(l.retail), fmt(l.qty * l.pur), l.bill, l.staff]
+        ? [l.number || invNo, dmy(l.date), i + 1, l.pid, ...(C.group ? [l.group || '', pn(l.name)] : [pn(l.name), l.pack]), fmt(l.qty), dmy(l.expiry), fmt(l.pur), fmt(l.sale), fmt(l.retail), fmt(l.qty * l.pur), l.bill, l.staff]
         : [l.number || invNo, dmy(l.date), i + 1, l.pid, pn(l.name), l.pack, dmy(l.expiry), fmt(l.qty), fmt(l.pur), fmt(l.sale), fmt(l.retail), fmt(l.qty * l.pur)]);
-    const rightAlign = (k: number) => (add ? [2, 5, 6, 8, 9, 10, 11].includes(k) : [2, 5, 7, 8, 9, 10, 11].includes(k));
+    const rightAlign = (k: number) => (add ? [2, ...(C.group ? [] : [5]), 6, 8, 9, 10, 11].includes(k) : [2, 5, 7, 8, 9, 10, 11].includes(k));
     const dis = viewing;
 
     const grid = (
@@ -259,9 +279,9 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
                 <div className="absolute inset-0 flex items-start justify-center bg-slate-900/20 pt-8"
                     onKeyDown={(e) => { if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'BUTTON') { e.preventDefault(); runView(); } }}>
                     <fieldset className="w-[560px] rounded-md border-2 border-[#1f2bd6] bg-[#e4e4fb] px-5 pb-4 pt-1 shadow-xl">
-                        <legend className="px-2 text-[14px] font-semibold text-[#1f2bd6]">{add ? 'View Opening Stock Detail' : 'View Opening Stock (Less) Detail'}</legend>
+                        <legend className="px-2 text-[14px] font-semibold text-[#1f2bd6]">{C.viewTitle}</legend>
                         <div className="grid grid-cols-[130px_24px_minmax(0,1fr)_130px] items-center gap-x-3 gap-y-2.5">
-                            <span className="text-[12.5px] text-[#1b1f4b]">{add ? 'Opening.Inv ID' : 'Op.Less Inv ID'}</span><span />
+                            <span className="text-[12.5px] text-[#1b1f4b]">{C.viewId}</span><span />
                             <input autoFocus value={vNo} onChange={(e) => setVNo(e.target.value)} placeholder="All" className={IN} /><span />
                             <button type="button" onClick={() => { setFindFor('view'); setFindProd(true); }} className={findBtn}>Find Product</button><span />
                             <input value={vPid} onChange={(e) => setVPid(e.target.value)} placeholder="Any product (PID / bar code)" className={IN} /><span />
@@ -311,7 +331,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
     );
 
     return (
-        <div className="h-screen overflow-hidden bg-[#c9c9f9] font-sans text-slate-900">
+        <div className="h-screen overflow-hidden font-sans text-slate-900" style={{ background: C.bg }}>
             <FitStage width={1320} height={680} className="flex flex-col overflow-hidden">
                 <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1">
                     <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[10px] font-black text-white">AQ</span>
@@ -321,7 +341,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
                 {add ? (
                     <div className="flex min-h-0 flex-1 flex-col gap-2 p-2.5">
                         <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#d9d9fb] px-2 pb-2 pt-0">
-                            <legend className="px-1 text-[20px] font-bold text-[#1f2bd6]">Opening Stock&nbsp;&nbsp;(Add)</legend>
+                            <legend className="px-1 text-[20px] font-bold text-[#1f2bd6]">{C.legend}</legend>
                             {productRow}
                             <div className="mt-1.5 grid grid-cols-[repeat(4,minmax(0,1fr))_110px_150px_150px_minmax(0,0.6fr)] items-end gap-2">
                                 {['Qty (U)', 'Pur.Rate', 'Sale Rate', 'Retail Rate', 'Packing', 'Stock in Hand', 'Net Amt. Prod-wise', ''].map((h, i) => <span key={i} className={lbl}>{h}</span>)}
@@ -354,7 +374,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
                                 <div className="flex h-8 items-center justify-center rounded-md bg-black font-mono text-[13px] text-[#3cff5a]">{voucherNo}</div>
                             </div>
                             <div>
-                                <div className={`${LABEL} mb-0.5 text-[13px]`}>Opening Stock Add. Inv</div>
+                                <div className={`${LABEL} mb-0.5 text-[13px]`}>{C.invLabel}</div>
                                 <div className={`${FIELD} flex h-8 items-center justify-center border-slate-300 bg-[#e6e6ee] font-mono !text-[14px] text-[#1f2bd6]`}>{shownInv}</div>
                             </div>
                             <span />
@@ -374,7 +394,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
                     <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_230px] gap-2.5 p-2.5">
                         <div className="flex min-h-0 flex-col gap-2">
                             <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#d9d9fb] px-2 pb-2 pt-0">
-                                <legend className="px-1 text-[20px] font-bold text-[#1f2bd6]">Opening Stock&nbsp;&nbsp;(Less)</legend>
+                                <legend className="px-1 text-[20px] font-bold text-[#1f2bd6]">{C.legend}</legend>
                                 {productRow}
                                 <div className="mt-1.5 grid grid-cols-[110px_repeat(3,minmax(0,1fr))_170px_minmax(0,1fr)_100px_100px] items-end gap-2">
                                     {['Qty (U)', 'Pur.Rate', 'Sale Rate', 'Retail Rate', 'Exp Date', 'Sub Total', 'Stock', 'Packing'].map((h) => <span key={h} className={lbl}>{h}</span>)}
@@ -400,7 +420,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
                                 <input value={billNo} disabled={dis} onChange={(e) => setBillNo(e.target.value)} maxLength={50} className={IN} />
                                 <span className={lbl}>Staff</span>
                                 {staffSelect}
-                                <div className="flex h-7 items-center justify-center rounded-md border border-slate-400 bg-[#e1e1e8] text-[13px] font-semibold text-[#1f2bd6]">Opening Stock (Less)</div>
+                                <div className="flex h-7 items-center justify-center rounded-md border border-slate-400 bg-[#e1e1e8] text-[13px] font-semibold text-[#1f2bd6]">{C.what}</div>
                             </div>
                             {grid}
                         </div>
@@ -412,7 +432,7 @@ export default function TradeOpeningStock({ kind }: { kind: 'oadd' | 'oles' }) {
                             </div>
                             <ReadBox value={<span className="w-full text-center text-[#1f2bd6]">Total Products = {lines.length}</span>} className="h-8 !text-[13px] !font-semibold" />
                             <div>
-                                <div className={`${LABEL} mb-0.5 text-[13px]`}>Op.Stock Less Inv.No</div>
+                                <div className={`${LABEL} mb-0.5 text-[13px]`}>{C.invLabel}</div>
                                 <div className={`${FIELD} flex h-8 items-center justify-center border-slate-300 bg-[#e6e6ee] font-mono !text-[14px] text-[#1f2bd6]`}>{shownInv}</div>
                             </div>
                             <div>
