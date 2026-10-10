@@ -74,6 +74,10 @@ class VoucherLine(models.Model):
     # Customer receipts: the part not applied to unpaid invoices (customer credit).
     unallocated = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     detail = models.CharField(max_length=255, blank=True, default='')
+    # Opening Assets: a cheque / bank per line.
+    chq_no = models.CharField(max_length=40, blank=True, default='')
+    bank = models.CharField(max_length=80, blank=True, default='')
+    chq_date = models.DateField(null=True, blank=True)
 
     class Meta:
         db_table = 'trade_voucher_lines'
@@ -828,11 +832,14 @@ class DamageStock(models.Model):
     add  (D-numbered): units leave saleable stock into damaged stock; voucher
          Demage Inventory debit / Inventory credit at purchase rate.
     less (U-numbered): damaged units go back into stock; the reverse voucher."""
-    KINDS = [('add', 'Damage Stock (Add)'), ('less', 'Damage Stock (Less)')]
+    KINDS = [('add', 'Damage Stock (Add)'), ('less', 'Damage Stock (Less)'),
+             ('oadd', 'Opening Stock (Add)'), ('oles', 'Opening Stock (Less)')]
     number = models.CharField(max_length=20, unique=True, db_index=True)
     kind = models.CharField(max_length=4, choices=KINDS)
     date = models.DateField()
     staff = models.ForeignKey(SalesStaff, on_delete=models.SET_NULL, null=True, blank=True, related_name='damage_stocks')
+    bill_no = models.CharField(max_length=50, blank=True, default='')
+    legacy = models.BooleanField(default=False)   # imported from the legacy OpStockDem tables
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     voucher = models.ForeignKey(Voucher, on_delete=models.SET_NULL, null=True, blank=True, related_name='damage_stocks')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

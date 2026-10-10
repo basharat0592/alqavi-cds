@@ -7,7 +7,7 @@ from .views import (
 from .trade_returns import TradeSaleReturnViewSet
 from .vouchers import VoucherViewSet
 from .trade_purchases import TradePurchaseViewSet, TradePurchaseOrderViewSet, TradePurchaseReturnViewSet
-from .trade_masters import TradeStaffViewSet, TradeCategoryViewSet, TradeDamageViewSet, TradeAreaViewSet, TradeAccountGroupViewSet, TradeFinancialYearViewSet
+from .trade_masters import TradeStaffViewSet, TradeCategoryViewSet, TradeDamageViewSet, TradeAreaViewSet, TradeAccountGroupViewSet, TradeFinancialYearViewSet, TradeOpeningStockViewSet, TradeOpeningVoucherViewSet
 from .invoice_share import public_invoice
 from .reports import (
     report_by_area, report_by_user, report_statements, report_returns_summary,
@@ -24,6 +24,8 @@ router.register(r'trade-purchase-orders', TradePurchaseOrderViewSet, basename='t
 router.register(r'trade-purchase-returns', TradePurchaseReturnViewSet, basename='trade-purchase-return')
 router.register(r'trade-account-groups', TradeAccountGroupViewSet, basename='trade-account-group')
 router.register(r'trade-financial-years', TradeFinancialYearViewSet, basename='trade-financial-year')
+router.register(r'trade-opening-stock', TradeOpeningStockViewSet, basename='trade-opening-stock')
+router.register(r'trade-opening-vouchers', TradeOpeningVoucherViewSet, basename='trade-opening-voucher')
 router.register(r'trade-areas', TradeAreaViewSet, basename='trade-area')
 router.register(r'trade-staff', TradeStaffViewSet, basename='trade-staff')
 router.register(r'trade-categories', TradeCategoryViewSet, basename='trade-category')

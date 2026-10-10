@@ -181,7 +181,7 @@ def next_damage_no(kind, date=None):
 def _damaged_by_expiry(product):
     """Damaged units still held for a product, per expiry date (add − less)."""
     out = {}
-    for kind, exp, q in (DamageStockItem.objects.filter(product=product)
+    for kind, exp, q in (DamageStockItem.objects.filter(product=product, damage__kind__in=['add', 'less'])
                          .values_list('damage__kind', 'expiry_date').annotate(q=Sum('qty'))):
         out[exp] = out.get(exp, 0) + (q if kind == 'add' else -q)
     return {k: v for k, v in out.items() if v > 0}
@@ -263,6 +263,7 @@ class TradeDamageViewSet(viewsets.ViewSet):
             items = items.filter(Q(product__sku__iexact=q['pid'].strip()) | Q(product__barcode__iexact=q['pid'].strip()))
         items = items.order_by('-damage__date', '-damage_id', 'line')[:3000]
         return Response([_line_row(it, it.damage) for it in items])
+
 
     def create(self, request):
         """Body: {kind, date?, staff?, lines: [{product, batch?, expiry_date?, qty}]} — qty in pieces."""
@@ -649,3 +650,260 @@ class TradeFinancialYearViewSet(viewsets.ViewSet):
             return Response({'detail': 'The Active financial year cannot be deleted.'}, status=400)
         y.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+# ───────────────────────── Opening Stock (Add) / (Less) ─────────────────────────
+# Same invoice tables as Damage Stock, kinds 'oadd' (B-numbered, legacy last
+# B24000027) and 'oles' (C-numbered). Add puts new stock batches in at the rates
+# entered (Inventory Dr / Capital Cr); Less takes units out of a batch (Capital
+# Dr / Inventory Cr), both at the purchase rate.
+
+CAPITAL_ACC = '31010001'
+OPENING_LETTER = {'oadd': 'B', 'oles': 'C'}
+LEGACY_LAST_OPENING = 'B24000027'
+
+
+def next_opening_no(kind, date=None):
+    prefix = f'{OPENING_LETTER[kind]}{(date or datetime.date.today()).strftime("%y")}'
+    last = DamageStock.objects.filter(number__startswith=prefix).aggregate(m=Max('number'))['m']
+    nums = [int(x[3:]) for x in (last, LEGACY_LAST_OPENING) if x and x.startswith(prefix) and x[3:].isdigit()]
+    return f'{prefix}{(max(nums) if nums else 0) + 1:06d}'
+
+
+class TradeOpeningStockViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAdminUser]
+
+    def _qs(self):
+        return scope_to_tenant(self.request.user, DamageStock.objects.all(), 'tenant')
+
+    def _kind(self, request):
+        k = request.query_params.get('kind') or (request.data.get('kind') if request.method == 'POST' else None)
+        return 'oles' if k in ('oles', 'less') else 'oadd'
+
+    @action(detail=False, methods=['get'])
+    def next_no(self, request):
+        return Response({'number': next_opening_no(self._kind(request))})
+
+    def list(self, request):
+        """View Opening Stock Detail: ?kind, ?number, ?pid, ?date_from, ?date_to -> lines."""
+        q = request.query_params
+        qs = self._qs().filter(kind=self._kind(request))
+        if q.get('number'):
+            qs = qs.filter(number__icontains=q['number'].strip())
+        if q.get('date_from'):
+            qs = qs.filter(date__gte=q['date_from'])
+        if q.get('date_to'):
+            qs = qs.filter(date__lte=q['date_to'])
+        items = (DamageStockItem.objects.filter(damage__in=qs)
+                 .select_related('damage__staff', 'damage__voucher', 'product__stock'))
+        if q.get('pid'):
+            items = items.filter(Q(product__sku__iexact=q['pid'].strip()) | Q(product__barcode__iexact=q['pid'].strip()))
+        out = []
+        for it in items.order_by('-damage__date', '-damage_id', 'line')[:3000]:
+            r = _line_row(it, it.damage)
+            r['bill_no'] = it.damage.bill_no
+            out.append(r)
+        return Response(out)
+
+    def create(self, request):
+        """Body: {kind, date?, bill_no?, staff?, lines: [...]}.
+        oadd lines: {product, qty, expiry_date?, pur_rate, sale_rate, retail_rate}.
+        oles lines: {product, batch?, qty} (rates from the batch)."""
+        from modules.company.models import LedgerAccount
+        from modules.products.models import Product, ProductBatch
+        d = request.data
+        kind = self._kind(request)
+        try:
+            ddate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        if ddate > datetime.date.today():
+            return Response({'detail': 'The date cannot be in the future.'}, status=400)
+        staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+        products = scope_to_tenant(request.user, Product.objects.all(), 'tenant').select_related('stock__product')
+        accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant')
+        tid = tenant_id_for(request.user)
+        with transaction.atomic():
+            prepared, need = [], {}
+            for x in d.get('lines') or []:
+                p = products.filter(pk=x.get('product')).first()
+                if not p:
+                    return Response({'detail': 'One of the products was not found.'}, status=400)
+                qty = int(_d(x.get('qty')))
+                if qty <= 0:
+                    return Response({'detail': f'Enter Qty (U) for {p.product_name}.'}, status=400)
+                if kind == 'oadd':
+                    pur, sale, retail = (_d(x.get(k)).quantize(Decimal('0.01')) for k in ('pur_rate', 'sale_rate', 'retail_rate'))
+                    if pur <= 0:
+                        return Response({'detail': f'Enter the Pur.Rate for {p.product_name}.'}, status=400)
+                    if min(sale, retail) < 0:
+                        return Response({'detail': 'Rates cannot be negative.'}, status=400)
+                    exp = None
+                    if x.get('expiry_date'):
+                        try:
+                            exp = datetime.date.fromisoformat(str(x['expiry_date'])[:10])
+                        except ValueError:
+                            return Response({'detail': f'Invalid expiry date for {p.product_name}.'}, status=400)
+                    if p.expiry_apply and not exp:
+                        return Response({'detail': f'Choose the expiry date for {p.product_name}.'}, status=400)
+                    prepared.append((p, None, exp, qty, pur, sale, retail))
+                else:
+                    batch = None
+                    if x.get('batch'):
+                        batch = ProductBatch.objects.select_for_update().filter(pk=x['batch'], product=p).first()
+                        if not batch:
+                            return Response({'detail': f'The stock batch of {p.product_name} was not found.'}, status=400)
+                    key = batch.id if batch else p.id
+                    have = batch.quantity if batch else int(p.total_quantity or 0)
+                    need[key] = need.get(key, 0) + qty
+                    if need[key] > have:
+                        return Response({'detail': f'Only {have} in stock for {p.product_name}.'}, status=400)
+                    prepared.append((p, batch, batch.expiry_date if batch else None, qty,
+                                     _d(batch.cost_price if batch and batch.cost_price else p.cost_price),
+                                     _d(batch.selling_price if batch and batch.selling_price else p.selling_price),
+                                     _d(batch.retail_price if batch and batch.retail_price else p.original_price)))
+            if not prepared:
+                return Response({'detail': 'Add at least one product.'}, status=400)
+            total = sum((pur * qty for _, _, _, qty, pur, _, _ in prepared), Z).quantize(Decimal('0.01'))
+            doc = DamageStock.objects.create(number=next_opening_no(kind, ddate), kind=kind, date=ddate, staff=staff,
+                                             bill_no=_clean(d.get('bill_no'), 50), total=total,
+                                             created_by=request.user, tenant_id=tid)
+            for i, (p, batch, exp, qty, pur, sale, retail) in enumerate(prepared, 1):
+                if kind == 'oadd':
+                    batch = ProductBatch.objects.create(product=p, expiry_date=exp, quantity=0, cost_price=pur,
+                                                        selling_price=sale or p.selling_price or 0,
+                                                        retail_price=retail or p.original_price or 0)
+                    # The rates entered become the product's current rates (as on a purchase).
+                    Product.objects.filter(pk=p.pk).update(cost_price=pur, **({'selling_price': sale} if sale else {}),
+                                                           **({'original_price': retail} if retail else {}))
+                DamageStockItem.objects.create(damage=doc, line=i, product=p, batch=batch, expiry_date=exp, qty=qty,
+                                               pur_rate=pur, sale_rate=sale, retail_rate=retail)
+                _move_stock(p, batch, qty if kind == 'oadd' else -qty)
+
+            cap = accounts.filter(acc_id=CAPITAL_ACC).first()
+            inv = accounts.filter(acc_id=INVENTORY_ACC).first()
+            if cap and inv and total > 0:
+                from .vouchers import VoucherViewSet
+                label = f'{"OpStock Add" if kind == "oadd" else "OpStock Less"}-{doc.number}'
+                v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(ddate),
+                                           vtype='opening_stock_add' if kind == 'oadd' else 'opening_stock_less',
+                                           date=ddate, staff=staff, detail=label, total=total, created_by=request.user, tenant_id=tid)
+                dr, cr = (inv, cap) if kind == 'oadd' else (cap, inv)
+                VoucherLine.objects.create(voucher=v, line=1, account=dr, debit=total, credit=Z, detail=label)
+                VoucherLine.objects.create(voucher=v, line=2, account=cr, debit=Z, credit=total, detail=label)
+                doc.voucher = v
+                doc.save(update_fields=['voucher'])
+        return Response({'id': doc.id, 'number': doc.number, 'voucher_no': doc.voucher.voucher_no if doc.voucher_id else '',
+                         'total': total}, status=status.HTTP_201_CREATED)
+
+
+# ───────────────────────── Opening Assets / Receivables / Liabilities ─────────────────────────
+
+OPENING_KINDS = {
+    # kind: (vtype, detail, account filter, account side)
+    'assets': ('opening_assets', 'Opening Balance of Assets', 'debit'),
+    'receivables': ('opening_receivables', 'Opening Balance of Receiveables', 'debit'),
+    'liabilities': ('opening_liabilities', 'Opening Balance of Liabilities', 'credit'),
+}
+
+
+class TradeOpeningVoucherViewSet(viewsets.ViewSet):
+    """Opening Assets (an asset account Dr, Capital Cr), Opening Receivables (a
+    customer Dr, Capital Cr) and Opening Liabilities (a supplier / liability
+    account Cr, Capital Dr) — one voucher, each line with its Capital line. A
+    customer's or supplier's opening amount is added to their balance."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def _kind(self, request):
+        k = request.query_params.get('kind') or (request.data.get('kind') if request.method == 'POST' else None)
+        return k if k in OPENING_KINDS else 'assets'
+
+    @staticmethod
+    def _allowed(kind, acc):
+        g = str(acc.group.code if acc.group_id else '')
+        if kind == 'assets':
+            return g.startswith('1') and g != '1202'
+        if kind == 'receivables':
+            return g == '1202'
+        return g.startswith('2')
+
+    @action(detail=False, methods=['get'])
+    def accounts(self, request):
+        """Accounts the Find Account window lists for this kind."""
+        from modules.company.models import LedgerAccount
+        kind = self._kind(request)
+        qs = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant').select_related('group', 'area')
+        return Response([{'id': a.id, 'acc_id': a.acc_id, 'name': a.name, 'group': a.group.code if a.group_id else None,
+                          'area': a.area.name if a.area_id else '', 'cell': getattr(a, 'cell', '') or ''}
+                         for a in qs.order_by('acc_id') if self._allowed(kind, a)])
+
+    def list(self, request):
+        """View Opening … Voucher Detail: ?kind, ?voucher_no, ?date_from, ?date_to -> lines."""
+        q = request.query_params
+        kind = self._kind(request)
+        vqs = scope_to_tenant(request.user, Voucher.objects.filter(vtype=OPENING_KINDS[kind][0]), 'tenant')
+        if q.get('voucher_no'):
+            vqs = vqs.filter(voucher_no__icontains=q['voucher_no'].strip())
+        if q.get('date_from'):
+            vqs = vqs.filter(date__gte=q['date_from'])
+        if q.get('date_to'):
+            vqs = vqs.filter(date__lte=q['date_to'])
+        lines = (VoucherLine.objects.filter(voucher__in=vqs).exclude(account__acc_id=CAPITAL_ACC)
+                 .select_related('voucher__staff', 'account').order_by('-voucher__date', '-voucher_id', 'line')[:3000])
+        return Response([{
+            'voucher_no': l.voucher.voucher_no, 'date': l.voucher.date, 'acc_id': l.account.acc_id, 'account': l.account.name,
+            'chq_no': l.chq_no, 'bank': l.bank, 'chq_date': l.chq_date, 'detail': l.detail,
+            'amount': l.debit or l.credit, 'staff': l.voucher.staff.name if l.voucher.staff_id else '',
+        } for l in lines])
+
+    def create(self, request):
+        """Body: {kind, date?, staff?, lines: [{account, amount, chq_no?, bank?, chq_date?}]}."""
+        from modules.company.models import LedgerAccount
+        from .vouchers import VoucherViewSet
+        d = request.data
+        kind = self._kind(request)
+        vtype, detail, side = OPENING_KINDS[kind]
+        try:
+            vdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant').select_related('group')
+        cap = accounts.filter(acc_id=CAPITAL_ACC).first()
+        if not cap:
+            return Response({'detail': 'The Capital account (31010001) is missing from the Chart of Accounts.'}, status=400)
+        prepared = []
+        for x in d.get('lines') or []:
+            acc = accounts.filter(pk=x.get('account')).first()
+            if not acc or not self._allowed(kind, acc):
+                return Response({'detail': 'One of the accounts cannot take this opening balance.'}, status=400)
+            amt = _d(x.get('amount')).quantize(Decimal('0.01'))
+            if amt <= 0:
+                return Response({'detail': f'Enter the amount for {acc.name}.'}, status=400)
+            cd = None
+            if x.get('chq_date'):
+                try:
+                    cd = datetime.date.fromisoformat(str(x['chq_date'])[:10])
+                except ValueError:
+                    return Response({'detail': 'Invalid cheque date.'}, status=400)
+            prepared.append((acc, amt, _clean(x.get('chq_no'), 40), _clean(x.get('bank'), 80), cd))
+        if not prepared:
+            return Response({'detail': 'Add at least one account.'}, status=400)
+        staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+        total = sum((a for _, a, _, _, _ in prepared), Z)
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(vdate), vtype=vtype, date=vdate, staff=staff,
+                                       detail=detail, total=total, created_by=request.user,
+                                       tenant_id=tenant_id_for(request.user) or cap.tenant_id)
+            n = 0
+            for acc, amt, chq, bank, cd in prepared:
+                # A customer's / supplier's opening amount counts as owed (negative unallocated).
+                owed = -amt if (acc.customer_id or acc.supplier_id) else Z
+                n += 1
+                VoucherLine.objects.create(voucher=v, line=n, account=acc, detail=detail, chq_no=chq, bank=bank, chq_date=cd,
+                                           debit=amt if side == 'debit' else Z, credit=amt if side == 'credit' else Z,
+                                           unallocated=owed)
+                n += 1
+                VoucherLine.objects.create(voucher=v, line=n, account=cap, detail=detail,
+                                           debit=amt if side == 'credit' else Z, credit=amt if side == 'debit' else Z)
+        return Response({'voucher_no': v.voucher_no, 'total': total}, status=status.HTTP_201_CREATED)
