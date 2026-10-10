@@ -8,7 +8,8 @@
  * Pur.Rate / Retail Rate / S.R % / Sale Rate / %Profit Retail / %Profit TP /
  * Sub Total / Stock / Packing. Middle: Find Supp (supplier accounts, Find
  * Account window with Add New → Chart of Account), Date, Bill.No, Extra Disc,
- * Freight, Extra Tax Amt, Paid Cash, Staff, Show Previous Purchase History.
+ * Freight (city to city), Fare, Goods, Extra Tax Amt, Paid Cash, Staff, Show
+ * Previous Purchase History.
  * Grid of lines; history grid below. Right: Amt purchase / Amt Bonus / Net
  * Amount / Balance, Add / Remove, Total Products, Purchase.Inv, Voucher No,
  * Save / View / Cancel. Saving adds a stock batch per line.
@@ -148,6 +149,8 @@ export default function TradePurchase() {
     const [billNo, setBillNo] = useState('');
     const [extraDisc, setExtraDisc] = useState('');
     const [freight, setFreight] = useState('');
+    const [fare, setFare] = useState('');
+    const [goods, setGoods] = useState('');
     const [tax, setTax] = useState('');
     const [paid, setPaid] = useState('');
     const [staffId, setStaffId] = useState('');
@@ -185,7 +188,7 @@ export default function TradePurchase() {
     };
     const amtPurchase = lines.reduce((s, l) => s + l.qty * l.pur, 0);
     const amtBonus = lines.reduce((s, l) => s + l.bonus * l.pur, 0);
-    const net = amtPurchase - num(extraDisc) + num(freight) + num(tax);
+    const net = amtPurchase - num(extraDisc) + num(freight) + num(fare) + num(goods) + num(tax);
     const balance = supBal + net - num(paid);
     const totalPieces = lines.reduce((s, l) => s + l.qty, 0);
     const totalBonus = lines.reduce((s, l) => s + l.bonus, 0);
@@ -210,7 +213,7 @@ export default function TradePurchase() {
     const missing = [!sup && 'the supplier', !lines.length && 'a product line'].filter(Boolean) as string[];
     const resetForm = () => {
         setLines([]); setSel(-1); setProd(null); setCode(''); setE({ ...EMPTY }); setSup(null); setSupCode(''); setSupBal(0);
-        setBillNo(''); setExtraDisc(''); setFreight(''); setTax(''); setPaid(''); setStaffId(''); setDate(today()); setHistory([]); loadNo();
+        setBillNo(''); setExtraDisc(''); setFreight(''); setFare(''); setGoods(''); setTax(''); setPaid(''); setStaffId(''); setDate(today()); setHistory([]); loadNo();
     };
     const [saving, setSaving] = useState(false);
     const save = () => {
@@ -223,7 +226,7 @@ export default function TradePurchase() {
                 setSaving(true);
                 try {
                     const { data } = await api.post('v1/sales/trade-purchases/', {
-                        supplier: sup!.id, date, bill_no: billNo.trim(), extra_disc: num(extraDisc), freight: num(freight), tax: num(tax),
+                        supplier: sup!.id, date, bill_no: billNo.trim(), extra_disc: num(extraDisc), freight: num(freight), fare: num(fare), goods: num(goods), tax: num(tax),
                         paid: num(paid), staff: staffId || null,
                         lines: lines.map((l) => ({ product: l.product.id, qty: l.qty, bonus: l.bonus, expiry_date: l.expiry,
                             pur_rate: l.pur, sale_rate: l.sale, retail_rate: l.retail })),
@@ -320,11 +323,15 @@ export default function TradePurchase() {
                                     <input type="date" value={date} max={today()} onChange={(ev) => ev.target.value && setDate(ev.target.value)} className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
                                     <ReadBox value={sup ? sup.name : ''} className="h-7 !text-[12px] !font-normal" />
                                 </div>
-                                <div className="grid grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,1.6fr)] items-end gap-2">
-                                    {['Bill.No', 'Extra Disc', 'Freight', 'Extra Tax Amt', 'Paid Cash', 'Staff'].map((h) => <span key={h} className={lbl}>{h}</span>)}
+                                <div className="grid grid-cols-[minmax(0,1.2fr)_repeat(6,minmax(0,1fr))_minmax(0,1.6fr)] items-end gap-2">
+                                    {['Bill.No', 'Extra Disc', 'Freight', 'Fare', 'Goods', 'Extra Tax Amt', 'Paid Cash', 'Staff'].map((h) => (
+                                        <span key={h} className={lbl} title={h === 'Freight' ? 'Freight (city to city)' : undefined}>{h}</span>
+                                    ))}
                                     <input value={billNo} onChange={(ev) => setBillNo(ev.target.value)} maxLength={50} className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
                                     <input value={extraDisc} onChange={(ev) => setExtraDisc(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
-                                    <input value={freight} onChange={(ev) => setFreight(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
+                                    <input value={freight} onChange={(ev) => setFreight(ev.target.value.replace(/[^\d.]/g, ''))} title="Freight (city to city)" className={SMALL} />
+                                    <input value={fare} onChange={(ev) => setFare(ev.target.value.replace(/[^\d.]/g, ''))} title="Fare" className={SMALL} />
+                                    <input value={goods} onChange={(ev) => setGoods(ev.target.value.replace(/[^\d.]/g, ''))} title="Goods" className={SMALL} />
                                     <input value={tax} onChange={(ev) => setTax(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
                                     <input value={paid} onChange={(ev) => setPaid(ev.target.value.replace(/[^\d.]/g, ''))} className={SMALL} />
                                     <select value={staffId} onChange={(ev) => setStaffId(ev.target.value)} className={`${COA_SELECT} h-7 !text-[12px] !font-normal`}>

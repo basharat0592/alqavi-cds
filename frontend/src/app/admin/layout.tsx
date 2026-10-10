@@ -429,7 +429,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         return (
             <AuthGuard allowedRoles={['admin', 'staff']}>
                 <div className={cn("h-screen bg-[#F7F7F5] font-sans text-[#1A1A1A] print:h-auto",
-                    isDashboardRoute ? "overflow-hidden" : "overflow-auto print:overflow-visible", theme)}>
+                    isDashboardRoute ? "overflow-hidden" : "overflow-auto print:overflow-visible", theme)}
+                    // Trade 1.0 windows: square boxes and buttons, like the desktop program (not the printed invoice).
+                    data-trade-ui={pathname?.startsWith('/admin/trade/') && !pathname.startsWith('/admin/trade/invoice') ? '' : undefined}>
                     <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
                     <ReadOnlyController />
                     {children}

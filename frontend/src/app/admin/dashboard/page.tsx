@@ -47,7 +47,7 @@ const MENUS: Menu[] = [
         { label: 'Purchase Order', href: '/admin/trade/purchase-order' },
         SEP,
         { label: 'Purchase Stock', href: '/admin/trade/purchase' },
-        { label: 'Purchase Return', disabled: true },
+        { label: 'Purchase Return', href: '/admin/trade/purchase-return' },
         SEP,
         { label: 'Product Stock Damage', href: '/admin/trade/damage-stock' },
         { label: 'Product Stock Damage Reverse', href: '/admin/trade/damage-reverse' },
@@ -214,13 +214,13 @@ const THEMES: Record<string, Theme> = {
 const COLUMNS: Group[] = [
     { theme: THEMES.product, buttons: [
         { name: 'Product Detail', href: '/admin/trade/product-detail', icon: Package },
-        { name: 'Stock', href: '/admin/inventory/list', icon: Boxes, disabled: true },
+        { name: 'Stock', href: '/admin/trade/purchase', icon: Boxes },
         { name: 'Update Rates / Expiry', href: '/admin/trade/update-rates', icon: CalendarClock },
     ] },
     { theme: THEMES.purchase, buttons: [
         { name: 'Purchase', href: '/admin/trade/purchase', icon: ShoppingCart },
         { name: 'Purchase Order', href: '/admin/trade/purchase-order', icon: ClipboardList },
-        { name: 'Purchase Return', href: '/admin/purchases/returns', icon: RefreshCcw, disabled: true },
+        { name: 'Purchase Return', href: '/admin/trade/purchase-return', icon: RefreshCcw },
     ] },
     { theme: THEMES.sale, buttons: [
         { name: 'Sale', href: '/admin/trade/sale-invoice', icon: ScanLine },

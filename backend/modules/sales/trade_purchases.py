@@ -22,6 +22,8 @@ from .models import PurchaseOrder, PurchaseOrderItem, SalesStaff, Voucher, Vouch
 Z = Decimal('0')
 LEGACY_LAST_PURCHASE = 'P26000059'
 LEGACY_LAST_ORDER = 'K26000002'
+LEGACY_LAST_RETURN = 'R26000003'
+LEGACY_RETURN_NOTE = 'Legacy Trade purchase return'
 ORDER_NOTE = 'Trade Purchase Order'
 LEGACY_ORDER_NOTE = 'Legacy Trade purchase order'
 LEGACY_NOTE = 'Legacy Trade purchase'
@@ -38,7 +40,7 @@ def next_purchase_no(date=None, letter='P'):
     yy = (date or datetime.date.today()).strftime('%y')
     prefix = f'{letter}{yy}'
     last = PurchaseOrder.objects.filter(purchase_number__startswith=prefix).aggregate(m=Max('purchase_number'))['m']
-    legacy = LEGACY_LAST_ORDER if letter == 'K' else LEGACY_LAST_PURCHASE
+    legacy = {'K': LEGACY_LAST_ORDER, 'R': LEGACY_LAST_RETURN}.get(letter, LEGACY_LAST_PURCHASE)
     nums = [int(x[3:]) for x in (last, legacy) if x and x.startswith(prefix) and x[3:].isdigit()]
     return f'{prefix}{(max(nums) if nums else 0) + 1:06d}'
 
@@ -106,7 +108,7 @@ class TradePurchaseViewSet(viewsets.ViewSet):
 
     def create(self, request):
         """Body: {supplier (ledger account id), date?, bill_no?, extra_disc?, freight?,
-        tax?, paid?, staff?, lines: [{product, qty, bonus?, expiry_date?, pur_rate,
+        fare?, goods?, tax?, paid?, staff?, lines: [{product, qty, bonus?, expiry_date?, pur_rate,
         sale_rate?, retail_rate?}]} — qty and bonus in pieces."""
         from modules.company.models import LedgerAccount
         from modules.products.models import Product, ProductBatch
@@ -148,10 +150,11 @@ class TradePurchaseViewSet(viewsets.ViewSet):
         if not prepared:
             return Response({'detail': 'Add at least one product.'}, status=400)
         extra_disc = _d(d.get('extra_disc')); freight = _d(d.get('freight')); tax = _d(d.get('tax')); paid = _d(d.get('paid'))
-        if min(extra_disc, freight, tax, paid) < 0:
+        fare = _d(d.get('fare')); goods = _d(d.get('goods'))
+        if min(extra_disc, freight, fare, goods, tax, paid) < 0:
             return Response({'detail': 'Amounts cannot be negative.'}, status=400)
         amount = sum((pur * qty for _, qty, _, pur, _, _, _ in prepared), Z)
-        net = (amount - extra_disc + freight + tax).quantize(Decimal('0.01'))
+        net = (amount - extra_disc + freight + fare + goods + tax).quantize(Decimal('0.01'))
         if net < 0:
             return Response({'detail': 'Extra Disc is more than the purchase amount.'}, status=400)
         if paid > net:
@@ -164,7 +167,7 @@ class TradePurchaseViewSet(viewsets.ViewSet):
                 purchase_number=next_purchase_no(pdate), supplier_id=sup_acc.supplier_id,
                 reference_number=str(d.get('bill_no') or '').strip()[:50] or None,
                 warehouse_id=prepared[0][0].warehouse_id, tenant_id=tid, created_by=request.user,
-                total_amount=net, shipping_cost=freight, tax_amount=tax, extra_discount=extra_disc,
+                total_amount=net, shipping_cost=freight, fare_amount=fare, goods_amount=goods, tax_amount=tax, extra_discount=extra_disc,
                 status='RECEIVED', is_inventory_synced=True, paid_amount=paid,
                 payment_status='PAID' if paid >= net and net > 0 else ('PARTIAL' if paid > 0 else 'UNPAID'),
                 payment_method='CASH', notes=f'Trade Purchase · staff {staff.name}' if staff else 'Trade Purchase')
@@ -291,3 +294,132 @@ class TradePurchaseOrderViewSet(viewsets.ViewSet):
                                                  items_per_carton=p.carton_qty or 1, quantity=qty, bonus_quantity=0,
                                                  price=rate, selling_price=0, retail_rate=0)
         return Response({'id': po.id, 'order_no': po.purchase_number, 'amount': total}, status=status.HTTP_201_CREATED)
+
+
+class TradePurchaseReturnViewSet(viewsets.ViewSet):
+    """Trade 1.0 Purchase Return: stock sent back to a supplier (R-numbered
+    PurchaseOrder, status RETURNED). Each line leaves its stock batch; the
+    supplier owes us the Net Amount (Amt purchase - Less Amount), less the cash
+    they paid back (Recevied Cash). Voucher: supplier Dr / Inventory Cr, and the
+    cash received as Cash Dr / supplier Cr."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def _qs(self):
+        return scope_to_tenant(self.request.user, PurchaseOrder.objects.filter(purchase_number__startswith='R', status='RETURNED'), 'tenant')
+
+    @action(detail=False, methods=['get'])
+    def next_no(self, request):
+        return Response({'return_no': next_purchase_no(letter='R')})
+
+    def list(self, request):
+        """View Purchase Return Detail: ?return_no, ?supplier, ?date_from, ?date_to -> lines."""
+        from modules.company.models import LedgerAccount
+        p = request.query_params
+        qs = self._qs()
+        if p.get('return_no'):
+            qs = qs.filter(purchase_number__icontains=p['return_no'].strip())
+        if p.get('supplier'):
+            acc = LedgerAccount.objects.filter(pk=p['supplier']).first()
+            qs = qs.filter(supplier_id=acc.supplier_id if acc else None)
+        if p.get('date_from'):
+            qs = qs.filter(order_date__date__gte=p['date_from'])
+        if p.get('date_to'):
+            qs = qs.filter(order_date__date__lte=p['date_to'])
+        ids = list(qs.order_by('-order_date', '-id').values_list('id', flat=True)[:500])
+        items = (PurchaseOrderItem.objects.filter(purchase_order_id__in=ids)
+                 .select_related('purchase_order__supplier__ledger_account', 'product')
+                 .order_by('-purchase_order__order_date', '-purchase_order_id', 'id'))
+        out = []
+        for it in items:
+            r = _line_row(it, it.purchase_order, _supplier_name(it.purchase_order))
+            r['return_no'] = r.pop('purchase_no')
+            out.append(r)
+        return Response(out)
+
+    def create(self, request):
+        """Body: {supplier, date?, bill_no?, less?, received?, staff?,
+        lines: [{product, batch?, qty}]} - qty in pieces, rates from the batch."""
+        from modules.company.models import LedgerAccount
+        from modules.products.models import Product, ProductBatch
+        from .trade_masters import _move_stock
+        d = request.data
+        accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant')
+        sup_acc = accounts.select_related('supplier').filter(pk=d.get('supplier')).first() if d.get('supplier') else None
+        if not sup_acc or not sup_acc.supplier_id:
+            return Response({'detail': 'Find the supplier first.'}, status=400)
+        try:
+            rdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        if rdate > datetime.date.today():
+            return Response({'detail': 'The date cannot be in the future.'}, status=400)
+        less = _d(d.get('less'))
+        received = _d(d.get('received'))
+        if less < 0 or received < 0:
+            return Response({'detail': 'Amounts cannot be negative.'}, status=400)
+        products = scope_to_tenant(request.user, Product.objects.all(), 'tenant').select_related('stock__product')
+        staff = SalesStaff.objects.filter(pk=d.get('staff')).first() if d.get('staff') else None
+        tid = tenant_id_for(request.user) or sup_acc.tenant_id
+        with transaction.atomic():
+            prepared, need = [], {}
+            for x in d.get('lines') or []:
+                p = products.filter(pk=x.get('product')).first()
+                if not p or not getattr(p, 'stock', None) or not p.stock.product_id:
+                    return Response({'detail': 'One of the products was not found.'}, status=400)
+                qty = int(_d(x.get('qty')))
+                if qty <= 0:
+                    return Response({'detail': f'Enter Qty (U) for {p.product_name}.'}, status=400)
+                batch = None
+                if x.get('batch'):
+                    batch = ProductBatch.objects.select_for_update().filter(pk=x['batch'], product=p).first()
+                    if not batch:
+                        return Response({'detail': f'The stock batch of {p.product_name} was not found.'}, status=400)
+                key = batch.id if batch else p.id
+                have = batch.quantity if batch else int(p.total_quantity or 0)
+                need[key] = need.get(key, 0) + qty
+                if need[key] > have:
+                    exp = f' (exp {batch.expiry_date:%d-%m-%Y})' if batch and batch.expiry_date else ''
+                    return Response({'detail': f'Only {have} in stock for {p.product_name}{exp}.'}, status=400)
+                pur = _d(batch.cost_price if batch and batch.cost_price else p.cost_price)
+                sale = _d(batch.selling_price if batch and batch.selling_price else p.selling_price)
+                retail = _d(batch.retail_price if batch and batch.retail_price else p.original_price)
+                prepared.append((p, batch, qty, pur, sale, retail))
+            if not prepared:
+                return Response({'detail': 'Add at least one product.'}, status=400)
+            amount = sum((pur * qty for _, _, qty, pur, _, _ in prepared), Z)
+            net = (amount - less).quantize(Decimal('0.01'))
+            if net < 0:
+                return Response({'detail': 'Less Amount is more than the return amount.'}, status=400)
+            if received > net:
+                return Response({'detail': 'Recevied Cash is more than the Net Amount.'}, status=400)
+            po = PurchaseOrder.objects.create(
+                purchase_number=next_purchase_no(rdate, 'R'), supplier_id=sup_acc.supplier_id,
+                reference_number=str(d.get('bill_no') or '').strip()[:50] or None,
+                warehouse_id=prepared[0][0].warehouse_id, tenant_id=tid, created_by=request.user,
+                total_amount=net, extra_discount=less, status='RETURNED', is_inventory_synced=True,
+                paid_amount=received,
+                payment_status='PAID' if received >= net and net > 0 else ('PARTIAL' if received > 0 else 'UNPAID'),
+                payment_method='CASH', notes=f'Trade Purchase Return · staff {staff.name}' if staff else 'Trade Purchase Return')
+            PurchaseOrder.objects.filter(pk=po.pk).update(order_date=datetime.datetime.combine(rdate, datetime.datetime.now().time()))
+            for p, batch, qty, pur, sale, retail in prepared:
+                PurchaseOrderItem.objects.create(
+                    purchase_order=po, product=p.stock.product, packaging_type='SINGLE',
+                    items_per_carton=int(p.carton_qty or 0) or p.stock.items_per_carton or 1, quantity=qty, bonus_quantity=0,
+                    price=pur, selling_price=sale, retail_rate=retail, expiry_date=batch.expiry_date if batch else None)
+                _move_stock(p, batch, -qty)
+            inv_acc = accounts.filter(acc_id='12010001').first()
+            cash_acc = accounts.filter(acc_id='12040001').first()
+            vno = ''
+            if inv_acc and net > 0:
+                from .vouchers import VoucherViewSet
+                label = f'Purchase Return-{po.purchase_number}'
+                v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(rdate), vtype='purchase_return', date=rdate,
+                                           staff=staff, detail=label, total=net, created_by=request.user, tenant_id=tid)
+                vl = [(sup_acc, net, Z), (inv_acc, Z, net)]
+                if received > 0 and cash_acc:
+                    vl += [(cash_acc, received, Z), (sup_acc, Z, received)]
+                for i, (acc, dr, cr) in enumerate(vl, 1):
+                    VoucherLine.objects.create(voucher=v, line=i, account=acc, debit=dr, credit=cr, detail=label)
+                vno = v.voucher_no
+        return Response({'id': po.id, 'return_no': po.purchase_number, 'voucher_no': vno, 'net': net},
+                        status=status.HTTP_201_CREATED)

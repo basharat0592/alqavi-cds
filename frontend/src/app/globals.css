@@ -170,3 +170,9 @@
   will-change: transform;
   animation: hand-grow-wave 1.8s ease-in-out 0.35s 1 both;
 }
+
+/* Trade 1.0 windows: every box, button and panel is square-cornered, as in the
+   desktop program the shop is used to (the user asked for rectangles). */
+[data-trade-ui] *:not(svg):not(svg *) {
+  border-radius: 0 !important;
+}

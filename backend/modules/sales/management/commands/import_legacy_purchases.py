@@ -2,8 +2,9 @@
 
 Each P-numbered purchase becomes a PurchaseOrder (RECEIVED, inventory already
 synced, fully paid — stock and balances were brought over from the legacy
-stock / vouchers, so nothing is counted twice) with its lines. Purchase
-returns (R…) are skipped. Re-running replaces only these imported rows.
+stock / vouchers, so nothing is counted twice) with its lines; each R-numbered
+purchase return the same way as status RETURNED. Re-running replaces only these
+imported rows.
 
   python manage.py import_legacy_purchases --dir /tmp/legacy_dump [--tenant admin]
 """
@@ -19,7 +20,7 @@ from django.db import transaction
 from modules.company.models import LedgerAccount
 from modules.products.models import SupplierProduct
 from modules.sales.models import PurchaseOrder, PurchaseOrderItem
-from modules.sales.trade_purchases import LEGACY_NOTE
+from modules.sales.trade_purchases import LEGACY_NOTE, LEGACY_RETURN_NOTE
 
 
 def _money(v):
@@ -61,14 +62,15 @@ class Command(BaseCommand):
                 lines.setdefault(r['PurID'].strip(), []).append(r)
         made = items = skipped = 0
         with transaction.atomic():
-            old = PurchaseOrder.objects.filter(tenant=tenant, notes=LEGACY_NOTE)
+            old = PurchaseOrder.objects.filter(tenant=tenant, notes__in=[LEGACY_NOTE, LEGACY_RETURN_NOTE])
             replaced = old.count()
             PurchaseOrderItem.objects.filter(purchase_order__in=old).delete()
             old.delete()
             with open(head_p, encoding='utf-8', errors='replace', newline='') as fh:
                 for h in csv.DictReader(fh):
                     pid = h['PurID'].strip()
-                    if not pid.startswith('P') or PurchaseOrder.objects.filter(purchase_number=pid).exists():
+                    ret = pid.startswith('R')
+                    if not (pid.startswith('P') or ret) or PurchaseOrder.objects.filter(purchase_number=pid).exists():
                         skipped += 1
                         continue
                     total = _money(h.get('PurAmt'))
@@ -76,8 +78,8 @@ class Command(BaseCommand):
                         purchase_number=pid, supplier_id=sup_by_acc.get(h.get('AccID', '').strip()),
                         reference_number=(h.get('BillNo') or '').strip()[:50] or None, tenant=tenant,
                         total_amount=total, shipping_cost=_money(h.get('Freight')), tax_amount=_money(h.get('STaxAmt')),
-                        extra_discount=_money(h.get('DiscAmt')), status='RECEIVED', is_inventory_synced=True,
-                        paid_amount=total, payment_status='PAID', payment_method='CASH', notes=LEGACY_NOTE)
+                        extra_discount=_money(h.get('DiscAmt')), status='RETURNED' if ret else 'RECEIVED', is_inventory_synced=True,
+                        paid_amount=total, payment_status='PAID', payment_method='CASH', notes=LEGACY_RETURN_NOTE if ret else LEGACY_NOTE)
                     d = _date(h.get('PurDate'))
                     if d:
                         PurchaseOrder.objects.filter(pk=po.pk).update(order_date=datetime.datetime.combine(d, datetime.time(12, 0)))

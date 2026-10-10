@@ -60,6 +60,10 @@ def account_balance(acc, user):
             rem = _d(po.total_amount) - _d(po.paid_amount)
             if rem > 0:
                 owed += rem
+        # Purchase returns: the supplier owes us their net, less any cash they paid back.
+        for po in scope_to_tenant(user, PurchaseOrder.objects.filter(supplier_id=acc.supplier_id, status='RETURNED'), 'tenant') \
+                .only('total_amount', 'paid_amount'):
+            owed -= max(_d(po.total_amount) - _d(po.paid_amount), Z)
         extra = VoucherLine.objects.filter(account=acc, voucher__legacy=False).aggregate(u=Sum('unallocated'))['u'] or Z
         return owed - extra
     agg = VoucherLine.objects.filter(account=acc).aggregate(d=Sum('debit'), c=Sum('credit'))

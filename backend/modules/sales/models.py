@@ -400,6 +400,7 @@ class PurchaseOrder(models.Model):
         ('SHIPPED', 'In Transit'),
         ('DELIVERED', 'Delivered'),
         ('RECEIVED', 'Received'),
+        ('RETURNED', 'Purchase Return'),   # Trade 1.0 Purchase Return (R-numbered)
         ('CANCELLED', 'Cancelled'),
     ]
 
@@ -411,6 +412,8 @@ class PurchaseOrder(models.Model):
     
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # "Freight"
+    fare_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)    # "Fare" (local)
+    goods_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)   # "Goods" (goods charges)
     tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)      # "Extra Tax Amt"
     # Extra flat discount given by the supplier on the whole bill ("Extra Disc").
     extra_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)

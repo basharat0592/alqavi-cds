@@ -6,7 +6,7 @@ from .views import (
 )
 from .trade_returns import TradeSaleReturnViewSet
 from .vouchers import VoucherViewSet
-from .trade_purchases import TradePurchaseViewSet, TradePurchaseOrderViewSet
+from .trade_purchases import TradePurchaseViewSet, TradePurchaseOrderViewSet, TradePurchaseReturnViewSet
 from .trade_masters import TradeStaffViewSet, TradeCategoryViewSet, TradeDamageViewSet
 from .invoice_share import public_invoice
 from .reports import (
@@ -21,6 +21,7 @@ router.register(r'trade-returns', TradeSaleReturnViewSet, basename='trade-return
 router.register(r'vouchers', VoucherViewSet, basename='voucher')
 router.register(r'trade-purchases', TradePurchaseViewSet, basename='trade-purchase')
 router.register(r'trade-purchase-orders', TradePurchaseOrderViewSet, basename='trade-purchase-order')
+router.register(r'trade-purchase-returns', TradePurchaseReturnViewSet, basename='trade-purchase-return')
 router.register(r'trade-staff', TradeStaffViewSet, basename='trade-staff')
 router.register(r'trade-categories', TradeCategoryViewSet, basename='trade-category')
 router.register(r'trade-damage', TradeDamageViewSet, basename='trade-damage')
