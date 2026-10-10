@@ -16,7 +16,7 @@ import {
     Package, Boxes, CalendarClock, ShoppingCart, ScanLine, RefreshCcw,
     TrendingUp, RotateCcw, ClipboardList, CreditCard, ArrowDownLeft, ArrowUpRight,
     BookOpen, Database, KeyRound, Receipt, Wallet, BarChart3, FileText, Users,
-    ChevronDown,
+    ChevronDown, ChevronRight, X,
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
@@ -26,50 +26,80 @@ import FitStage from '@/components/trade/FitStage';
 /* ───────────────────────── Top menu bar (File / Product / …) ───────────────────────── */
 // `inPlace` links navigate this window; every other item opens its screen in a
 // pop-up window, like the legacy desktop app.
-type MenuLink = { label: string; href?: string; action?: 'logout'; inPlace?: boolean; disabled?: boolean };
+type MenuLink = { label?: string; href?: string; action?: 'logon' | 'logoff' | 'exit' | 'about'; inPlace?: boolean; disabled?: boolean; sub?: boolean; sep?: boolean };
 type Menu = { title: string; items: MenuLink[] };
 
+// Same menus as the legacy Trade 1.0 console. Screens not built yet are greyed out.
+const SEP: MenuLink = { sep: true };
 const MENUS: Menu[] = [
     { title: 'File', items: [
-        { label: 'Dashboard', href: '/admin/dashboard', inPlace: true },
-        { label: 'Full Admin View', href: '/admin/products', inPlace: true },
-        { label: 'Backup Database', href: '/admin/trade/backup' },
-        { label: 'Logout', action: 'logout' },
+        { label: 'Sale Man', disabled: true },
+        SEP,
+        { label: 'Log On', action: 'logon' },
+        { label: 'Log Off', action: 'logoff' },
+        { label: 'Exit', action: 'exit' },
     ] },
     { title: 'Product', items: [
+        { label: 'Companies', disabled: true },
+        { label: 'Product Category', disabled: true },
         { label: 'Product Detail', href: '/admin/trade/product-detail' },
-        { label: 'Add Product', href: '/admin/products/add' },
-        { label: 'Stock', href: '/admin/inventory/list', disabled: true },
-        { label: 'Update Rates / Expiry', href: '/admin/trade/update-rates' },
+        SEP,
+        { label: 'Purchase Order', href: '/admin/trade/purchase-order' },
+        SEP,
+        { label: 'Purchase Stock', href: '/admin/trade/purchase' },
+        { label: 'Purchase Return', disabled: true },
+        SEP,
+        { label: 'Product Stock Damage', disabled: true },
+        { label: 'Product Stock Damage Reverse', disabled: true },
+        SEP,
+        { label: 'Update Rates /  Expiry Date', href: '/admin/trade/update-rates' },
     ] },
     { title: 'Sale', items: [
         { label: 'Sale Invoice', href: '/admin/trade/sale-invoice' },
-        { label: 'Sale (POS)', href: '/admin/sale' },
-        { label: 'Sale Records', href: '/admin/trade/sale-records' },
+        { label: 'Sale and Sale Return Records', href: '/admin/trade/sale-records' },
+        SEP,
         { label: 'Sale Return', href: '/admin/trade/sale-return' },
-        { label: 'Orders', href: '/admin/orders' },
     ] },
     { title: 'Accounts', items: [
-        { label: 'Chart of Account', href: '/admin/trade/chart-of-account' },
+        { label: 'District', disabled: true },
+        { label: 'Main Area', disabled: true },
+        { label: 'Sub Area', disabled: true },
+        { label: 'Accounts 2nd Level', disabled: true },
+        { label: 'Accounts 3rd Level', disabled: true },
+        { label: 'Chart of Accounts', href: '/admin/trade/chart-of-account' },
+        SEP,
+        { label: 'Financial Year', disabled: true },
+        SEP,
+        { label: 'Opening entries', disabled: true, sub: true },
+        SEP,
         { label: 'Receipt Voucher', href: '/admin/trade/receipt-voucher' },
+        SEP,
         { label: 'Payment Voucher', href: '/admin/trade/payment-voucher' },
+        SEP,
         { label: 'Expense Voucher', href: '/admin/trade/expense-voucher' },
+        SEP,
+        { label: 'Short / Excess', disabled: true, sub: true },
+        SEP,
+        { label: 'Bank', disabled: true, sub: true },
+        SEP,
+        { label: 'Post Voucher (Manually)', disabled: true },
+        { label: 'Forward the Profit and Loss', disabled: true },
     ] },
     { title: 'Setup', items: [
-        { label: 'System Settings', href: '/admin/settings' },
-        { label: 'Suppliers', href: '/admin/company/suppliers' },
-        { label: 'Customers', href: '/admin/company/customers' },
-        { label: 'Areas / Territories', href: '/admin/company/areas' },
-        { label: 'Users', href: '/admin/users' },
-        { label: 'Website CMS', href: '/admin/website-settings' },
+        { label: 'New User', disabled: true },
+        { label: 'Change Password', href: '/admin/trade/change-password' },
+        SEP,
+        { label: 'Backup Data Base', href: '/admin/trade/backup' },
+        { label: 'Restore Data Base', disabled: true },
+        SEP,
+        { label: 'Distribution Setting', disabled: true },
+        { label: 'User-Role Permissions', disabled: true },
     ] },
     { title: 'Reports', items: [
-        { label: 'Reports Center', href: '/admin/reports' },
-        { label: 'Income', href: '/admin/income' },
-        { label: 'Expense', href: '/admin/expense' },
+        { label: 'Data Reports', href: '/admin/reports' },
     ] },
     { title: 'About', items: [
-        { label: "AL-QAVI TRADER'S — Trade 2.1", href: '/admin/dashboard', inPlace: true },
+        { label: 'About Me', action: 'about' },
     ] },
 ];
 
@@ -82,10 +112,19 @@ function MenuBar() {
         document.addEventListener('mousedown', h);
         return () => document.removeEventListener('mousedown', h);
     }, []);
+    const [about, setAbout] = useState(false);
     const go = (it: MenuLink) => {
+        if (it.disabled || it.sep) return;
         setOpen(null);
-        if (it.action === 'logout') { authService.logout(); router.push('/login'); return; }
-        if (!it.href || it.disabled) return;
+        if (it.action === 'about') { setAbout(true); return; }
+        if (it.action === 'logon' || it.action === 'logoff') { authService.logout(); router.push('/login'); return; }
+        if (it.action === 'exit') {
+            authService.logout();
+            window.close();                       // closes when the console was opened as its own window
+            setTimeout(() => router.push('/login'), 300);
+            return;
+        }
+        if (!it.href) return;
         if (it.inPlace) router.push(it.href);
         else openPopup(it.href);
     };
@@ -102,23 +141,56 @@ function MenuBar() {
                         <ChevronDown size={15} className={`transition-transform ${open === m.title ? 'rotate-180' : ''}`} />
                     </button>
                     {open === m.title && (
-                        <div className="absolute left-0 top-full mt-1 w-64 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-150">
-                            {m.items.map((it) => (
+                        <div className="absolute left-0 top-full mt-1 w-72 overflow-hidden rounded-xl border border-slate-100 bg-white py-1 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.3)] animate-in fade-in zoom-in-95 duration-150">
+                            {m.items.map((it, i) => (it.sep ? (
+                                <div key={`sep${i}`} className="mx-3 my-1 border-t border-slate-200" />
+                            ) : (
                                 <button
                                     key={it.label}
                                     type="button"
                                     onClick={() => go(it)}
                                     disabled={it.disabled}
                                     title={it.disabled ? 'Not available yet' : undefined}
-                                    className="block w-full px-4 py-2.5 text-left text-[15px] font-medium text-slate-600 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300"
+                                    className="flex w-full items-center px-4 py-1.5 text-left text-[14px] font-normal text-slate-700 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300"
                                 >
-                                    {it.label}
+                                    <span className="flex-1 whitespace-pre">{it.label}</span>
+                                    {it.sub && <ChevronRight size={14} className="shrink-0" />}
                                 </button>
-                            ))}
+                            )))}
                         </div>
                     )}
                 </div>
             ))}
+            {about && <AboutBox onClose={() => setAbout(false)} />}
+        </div>
+    );
+}
+
+/* About Me — who the program is for and who to call. */
+function AboutBox({ onClose }: { onClose: () => void }) {
+    useEffect(() => {
+        const h = (e: KeyboardEvent) => { if (e.key === 'Escape' || e.key === 'Enter') onClose(); };
+        window.addEventListener('keydown', h);
+        return () => window.removeEventListener('keydown', h);
+    }, [onClose]);
+    return (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/40 p-6" onMouseDown={onClose}>
+            <div className="w-full max-w-sm overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl" onMouseDown={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2 bg-[#2B2F8F] px-4 py-2 text-[13px] font-semibold text-white">
+                    <span className="flex-1">About AL-QAVI TRADERS</span>
+                    <button type="button" onClick={onClose} aria-label="Close" className="rounded p-0.5 hover:bg-white/15"><X size={15} /></button>
+                </div>
+                <div className="flex flex-col items-center gap-2 px-6 py-5 text-center">
+                    <img src="/brand/aqt-monogram-card.png" alt="Al-Qavi Traders" className="h-16 w-auto" />
+                    <div className="text-[18px] font-bold text-[#1F2370]">AL-QAVI TRADERS</div>
+                    <div className="text-[13px] text-slate-600">Trade 1.0 — Distribution Management</div>
+                    <div className="text-[13px] text-slate-600">Gilgit-Baltistan · Contact 03138692190</div>
+                    <div className="text-[12px] text-slate-400">old.alqavitraders.com</div>
+                </div>
+                <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-4 py-2.5">
+                    <button type="button" autoFocus onClick={onClose} className="h-8 min-w-[88px] rounded-md border border-[#2B2F8F] bg-[#2B2F8F] px-4 text-[13px] font-semibold text-white hover:bg-[#1F2370]">OK</button>
+                </div>
+            </div>
         </div>
     );
 }
