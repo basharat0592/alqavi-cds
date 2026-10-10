@@ -354,3 +354,96 @@ class TradeDamageViewSet(viewsets.ViewSet):
                 dmg.save(update_fields=['voucher'])
         return Response({'id': dmg.id, 'number': dmg.number, 'voucher_no': dmg.voucher.voucher_no if dmg.voucher_id else '',
                          'total': total}, status=status.HTTP_201_CREATED)
+
+
+# ───────────────────────── District / Main Area ─────────────────────────
+
+class TradeAreaViewSet(viewsets.ViewSet):
+    """Trade 1.0 New District (?level=district, codes D1, D2 …) and New Main Area
+    (?level=main, codes M1, M2 …, each under a district). Sub areas (A…) stay
+    in the Chart of Account › Sub Area window."""
+    permission_classes = [permissions.IsAdminUser]
+    PREFIX = {'district': 'D', 'main': 'M'}
+
+    def _level(self, request):
+        lv = request.query_params.get('level') or (request.data.get('level') if request.method in ('POST', 'PATCH') else None)
+        return 'main' if lv == 'main' else 'district'
+
+    def _tid(self):
+        u = self.request.user
+        return tenant_id_for(u) or u.pk
+
+    def _qs(self, level):
+        from modules.company.models import Area
+        return Area.objects.filter(tenant_id=self._tid(), code__regex=rf'^{self.PREFIX[level]}[0-9]+$')
+
+    @staticmethod
+    def _num(code):
+        return int(code[1:]) if code and code[1:].isdigit() else None
+
+    def _next(self, level):
+        return max([self._num(c) or 0 for c in self._qs(level).values_list('code', flat=True)] or [0]) + 1
+
+    def _row(self, a):
+        return {'id': a.id, 'code': self._num(a.code), 'name': a.name,
+                'district': str(a.parent_id) if a.parent_id else '', 'district_name': a.parent.name if a.parent_id else ''}
+
+    @action(detail=False, methods=['get'])
+    def next_code(self, request):
+        return Response({'code': self._next(self._level(request))})
+
+    def list(self, request):
+        return Response([self._row(a) for a in self._qs(self._level(request)).select_related('parent')])
+
+    def _fields(self, request, level, exclude=None):
+        from modules.company.models import Area
+        name = _clean(request.data.get('name'), 120)
+        if not name:
+            return None, 'Enter the District Name.' if level == 'district' else 'Enter the Main Area Name.'
+        if Area.objects.filter(tenant_id=self._tid(), name__iexact=name).exclude(pk=exclude).exists():
+            return None, f'{name} already exists.'
+        parent = None
+        if level == 'main':
+            parent = self._qs('district').filter(pk=request.data.get('district') or 0).first()
+            if not parent:
+                return None, 'Select the District.'
+        return {'name': name, 'parent': parent}, None
+
+    def create(self, request):
+        from modules.company.models import Area
+        level = self._level(request)
+        f, err = self._fields(request, level)
+        if err:
+            return Response({'detail': err}, status=400)
+        with transaction.atomic():
+            a = Area.objects.create(code=f'{self.PREFIX[level]}{self._next(level)}', tenant_id=self._tid(), is_active=True, **f)
+        return Response(self._row(a), status=status.HTTP_201_CREATED)
+
+    def partial_update(self, request, pk=None):
+        level = self._level(request)
+        a = self._qs(level).filter(pk=pk).first()
+        if not a:
+            return Response({'detail': 'Not found.'}, status=404)
+        f, err = self._fields(request, level, exclude=a.pk)
+        if err:
+            return Response({'detail': err}, status=400)
+        a.name = f['name']
+        if level == 'main':
+            a.parent = f['parent']
+        a.save()
+        return Response(self._row(a))
+
+    def destroy(self, request, pk=None):
+        level = self._level(request)
+        a = self._qs(level).filter(pk=pk).first()
+        if not a:
+            return Response({'detail': 'Not found.'}, status=404)
+        kids = a.children.count()
+        if kids:
+            what = 'main area(s)' if level == 'district' else 'sub area(s)'
+            return Response({'detail': f'{a.name} has {kids} {what} — it cannot be deleted.'}, status=400)
+        used = a.ledger_accounts.count() + a.customers.count()
+        if used:
+            return Response({'detail': f'{a.name} is used by {used} account(s) — it cannot be deleted.'}, status=400)
+        a.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

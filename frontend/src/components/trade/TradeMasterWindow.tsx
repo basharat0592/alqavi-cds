@@ -36,6 +36,7 @@ export type MasterConfig = {
     cols: MasterCol[];
     url: string;                    // list / create; `${url}${id}/` patch / delete
     nextCodeUrl: string;
+    params?: Record<string, string>;   // sent with every request (e.g. ?level=main)
     exportName: string;
     stage: { width: number; height: number };
 };
@@ -47,10 +48,10 @@ const errMsg = (err: any, fallback: string) => {
     return String(d.detail || d.error || d.name || Object.values(d)[0] || fallback);
 };
 
-async function loadAll(url: string) {
+async function loadAll(url: string, extra?: Record<string, string>) {
     const out: any[] = [];
     for (let page = 1; page <= 50; page++) {
-        const { data } = await api.get(url, { params: { page, page_size: 100 } });
+        const { data } = await api.get(url, { params: { ...extra, page, page_size: 100 } });
         if (Array.isArray(data)) return data;
         out.push(...(data.results || []));
         if (!data.next) break;
@@ -71,12 +72,12 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
     const refs = useRef<(HTMLInputElement | HTMLSelectElement | null)[]>([]);
     const gridRef = useRef<HTMLDivElement>(null);
 
-    const loadCode = () => api.get(cfg.nextCodeUrl).then(({ data }) => setNextCode(String(data.code ?? ''))).catch(() => setNextCode(''));
+    const loadCode = () => api.get(cfg.nextCodeUrl, { params: cfg.params }).then(({ data }) => setNextCode(String(data.code ?? ''))).catch(() => setNextCode(''));
     useEffect(() => { loadCode(); setTimeout(() => refs.current[0]?.focus(), 50); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const sorted = useMemo(() => (rows ? [...rows].sort((a, b) => (Number(a.code) || 1e9) - (Number(b.code) || 1e9)) : []), [rows]);
     const reload = async () => {
-        try { setRows(await loadAll(cfg.url)); } catch { toast.error('Could not load the list.'); setRows((r) => r || []); }
+        try { setRows(await loadAll(cfg.url, cfg.params)); } catch { toast.error('Could not load the list.'); setRows((r) => r || []); }
     };
     const valueOf = (r: any, k: string) => String(r?.[k] ?? '');
     const pick = (r: any) => { setSel(r); setForm(Object.fromEntries(cfg.fields.map((f) => [f.key, valueOf(r, f.key)]))); };
@@ -98,7 +99,7 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
         if (busy || sel || !complete) return;
         setBusy(true);
         try {
-            const { data } = await api.post(cfg.url, body());
+            const { data } = await api.post(cfg.url, body(), { params: cfg.params });
             toast.success(`${cfg.entity} ${data.code ?? ''} — ${data.name} saved.`);
             setForm(empty); loadCode();
             if (rows) await reload();
@@ -110,7 +111,7 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
         if (busy || !sel || !complete || !changed) return;
         setBusy(true);
         try {
-            const { data } = await api.patch(`${cfg.url}${sel.id}/`, body());
+            const { data } = await api.patch(`${cfg.url}${sel.id}/`, body(), { params: cfg.params });
             toast.success(`${cfg.entity} ${data.code ?? ''} — ${data.name} updated.`);
             await reload(); pick(data);
         } catch (err) { toast.error(errMsg(err, `Could not update the ${cfg.entity.toLowerCase()}.`), { duration: 6000 }); }
@@ -123,7 +124,7 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
             yes: async () => {
                 setBusy(true);
                 try {
-                    await api.delete(`${cfg.url}${sel.id}/`);
+                    await api.delete(`${cfg.url}${sel.id}/`, { params: cfg.params });
                     toast.success(`${cfg.entity} ${sel.code ?? ''} — ${sel.name} deleted.`);
                     setSel(null); setForm(empty); await reload();
                 } catch (err) { toast.error(errMsg(err, `Could not delete the ${cfg.entity.toLowerCase()}.`), { duration: 7000 }); }

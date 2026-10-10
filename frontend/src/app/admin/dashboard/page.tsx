@@ -61,8 +61,8 @@ const MENUS: Menu[] = [
         { label: 'Sale Return', href: '/admin/trade/sale-return' },
     ] },
     { title: 'Accounts', items: [
-        { label: 'District', disabled: true },
-        { label: 'Main Area', disabled: true },
+        { label: 'District', href: '/admin/trade/district' },
+        { label: 'Main Area', href: '/admin/trade/main-area' },
         { label: 'Sub Area', disabled: true },
         { label: 'Accounts 2nd Level', disabled: true },
         { label: 'Accounts 3rd Level', disabled: true },
