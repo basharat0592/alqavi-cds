@@ -178,7 +178,7 @@ function FitBox({ w, h, children }: { w: number; h: number; children: React.Reac
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
     ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
-    ['Dbl-click', 'Edit line'], ['F9', 'Preview / Print'], ['Ctrl+S', 'Save'],
+    ['Dbl-click', 'Edit line'], ['F9', 'Preview'], ['Ctrl+S', 'Save'], ['Ctrl+P', 'Save & Print'],
 ];
 
 /* Sale grid columns — legacy order and proportions (as % of the grid width, so
@@ -2109,6 +2109,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             if (e.key === 'F2') { e.preventDefault(); setShowFindCust(true); }
             else if (e.key === 'F3') { e.preventDefault(); openFpRef.current(); }
             else if (e.key === 'F9') { e.preventDefault(); setShowPV(true); }
+            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') { e.preventDefault(); printRef.current(); }
             else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveRef.current(false); }
         };
         window.addEventListener('keydown', h);
@@ -2117,6 +2118,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Keyboard handler is bound once; route Ctrl+S to the latest saveInvoice.
     const saveRef = useRef(saveInvoice);
     saveRef.current = saveInvoice;
+    const printRef = useRef(() => {});
+    printRef.current = () => { if (!saving && !saveMissing.length) saveInvoice(true); };
 
     const onEnter = (next: () => void) => (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') { e.preventDefault(); next(); }
@@ -2358,6 +2361,14 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         <button type="button" onClick={newInvoice} className={ACTION_BTN}><span className="underline">N</span>ew Invoice</button>
                         <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint} className={ACTION_BTN}>
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                        </button>
+                        {/* Save & Print straight from the window (no preview step); paper size kept for next time. */}
+                        <select value={printSize} onChange={(e) => choosePrintSize(e.target.value as InvoiceSize)} title="Print size"
+                            className={`${FIELD} h-9 w-[88px] border-slate-300 bg-white !px-1 !text-[12px] !font-normal`} aria-label="Print size">
+                            {INVOICE_SIZES.map((o) => <option key={o.v} value={o.v}>{o.v === 'a5' ? 'A5 (half)' : o.label.replace('Slip ', '')}</option>)}
+                        </select>
+                        <button type="button" onClick={() => saveInvoice(true)} disabled={saving || saveMissing.length > 0} title={saveHint ? saveHint : 'Save and print the invoice (Ctrl+P)'} className={`${ACTION_BTN} gap-1.5`}>
+                            <Printer size={14} /> <span><span className="underline">P</span>rint</span>
                         </button>
                         <button type="button" onClick={() => openSaleRecords()} className={ACTION_BTN}><span className="underline">V</span>iew</button>
                         <button type="button" onClick={closeWindow} className={ACTION_BTN}><span className="underline">C</span>lose</button>

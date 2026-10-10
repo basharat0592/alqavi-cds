@@ -59,7 +59,7 @@ type Line = {
 };
 function WaIcon() {
     return (
-        <svg viewBox="0 0 24 24" width="10" height="10" aria-label="WhatsApp" style={{ flexShrink: 0 }}>
+        <svg viewBox="0 0 24 24" aria-label="WhatsApp" style={{ width: '3.6mm', height: '3.6mm', flexShrink: 0, display: 'block' }}>
             <path fill="#25D366" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z" />
             <path fill="#fff" d="M17.3 14.6c-.3-.1-1.7-.8-1.9-.9-.3-.1-.5-.1-.7.1l-.9 1.1c-.2.2-.3.2-.6.1a7.6 7.6 0 0 1-3.8-3.3c-.3-.5.3-.5.8-1.6.1-.2 0-.4 0-.5l-.9-2c-.2-.5-.4-.5-.6-.5h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3z" />
         </svg>
@@ -509,8 +509,10 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                 <b style={{ fontSize: fs(8.6), fontWeight: 800 }}>{pf.easypaisa || '—'}</b>
                                 {pf.easypaisa_name && <span style={{ fontSize: fs(6.5), fontWeight: 400, color: '#444' }}> ({pf.easypaisa_name})</span>}
                             </div>
-                            <div className="flex items-center" style={{ gap: '1mm' }}>
-                                <WaIcon /><span style={{ color: '#333' }}>Contact: </span>
+                            {/* The logo hangs in the margin so "Contact:" lines up with "Easypaisa:". */}
+                            <div className="relative flex items-center">
+                                <span style={{ position: 'absolute', right: '100%', marginRight: '1mm', top: '50%', transform: 'translateY(-50%)' }}><WaIcon /></span>
+                                <span style={{ color: '#333' }}>Contact:&nbsp;</span>
                                 <b style={{ fontSize: fs(8.6), fontWeight: 800 }}>{pf.contact_no || '—'}</b>
                             </div>
                         </div>
@@ -564,19 +566,26 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                 </tr>
     );
     const Summary = (
-            <table style={{ marginTop: '2mm', fontSize: fs(7.5), width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-                <colgroup><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '17%' }} /><col style={{ width: '32%' }} /></colgroup>
+            <table style={{ marginTop: '1.5mm', fontSize: fs(7.5), width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <colgroup>{[16, 16.5, 15.5, 20, 32].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                 <tbody>
                     <tr>
                         {([['Prev Amount', t.prev_balance], ['Special Disc', n(t.special) + n(t.bill_disc)], ['Shelf Rent', t.shelf], ['Advance Amount', t.paid]] as const).map(([k, v]) => (
-                            <td key={k} style={{ border: B, padding: '1mm 1.8mm', verticalAlign: 'top' }}>
-                                <div style={{ color: '#333' }}>{k}</div>
-                                <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(v)}</div>
+                            <td key={k} style={{ border: B, padding: '0.6mm 1.5mm', verticalAlign: 'middle' }}>
+                                <div className="flex items-baseline justify-between" style={{ gap: '1mm' }}>
+                                    <span style={{ color: '#333', whiteSpace: 'nowrap' }}>{k}</span>
+                                    <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{money(v)}</span>
+                                </div>
                             </td>
                         ))}
-                        <td style={{ border: '0.6mm solid #000', padding: '1mm 2.2mm', background: '#111', color: '#fff', verticalAlign: 'top' }}>
-                            <div style={{ fontWeight: 700 }}>Total Remaining Balance</div>
-                            <div style={{ textAlign: 'right', fontWeight: 900, fontSize: fs(12.5), lineHeight: 1.1, fontVariantNumeric: 'tabular-nums' }}>{money(remaining)}</div>
+                        <td style={{ border: B, padding: '0.5mm 1.5mm', verticalAlign: 'middle' }}>
+                            <div className="flex items-center justify-between" style={{ gap: '1.5mm' }}>
+                                <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Total Remaining Balance</span>
+                                <span style={{
+                                    color: '#fff', background: remaining > 0.005 ? '#c62828' : '#2e7d32', fontWeight: 800, fontSize: fs(10),
+                                    padding: '0.2mm 1.8mm', borderRadius: '0.8mm', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.25,
+                                }}>{money(remaining)}</span>
+                            </div>
                         </td>
                     </tr>
                 </tbody>
