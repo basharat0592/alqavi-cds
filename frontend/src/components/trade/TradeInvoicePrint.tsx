@@ -19,10 +19,11 @@ import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
 
-export type InvoiceSize = 'a4' | 'a5' | 'letter' | 'legal' | 'custom' | '80' | '58';
+export type InvoiceSize = 'a4' | 'a5' | 'a5s' | 'letter' | 'legal' | 'custom' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
     { v: 'a4', label: 'A4' },
-    { v: 'a5', label: 'A5 (half A4)' },
+    { v: 'a5s', label: 'A5 sideways (half A4)' },
+    { v: 'a5', label: 'A5 upright' },
     { v: 'letter', label: 'Letter' },
     { v: 'legal', label: 'Legal' },
     { v: 'custom', label: 'Custom size' },
@@ -120,7 +121,21 @@ const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+
    (printing the web page directly let some printers / settings push the
    content down and drop the footer). */
 const PX_PER_MM = 96 / 25.4;
-async function buildPdf(paperMm: { w: number; h: number } | null) {
+/* Turn a page picture a quarter turn clockwise (its top ends up on the right). */
+async function rotateCw(jpeg: string): Promise<string> {
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = jpeg; });
+    const c = document.createElement('canvas');
+    c.width = img.height; c.height = img.width;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.translate(c.width, 0); ctx.rotate(Math.PI / 2); ctx.drawImage(img, 0, 0);
+    return c.toDataURL('image/jpeg', 0.95);
+}
+/* `sideways`: the half sheet lies across the printer (210 x 148 mm), so each
+   upright A5 invoice is turned a quarter turn onto a landscape page — the
+   header runs down the right-hand edge. */
+async function buildPdf(paperMm: { w: number; h: number } | null, sideways = false) {
     const sheets = Array.from(document.querySelectorAll<HTMLElement>('.inv-page'));
     if (!sheets.length) throw new Error('Nothing to print yet.');
     await (document as any).fonts?.ready;
@@ -128,14 +143,16 @@ async function buildPdf(paperMm: { w: number; h: number } | null) {
     for (const el of sheets) {
         const wMm = paperMm ? paperMm.w : el.offsetWidth / PX_PER_MM;
         const hMm = paperMm ? paperMm.h : el.offsetHeight / PX_PER_MM;
-        const img = await toJpeg(el, {
+        let img = await toJpeg(el, {
             quality: 0.95, pixelRatio: 3, backgroundColor: '#ffffff', cacheBust: false,
             style: { margin: '0', boxShadow: 'none' },
         });
-        const orientation = wMm > hMm ? 'landscape' : 'portrait';
-        if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [wMm, hMm], orientation, compress: true });
-        else pdf.addPage([wMm, hMm], orientation);
-        pdf.addImage(img, 'JPEG', 0, 0, wMm, hMm, undefined, 'FAST');
+        let [pw, ph] = [wMm, hMm];
+        if (sideways) { img = await rotateCw(img); [pw, ph] = [hMm, wMm]; }
+        const orientation = pw > ph ? 'landscape' : 'portrait';
+        if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [pw, ph], orientation, compress: true });
+        else pdf.addPage([pw, ph], orientation);
+        pdf.addImage(img, 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
     }
     return pdf!;
 }
@@ -224,7 +241,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
 
     const isSlip = size === '80' || size === '58';
     const [busy, setBusy] = useState(false);
-    const makePdf = () => buildPdf(isSlip ? null : { w: paper.w, h: paper.h });
+    const makePdf = () => buildPdf(isSlip ? null : { w: paper.w, h: paper.h }, size === 'a5s');
     const printNow = async () => {
         if (busy) return;
         setBusy(true);
@@ -262,7 +279,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
 
     const paper = size === 'custom'
         ? { w: Math.max(80, custom.w || 210), h: Math.max(80, custom.h || 297), m: 5 }
-        : PAPER[size] || PAPER.a4;
+        : PAPER[size === 'a5s' ? 'a5' : size] || PAPER.a4;
     const slipW = size === '58' ? 54 : 74; // printable width in mm
     const pageCss = isSlip
         ? `@page { size: ${size}mm ${Math.max(60, Math.ceil(slipH) + 6)}mm; margin: 3mm 0; }`
