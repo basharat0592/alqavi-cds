@@ -78,6 +78,8 @@ class VoucherLine(models.Model):
     chq_no = models.CharField(max_length=40, blank=True, default='')
     bank = models.CharField(max_length=80, blank=True, default='')
     chq_date = models.DateField(null=True, blank=True)
+    # Cheque Management: a cheque in Chq Amount (12040002) sent to a bank by this voucher.
+    cleared_by = models.ForeignKey('Voucher', on_delete=models.SET_NULL, null=True, blank=True, related_name='cleared_cheques')
 
     class Meta:
         db_table = 'trade_voucher_lines'

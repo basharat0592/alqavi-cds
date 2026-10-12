@@ -29,6 +29,7 @@ import {
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
 import FitStage from '@/components/trade/FitStage';
+import { PrintChoiceButton, useOwnPrint } from '@/components/trade/WindowPrintButton';
 
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const r2 = (n: number) => Math.round(n * 100) / 100;
@@ -83,6 +84,9 @@ export default function TradePurchase() {
     const loadNo = () => api.get('v1/sales/trade-purchases/next_no/').then(({ data }) => setPurNo(data.purchase_no)).catch(() => setPurNo('—'));
     useEffect(() => { loadNo(); }, []);
     const [voucherNo, setVoucherNo] = useState('');
+    // Last purchase saved here — Print › Invoice prints it when nothing new is entered.
+    const [lastId, setLastId] = useState<number | null>(null);
+    useOwnPrint();
 
     // ── entry row ──
     const [code, setCode] = useState('');
@@ -216,13 +220,21 @@ export default function TradePurchase() {
         setBillNo(''); setExtraDisc(''); setFreight(''); setFare(''); setGoods(''); setTax(''); setPaid(''); setStaffId(''); setDate(today()); setHistory([]); loadNo();
     };
     const [saving, setSaving] = useState(false);
-    const save = () => {
+    const printInvoice = () => {
+        if (lines.length) { save(true); return; }
+        if (lastId) { openPopup(`/admin/trade/purchase-invoice/${lastId}?print=1`); return; }
+        toast.error('Save a purchase first (or enter one and choose Print › Invoice).');
+    };
+    const save = (print = false) => {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
         if (num(paid) > net + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
         setAsk({
             msg: `Save Purchase ${purNo} from ${sup!.name} for ${fmt(net)} ?`,
             yes: async () => {
+                // Open the print window now (inside the click), or the browser blocks it.
+                const win = print ? window.open('', 'trade:purchase-print', 'popup=yes,width=1000,height=820') : null;
+                win?.document.write('<p style="font:14px sans-serif;padding:24px">Saving purchase…</p>');
                 setSaving(true);
                 try {
                     const { data } = await api.post('v1/sales/trade-purchases/', {
@@ -232,9 +244,15 @@ export default function TradePurchase() {
                             pur_rate: l.pur, sale_rate: l.sale, retail_rate: l.retail })),
                     });
                     toast.success(`Purchase ${data.purchase_no} saved${data.voucher_no ? ` — Voucher ${data.voucher_no}` : ''}.`);
+                    setLastId(data.id);
+                    if (print) {
+                        const url = `/admin/trade/purchase-invoice/${data.id}?print=1`;
+                        if (win && !win.closed) win.location.href = url; else openPopup(url);
+                    }
                     setVoucherNo(data.voucher_no || '');
                     resetForm();
                 } catch (err: any) {
+                    win?.close();
                     const d = err?.response?.data;
                     toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not save the purchase.'), { duration: 7000 });
                 } finally { setSaving(false); }
@@ -405,9 +423,13 @@ export default function TradePurchase() {
                         <span className={`${LABEL} text-[14px]`}>Voucher No</span>
                         <div className="flex h-9 items-center justify-center rounded-md bg-black font-mono text-[15px] font-bold text-[#3cff5a]">{voucherNo}</div>
                         {missing.length > 0 && <span className="text-[11.5px] text-slate-600">To save, add {missing.join(' and ')}.</span>}
-                        <button type="button" onClick={save} disabled={saving || missing.length > 0} className={ACTION_BTN}>
-                            {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
-                        </button>
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                            <button type="button" onClick={() => save()} disabled={saving || missing.length > 0} className={ACTION_BTN}>
+                                {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
+                            </button>
+                            <PrintChoiceButton onInvoice={printInvoice} invoiceDisabled={saving || (!lastId && missing.length > 0)}
+                                invoiceHint={lines.length ? 'Save and print the purchase invoice' : 'Print the last purchase saved'} className={`${ACTION_BTN} !min-w-0 !px-3`} />
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => setView({ rows: null, filter: true })} className={`${ACTION_BTN} !min-w-0`}><span className="underline">V</span>iew</button>
                             <button type="button" onClick={closeWindow} className={`${ACTION_BTN} !min-w-0`}><span className="underline">C</span>ancel</button>

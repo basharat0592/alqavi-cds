@@ -21,6 +21,7 @@ import { orderService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
 import { getImageUrl } from '@/lib/utils';
 import FitStage from '@/components/trade/FitStage';
+import { PrintChoiceButton, useOwnPrint } from '@/components/trade/WindowPrintButton';
 import { INVOICE_SIZES, savedInvoiceSize, type InvoiceSize } from '@/components/trade/TradeInvoicePrint';
 
 /* ───────────────────────── types & helpers ───────────────────────── */
@@ -2118,6 +2119,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Keyboard handler is bound once; route Ctrl+S to the latest saveInvoice.
     const saveRef = useRef(saveInvoice);
     saveRef.current = saveInvoice;
+    useOwnPrint(mode === 'invoice');
     const printRef = useRef(() => {});
     printRef.current = () => { if (!saving && !saveMissing.length) saveInvoice(true); };
 
@@ -2367,9 +2369,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             className={`${FIELD} h-9 w-[110px] border-slate-300 bg-white !px-1 !text-[12px] !font-normal`} aria-label="Print size">
                             {INVOICE_SIZES.map((o) => <option key={o.v} value={o.v}>{o.v === 'a5s' ? 'A5 sideways' : o.v === 'a5' ? 'A5 upright' : o.label.replace('Slip ', '')}</option>)}
                         </select>
-                        <button type="button" onClick={() => saveInvoice(true)} disabled={saving || saveMissing.length > 0} title={saveHint ? saveHint : 'Save and print the invoice (Ctrl+P)'} className={`${ACTION_BTN} gap-1.5`}>
-                            <Printer size={14} /> <span><span className="underline">P</span>rint</span>
-                        </button>
+                        {/* Print: the invoice (saves it first, Ctrl+P) or the window as shown. */}
+                        <PrintChoiceButton onInvoice={() => saveInvoice(true)} invoiceDisabled={saving || saveMissing.length > 0}
+                            invoiceHint={saveHint || 'Save and print the invoice (Ctrl+P)'} className={ACTION_BTN} />
                         <button type="button" onClick={() => openSaleRecords()} className={ACTION_BTN}><span className="underline">V</span>iew</button>
                         <button type="button" onClick={closeWindow} className={ACTION_BTN}><span className="underline">C</span>lose</button>
                     </div>

@@ -974,3 +974,168 @@ class TradeCashShortExcessViewSet(viewsets.ViewSet):
             VoucherLine.objects.create(voucher=v, line=1, account=dr, debit=amt, credit=Z, detail=label)
             VoucherLine.objects.create(voucher=v, line=2, account=cr, debit=Z, credit=amt, detail=label)
         return Response({'voucher_no': v.voucher_no, 'amount': amt}, status=status.HTTP_201_CREATED)
+
+
+
+# ───────────────────────── Bank Withdrawal / Cheque Management ─────────────────────────
+
+CHQ_ACC = '12040002'   # Chq Amount: cheques received, not yet in the bank
+
+
+def _is_bank(acc):
+    """Bank accounts: Cash-Bank-Cheque (1204) other than Cash and Chq Amount, and Bank (2203)."""
+    g = acc.group.code if acc.group_id else None
+    return (g == 1204 and acc.acc_id not in (CASH_ACC, CHQ_ACC)) or g == 2203
+
+
+class TradeBankViewSet(viewsets.ViewSet):
+    """Bank Withdrawal (cash taken out of a bank: Cash Dr / Bank Cr) and Cheque
+    Management (un-cleared cheques in 12040002 Chq Amount sent to a bank:
+    Bank Dr / Chq Amount Cr, and marked cleared)."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def _accounts(self):
+        from modules.company.models import LedgerAccount
+        return scope_to_tenant(self.request.user, LedgerAccount.objects.all(), 'tenant').select_related('group')
+
+    def _staff(self, d):
+        return scope_to_tenant(self.request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+
+    @staticmethod
+    def _date(v):
+        try:
+            return datetime.date.fromisoformat(str(v)[:10]) if v else datetime.date.today()
+        except ValueError:
+            return None
+
+    # Bank Withdrawal
+    @action(detail=False, methods=['get', 'post'])
+    def withdrawals(self, request):
+        """GET (View Bank withdrawal Voucher Detail): ?voucher_no, ?bank, ?date_from, ?date_to.
+        POST: {bank, amount, detail?, date?, staff?}."""
+        from .vouchers import VoucherViewSet
+        if request.method == 'GET':
+            q = request.query_params
+            qs = scope_to_tenant(request.user, Voucher.objects.filter(vtype='withdrawal'), 'tenant')
+            if q.get('voucher_no'):
+                qs = qs.filter(voucher_no__icontains=q['voucher_no'].strip())
+            if q.get('date_from'):
+                qs = qs.filter(date__gte=q['date_from'])
+            if q.get('date_to'):
+                qs = qs.filter(date__lte=q['date_to'])
+            lines = VoucherLine.objects.filter(voucher__in=qs, credit__gt=0).select_related('voucher__staff', 'account')
+            if q.get('bank'):
+                lines = lines.filter(account_id=q['bank'])
+            return Response([{'voucher_no': l.voucher.voucher_no, 'date': l.voucher.date, 'acc_id': l.account.acc_id,
+                              'bank': l.account.name, 'detail': l.detail, 'amount': l.credit,
+                              'staff': l.voucher.staff.name if l.voucher.staff_id else ''}
+                             for l in lines.order_by('-voucher__date', '-voucher_id')[:2000]])
+        d = request.data
+        accounts = self._accounts()
+        bank = accounts.filter(pk=d.get('bank')).first()
+        if not bank or not _is_bank(bank):
+            return Response({'detail': 'Find the bank first.'}, status=400)
+        cash = accounts.filter(acc_id=CASH_ACC).first()
+        if not cash:
+            return Response({'detail': 'The Cash account (12040001) is missing.'}, status=400)
+        amt = _d(d.get('amount')).quantize(Decimal('0.01'))
+        if amt <= 0:
+            return Response({'detail': 'Enter the Amount.'}, status=400)
+        vdate = self._date(d.get('date'))
+        if not vdate:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        detail = _clean(d.get('detail'), 255) or f'Withdrawal from {bank.name}'
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(vdate), vtype='withdrawal', date=vdate,
+                                       staff=self._staff(d), detail=detail, total=amt, created_by=request.user,
+                                       tenant_id=tenant_id_for(request.user) or bank.tenant_id)
+            VoucherLine.objects.create(voucher=v, line=1, account=cash, debit=amt, credit=Z, detail=detail)
+            VoucherLine.objects.create(voucher=v, line=2, account=bank, debit=Z, credit=amt, detail=detail)
+        return Response({'voucher_no': v.voucher_no, 'amount': amt}, status=status.HTTP_201_CREATED)
+
+    # Cheque Management
+    @action(detail=False, methods=['get'])
+    def cheques(self, request):
+        """Un Clear Chqs: amounts in Chq Amount not yet sent to a bank. ?date_from / ?date_to (cheque date)."""
+        q = request.query_params
+        lines = (scope_to_tenant(request.user, VoucherLine.objects.filter(account__acc_id=CHQ_ACC, debit__gt=0,
+                                                                          cleared_by__isnull=True), 'voucher__tenant')
+                 .select_related('voucher', 'account'))
+        out = []
+        for l in lines.order_by('voucher__date', 'id')[:3000]:
+            v = l.voucher
+            chq_date = l.chq_date or v.chq_date
+            if q.get('date_from') and (not chq_date or str(chq_date) < q['date_from']):
+                continue
+            if q.get('date_to') and (not chq_date or str(chq_date) > q['date_to']):
+                continue
+            # Whose cheque it is: the voucher's other (credited) account.
+            party = VoucherLine.objects.filter(voucher=v, credit__gt=0).select_related('account').first()
+            out.append({'line': l.id, 'voucher_no': v.voucher_no, 'date': v.date,
+                        'acc_id': party.account.acc_id if party else '', 'account': party.account.name if party else '',
+                        'chq_no': l.chq_no or v.chq_no, 'chq_date': chq_date, 'bank': l.bank or v.bank,
+                        'detail': l.detail or v.detail, 'amount': l.debit})
+        return Response(out)
+
+    @action(detail=False, methods=['post'])
+    def clear_cheques(self, request):
+        """Body: {lines: [VoucherLine ids], bank (account id), date?, staff?, detail?} -> one voucher."""
+        from .vouchers import VoucherViewSet
+        d = request.data
+        accounts = self._accounts()
+        bank = accounts.filter(pk=d.get('bank')).first()
+        if not bank or not _is_bank(bank):
+            return Response({'detail': 'Find the bank account the cheques go to.'}, status=400)
+        chq = accounts.filter(acc_id=CHQ_ACC).first()
+        vdate = self._date(d.get('date'))
+        if not vdate:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        with transaction.atomic():
+            lines = list(scope_to_tenant(request.user, VoucherLine.objects.select_for_update().filter(
+                pk__in=d.get('lines') or [], account__acc_id=CHQ_ACC, debit__gt=0, cleared_by__isnull=True), 'voucher__tenant')
+                .select_related('voucher'))
+            if not lines:
+                return Response({'detail': 'Select the cheques to send.'}, status=400)
+            total = sum((l.debit for l in lines), Z)
+            detail = _clean(d.get('detail'), 255) or f'Cheques sent to {bank.name}'
+            v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(vdate), vtype='chq_voucher', date=vdate,
+                                       staff=self._staff(d), detail=detail, total=total, created_by=request.user,
+                                       tenant_id=tenant_id_for(request.user) or bank.tenant_id)
+            n = 0
+            for l in lines:
+                no = l.chq_no or l.voucher.chq_no
+                n += 1
+                VoucherLine.objects.create(voucher=v, line=n, account=bank, debit=l.debit, credit=Z,
+                                           detail=f'Chq {no} ({l.voucher.voucher_no})', chq_no=no)
+            VoucherLine.objects.create(voucher=v, line=n + 1, account=chq, debit=Z, credit=total, detail=detail)
+            VoucherLine.objects.filter(pk__in=[l.pk for l in lines]).update(cleared_by=v)
+        return Response({'voucher_no': v.voucher_no, 'total': total, 'count': len(lines)}, status=status.HTTP_201_CREATED)
+
+
+# ───────────────────────── Purchase invoice (print) ─────────────────────────
+
+class TradePurchaseInvoiceView(viewsets.ViewSet):
+    """One saved purchase with its header totals and lines, for the printed purchase invoice."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def retrieve(self, request, pk=None):
+        from .models import PurchaseOrder
+        po = (scope_to_tenant(request.user, PurchaseOrder.objects.filter(purchase_number__startswith='P'), 'tenant')
+              .select_related('supplier__ledger_account').prefetch_related('items__product').filter(pk=pk).first())
+        if not po:
+            return Response({'detail': 'Purchase not found.'}, status=404)
+        acc = getattr(po.supplier, 'ledger_account', None) if po.supplier_id else None
+        lines = [{'pid': (it.product.sku or '') if it.product else '', 'name': it.product.name if it.product else 'Deleted product',
+                  'qty': it.quantity, 'bonus': it.bonus_quantity, 'expiry_date': it.expiry_date, 'pur_rate': it.price,
+                  'sale_rate': it.selling_price, 'retail_rate': it.retail_rate, 'sub_total': _d(it.price) * (it.quantity or 0)}
+                 for it in po.items.all().order_by('id')]
+        amount = sum((l['sub_total'] for l in lines), Z)
+        return Response({
+            'id': po.id, 'purchase_no': po.purchase_number, 'date': po.order_date.date() if po.order_date else None,
+            'bill_no': po.reference_number or '', 'supplier_acc': acc.acc_id if acc else '',
+            'supplier': (acc.name if acc else '') or (po.supplier.name if po.supplier_id else ''),
+            'amount': amount, 'extra_disc': po.extra_discount, 'freight': po.shipping_cost, 'fare': po.fare_amount,
+            'goods': po.goods_amount, 'tax': po.tax_amount, 'net': po.total_amount, 'paid': po.paid_amount,
+            'staff': (po.notes or '').split('staff ', 1)[1] if 'staff ' in (po.notes or '') else '',
+            'lines': lines,
+        })

@@ -95,9 +95,9 @@ const MENUS: Menu[] = [
         { label: 'Bank', sub: true, children: [
             { label: 'Bank Deposit', disabled: true },
             SEP,
-            { label: 'Bank Withdrawal', disabled: true },
+            { label: 'Bank Withdrawal', href: '/admin/trade/bank-withdrawal' },
             SEP,
-            { label: 'Cheque Management', disabled: true },
+            { label: 'Cheque Management', href: '/admin/trade/cheque-management' },
         ] },
         SEP,
         { label: 'Post Voucher (Manually)', disabled: true },
