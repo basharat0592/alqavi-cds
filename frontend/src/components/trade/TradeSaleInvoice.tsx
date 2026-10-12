@@ -311,7 +311,7 @@ const errMsg = (err: any, fallback: string) => {
     return String(d?.error || d?.detail || (d && typeof d === 'object' && Object.values(d).flat()[0]) || fallback);
 };
 
-function FindCompanyWindow({ companies, current, askClose, reload, onPick, onClose }: {
+export function FindCompanyWindow({ companies, current, askClose, reload, onPick, onClose }: {
     companies: any[]; current: string;
     askClose: (fn: () => void, msg?: string) => void; reload: () => Promise<void>;
     onPick: (c: any) => void; onClose: () => void;

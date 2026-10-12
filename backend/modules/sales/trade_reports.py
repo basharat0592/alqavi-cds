@@ -102,6 +102,16 @@ class Ctx:
         self.account = (q.get('account') or '').strip()
         self.cheque = q.get('cheque_status') or ''
         self.areas = [int(x) for x in (q.get('areas') or '').split(',') if x.strip().isdigit()]
+        from modules.company.models import Company, LedgerAccount
+        from modules.products.models import Product
+        self.company = q.get('company') or None
+        co = scope_to_tenant(self.user, Company.objects.filter(pk=self.company), 'tenant').first() if self.company else None
+        self.company_name = co.name if co else ''
+        accs = scope_to_tenant(self.user, LedgerAccount.objects.all(), 'tenant')
+        self.supplier_acc = accs.filter(pk=q.get('supplier'), supplier__isnull=False).first() if q.get('supplier') else None
+        self.customer_acc = accs.filter(pk=q.get('customer'), customer__isnull=False).first() if q.get('customer') else None
+        self.product = (scope_to_tenant(self.user, Product.objects.filter(pk=q.get('product')), 'tenant').select_related('stock').first()
+                        if q.get('product') else None)
         self.fy = None
         from .models import FinancialYear
         fys = scope_to_tenant(self.user, FinancialYear.objects.all(), 'tenant')
@@ -843,15 +853,657 @@ def r_cheque_register(ctx):
                 rows, ['Total', f'{len(rows)} cheques', '', '', '', '', '', _f(sum(_d(r['c'][7]) for r in rows))])
 
 
-RUNNERS = {k: globals()[f'r_{k}'] for k, *_ in REPORTS}
+# ═════════════════════ the legacy report menu: groups and the reports in each ═════════════════════
+# (key, label, filters, permission). Filters: dates, staff, cheque, fy, areas and one "find" box:
+# find:invoice | find:voucher | find:company | find:supplier | find:product | find:customer | find:account.
+# "staff!" = a saleman must be chosen.
+
+def _filter_company(ctx, p):
+    return not ctx.company or (getattr(getattr(p, 'stock', None), 'product', None) and str(p.stock.product.company_id) == str(ctx.company))
+
+
+def _stock_list(ctx, title, *, by_company=True, qty='all', rate=False, specific=False):
+    if specific and not ctx.company:
+        return _out(title, ctx, [('', 'l')], [R('Find the company first.')], subtitle='')
+    rows, cur, sub = [], None, [0, Z]
+    tq, tv = 0, Z
+    prods = [p for p in _products(ctx) if _filter_company(ctx, p)]
+    q = lambda p: int(p.total_quantity or 0)
+    keep = {'all': lambda p: True, 'nonzero': lambda p: q(p) != 0, 'zero': lambda p: q(p) == 0,
+            'above': lambda p: q(p) > int(p.min_count or 0), 'below': lambda p: q(p) <= int(p.min_count or 0)}[qty]
+    prods = [p for p in prods if keep(p)]
+    prods.sort(key=lambda p: ((_company(p).lower() if by_company else ''), p.product_name.lower()))
+
+    def close():
+        if by_company and cur is not None:
+            rows.append(R('', f'Total {cur}', '', sub[0], '', '', _f(sub[1]), t='s') if not rate else R('', f'Total {cur}', '', sub[0], '', _f(sub[1]), t='s'))
+    for p in prods:
+        c = _company(p) or '(No company)'
+        if by_company and c != cur:
+            close(); rows.append(R(c, t='g')); cur = c; sub[0], sub[1] = 0, Z
+        pack = max(1, int(getattr(p.stock, 'items_per_carton', None) or 1)) if p.stock_id else 1
+        if rate:
+            val = _d(p.cost_price) * q(p)
+            rows.append(R(p.sku or '', p.product_name, pack, q(p), _f(p.cost_price), _f(val)))
+        else:
+            val = _d(p.selling_price) * q(p)
+            rows.append(R(p.sku or '', p.product_name, pack, q(p), _f(p.selling_price), _f(p.original_price), _f(val)))
+        sub[0] += q(p); sub[1] += val; tq += q(p); tv += val
+    close()
+    if rate:
+        cols = [('PID', 'l'), ('Product Name', 'l'), ('Pack', 'r'), ('Qty', 'r'), ('Pur.Rate', 'r'), ('Value', 'r')]
+        tot = ['Total', f'{len(prods)} products', '', tq, '', _f(tv)]
+    else:
+        cols = [('PID', 'l'), ('Product Name', 'l'), ('Pack', 'r'), ('Qty', 'r'), ('TP', 'r'), ('Retail', 'r'), ('Value (TP)', 'r')]
+        tot = ['Total', f'{len(prods)} products', '', tq, '', '', _f(tv)]
+    return _out(title, ctx, cols, rows, tot, subtitle=f'Stock in hand as on {_dmy(datetime.date.today())}')
+
+
+def r_stock_company_all(ctx):
+    return _stock_list(ctx, 'Company-wise Stock of all Products')
+
+
+def r_stock_company_specific(ctx):
+    return _stock_list(ctx, 'Company Stock (Specific)', specific=True)
+
+
+def r_stock_above_min(ctx):
+    return _stock_list(ctx, 'Product-wise Stock (Above Min Qty)', by_company=False, qty='above')
+
+
+def r_stock_below_min(ctx):
+    return _stock_list(ctx, 'Product-wise Stock (Below Min Qty)', by_company=False, qty='below')
+
+
+def r_stock_nonzero(ctx):
+    return _stock_list(ctx, 'Product-wise Stock (Non zero Qty)', by_company=False, qty='nonzero')
+
+
+def r_stock_zero(ctx):
+    return _stock_list(ctx, 'Product-wise Stock (zero Qty)', by_company=False, qty='zero')
+
+
+def r_stock_company_all_rate(ctx):
+    return _stock_list(ctx, 'Company-wise Stock of all Products W.Pur.Rate', rate=True)
+
+
+def r_stock_company_specific_rate(ctx):
+    return _stock_list(ctx, 'Company Stock (Specific) W.Pur.Rate', rate=True, specific=True)
+
+
+def r_stock_above_min_rate(ctx):
+    return _stock_list(ctx, 'Product-wise Stock (Above Min Qty) W.Pur.Rate', by_company=False, qty='above', rate=True)
+
+
+def r_stock_below_min_rate(ctx):
+    return _stock_list(ctx, 'Product-wise Stock (Below Min Qty) W.Pur.Rate', by_company=False, qty='below', rate=True)
+
+
+def r_stock_nonzero_rate(ctx):
+    return _stock_list(ctx, 'Product-wise Stock (Non zero Qty) W.Pur.Rate', by_company=False, qty='nonzero', rate=True)
+
+
+def r_stock_position_company(ctx):
+    base = r_stock_position(ctx)
+    agg = defaultdict(lambda: [0] * 7)
+    for r in base['rows']:
+        a = agg[r['c'][2] or '(No company)']
+        a[0] += 1
+        for i in range(6):
+            a[i + 1] += r['c'][3 + i]
+    rows = [R(k, *v) for k, v in sorted(agg.items(), key=lambda x: x[0].lower())]
+    tot = ['Total'] + [sum(r['c'][i] for r in rows) for i in range(1, 8)]
+    return _out('Stock Position Company-wise', ctx, [('Company', 'l'), ('Products', 'r'), ('Purchased', 'r'), ('Pur.Return', 'r'), ('Sold', 'r'),
+                                                     ('Sale Return', 'r'), ('Adjust (±)', 'r'), ('Stock Now', 'r')], rows, tot)
+
+
+# ── purchase order / purchase / purchase return ──
+
+PUR_KIND = {'K': ('PENDING', 'Purchase Order', 'Order No'), 'P': ('RECEIVED', 'Purchase Detail', 'Pur. Inv'), 'R': ('RETURNED', 'Purchase Return', 'Ret. Inv')}
+
+
+def _pur_docs(ctx, letter):
+    qs = _pos(ctx, letter, PUR_KIND[letter][0]).prefetch_related('items__product')
+    if ctx.supplier_acc:
+        qs = qs.filter(supplier_id=ctx.supplier_acc.supplier_id)
+    return qs
+
+
+def _pur_detail(ctx, letter, mode):
+    status, what, numh = PUR_KIND[letter]
+    title = f'{what} By ' + {'date': 'Date-wise', 'invoice': 'Invoice No', 'product': 'Product-Wise', 'supplier': 'Supplier-Wise'}[mode]
+    if mode == 'invoice':
+        from .models import PurchaseOrder
+        po = ctx.scope(PurchaseOrder.objects.filter(purchase_number__iexact=ctx.invoice)).first() if ctx.invoice else None
+        if not po:
+            return _out(title, ctx, [('', 'l')], [R(f'Enter the {what} number.' if not ctx.invoice else f'{ctx.invoice} not found.')], subtitle='')
+        return _po_lines_report(ctx, po, f'{what} Invoice')
+    if mode == 'supplier' and not ctx.supplier_acc:
+        return _out(title, ctx, [('', 'l')], [R('Find the supplier first.')], subtitle='')
+    if mode == 'product' and not ctx.product:
+        return _out(title, ctx, [('', 'l')], [R('Find the product first.')], subtitle='')
+    rows, tq, tv = [], 0, Z
+    sp_id = ctx.product.stock.product_id if (ctx.product and ctx.product.stock_id) else None
+    for po in _pur_docs(ctx, letter):
+        items = [it for it in po.items.all() if mode != 'product' or it.product_id == sp_id]
+        if not items:
+            continue
+        d = _dmy(po.order_date.date() if po.order_date else None)
+        if mode == 'product':
+            for it in items:
+                sub = _d(it.price) * (it.quantity or 0)
+                rows.append(R(po.purchase_number, d, _sup(po), it.quantity, it.bonus_quantity or '', _dmy(it.expiry_date), _f(it.price), _f(sub)))
+                tq += it.quantity or 0; tv += sub
+            continue
+        rows.append(R(f'{po.purchase_number}  ·  {d}  ·  {_sup(po)}', t='g'))
+        st = Z
+        for it in items:
+            sub = _d(it.price) * (it.quantity or 0); st += sub
+            rows.append(R(it.product.sku if it.product else '', it.product.name if it.product else '', it.quantity, it.bonus_quantity or '',
+                          _dmy(it.expiry_date), _f(it.price), _f(sub)))
+            tq += it.quantity or 0
+        rows.append(R('', f'Total {po.purchase_number}', '', '', '', '', _f(st), t='s')); tv += st
+    if mode == 'product':
+        return _out(title, ctx, [(numh, 'l'), ('Date', 'l'), ('Supplier', 'l'), ('Qty', 'r'), ('Bonus', 'r'), ('Expiry', 'l'), ('Rate', 'r'), ('Sub Total', 'r')],
+                    rows, ['Total', '', '', tq, '', '', '', _f(tv)], subtitle=f'{ctx.product.sku} {ctx.product.product_name} · {ctx.period()}')
+    sub = ctx.period() + (f' · {ctx.supplier_acc.name}' if ctx.supplier_acc else '')
+    return _out(title, ctx, [('PID', 'l'), ('Product Name', 'l'), ('Qty', 'r'), ('Bonus', 'r'), ('Expiry', 'l'), ('Rate', 'r'), ('Sub Total', 'r')],
+                rows, ['Total', '', tq, '', '', '', _f(tv)], subtitle=sub)
+
+
+def _mk_pur(letter, mode):
+    return lambda ctx: _pur_detail(ctx, letter, mode)
+
+
+def r_pur_summary(ctx):
+    agg = defaultdict(lambda: [0, Z, 0, Z])
+    for letter, i in (('P', 0), ('R', 2)):
+        for po in _pur_docs(ctx, letter):
+            a = agg[_sup(po) or '(no supplier)']
+            a[i] += 1; a[i + 1] += _d(po.total_amount)
+    rows = [R(k, v[0], _f(v[1]), v[2], _f(v[3]), _f(v[1] - v[3])) for k, v in sorted(agg.items(), key=lambda x: x[0].lower())]
+    tot = ['Total', sum(r['c'][1] for r in rows), _f(sum(_d(r['c'][2]) for r in rows)), sum(r['c'][3] for r in rows),
+           _f(sum(_d(r['c'][4]) for r in rows)), _f(sum(_d(r['c'][5]) for r in rows))]
+    return _out('Purchase / Pur.Return Summary', ctx, [('Supplier', 'l'), ('Purchases', 'r'), ('Purchase Amount', 'r'), ('Returns', 'r'),
+                                                      ('Return Amount', 'r'), ('Net', 'r')], rows, tot)
+
+
+# ── sale / sale return invoices ──
+
+def _sale_detail(ctx, mode):
+    """Invoices with their lines, grouped per invoice (by date, or one customer's)."""
+    title = 'Sale Invoice By ' + ('Date' if mode == 'date' else 'Customer')
+    if mode == 'customer' and not ctx.customer_acc:
+        return _out(title, ctx, [('', 'l')], [R('Find the customer first.')], subtitle='')
+    from .models import OrderItem
+    accs = _cust_accounts(ctx)
+    orders = _orders(ctx)
+    if mode == 'customer':
+        orders = orders.filter(customer_id=ctx.customer_acc.customer_id)
+    orders = sorted(orders.select_related('staff'), key=lambda o: (_odate(o), o.tracking_id))[:1500]
+    lines = defaultdict(list)
+    for it in OrderItem.objects.filter(order__in=orders).select_related('product').order_by('id'):
+        lines[it.order_id].append(it)
+    rows, tq, tn = [], 0, Z
+    for o in orders:
+        code, name, area = _cust_name(o, accs)
+        rows.append(R(f'{o.tracking_id}  ·  {_dmy(_odate(o))}  ·  {code} {name}{"  ·  " + area if area else ""}{"  ·  " + o.staff.name if o.staff_id else ""}', t='g'))
+        for it in lines[o.id]:
+            gross = _d(it.price) * (it.quantity or 0)
+            rows.append(R(it.product.sku if it.product else '', it.product.product_name if it.product else '', it.quantity, it.bonus_quantity or '',
+                          _f(it.price), _f(it.discount), _f(gross - _d(it.discount))))
+            tq += it.quantity or 0
+        rows.append(R('', f'Net {o.tracking_id}', '', '', '', '', _f(o.total_amount), t='s')); tn += _d(o.total_amount)
+    return _out(title, ctx, [('PID', 'l'), ('Product Name', 'l'), ('Qty', 'r'), ('Bonus', 'r'), ('TP', 'r'), ('Disc', 'r'), ('Net', 'r')],
+                rows, ['Total', f'{len(orders)} invoices', tq, '', '', '', _f(tn)],
+                subtitle=ctx.period() + (f' · {ctx.customer_acc.name}' if mode == 'customer' else ''))
+
+
+def r_sale_by_date(ctx):
+    return _sale_detail(ctx, 'date')
+
+
+def r_sale_by_invoice(ctx):
+    if not ctx.invoice:
+        return _out('Sale Invoice By Invice No', ctx, [('', 'l')], [R('Enter the Invoice No.')], subtitle='')
+    return r_sale_invoice(ctx)
+
+
+def r_sale_by_customer(ctx):
+    return _sale_detail(ctx, 'customer')
+
+
+def _return_detail(ctx, mode):
+    title = 'Sale Return Invoice By ' + ('Date' if mode == 'date' else 'Customer')
+    if mode == 'customer' and not ctx.customer_acc:
+        return _out(title, ctx, [('', 'l')], [R('Find the customer first.')], subtitle='')
+    rets = _returns(ctx)
+    if mode == 'customer':
+        rets = rets.filter(customer_id=ctx.customer_acc.customer_id)
+    rows, tn, n = [], Z, 0
+    for r in rets.order_by('return_date', 'return_no').prefetch_related('items__product')[:1500]:
+        n += 1
+        rows.append(R(f'{r.return_no}  ·  {_dmy(r.return_date)}  ·  {r.customer_name or ""}{"  ·  " + r.staff.name if r.staff_id else ""}', t='g'))
+        for it in r.items.all():
+            rows.append(R(it.product.sku if it.product else '', it.product.product_name if it.product else '', it.quantity, it.bonus_quantity or '',
+                          _f(it.price), _f(it.discount), _f(_d(it.price) * (it.quantity or 0) - _d(it.discount))))
+        net = _d(r.net_amount) - _d(r.less_amount)
+        rows.append(R('', f'Net {r.return_no}', '', '', '', '', _f(net), t='s')); tn += net
+    return _out(title, ctx, [('PID', 'l'), ('Product Name', 'l'), ('Qty', 'r'), ('Bonus', 'r'), ('TP', 'r'), ('Disc', 'r'), ('Net', 'r')],
+                rows, ['Total', f'{n} returns', '', '', '', '', _f(tn)], subtitle=ctx.period() + (f' · {ctx.customer_acc.name}' if mode == 'customer' else ''))
+
+
+def r_return_by_date(ctx):
+    return _return_detail(ctx, 'date')
+
+
+def r_return_by_invoice(ctx):
+    if not ctx.invoice:
+        return _out('Sale Return Invoice By Invice No', ctx, [('', 'l')], [R('Enter the Return No.')], subtitle='')
+    return r_sale_return(ctx)
+
+
+def r_return_by_customer(ctx):
+    return _return_detail(ctx, 'customer')
+
+
+def r_challan_area(ctx):
+    """Loading sheet: for each area, the products of the invoices in the period (qty, bonus, cartons)."""
+    accs = _cust_accounts(ctx)
+    from .models import OrderItem
+    orders = list(_orders(ctx))
+    area_of = {o.id: (_cust_name(o, accs)[2] or '(no area)') for o in orders}
+    agg = defaultdict(lambda: defaultdict(lambda: [0, 0]))
+    names = {}
+    for it in OrderItem.objects.filter(order__in=orders).select_related('product'):
+        p = it.product
+        k = p.id if p else None
+        names[k] = (p.sku if p else '', p.product_name if p else '(deleted)', p.carton_qty if p else 0)
+        a = agg[area_of[it.order_id]][k]
+        a[0] += it.quantity or 0; a[1] += it.bonus_quantity or 0
+    rows = []
+    for area in sorted(agg, key=str.lower):
+        rows.append(R(area, t='g'))
+        for k, (q, b) in sorted(agg[area].items(), key=lambda x: names[x[0]][1].lower()):
+            sku, nm, ctn = names[k]
+            rows.append(R(sku, nm, (f'{q // ctn} + {q % ctn}' if q % ctn else q // ctn) if ctn else '', q, b or '', ''))
+    return _out('Area-Wise Delivery Challan', ctx, [('PID', 'l'), ('Product Name', 'l'), ('Cartons', 'r'), ('Qty', 'r'), ('Bonus', 'r'), ('Loaded', 'l')],
+                rows, ['Total', f'{len(orders)} invoices', '', sum(r['c'][3] for r in rows if not r['t']), '', ''])
+
+
+# ── sale statements ──
+
+def _two_level(ctx, title, outer_h, inner_h, outer, inner, items=True):
+    """Sale totals grouped by outer -> inner (e.g. saleman -> area)."""
+    agg = defaultdict(lambda: defaultdict(lambda: [0, Z, Z]))
+    if items:
+        for it in _items(ctx).select_related('order__staff'):
+            gross = _d(it.price) * (it.quantity or 0)
+            a = agg[outer(it)][inner(it)]
+            a[0] += it.quantity or 0; a[1] += gross; a[2] += gross - _d(it.discount)
+    rows, tq, tg, tn = [], 0, Z, Z
+    for o in sorted(agg, key=lambda x: str(x).lower()):
+        rows.append(R(o, t='g'))
+        sq, sg, sn = 0, Z, Z
+        for i, (q, g, n) in sorted(agg[o].items(), key=lambda x: str(x[0]).lower()):
+            rows.append(R(i, q, _f(g), _f(n))); sq += q; sg += g; sn += n
+        rows.append(R(f'Total {o}', sq, _f(sg), _f(sn), t='s'))
+        tq += sq; tg += sg; tn += sn
+    return _out(title, ctx, [(inner_h, 'l'), ('Qty', 'r'), ('Gross', 'r'), ('Net', 'r')], rows, ['Total', tq, _f(tg), _f(tn)])
+
+
+def _staff_name(o):
+    return o.staff.name if o.staff_id else '(no saleman)'
+
+
+def r_saleman_area(ctx):
+    accs = _cust_accounts(ctx)
+    return _two_level(ctx, 'Saleman Area-wise', 'Saleman', 'Area', lambda it: _staff_name(it.order), lambda it: _cust_name(it.order, accs)[2] or '(no area)')
+
+
+def r_saleman_comp(ctx):
+    return _two_level(ctx, 'Saleman Comp-wise', 'Saleman', 'Company', lambda it: _staff_name(it.order), lambda it: (_company(it.product) if it.product else '') or '(No company)')
+
+
+def r_saleman_specific_comp(ctx):
+    if not ctx.staff:
+        return _out('Saleman Specific Comp-wise', ctx, [('', 'l')], [R('Choose the Staff (saleman) first.')], subtitle='')
+    return _two_level(ctx, 'Saleman Specific Comp-wise', 'Saleman', 'Company', lambda it: _staff_name(it.order), lambda it: (_company(it.product) if it.product else '') or '(No company)')
+
+
+def r_company_specific(ctx):
+    if not ctx.company:
+        return _out('Company-Wise (Specific)', ctx, [('', 'l')], [R('Find the company first.')], subtitle='')
+    agg = defaultdict(lambda: [0, 0, Z, Z])
+    for it in _items(ctx).filter(product__stock__product__company_id=ctx.company):
+        p = it.product
+        a = agg[(p.sku or '', p.product_name)]
+        gross = _d(it.price) * (it.quantity or 0)
+        a[0] += it.quantity or 0; a[1] += it.bonus_quantity or 0; a[2] += gross; a[3] += gross - _d(it.discount)
+    rows = [R(k[0], k[1], v[0], v[1] or '', _f(v[2]), _f(v[3])) for k, v in sorted(agg.items(), key=lambda x: x[0][1].lower())]
+    tot = ['Total', f'{len(rows)} products', sum(r['c'][2] for r in rows), '', _f(sum(_d(r['c'][4]) for r in rows)), _f(sum(_d(r['c'][5]) for r in rows))]
+    return _out('Company-Wise (Specific)', ctx, [('PID', 'l'), ('Product Name', 'l'), ('Qty', 'r'), ('Bonus', 'r'), ('Gross', 'r'), ('Net', 'r')], rows, tot,
+                subtitle=ctx.period() + f' · {ctx.company_name}')
+
+
+def r_company_customer(ctx):
+    accs = _cust_accounts(ctx)
+    return _two_level(ctx, 'Company and Customer-Wise', 'Company', 'Customer',
+                      lambda it: (_company(it.product) if it.product else '') or '(No company)',
+                      lambda it: ' '.join(x for x in _cust_name(it.order, accs)[:2] if x))
+
+
+def r_customers_overall(ctx):
+    """Each customer: sales, returns, received and balance (whole ledger)."""
+    from modules.company.models import LedgerAccount
+    qs = ctx.scope(LedgerAccount.objects.filter(group__code=1202)).select_related('area')
+    if ctx.areas:
+        qs = qs.filter(area_id__in=ctx.areas)
+    sale, ret, rec, bal = defaultdict(lambda: Z), defaultdict(lambda: Z), defaultdict(lambda: Z), defaultdict(lambda: Z)
+    for d, no, acc, det, dr, cr, st in _ledger(ctx, upto=ctx.dto):
+        if not (acc.group_id and acc.group.code == 1202):
+            continue
+        bal[acc.pk] += dr - cr
+        if ctx.dfrom and d < ctx.dfrom:
+            continue
+        if str(det or '').startswith('Sale of'):
+            sale[acc.pk] += dr
+        elif str(det or '').startswith('Sale Ret'):
+            ret[acc.pk] += cr
+        else:
+            rec[acc.pk] += cr - dr
+    rows = []
+    for a in sorted(qs, key=lambda a: a.name.lower()):
+        if not any((sale[a.pk], ret[a.pk], rec[a.pk], bal[a.pk])):
+            continue
+        rows.append(R(a.acc_id, a.name, a.area.name if a.area_id else '', _f(sale[a.pk]), _f(ret[a.pk]), _f(rec[a.pk]), _f(bal[a.pk])))
+    tot = ['Total', f'{len(rows)} customers', ''] + [_f(sum(_d(r['c'][i]) for r in rows)) for i in range(3, 7)]
+    return _out('Customers over all', ctx, [('Acc ID', 'l'), ('Customer', 'l'), ('Area', 'l'), ('Sales', 'r'), ('Returns', 'r'), ('Received / Other', 'r'), ('Balance', 'r')], rows, tot)
+
+
+def _sorted_profit(base, col, title):
+    rows = sorted(base['rows'], key=lambda r: -_d(r['c'][col]))
+    return {**base, 'title': title, 'rows': rows}
+
+
+def r_daily_by_profit(ctx):
+    return _sorted_profit(r_daily_sale(ctx), 5, 'Daily Sale Summary Order By Profit')
+
+
+def r_daily_by_qty(ctx):
+    return _sorted_profit(r_daily_sale(ctx), 1, 'Daily Sale Summary Order By Qty')
+
+
+def r_product_by_profit(ctx):
+    return _sorted_profit(r_product_sale(ctx), 7, 'Product-wise Sale Summary Order By Profit')
+
+
+# ── accounting ──
+
+def r_journal_voucher(ctx):
+    if not ctx.invoice:
+        return _out('General Journal by voucher No', ctx, [('', 'l')], [R('Enter the Voucher No.')], subtitle='')
+    rows, td, tc = [], Z, Z
+    for d, no, acc, det, dr, cr, st in _ledger(ctx):
+        if no.upper() != ctx.invoice.upper():
+            continue
+        rows.append(R(_dmy(d), acc.acc_id, acc.name, det, _f(dr) if dr else '', _f(cr) if cr else ''))
+        td += dr; tc += cr
+    if not rows:
+        rows = [R(f'{ctx.invoice} not found.')]
+        return _out('General Journal by voucher No', ctx, [('', 'l')], rows, subtitle='')
+    return _out('General Journal by voucher No', ctx, [('Date', 'l'), ('Acc ID', 'l'), ('Account', 'l'), ('Detail', 'l'), ('Debit', 'r'), ('Credit', 'r')],
+                rows, ['Total', '', '', '', _f(td), _f(tc)], subtitle=ctx.invoice.upper())
+
+
+def r_balances_2nd(ctx):
+    from modules.company.models import AccountGroup
+    groups = {g.id: g for g in ctx.scope(AccountGroup.objects.all())}
+    bal = _balances(ctx)
+    agg = defaultdict(list)
+    for acc, (dr, cr) in bal.items():
+        net = dr - cr
+        if abs(net) < Decimal('0.005') or not acc.group_id:
+            continue
+        g2 = groups.get(acc.group.parent_id)
+        agg[(g2.code if g2 else 0, g2.name if g2 else '')].append((acc, net))
+    rows, td, tc = [], Z, Z
+    for (code, name) in sorted(agg):
+        rows.append(R(f'{code} {name}', t='g'))
+        sd = sc = Z
+        for acc, net in sorted(agg[(code, name)], key=lambda x: x[0].acc_id):
+            rows.append(R(acc.acc_id, acc.name, _f(net) if net > 0 else '', _f(-net) if net < 0 else ''))
+            sd += max(net, Z); sc += max(-net, Z)
+        rows.append(R('', f'Total {name}', _f(sd), _f(sc), t='s')); td += sd; tc += sc
+    return _out('Over all Balances Acc 2nd Level-wise', ctx, [('Acc ID', 'l'), ('Account', 'l'), ('Debit', 'r'), ('Credit', 'r')], rows, ['Total', '', _f(td), _f(tc)],
+                subtitle=f'As on {_dmy(ctx.dto or datetime.date.today())}' + (f' · FY {ctx.fy.title}' if ctx.fy else ''))
+
+
+def _vouchers_report(ctx, vtype, title, group_by_staff):
+    from .models import Voucher, VoucherLine
+    qs = ctx.scope(Voucher.objects.filter(vtype=vtype)).select_related('staff')
+    if ctx.dfrom:
+        qs = qs.filter(date__gte=ctx.dfrom)
+    if ctx.dto:
+        qs = qs.filter(date__lte=ctx.dto)
+    if ctx.staff:
+        qs = qs.filter(staff_id=ctx.staff)
+    if ctx.cheque == 'cash':
+        qs = qs.filter(chq_no__in=['', '-'])
+    elif ctx.cheque in ('cleared', 'uncleared', 'cheque'):
+        qs = qs.exclude(chq_no__in=['', '-'])
+    side = 'credit' if vtype == 'receipt' else 'debit'
+    lines = (VoucherLine.objects.filter(voucher__in=qs, **{f'{side}__gt': 0}).select_related('voucher__staff', 'account')
+             .order_by('voucher__date', 'voucher_id', 'line'))
+    if ctx.cheque == 'cleared':
+        lines = [l for l in lines if VoucherLine.objects.filter(voucher=l.voucher, cleared_by__isnull=False).exists()]
+    elif ctx.cheque == 'uncleared':
+        lines = [l for l in lines if VoucherLine.objects.filter(voucher=l.voucher, account__acc_id='12040002', cleared_by__isnull=True, debit__gt=0).exists()]
+    rows, cur, sub, tot = [], None, Z, Z
+    for l in sorted(lines, key=lambda l: ((l.voucher.staff.name if l.voucher.staff_id else '~') if group_by_staff else '', l.voucher.date, l.voucher.voucher_no)):
+        v = l.voucher
+        g = (v.staff.name if v.staff_id else '(no staff)') if group_by_staff else _dmy(v.date)
+        if g != cur:
+            if cur is not None:
+                rows.append(R('', '', f'Total {cur}', '', '', _f(sub), t='s'))
+            rows.append(R(g, t='g')); cur = g; sub = Z
+        amt = getattr(l, side)
+        rows.append(R(v.voucher_no, _dmy(v.date), l.account.acc_id, l.account.name, (v.chq_no if v.chq_no not in ('', '-') else '') or l.detail or v.detail, _f(amt)))
+        sub += amt; tot += amt
+    if cur is not None:
+        rows.append(R('', '', f'Total {cur}', '', '', _f(sub), t='s'))
+    return _out(title, ctx, [('Voucher', 'l'), ('Date', 'l'), ('Acc ID', 'l'), ('Account', 'l'), ('Chq No / Detail', 'l'), ('Amount', 'r')], rows, ['Total', '', '', '', '', _f(tot)])
+
+
+def r_receipts_saleman(ctx):
+    return _vouchers_report(ctx, 'receipt', 'Saleman-wise Receipt Vouchers', True)
+
+
+def r_expense_date(ctx):
+    return _vouchers_report(ctx, 'expense', 'Date-wise Expanse Vouchers', False)
+
+
+def _by_group(ctx, items, groups):
+    """items: [(acc, value)] -> rows per 3rd-level group (short)."""
+    agg = defaultdict(lambda: Z)
+    for acc, v in items:
+        agg[acc.group_id] += v
+    return [(groups[g], v) for g, v in sorted(agg.items(), key=lambda x: groups[x[0]].code) if abs(v) >= Decimal('0.005')]
+
+
+def r_trial_short(ctx):
+    from modules.company.models import AccountGroup
+    groups = {g.id: g for g in ctx.scope(AccountGroup.objects.all())}
+    bal = _balances(ctx)
+    rows, td, tc = [], Z, Z
+    for g, net in _by_group(ctx, [(a, dr - cr) for a, (dr, cr) in bal.items() if a.group_id], groups):
+        rows.append(R(g.code, g.name, _f(net) if net > 0 else '', _f(-net) if net < 0 else ''))
+        td += max(net, Z); tc += max(-net, Z)
+    if abs(td - tc) >= Decimal('0.01'):
+        rows.append(R('', 'Difference', _f(tc - td) if tc > td else '', _f(td - tc) if td > tc else '', t='s'))
+    return _out('Trial Balance (Short)', ctx, [('Group', 'l'), ('Account Group', 'l'), ('Debit', 'r'), ('Credit', 'r')], rows, ['Total', '', _f(td), _f(tc)],
+                subtitle=f'As on {_dmy(ctx.dto or datetime.date.today())}' + (f' · FY {ctx.fy.title}' if ctx.fy else ''))
+
+
+def r_income_short(ctx):
+    from modules.company.models import AccountGroup
+    groups = {g.id: g for g in ctx.scope(AccountGroup.objects.all())}
+    _, inc, exp = _pl(ctx)
+    gi, ge = _by_group(ctx, inc, groups), _by_group(ctx, exp, groups)
+    ti, te = sum((v for _, v in gi), Z), sum((v for _, v in ge), Z)
+    rows = ([R('Income', t='g')] + [R(g.code, g.name, _f(v)) for g, v in gi] + [R('', 'Total Income', _f(ti), t='s'), R('Expenses', t='g')]
+            + [R(g.code, g.name, _f(v)) for g, v in ge] + [R('', 'Total Expenses', _f(te), t='s')])
+    base = r_profit_loss(ctx)
+    return _out('Income Statement (Short)', ctx, [('Group', 'l'), ('Account Group', 'l'), ('Amount', 'r')], rows,
+                ['', 'Net Profit' if ti >= te else 'Net Loss', _f(abs(ti - te))], subtitle=base['subtitle'])
+
+
+def r_balance_short(ctx):
+    from modules.company.models import AccountGroup
+    groups = {g.id: g for g in ctx.scope(AccountGroup.objects.all())}
+    bal, inc, exp = _pl(ctx)
+    profit = sum((v for _, v in inc), Z) - sum((v for _, v in exp), Z)
+    rows, totals = [], {}
+    for head, digit, sign in (('Assets', '1', 1), ('Liabilities', '2', -1), ('Equity', '3', -1)):
+        rows.append(R(head, t='g'))
+        items = [(a, (dr - cr) * sign) for a, (dr, cr) in bal.items() if a.group_id and str(a.group.code)[:1] == digit]
+        t = Z
+        for g, v in _by_group(ctx, items, groups):
+            rows.append(R(g.code, g.name, _f(v))); t += v
+        if digit == '3':
+            rows.append(R('', 'Profit / Loss of the year (not forwarded)', _f(profit))); t += profit
+        rows.append(R('', f'Total {head}', _f(t), t='s')); totals[digit] = t
+    return _out('Balance Sheet (short)', ctx, [('Group', 'l'), ('Account Group', 'l'), ('Amount', 'r')], rows,
+                ['', 'Assets − (Liabilities + Equity)', _f(totals['1'] - totals['2'] - totals['3'])],
+                subtitle=f'As on {_dmy(ctx.dto or datetime.date.today())}' + (f' · FY {ctx.fy.title}' if ctx.fy else ''))
+
+
+def _retitle(fn, title):
+    def run(ctx):
+        out = fn(ctx)
+        out['title'] = title if not out['title'].startswith('Ledger —') else out['title']
+        return out
+    return run
+
+
+F_D, F_S, F_A, F_FY = 'dates', 'staff', 'areas', 'fy'
+CATEGORIES = [
+    ('401', '401-Reports Stock', [
+        ('stock_taking', 'Stock Taking List', [], 'rpt_stock_taking'),
+        ('stock_company_all', 'Company-wise Stock of all Products', [], 'rpt_stock_summary'),
+        ('stock_company_specific', 'Company Stock (Speciifc)', ['find:company'], 'rpt_stock_summary'),
+        ('stock_above_min', 'Product-wise Stock (Above Min Qty)', [], 'rpt_stock_summary'),
+        ('stock_below_min', 'Product-wise Stock (Below Min Qty)', [], 'rpt_stock_summary'),
+        ('stock_nonzero', 'Product-wise Stock (Non zero Qty)', [], 'rpt_stock_summary'),
+        ('stock_zero', 'Product-wise Stock (zero Qty)', [], 'rpt_stock_summary'),
+        ('stock_position', 'Stock Position', [F_D], 'rpt_stock_position'),
+        ('stock_summary', 'Company-wise Stock Summary', [], 'rpt_stock_summary'),
+        ('stock_company_all_rate', 'Company-wise Stock of all Products W.Pur.Rate)', [], 'rpt_stock_pur_rate'),
+        ('stock_company_specific_rate', 'Company Stock (Speciifc) W.Pur.Rate', ['find:company'], 'rpt_stock_pur_rate'),
+        ('stock_above_min_rate', 'Product-wise Stock (Above Min Qty) W.Pur.Rate', [], 'rpt_stock_pur_rate'),
+        ('stock_below_min_rate', 'Product-wise Stock (Below Min Qty) W.Pur.Rate', [], 'rpt_stock_pur_rate'),
+        ('stock_nonzero_rate', 'Product-wise Stock (Non zero Qty)W.Pur.Rate)', [], 'rpt_stock_pur_rate'),
+        ('stock_position_company', 'Stock Position Company-wise', [F_D], 'rpt_stock_position'),
+    ]),
+    ('402', '402-Stock Adjustments', [
+        ('opening_stock', 'Opening Stock Add / Less', [F_D], 'rpt_opening_stock'),
+        ('damage', 'Demage / Un-Demage Stock', [F_D], 'rpt_damage'),
+        ('stock_access', 'Stock Access / Short', [F_D], 'rpt_stock_access'),
+        ('cash_access', 'Cash Access / Short', [F_D], 'rpt_cash_access'),
+    ]),
+    ('403', '403-Purchase Order / Purchase / Purchase Retuern', [
+        ('po_date', 'Purchase Order By Date-wise', [F_D], 'rpt_purchase_order'),
+        ('po_invoice', 'Purchase Order By Invoice No', ['find:invoice'], 'rpt_purchase_order'),
+        ('po_supplier', 'Purchase Order By Supplier-Wise', [F_D, 'find:supplier'], 'rpt_purchase_order'),
+        None,
+        ('pur_date', 'Purchase Detail By Date-wise', [F_D], 'rpt_purchase_stock'),
+        ('pur_invoice', 'Purchase Detail By Invoice No', ['find:invoice'], 'rpt_purchase_stock'),
+        ('pur_product', 'Purchase Detail By Product-Wise', [F_D, 'find:product'], 'rpt_purchase_stock'),
+        ('pur_supplier', 'Purchase Detail By Supplier-Wise', [F_D, 'find:supplier'], 'rpt_purchase_stock'),
+        None,
+        ('pret_date', 'Purchase  Return By Date-wise', [F_D], 'rpt_purchase_return'),
+        ('pret_invoice', 'Purchase  Return By Invoice No', ['find:invoice'], 'rpt_purchase_return'),
+        ('pret_product', 'Purchase  Return By Product-Wise', [F_D, 'find:product'], 'rpt_purchase_return'),
+        ('pret_supplier', 'Purchase  Return By Supplier-Wise', [F_D, 'find:supplier'], 'rpt_purchase_return'),
+        ('pur_summary', 'Purchase / Pur.Return Summary', [F_D], 'rpt_purchase_stock'),
+    ]),
+    ('404', '404-Sale / Sale Return', [
+        ('sale_by_date', 'Sale Invoice  By Date', [F_D, F_S, F_A], 'rpt_sale_invoice'),
+        ('sale_by_invoice', 'Sale Invoice  By Invice No', ['find:invoice'], 'rpt_sale_invoice'),
+        ('sale_by_customer', 'Sale Invoice  By Customer', [F_D, 'find:customer'], 'rpt_sale_invoice'),
+        None,
+        ('return_by_date', 'Sale Return Invoice By Date', [F_D, F_S], 'rpt_sale_return'),
+        ('return_by_invoice', 'Sale Return Invoice By Invice No', ['find:invoice'], 'rpt_sale_return'),
+        ('return_by_customer', 'Sale Return Invoice By Customer', [F_D, 'find:customer'], 'rpt_sale_return'),
+        None,
+        ('challan_area', 'Area-Wise Delivery Challan', [F_D, F_S, F_A], 'rpt_delivery_challan'),
+        ('customer_list', 'Area-Wise Customer List', [F_A], 'rpt_customer_list'),
+        None,
+        ('sale_invoice', 'Sale Invoice List', [F_D, F_S, F_A], 'rpt_sale_invoice'),
+        ('sale_return', 'Sale Return Invoice List', [F_D, F_S], 'rpt_sale_return'),
+    ]),
+    ('405', '405-Sale Statements', [
+        ('sale_date', 'Date-wise', [F_D, F_S, F_A], 'rpt_sale_date'),
+        ('saleman_area', 'Saleman Area-wise', [F_D, F_S], 'rpt_sale_saleman'),
+        ('saleman_comp', 'Saleman Comp-wise', [F_D, F_S], 'rpt_sale_saleman'),
+        ('saleman_specific_comp', 'Saleman Specific Comp-wise', [F_D, 'staff!'], 'rpt_sale_saleman'),
+        ('sale_customer', 'Customer-Wise', [F_D, F_S, F_A], 'rpt_sale_customer'),
+        ('customers_overall', 'Customers over all', [F_D, F_A], 'rpt_sale_customer'),
+        ('sale_company', 'Company-Wise', [F_D, F_S, F_A], 'rpt_sale_company'),
+        ('company_specific', 'Company-Wise(Specific)', [F_D, F_S, 'find:company'], 'rpt_sale_company'),
+        ('company_customer', 'Company and Customer-Wise', [F_D, F_S, F_A], 'rpt_sale_company'),
+        None,
+        ('sale_area', 'Area-Wise', [F_D, F_S, F_A], 'rpt_sale_area'),
+        ('daily_by_profit', 'Daily Sale Summary Order By Profit', [F_D, F_S, F_A], 'rpt_daily_sale'),
+        ('daily_by_qty', 'Daily Sale Summary Order By Qty', [F_D, F_S, F_A], 'rpt_daily_sale'),
+        ('product_by_profit', 'Product-wise Sale Summary Order By Profit', [F_D, F_S, F_A], 'rpt_product_sale'),
+    ]),
+    ('406', '406-Accounting', [
+        ('chart_of_account', 'Chart of Accounts', [], 'rpt_chart_of_account'),
+        ('journal', 'General Journal by Date', [F_D, F_S], 'rpt_journal'),
+        ('journal_voucher', 'General Journal by voucher No', ['find:voucher'], 'rpt_journal'),
+        ('recovery', 'Over all  Balances Area-wise', [F_D, F_A], 'rpt_account_balances'),
+        ('balances_2nd', 'Over all  Balances Acc 2nd Level-wise', [F_D, F_FY], 'rpt_account_balances'),
+        ('receipts_saleman', 'Salwman-wise Receipt Vouchers', [F_D, F_S, 'cheque'], 'rpt_journal'),
+        ('expense_date', 'Date-wise Expanse Vouchers', [F_D, F_S], 'rpt_journal'),
+        ('ledger', 'General Ledger', [F_D, 'find:account'], 'rpt_ledger'),
+        ('trial_balance', 'Trial Balance(Detail)', [F_D, F_FY], 'rpt_trial_balance'),
+        ('trial_short', 'Trial Balance(Short)', [F_D, F_FY], 'rpt_trial_balance'),
+        ('income_short', 'Income Statement (Short)', [F_D, F_FY], 'rpt_profit_loss'),
+        ('profit_loss', 'Income Statement (Detail)', [F_D, F_FY], 'rpt_profit_loss'),
+        ('balance_short', 'Balance Sheet (short)', [F_D, F_FY], 'rpt_balance_sheet'),
+        ('balance_sheet', 'Balance Sheet (Detail)', [F_D, F_FY], 'rpt_balance_sheet'),
+    ]),
+]
+_EXTRA = {
+    'po_date': _mk_pur('K', 'date'), 'po_invoice': _mk_pur('K', 'invoice'), 'po_supplier': _mk_pur('K', 'supplier'),
+    'pur_date': _mk_pur('P', 'date'), 'pur_invoice': _mk_pur('P', 'invoice'), 'pur_product': _mk_pur('P', 'product'), 'pur_supplier': _mk_pur('P', 'supplier'),
+    'pret_date': _mk_pur('R', 'date'), 'pret_invoice': _mk_pur('R', 'invoice'), 'pret_product': _mk_pur('R', 'product'), 'pret_supplier': _mk_pur('R', 'supplier'),
+    'customer_list': _retitle(r_customer_list, 'Area-Wise Customer List'), 'recovery': _retitle(r_recovery, 'Over all Balances Area-wise'),
+    'journal': _retitle(r_journal, 'General Journal by Date'), 'trial_balance': _retitle(r_trial_balance, 'Trial Balance (Detail)'),
+    'profit_loss': _retitle(r_profit_loss, 'Income Statement (Detail)'), 'balance_sheet': _retitle(r_balance_sheet, 'Balance Sheet (Detail)'),
+    'sale_date': _retitle(r_sale_date, 'Sale Statement Date-wise'), 'sale_customer': _retitle(r_sale_customer, 'Sale Statement Customer-Wise'),
+    'sale_company': _retitle(r_sale_company, 'Sale Statement Company-Wise'), 'sale_area': _retitle(r_sale_area, 'Sale Statement Area-Wise'),
+    'stock_summary': _retitle(r_stock_summary, 'Company-wise Stock Summary'),
+}
+REPORTS = [(k, l, code, f, perm) for code, _, items in CATEGORIES for it in items if it for k, l, f, perm in [it]]
+REPORT_PERM = {r[0]: r[4] for r in REPORTS}
+RUNNERS = {k: _EXTRA.get(k) or globals()[f'r_{k}'] for k, *_ in REPORTS}
 
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAdminUser])
 def report_catalog(request):
     from .trade_perms import allowed
-    return Response([{'key': k, 'label': l, 'group': g, 'filters': f} for k, l, g, f, perm in REPORTS
-                     if allowed(request.user, f'{perm}.print')])
+    out = []
+    for code, label, items in CATEGORIES:
+        rs = [None if it is None else {'key': it[0], 'label': it[1], 'filters': it[2]}
+              for it in items if it is None or allowed(request.user, f'{it[3]}.print')]
+        while rs and rs[-1] is None:
+            rs.pop()
+        if any(rs):
+            out.append({'code': code, 'label': label, 'reports': rs})
+    return Response(out)
 
 
 @api_view(['GET'])
@@ -860,7 +1512,7 @@ def report_run(request):
     from .trade_perms import allowed
     t = request.query_params.get('type')
     if t not in RUNNERS:
-        return Response({'detail': 'Choose the Report Type.'}, status=400)
+        return Response({'detail': 'Choose the report.'}, status=400)
     if not allowed(request.user, f'{REPORT_PERM[t]}.print'):
         return Response({'detail': 'You do not have permission to print this report.'}, status=403)
     return Response(RUNNERS[t](Ctx(request)))

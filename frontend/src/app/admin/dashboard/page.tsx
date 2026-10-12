@@ -289,12 +289,12 @@ const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
 ];
 
 const REPORTS: Btn[] = [
-    { name: 'Stock Reports', href: '/admin/trade/reports?report=stock_summary', icon: Boxes },
-    { name: 'Sale & Sale Return Reports', href: '/admin/trade/reports?report=sale_invoice', icon: TrendingUp },
-    { name: 'Party Ledger & Recovery Reports', href: '/admin/trade/reports?report=ledger', icon: Users },
-    { name: 'Purchase Order / Detail / Return Reports', href: '/admin/trade/reports?report=purchase_stock', icon: FileText },
-    { name: 'Sale Statements Reports', href: '/admin/trade/reports?report=sale_date', icon: Receipt },
-    { name: 'Trial Balance / Income Statement', href: '/admin/trade/reports?report=trial_balance', icon: BarChart3 },
+    { name: 'Stock Reports', href: '/admin/trade/reports?cat=401', icon: Boxes },
+    { name: 'Sale & Sale Return Reports', href: '/admin/trade/reports?cat=404', icon: TrendingUp },
+    { name: 'Party Ledger & Recovery Reports', href: '/admin/trade/reports?cat=406&report=ledger', icon: Users },
+    { name: 'Purchase Order / Detail / Return Reports', href: '/admin/trade/reports?cat=403', icon: FileText },
+    { name: 'Sale Statements Reports', href: '/admin/trade/reports?cat=405', icon: Receipt },
+    { name: 'Trial Balance / Income Statement', href: '/admin/trade/reports?cat=406&report=trial_balance', icon: BarChart3 },
 ];
 
 function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: boolean; delay?: number }) {
