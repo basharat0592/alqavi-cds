@@ -26,6 +26,7 @@ VTYPES = {
     12: 'damage_stock', 13: 'un_damage', 14: 'stock_update', 15: 'opening_stock_add', 16: 'opening_stock_less',
     17: 'stock_access', 18: 'stock_short', 19: 'cash_access', 20: 'cash_short', 21: 'sale', 22: 'sale_return',
     23: 'chq_voucher', 24: 'stock_short', 25: 'stock_access', 26: 'cash_short', 27: 'cash_access',
+    28: 'forward_pl',
 }
 
 

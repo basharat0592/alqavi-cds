@@ -1139,3 +1139,141 @@ class TradePurchaseInvoiceView(viewsets.ViewSet):
             'staff': (po.notes or '').split('staff ', 1)[1] if 'staff ' in (po.notes or '') else '',
             'lines': lines,
         })
+
+
+
+# ───────────────────────── General Voucher / Forward the Profit and Loss ─────────────────────────
+
+RETAIN_ACC = '32010001'
+
+
+def _gv_row(l):
+    v, a = l.voucher, l.account
+    return {'line_id': l.id, 'voucher_no': v.voucher_no, 'date': v.date,
+            'sub_acc': a.group.name if a.group_id else '', 'acc_id': a.acc_id, 'account': a.name,
+            'chq_no': l.chq_no or '', 'chq_date': l.chq_date, 'bank': l.bank or '', 'detail': l.detail,
+            'debit': l.debit, 'credit': l.credit, 'staff': v.staff.name if v.staff_id else ''}
+
+
+class TradeGeneralVoucherViewSet(viewsets.ViewSet):
+    """Post General Voucher (manually): any accounts, each line a Debit or a
+    Credit, with cheque / bank if any; debits must equal credits. A customer's
+    or supplier's line moves their balance the way the accounts say (customer
+    Dr = owes more, Cr = owes less; supplier Cr = we owe more, Dr = less)."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def list(self, request):
+        """View Voucher Detail: ?voucher_no, ?account, ?date_from, ?date_to, ?detail."""
+        q = request.query_params
+        vqs = scope_to_tenant(request.user, Voucher.objects.filter(vtype='general'), 'tenant')
+        if q.get('voucher_no'):
+            vqs = vqs.filter(voucher_no__icontains=q['voucher_no'].strip())
+        if q.get('date_from'):
+            vqs = vqs.filter(date__gte=q['date_from'])
+        if q.get('date_to'):
+            vqs = vqs.filter(date__lte=q['date_to'])
+        if q.get('detail'):
+            vqs = vqs.filter(Q(detail__icontains=q['detail'].strip()) | Q(lines__detail__icontains=q['detail'].strip())).distinct()
+        if q.get('account'):
+            vqs = vqs.filter(lines__account_id=q['account']).distinct()
+        lines = (VoucherLine.objects.filter(voucher__in=vqs).select_related('voucher__staff', 'account__group')
+                 .order_by('-voucher__date', '-voucher_id', 'line')[:3000])
+        return Response([_gv_row(l) for l in lines])
+
+    def create(self, request):
+        from modules.company.models import LedgerAccount
+        from .vouchers import VoucherViewSet
+        d = request.data
+        accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant')
+        try:
+            vdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        prepared = []
+        for x in d.get('lines') or []:
+            acc = accounts.filter(pk=x.get('account')).first()
+            if not acc:
+                return Response({'detail': 'One of the accounts was not found.'}, status=400)
+            dr = _d(x.get('debit')).quantize(Decimal('0.01')); cr = _d(x.get('credit')).quantize(Decimal('0.01'))
+            if dr < 0 or cr < 0 or (dr > 0) == (cr > 0):
+                return Response({'detail': f'Enter either a Debit or a Credit for {acc.name}.'}, status=400)
+            cd = None
+            if x.get('chq_date'):
+                try:
+                    cd = datetime.date.fromisoformat(str(x['chq_date'])[:10])
+                except ValueError:
+                    return Response({'detail': 'Invalid cheque date.'}, status=400)
+            prepared.append((acc, dr, cr, _clean(x.get('detail'), 255), _clean(x.get('chq_no'), 40), _clean(x.get('bank'), 80), cd))
+        if len(prepared) < 2:
+            return Response({'detail': 'A voucher needs at least two lines (a Debit and a Credit).'}, status=400)
+        tdr = sum((p[1] for p in prepared), Z); tcr = sum((p[2] for p in prepared), Z)
+        if tdr != tcr:
+            return Response({'detail': f'Debit ({tdr:,.2f}) and Credit ({tcr:,.2f}) are not equal.'}, status=400)
+        staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(vdate), vtype='general', date=vdate, staff=staff,
+                                       detail=prepared[0][3] or 'General Voucher', total=tdr, created_by=request.user,
+                                       tenant_id=tenant_id_for(request.user) or prepared[0][0].tenant_id)
+            for i, (acc, dr, cr, det, chq, bank, cd) in enumerate(prepared, 1):
+                # Balances read customers / suppliers through `unallocated` (negative = owed).
+                if acc.customer_id:
+                    un = cr - dr
+                elif acc.supplier_id:
+                    un = dr - cr
+                else:
+                    un = Z
+                VoucherLine.objects.create(voucher=v, line=i, account=acc, debit=dr, credit=cr, detail=det,
+                                           chq_no=chq, bank=bank, chq_date=cd, unallocated=un)
+        return Response({'voucher_no': v.voucher_no, 'total': tdr}, status=status.HTTP_201_CREATED)
+
+
+class TradeForwardPLViewSet(viewsets.ViewSet):
+    """Forward the Profit and Loss (Post Retain Profit Voucher): the year's
+    profit (or loss, a negative amount) posted to 32010001 Retain Earning, one
+    line, as the legacy program did."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def list(self, request):
+        q = request.query_params
+        qs = scope_to_tenant(request.user, Voucher.objects.filter(vtype='forward_pl'), 'tenant').select_related('staff')
+        if q.get('voucher_no'):
+            qs = qs.filter(voucher_no__icontains=q['voucher_no'].strip())
+        if q.get('date_from'):
+            qs = qs.filter(date__gte=q['date_from'])
+        if q.get('date_to'):
+            qs = qs.filter(date__lte=q['date_to'])
+        out = []
+        for v in qs.prefetch_related('lines').order_by('-date', '-id')[:500]:
+            amt = sum(((l.credit or Z) - (l.debit or Z) for l in v.lines.all()), Z)
+            out.append({'voucher_no': v.voucher_no, 'date': v.date, 'detail': v.detail, 'amount': amt,
+                        'staff': v.staff.name if v.staff_id else ''})
+        return Response(out)
+
+    @action(detail=False, methods=['get'])
+    def account(self, request):
+        from modules.company.models import LedgerAccount
+        a = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant').filter(acc_id=RETAIN_ACC).first()
+        return Response({'acc_id': RETAIN_ACC, 'name': a.name if a else 'Retain Earning'})
+
+    def create(self, request):
+        from modules.company.models import LedgerAccount
+        from .vouchers import VoucherViewSet
+        d = request.data
+        amt = _d(d.get('amount')).quantize(Decimal('0.01'))
+        if amt == 0:
+            return Response({'detail': 'Enter the Amount (a loss as a negative amount).'}, status=400)
+        try:
+            vdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        acc = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant').filter(acc_id=RETAIN_ACC).first()
+        if not acc:
+            return Response({'detail': 'The Retain Earning account (32010001) is missing.'}, status=400)
+        detail = _clean(d.get('detail'), 255) or 'fwd P/L'
+        staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(vdate), vtype='forward_pl', date=vdate, staff=staff,
+                                       detail=detail, total=abs(amt), created_by=request.user,
+                                       tenant_id=tenant_id_for(request.user) or acc.tenant_id)
+            VoucherLine.objects.create(voucher=v, line=1, account=acc, debit=Z, credit=amt, detail=detail)
+        return Response({'voucher_no': v.voucher_no, 'amount': amt}, status=status.HTTP_201_CREATED)

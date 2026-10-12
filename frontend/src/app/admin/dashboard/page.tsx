@@ -100,8 +100,8 @@ const MENUS: Menu[] = [
             { label: 'Cheque Management', href: '/admin/trade/cheque-management' },
         ] },
         SEP,
-        { label: 'Post Voucher (Manually)', disabled: true },
-        { label: 'Forward the Profit and Loss', disabled: true },
+        { label: 'Post Voucher (Manually)', href: '/admin/trade/general-voucher' },
+        { label: 'Forward the Profit and Loss', href: '/admin/trade/forward-profit-loss' },
     ] },
     { title: 'Setup', items: [
         { label: 'New User', disabled: true },
