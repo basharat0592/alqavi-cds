@@ -135,32 +135,28 @@ class Command(BaseCommand):
 
         # ── Areas (District > AreaMain > Area) ──
         dist_map, marea_map, area_map = {}, {}, {}
+        # Matched on the legacy code (D1 / M1 / A1): names repeat across levels
+        # (a district and a sub area can both be "Gilgit").
+        def area(code, name, parent=None):
+            obj = Area.objects.filter(tenant=tenant, code=code).first()
+            if obj is None:
+                return Area.objects.create(tenant=tenant, code=code, name=name, parent=parent, is_active=True)
+            if obj.name != name or obj.parent_id != (parent.id if parent else None):
+                obj.name, obj.parent = name, parent
+                obj.save(update_fields=['name', 'parent'])
+            return obj
         for r in rows(d, 'District'):
             name = clean(r.get('DistName'))
-            if not name:
-                continue
-            obj, _ = Area.objects.get_or_create(
-                tenant=tenant, name=name,
-                defaults={'code': f"D{clean(r.get('DistID'))}"})
-            dist_map[clean(r.get('DistID'))] = obj
+            if name:
+                dist_map[clean(r.get('DistID'))] = area(f"D{clean(r.get('DistID'))}", name)
         for r in rows(d, 'AreaMain'):
             name = clean(r.get('MAreaName'))
-            if not name:
-                continue
-            parent = dist_map.get(clean(r.get('DistID')))
-            obj, _ = Area.objects.get_or_create(
-                tenant=tenant, name=name,
-                defaults={'code': f"M{clean(r.get('MAreaID'))}", 'parent': parent})
-            marea_map[clean(r.get('MAreaID'))] = obj
+            if name:
+                marea_map[clean(r.get('MAreaID'))] = area(f"M{clean(r.get('MAreaID'))}", name, dist_map.get(clean(r.get('DistID'))))
         for r in rows(d, 'Area'):
             name = clean(r.get('AreaName'))
-            if not name:
-                continue
-            parent = marea_map.get(clean(r.get('MAreaID')))
-            obj, _ = Area.objects.get_or_create(
-                tenant=tenant, name=name,
-                defaults={'code': f"A{clean(r.get('AreaID'))}", 'parent': parent})
-            area_map[clean(r.get('AreaID'))] = obj
+            if name:
+                area_map[clean(r.get('AreaID'))] = area(f"A{clean(r.get('AreaID'))}", name, marea_map.get(clean(r.get('MAreaID'))))
         self.stdout.write(f'Areas: districts={len(dist_map)} main={len(marea_map)} areas={len(area_map)}')
 
         if opts['accounts_only']:
