@@ -38,6 +38,9 @@ urlpatterns = [
     path('trade-password/users/', views.trade_password_users, name='trade-password-users'),
     path('trade-password/change/', views.trade_change_password, name='trade-password-change'),
     path('trade-backup/', trade_backup, name='trade-backup'),
+    path('trade-users/', views.trade_users, name='trade-users'),
+    path('trade-users/next_code/', views.trade_users_next_code, name='trade-users-next-code'),
+    path('trade-users/<int:user_id>/', views.trade_user_detail, name='trade-user-detail'),
     path('create/', views.create_user, name='user-create'),
 
     # Role Management (literal — must precede <str:user_id>)

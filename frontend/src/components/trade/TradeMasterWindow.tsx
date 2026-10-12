@@ -24,7 +24,7 @@ import FitStage from '@/components/trade/FitStage';
 export type MasterField = {
     key: string; label: string; required?: boolean; max?: number; half?: boolean;
     options?: { value: string; label: string }[]; placeholder?: string; digits?: boolean;
-    type?: 'date';
+    type?: 'date' | 'password';
     // Options that depend on another box (Main Area follows District); `resets`
     // clears those boxes when this one changes.
     optionsFn?: (form: Record<string, string>) => { value: string; label: string }[];
@@ -189,8 +189,9 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
         const i = ++idx;
         const ref = (el: HTMLInputElement | HTMLSelectElement | null) => { refs.current[i] = el; };
         const opts = f.optionsFn ? f.optionsFn(form) : f.options;
-        if (f.type === 'date') {
-            return <input ref={ref} type="date" value={form[f.key]} onChange={set(f.key)} onKeyDown={enter(i)} className={IN} />;
+        if (f.type === 'date' || f.type === 'password') {
+            return <input ref={ref} type={f.type} value={form[f.key]} onChange={set(f.key)} onKeyDown={enter(i)} maxLength={f.max}
+                placeholder={f.placeholder} autoComplete={f.type === 'password' ? 'new-password' : undefined} className={IN} />;
         }
         return opts ? (
             <select ref={ref} value={form[f.key]} onChange={set(f.key, false, f.resets)} onKeyDown={enter(i)} className={`${IN} !px-1.5`}>

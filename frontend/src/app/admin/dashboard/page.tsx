@@ -104,7 +104,7 @@ const MENUS: Menu[] = [
         { label: 'Forward the Profit and Loss', href: '/admin/trade/forward-profit-loss' },
     ] },
     { title: 'Setup', items: [
-        { label: 'New User', disabled: true },
+        { label: 'New User', href: '/admin/trade/new-user' },
         { label: 'Change Password', href: '/admin/trade/change-password' },
         SEP,
         { label: 'Backup Data Base', href: '/admin/trade/backup' },

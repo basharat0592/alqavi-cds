@@ -993,3 +993,102 @@ def trade_change_password(request):
     UserActivityLog.objects.create(user=request.user, action='password_change',
                                    description=f'Changed password for user: {user.username}')
     return Response({'message': 'Password changed'})
+
+
+
+# ==================== TRADE 1.0 NEW USER ====================
+
+def _trade_users(actor):
+    """The shop's logins, oldest first (Login ID 1, 2, 3 …): the owning admin and its staff logins."""
+    from django.db.models import Q
+    tid = tenant_id_for(actor) or actor.pk
+    return User.objects.filter(is_staff=True, is_active=True).filter(Q(pk=tid) | Q(tenant_id=tid)).order_by('date_joined', 'id')
+
+
+def _trade_user_rows(actor):
+    return [{'id': u.pk, 'code': i, 'name': u.username} for i, u in enumerate(_trade_users(actor), 1)]
+
+
+def _check_login(name, password, confirm, *, exclude=None, need_password=True):
+    if not name:
+        return 'Enter the Login Name.'
+    if len(name) > 150 or not all(c.isalnum() or c in '@.+-_ ' for c in name):
+        return 'The Login Name may use letters, numbers, spaces and @ . + - _ only.'
+    if User.objects.filter(username__iexact=name).exclude(pk=exclude).exists():
+        return f'The Login Name "{name}" is already used.'
+    if need_password or password or confirm:
+        if len(password) < 6:
+            return 'The Password must be at least 6 characters.'
+        if password != confirm:
+            return 'Password and ConfirmPassword do not match.'
+    return None
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAdminUser])
+def trade_users(request):
+    """GET: the shop's logins. POST {name, password, confirm}: a new login with
+    the Admin role, in the same shop (same data) as the one creating it."""
+    if request.method == 'GET':
+        return Response(_trade_user_rows(request.user))
+    d = request.data
+    name = str(d.get('name') or '').strip()
+    pw, confirm = str(d.get('password') or ''), str(d.get('confirm') or '')
+    err = _check_login(name, pw, confirm)
+    if err:
+        return Response({'detail': err}, status=400)
+    role = Role.objects.filter(name__iexact='Admin', tenant__isnull=True).first()
+    tid = tenant_id_for(request.user) or request.user.pk
+    with transaction.atomic():
+        u = User(username=name, is_staff=True, is_active=True, role=role, tenant_id=tid)
+        u.set_password(pw)
+        u.plain_password = pw
+        u.save()
+        UserActivityLog.objects.create(user=request.user, action='create', description=f'Created login: {name}')
+    rows = _trade_user_rows(request.user)
+    return Response(next((r for r in rows if r['id'] == u.pk), {'id': u.pk, 'name': name}), status=status.HTTP_201_CREATED)
+
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAdminUser])
+def trade_user_detail(request, user_id):
+    """PATCH {name, password?, confirm?}: rename and / or set a new password.
+    DELETE: remove the login (not your own, not the shop's main admin)."""
+    u = _trade_users(request.user).filter(pk=user_id).first()
+    if not u:
+        return Response({'detail': 'Login not found.'}, status=404)
+    if request.method == 'DELETE':
+        if u.pk == request.user.pk:
+            return Response({'detail': 'You cannot delete the login you are using.'}, status=400)
+        if u.is_superuser or u.pk == (tenant_id_for(request.user) or request.user.pk):
+            return Response({'detail': 'The main admin login cannot be deleted.'}, status=400)
+        try:
+            with transaction.atomic():
+                u.delete()
+        except ProtectedError:
+            # Records still point at this login: switch it off instead.
+            u.is_active = False
+            u.save(update_fields=['is_active'])
+        UserActivityLog.objects.create(user=request.user, action='delete', description=f'Removed login: {u.username}')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    d = request.data
+    name = str(d.get('name') or '').strip()
+    pw, confirm = str(d.get('password') or ''), str(d.get('confirm') or '')
+    err = _check_login(name, pw, confirm, exclude=u.pk, need_password=False)
+    if err:
+        return Response({'detail': err}, status=400)
+    u.username = name
+    if pw:
+        u.set_password(pw)
+        u.plain_password = pw
+    u.save()
+    UserActivityLog.objects.create(user=request.user, action='update', description=f'Updated login: {name}')
+    rows = _trade_user_rows(request.user)
+    return Response(next((r for r in rows if r['id'] == u.pk), {'id': u.pk, 'name': name}))
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def trade_users_next_code(request):
+    """Login ID the next new login gets."""
+    return Response({'code': _trade_users(request.user).count() + 1})
