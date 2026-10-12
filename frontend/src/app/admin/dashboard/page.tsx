@@ -122,7 +122,7 @@ const MENUS: Menu[] = [
         { label: 'User-Role Permissions', href: '/admin/trade/user-permissions' },
     ] },
     { title: 'Reports', items: [
-        { label: 'Data Reports', href: '/admin/reports' },
+        { label: 'Data Reports', href: '/admin/trade/reports' },
     ] },
     { title: 'About', items: [
         { label: 'About Me', action: 'about' },
@@ -289,12 +289,12 @@ const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
 ];
 
 const REPORTS: Btn[] = [
-    { name: 'Stock Reports', href: '/admin/reports', icon: Boxes },
-    { name: 'Sale & Sale Return Reports', href: '/admin/reports', icon: TrendingUp },
-    { name: 'Party Ledger & Recovery Reports', href: '/admin/reports', icon: Users },
-    { name: 'Purchase Order / Detail / Return Reports', href: '/admin/reports', icon: FileText },
-    { name: 'Sale Statements Reports', href: '/admin/reports', icon: Receipt },
-    { name: 'Trial Balance / Income Statement', href: '/admin/reports', icon: BarChart3 },
+    { name: 'Stock Reports', href: '/admin/trade/reports?report=stock_summary', icon: Boxes },
+    { name: 'Sale & Sale Return Reports', href: '/admin/trade/reports?report=sale_invoice', icon: TrendingUp },
+    { name: 'Party Ledger & Recovery Reports', href: '/admin/trade/reports?report=ledger', icon: Users },
+    { name: 'Purchase Order / Detail / Return Reports', href: '/admin/trade/reports?report=purchase_stock', icon: FileText },
+    { name: 'Sale Statements Reports', href: '/admin/trade/reports?report=sale_date', icon: Receipt },
+    { name: 'Trial Balance / Income Statement', href: '/admin/trade/reports?report=trial_balance', icon: BarChart3 },
 ];
 
 function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: boolean; delay?: number }) {

@@ -10,6 +10,7 @@ from .trade_purchases import TradePurchaseViewSet, TradePurchaseOrderViewSet, Tr
 from .trade_masters import TradeStaffViewSet, TradeCategoryViewSet, TradeDamageViewSet, TradeAreaViewSet, TradeAccountGroupViewSet, TradeFinancialYearViewSet, TradeOpeningStockViewSet, TradeOpeningVoucherViewSet, TradeCashShortExcessViewSet, TradeBankViewSet, TradePurchaseInvoiceView, TradeGeneralVoucherViewSet, TradeForwardPLViewSet
 from .invoice_share import public_invoice
 from .trade_perms import my_permissions, permission_users, permission_user
+from .trade_reports import report_catalog, report_run
 from .reports import (
     report_by_area, report_by_user, report_statements, report_returns_summary,
     report_delivery, report_ledger,
@@ -44,6 +45,8 @@ urlpatterns = [
     # Grouped analytics
     path('public-invoice/<str:token>/', public_invoice, name='public-invoice'),
     path('trade-permissions/me/', my_permissions, name='trade-permissions-me'),
+    path('trade-reports/catalog/', report_catalog, name='trade-report-catalog'),
+    path('trade-reports/run/', report_run, name='trade-report-run'),
     path('trade-permissions/users/', permission_users, name='trade-permission-users'),
     path('trade-permissions/users/<int:user_id>/', permission_user, name='trade-permission-user'),
     path('reports/by-area/', report_by_area, name='report-by-area'),

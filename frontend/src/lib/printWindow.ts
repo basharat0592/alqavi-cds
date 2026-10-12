@@ -42,14 +42,15 @@ export async function printWindow(el?: HTMLElement, orientation?: 'portrait' | '
     printPdfBlob((await makeWindowPdf(el, orientation)).output('blob'));
 }
 
-/** Print several A4 sheets (elements of exactly A4 size), one per page. */
-export async function printSheets(sheets: HTMLElement[], save?: string) {
+/** Print several A4 sheets (elements of exactly A4 size, portrait or landscape), one per page. */
+export async function printSheets(sheets: HTMLElement[], save?: string, orientation: 'portrait' | 'landscape' = 'portrait', sharp = 3) {
     await (document as any).fonts?.ready;
-    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    const [w, h] = orientation === 'portrait' ? [210, 297] : [297, 210];
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation, compress: true });
     for (let i = 0; i < sheets.length; i++) {
-        const img = await toJpeg(sheets[i], { quality: 0.95, pixelRatio: 3, backgroundColor: '#ffffff', cacheBust: false, style: { margin: '0', boxShadow: 'none' } });
-        if (i) pdf.addPage('a4', 'portrait');
-        pdf.addImage(img, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
+        const img = await toJpeg(sheets[i], { quality: sharp >= 3 ? 0.95 : 0.85, pixelRatio: sharp, backgroundColor: '#ffffff', cacheBust: false, style: { margin: '0', boxShadow: 'none' } });
+        if (i) pdf.addPage('a4', orientation);
+        pdf.addImage(img, 'JPEG', 0, 0, w, h, undefined, 'FAST');
     }
     if (save) pdf.save(save); else printPdfBlob(pdf.output('blob'));
 }
