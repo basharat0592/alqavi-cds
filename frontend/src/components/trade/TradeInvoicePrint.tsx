@@ -68,7 +68,7 @@ function WaIcon() {
 }
 
 type Profile = { proprietor: string; phones: string; easypaisa: string; contact_no: string; whatsapp: string; acct_no?: string;
-    bank_name?: string; bank_title?: string; easypaisa_name?: string };
+    bank_name?: string; bank_title?: string; easypaisa_name?: string; distribution_detail?: string };
 const DEFAULT_PROFILE: Profile = { proprietor: 'Syed Sakhawat & Associates', phones: '03351240190, 03138692190', easypaisa: '', contact_no: '', whatsapp: '', acct_no: '' };
 
 type Invoice = {
@@ -391,7 +391,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
    in print (repeated on each page); thead / tfoot spacers keep the body clear
    of them. Drawn at A4 width and scaled (CSS zoom) to the chosen paper. */
 const B = '0.3mm solid #222';
-const SOLE_DISTRIBUTORS = 'SOLE DISTRIBUTORS of Mother Care, BNB Cosmetics, Baba Cosmetics, Doctor Paste, Bio Amla, Kidi Diapers, '
+export const SOLE_DISTRIBUTORS = 'SOLE DISTRIBUTORS of Mother Care, BNB Cosmetics, Baba Cosmetics, Doctor Paste, Bio Amla, Kidi Diapers, '
     + 'Santex Ladies Pads, Aish, Face Fresh, Luvel, Amour Diapers, Grace, Pink and White, Perfume — and products of all companies are available at reasonable prices.';
 
 function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m: number } }) {
@@ -614,7 +614,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 <div style={{ border: '0.35mm solid #222', padding: '1.3mm 2mm', marginTop: '2mm' }}>
                     <img src="/brand/inv-shops-banner.png" alt="" style={{ width: '100%', aspectRatio: '2960 / 112', height: 'auto', display: 'block' }} />
                 </div>
-                <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: fs(7.3), lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
+                <div style={{ border: '0.35mm solid #222', borderTop: 0, padding: '1mm 2mm', fontSize: fs(7.3), lineHeight: 1.35 }}>{pf.distribution_detail || SOLE_DISTRIBUTORS}</div>
                 <img src={region.code === 'SKD' ? '/brand/inv-terms-skd.png' : '/brand/inv-terms-glt.png'} alt="" style={{ width: '100%', aspectRatio: '3024 / 216', height: 'auto', display: 'block', marginTop: '0.8mm' }} />
                 <div className="flex justify-between" style={{ marginTop: mm(6, 4), fontSize: fs(8), fontWeight: 600 }}>
                     <div style={{ width: mm(58, 48), borderTop: '0.3mm solid #222', textAlign: 'center', paddingTop: '0.6mm' }}>Store Manager</div>
@@ -766,7 +766,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             <div className="ur" dir="rtl" style={{ fontSize: `${fs - 0.5}pt`, lineHeight: 1.9, textAlign: 'center' }}>{SLOGAN_UR}</div>
             {shop(SHOP_SKARDU_UR)}
             <div style={{ border: '0.3mm solid #000', padding: '0.6mm 1.4mm', marginTop: '1.2mm' }}>
-                <div style={{ fontSize: `${fs - 1}pt`, lineHeight: 1.35 }}>{SOLE_DISTRIBUTORS}</div>
+                <div style={{ fontSize: `${fs - 1}pt`, lineHeight: 1.35 }}>{pf.distribution_detail || SOLE_DISTRIBUTORS}</div>
             </div>
             <div style={{ border: '0.4mm solid #000', padding: '0.9mm 1.4mm', fontWeight: 700, textAlign: 'center', marginTop: '1.4mm' }}>
                 Due Date: {dmy(due.dueDate)}<br />{due.owing ? '⚠ ' : ''}{due.text}

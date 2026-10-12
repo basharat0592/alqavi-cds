@@ -99,6 +99,8 @@ class InvoiceProfile(models.Model):
     bank_name = models.CharField(max_length=40, blank=True, default='')   # e.g. UBL
     bank_title = models.CharField(max_length=80, blank=True, default='')  # account title
     easypaisa_name = models.CharField(max_length=80, blank=True, default='')
+    # Setup › Distribution Setting: the "SOLE DISTRIBUTORS of …" line on the invoice (blank = the built-in text).
+    distribution_detail = models.TextField(blank=True, default='')
 
     class Meta:
         db_table = 'trade_invoice_profile'
@@ -106,7 +108,8 @@ class InvoiceProfile(models.Model):
     def as_dict(self):
         return {'proprietor': self.proprietor, 'phones': self.phones, 'easypaisa': self.easypaisa,
                 'contact_no': self.contact_no, 'whatsapp': self.whatsapp, 'acct_no': self.acct_no,
-                'bank_name': self.bank_name, 'bank_title': self.bank_title, 'easypaisa_name': self.easypaisa_name}
+                'bank_name': self.bank_name, 'bank_title': self.bank_title, 'easypaisa_name': self.easypaisa_name,
+                'distribution_detail': self.distribution_detail}
 
 
 class SalesStaff(models.Model):

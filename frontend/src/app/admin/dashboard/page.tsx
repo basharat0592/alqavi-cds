@@ -110,7 +110,7 @@ const MENUS: Menu[] = [
         { label: 'Backup Data Base', href: '/admin/trade/backup' },
         { label: 'Restore Data Base', disabled: true },
         SEP,
-        { label: 'Distribution Setting', disabled: true },
+        { label: 'Distribution Setting', href: '/admin/trade/distribution-setting' },
         { label: 'User-Role Permissions', disabled: true },
     ] },
     { title: 'Reports', items: [
