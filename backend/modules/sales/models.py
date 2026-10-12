@@ -889,3 +889,14 @@ class FinancialYear(models.Model):
     class Meta:
         db_table = 'trade_financial_years'
         ordering = ['sno']
+
+
+class TradePermission(models.Model):
+    """Trade 1.0 User Permissions: the rights given to one login ("purchase.save" …).
+    No row = full access (see trade_perms)."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='trade_permission')
+    perms = models.JSONField(default=list, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'trade_user_permissions'

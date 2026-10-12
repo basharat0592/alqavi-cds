@@ -9,6 +9,7 @@ from .vouchers import VoucherViewSet
 from .trade_purchases import TradePurchaseViewSet, TradePurchaseOrderViewSet, TradePurchaseReturnViewSet
 from .trade_masters import TradeStaffViewSet, TradeCategoryViewSet, TradeDamageViewSet, TradeAreaViewSet, TradeAccountGroupViewSet, TradeFinancialYearViewSet, TradeOpeningStockViewSet, TradeOpeningVoucherViewSet, TradeCashShortExcessViewSet, TradeBankViewSet, TradePurchaseInvoiceView, TradeGeneralVoucherViewSet, TradeForwardPLViewSet
 from .invoice_share import public_invoice
+from .trade_perms import my_permissions, permission_users, permission_user
 from .reports import (
     report_by_area, report_by_user, report_statements, report_returns_summary,
     report_delivery, report_ledger,
@@ -42,6 +43,9 @@ router.register(r'supplier/dashboard', SupplierDashboardViewSet, basename='suppl
 urlpatterns = [
     # Grouped analytics
     path('public-invoice/<str:token>/', public_invoice, name='public-invoice'),
+    path('trade-permissions/me/', my_permissions, name='trade-permissions-me'),
+    path('trade-permissions/users/', permission_users, name='trade-permission-users'),
+    path('trade-permissions/users/<int:user_id>/', permission_user, name='trade-permission-user'),
     path('reports/by-area/', report_by_area, name='report-by-area'),
     path('reports/by-user/', report_by_user, name='report-by-user'),
     path('reports/statements/', report_statements, name='report-statements'),

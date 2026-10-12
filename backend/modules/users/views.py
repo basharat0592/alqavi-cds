@@ -978,6 +978,12 @@ def trade_change_password(request):
     user = _trade_login_users(request.user).filter(pk=d.get('user')).first()
     if not user:
         return Response({'detail': 'Select the User ID.'}, status=400)
+    from modules.sales.trade_perms import allowed
+    if user.pk == request.user.pk:
+        if not (allowed(request.user, 'change_password.own') or allowed(request.user, 'change_password.all')):
+            return Response({'detail': 'You do not have permission to change your password.'}, status=403)
+    elif not allowed(request.user, 'change_password.all'):
+        return Response({'detail': 'You may only change your own password.'}, status=403)
     old, new, confirm = (str(d.get(k) or '') for k in ('old_password', 'new_password', 'confirm_password'))
     if not check_password(old, user.password):
         return Response({'detail': 'Old Password is not correct.'}, status=400)

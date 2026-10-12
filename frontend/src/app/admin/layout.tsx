@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import WindowPrintButton from '@/components/trade/WindowPrintButton';
+import TradePermGuard from '@/components/trade/TradePermGuard';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
 import AdminSidebar from '@/components/layout/AdminSidebar';
@@ -437,7 +438,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <ReadOnlyController />
                     {/* Print the window as shown (not on the dashboard or the printed invoices). */}
                     {!isDashboardRoute && !pathname?.startsWith('/admin/trade/invoice') && !pathname?.startsWith('/admin/trade/purchase-invoice') && <WindowPrintButton />}
-                    {children}
+                    {pathname?.startsWith('/admin/trade/') ? <TradePermGuard path={pathname}>{children}</TradePermGuard> : children}
                 </div>
             </AuthGuard>
         );

@@ -22,6 +22,14 @@ import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
 import FitStage from '@/components/trade/FitStage';
+import { canOpen, loadMyPerms, type MyPerms } from '@/lib/tradePerms';
+
+/* The signed-in login's Trade rights (User-Role Permissions): windows it may not open are greyed out. */
+function usePerms() {
+    const [p, setP] = useState<MyPerms | null>(null);
+    useEffect(() => { loadMyPerms().then(setP); }, []);
+    return p;
+}
 
 /* ───────────────────────── Top menu bar (File / Product / …) ───────────────────────── */
 // `inPlace` links navigate this window; every other item opens its screen in a
@@ -111,7 +119,7 @@ const MENUS: Menu[] = [
         { label: 'Restore Data Base', disabled: true },
         SEP,
         { label: 'Distribution Setting', href: '/admin/trade/distribution-setting' },
-        { label: 'User-Role Permissions', disabled: true },
+        { label: 'User-Role Permissions', href: '/admin/trade/user-permissions' },
     ] },
     { title: 'Reports', items: [
         { label: 'Data Reports', href: '/admin/reports' },
@@ -131,10 +139,13 @@ function MenuBar() {
         return () => document.removeEventListener('mousedown', h);
     }, []);
     const [about, setAbout] = useState(false);
+    const perms = usePerms();
+    const off = (it: MenuLink) => !!it.disabled || (!!it.href && !canOpen(perms, it.href));
+    const offTitle = (it: MenuLink) => (it.disabled ? 'Not available yet' : off(it) ? 'No permission' : undefined);
     const [flyout, setFlyout] = useState<string | null>(null);   // open sub-menu (Opening entries ›)
     useEffect(() => { setFlyout(null); }, [open]);
     const go = (it: MenuLink) => {
-        if (it.disabled || it.sep) return;
+        if (off(it) || it.sep) return;
         if (it.children) { setFlyout((f) => (f === it.label ? null : it.label!)); return; }
         setOpen(null);
         if (it.action === 'about') { setAbout(true); return; }
@@ -170,8 +181,8 @@ function MenuBar() {
                                     <button
                                         type="button"
                                         onClick={() => go(it)}
-                                        disabled={it.disabled}
-                                        title={it.disabled ? 'Not available yet' : undefined}
+                                        disabled={off(it)}
+                                        title={offTitle(it)}
                                         className={`flex w-full items-center px-4 py-1.5 text-left text-[14px] font-normal hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300 ${flyout === it.label ? 'bg-[#2B2F8F]/10 text-[#2B2F8F]' : 'text-slate-700'}`}
                                     >
                                         <span className="flex-1 whitespace-pre">{it.label}</span>
@@ -182,8 +193,8 @@ function MenuBar() {
                                             {it.children.map((c, k) => (c.sep ? (
                                                 <div key={`csep${k}`} className="mx-3 my-1 border-t border-slate-200" />
                                             ) : (
-                                                <button key={c.label} type="button" onClick={() => go(c)} disabled={c.disabled}
-                                                    title={c.disabled ? 'Not available yet' : undefined}
+                                                <button key={c.label} type="button" onClick={() => go(c)} disabled={off(c)}
+                                                    title={offTitle(c)}
                                                     className="flex w-full items-center px-4 py-1.5 text-left text-[14px] font-normal text-slate-700 hover:bg-[#2B2F8F]/5 hover:text-[#2B2F8F] disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent disabled:hover:text-slate-300">
                                                     <span className="flex-1 whitespace-pre">{c.label}</span>
                                                 </button>
@@ -288,10 +299,12 @@ const REPORTS: Btn[] = [
 
 function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: boolean; delay?: number }) {
     const Icon = b.icon;
-    if (b.disabled) {
-        // Not built yet — shown greyed out and does nothing.
+    const perms = usePerms();
+    const denied = !b.disabled && !canOpen(perms, b.href);
+    if (b.disabled || denied) {
+        // Not built yet / no permission — shown greyed out and does nothing.
         return (
-            <div aria-disabled="true" title="Not available yet" style={{ animationDelay: `${delay}ms` }}
+            <div aria-disabled="true" title={denied ? "No permission" : "Not available yet"} style={{ animationDelay: `${delay}ms` }}
                 className={`aq-tile flex cursor-not-allowed select-none items-center gap-3 rounded-xl border border-slate-200 bg-slate-100 px-3 ${big ? 'py-2.5' : 'py-2'} lg:h-full text-slate-400 opacity-70`}>
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-400">
                     <Icon size={18} strokeWidth={1.9} />
