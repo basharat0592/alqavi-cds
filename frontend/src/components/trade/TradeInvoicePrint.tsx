@@ -18,6 +18,7 @@ import { pn } from '@/lib/productName';
 import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
+import { printImages } from '@/lib/printWindow';
 
 export type InvoiceSize = 'a4' | 'a5' | 'a5s' | 'letter' | 'legal' | 'custom' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
@@ -115,11 +116,11 @@ function dueInfo(inv: Invoice) {
 const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@700&family=Noto+Nastaliq+Urdu:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap');`;
 
 /* `token`: the public shared link (no login) — read only, no admin buttons. */
-/* Printing goes through a real PDF: every sheet is captured as an image at
-   ~300 dpi and placed on a page of the exact paper size. A printer prints a
-   PDF scaled to the paper as one picture, so nothing can shift or be cut off
-   (printing the web page directly let some printers / settings push the
-   content down and drop the footer). */
+/* Every sheet is captured as an image at ~300 dpi, so nothing can shift or be
+   cut off (printing the web page directly let some printers / settings push
+   the content down and drop the footer). Print fits the pictures to the
+   printer's paper (printImages); Save PDF places them on pages of the chosen
+   size; a slip prints as a PDF of its own roll length. */
 const PX_PER_MM = 96 / 25.4;
 /* Turn a page picture a quarter turn clockwise (its top ends up on the right). */
 async function rotateCw(jpeg: string): Promise<string> {
@@ -155,6 +156,16 @@ async function buildPdf(paperMm: { w: number; h: number } | null, sideways = fal
         pdf.addImage(img, 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
     }
     return pdf!;
+}
+async function captureSheets() {
+    const sheets = Array.from(document.querySelectorAll<HTMLElement>('.inv-page'));
+    if (!sheets.length) throw new Error('Nothing to print yet.');
+    await (document as any).fonts?.ready;
+    const out: string[] = [];
+    for (const el of sheets) {
+        out.push(await toJpeg(el, { quality: 0.95, pixelRatio: 3, backgroundColor: '#ffffff', cacheBust: false, style: { margin: '0', boxShadow: 'none' } }));
+    }
+    return out;
 }
 function printPdfBlob(blob: Blob) {
     const url = URL.createObjectURL(blob);
@@ -245,7 +256,12 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     const printNow = async () => {
         if (busy) return;
         setBusy(true);
-        try { printPdfBlob((await makePdf()).output('blob')); }
+        try {
+            // Sheets print fitted to the printer's paper (and turned to suit it);
+            // a slip keeps its own roll-length page.
+            if (isSlip) printPdfBlob((await makePdf()).output('blob'));
+            else await printImages(await captureSheets(), 0.95);
+        }
         catch (e: any) { setErr(e?.message || 'Could not prepare the print.'); }
         finally { setBusy(false); }
     };
