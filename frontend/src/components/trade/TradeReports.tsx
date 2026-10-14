@@ -36,8 +36,8 @@ type Pick = { id: string; code: string; name: string } | null;
 const today = () => new Date().toISOString().slice(0, 10);
 const yearStart = () => `${new Date().getFullYear()}-01-01`;
 const show = (v: any) => (typeof v === 'number' ? v.toLocaleString('en-US', { maximumFractionDigits: 2 }) : v ?? '');
-const IN = `${EDIT} h-9 w-full !text-[14px] !font-normal`;
-const OFF = `${FIELD} h-9 w-full border-slate-300 bg-[#ececf3] !text-[14px] !font-normal text-slate-400`;
+const IN = `${EDIT} h-9 w-full !text-[15px] !font-normal`;
+const OFF = `${FIELD} h-9 w-full border-slate-300 bg-[#ececf3] !text-[15px] !font-normal text-slate-400`;
 const FIND_LABEL: Record<string, string> = {
     invoice: 'Invice No', voucher: 'Voucher No', company: 'Company', supplier: 'Supplier', product: 'Product', customer: 'Customer', account: 'Account',
 };
@@ -167,8 +167,8 @@ export default function TradeReports() {
         downloadXlsx(res.title.replace(/[^\w]+/g, '-').toLowerCase(), res.title.slice(0, 31), res.columns.map((c) => c.h || ' '), rows);
     };
 
-    const lbl = (on: boolean) => `whitespace-nowrap text-[15px] ${on ? 'text-[#1b1f4b]' : 'text-slate-400'}`;
-    const sel = (on: boolean) => (on ? `${COA_SELECT} h-9 !text-[14px] !font-normal` : OFF);
+    const lbl = (on: boolean) => `whitespace-nowrap text-[16px] ${on ? 'text-[#1b1f4b]' : 'text-slate-400'}`;
+    const sel = (on: boolean) => (on ? `${COA_SELECT} h-9 !text-[15px] !font-normal` : OFF);
     const table = (rows: Row[], fs: string, withTotal: boolean) => res && (
         <table className="w-full border-collapse" style={{ fontSize: fs }}>
             <thead>
@@ -199,15 +199,15 @@ export default function TradeReports() {
 
     return (
         <div className="h-screen overflow-hidden bg-[#c9c9f9] font-sans text-slate-900">
-            <FitStage width={1640} height={810} className="flex flex-col overflow-hidden">
+            <FitStage width={1460} height={790} className="flex flex-col overflow-hidden">
                 <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1">
                     <span className="flex h-5 w-5 items-center justify-center bg-emerald-600 text-[10px] font-black text-white">AQ</span>
                     <span className="text-[13px] font-semibold text-slate-800">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( Reports )</span>
                 </div>
-                <div className="grid min-h-0 flex-1 grid-cols-[820px_minmax(0,1fr)] gap-3 p-3">
+                <div className="grid min-h-0 flex-1 grid-cols-[700px_minmax(0,1fr)] gap-3 p-3">
                     {/* Left: the boxes the chosen report uses */}
                     <div className="flex min-h-0 flex-col gap-3 border border-[#9da1d8] p-4">
-                        <div className="grid shrink-0 grid-cols-[150px_40px_minmax(0,1fr)] items-center gap-x-3 gap-y-3">
+                        <div className="grid shrink-0 grid-cols-[150px_32px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5">
                             <span className="text-[17px] text-[#1b1f4b]">Report Type</span><span />
                             <select value={catCode} onChange={(e) => { pickCat(e.target.value); setRes(null); }} className={`${COA_SELECT} h-10 !text-[16px] !font-normal`}>
                                 <option value="">{cats ? 'Select any one' : 'Loading…'}</option>
@@ -237,33 +237,33 @@ export default function TradeReports() {
                             <span className={lbl(findOn)}>{FIND_LABEL[find] || 'Invice No'}</span><span />
                             <div className="grid grid-cols-[90px_minmax(0,1fr)] gap-2">
                                 <button type="button" disabled={!findOn || typedFind} onClick={() => setFinder(find)}
-                                    className="h-9 border border-slate-400 bg-gradient-to-b from-white to-[#e4e4ee] text-[14px] font-semibold text-slate-700 disabled:text-slate-400">Find</button>
+                                    className="h-9 border border-slate-400 bg-gradient-to-b from-white to-[#e4e4ee] text-[15px] font-semibold text-slate-700 disabled:text-slate-400">Find</button>
                                 {typedFind ? (
                                     <input value={typed} onChange={(e) => setTyped(e.target.value.toUpperCase())} onKeyDown={(e) => { if (e.key === 'Enter') preview(); }}
                                         placeholder={find === 'voucher' ? 'e.g. V26001704' : 'e.g. S26000897'} className={`${IN} !bg-white`} />
                                 ) : (
-                                    <div className={`${FIELD} flex h-9 items-center px-2 !text-[14px] !font-normal ${findOn ? 'border-slate-300 bg-white' : 'border-slate-300 bg-[#ececf3] text-slate-400'}`}>
+                                    <div className={`${FIELD} flex h-9 items-center px-2 !text-[15px] !font-normal ${findOn ? 'border-slate-300 bg-white' : 'border-slate-300 bg-[#ececf3] text-slate-400'}`}>
                                         {cur ? `${cur.code}  ${cur.name}` : ''}
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div className="grid shrink-0 grid-cols-[240px_minmax(0,1fr)] items-center gap-3">
+                        <div className="grid shrink-0 grid-cols-[200px_minmax(0,1fr)] items-center gap-3">
                             <label className={`flex items-center gap-2 text-[16px] font-semibold ${uses('areas') ? 'text-[#1b1f4b]' : 'text-slate-400'}`}>
                                 <input type="checkbox" checked={allAreas} disabled={!uses('areas')} onChange={(e) => setAllAreas(e.target.checked)} className="h-4 w-4 accent-[#3b3f8f]" />Select all Areas
                             </label>
-                            <div className="flex h-12 items-center gap-2 border border-[#9da1d8] px-2 text-[13px] text-slate-600">
+                            <div className="flex h-11 items-center gap-2 border border-[#9da1d8] px-2 text-[14px] text-slate-600">
                                 <input value={areaQ} disabled={!uses('areas') || allAreas} onChange={(e) => setAreaQ(e.target.value)} placeholder="Search area"
-                                    className={`${FIELD} h-8 w-[200px] border-slate-300 bg-white !text-[13px] !font-normal disabled:bg-[#ececf3]`} />
+                                    className={`${FIELD} h-8 w-[220px] border-slate-300 bg-white !text-[14px] !font-normal disabled:bg-[#ececf3]`} />
                                 {uses('areas') && !allAreas ? `${picked.size} area${picked.size === 1 ? '' : 's'} ticked` : ''}
                                 {uses('areas') && !allAreas && picked.size > 0 && <button type="button" onClick={() => setPicked(new Set())} className="underline">clear</button>}
                             </div>
                         </div>
                         <div className={`min-h-0 flex-1 overflow-auto border border-slate-400 bg-white ${uses('areas') && !allAreas ? '' : 'pointer-events-none opacity-50'}`}>
                             {areaList.map((a) => (
-                                <label key={a.id} className="flex cursor-pointer items-center gap-2 border-b border-slate-100 px-2 py-[3px] text-[13px] hover:bg-indigo-50">
-                                    <input type="checkbox" checked={picked.has(a.id)} onChange={() => setPicked((s) => { const n = new Set(s); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); return n; })} className="h-3.5 w-3.5 accent-[#3b3f8f]" />
-                                    <span className="font-semibold">{a.name}</span><span className="text-slate-500">· {a.main_name} · {a.district_name}</span>
+                                <label key={a.id} className="flex cursor-pointer items-center gap-2.5 border-b border-slate-100 px-2.5 py-[6px] text-[15px] hover:bg-indigo-50">
+                                    <input type="checkbox" checked={picked.has(a.id)} onChange={() => setPicked((s) => { const n = new Set(s); if (n.has(a.id)) n.delete(a.id); else n.add(a.id); return n; })} className="h-4 w-4 shrink-0 accent-[#3b3f8f]" />
+                                    <span className="font-semibold">{a.name}</span><span className="truncate text-[14px] text-slate-500">· {a.main_name} · {a.district_name}</span>
                                 </label>
                             ))}
                         </div>
@@ -271,14 +271,14 @@ export default function TradeReports() {
 
                     {/* Right: the group's reports */}
                     <div className="flex min-h-0 flex-col gap-2">
-                        <div className="min-h-0 flex-1 overflow-auto border border-[#9da1d8] px-5 py-3">
-                            {!cat && <div className="pt-10 text-center text-[14px] text-slate-500">Choose the Report Type.</div>}
+                        <div className="min-h-0 flex-1 overflow-auto border border-[#9da1d8] px-6 py-3">
+                            {!cat && <div className="pt-10 text-center text-[16px] text-slate-500">Choose the Report Type.</div>}
                             {cat?.reports.map((r, i) => (r ? (
-                                <label key={r.key} className="flex cursor-pointer items-center gap-3 py-[5px] text-[17px] text-slate-900">
-                                    <input type="radio" name="report" checked={type === r.key} onChange={() => { setType(r.key); }} className="h-4 w-4 accent-[#3b3f8f]" />
+                                <label key={r.key} className={`flex cursor-pointer items-center gap-3 rounded px-2 py-[4px] text-[18px] ${type === r.key ? 'bg-white/70 font-semibold text-[#1f2bd6]' : 'text-slate-900 hover:bg-white/40'}`}>
+                                    <input type="radio" name="report" checked={type === r.key} onChange={() => { setType(r.key); }} className="h-[18px] w-[18px] shrink-0 accent-[#3b3f8f]" />
                                     {r.label}
                                 </label>
-                            ) : <div key={`gap${i}`} className="h-5" />))}
+                            ) : <div key={`gap${i}`} className="h-3" />))}
                         </div>
                         <div className="flex shrink-0 justify-end gap-3">
                             <button type="button" onClick={preview} disabled={!rep || busy} className={ACTION_BTN}>
@@ -308,7 +308,7 @@ export default function TradeReports() {
                     <div className="min-h-0 flex-1 overflow-auto p-4">
                         <div className="mx-auto max-w-[1500px] bg-white p-4 shadow">
                             <div className="mb-2 text-[18px] font-extrabold">AL-QAVI TRADERS</div>
-                            {table(res.rows, '13px', true)}
+                            {table(res.rows, '14px', true)}
                         </div>
                     </div>
                 </div>
