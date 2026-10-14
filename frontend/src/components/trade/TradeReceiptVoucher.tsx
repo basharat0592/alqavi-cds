@@ -154,19 +154,30 @@ export default function TradeReceiptVoucher() {
         amount: number; account: string; acc_id: string; staff: string; days: number | null; due: boolean };
     const [pend, setPend] = useState<{ due: number; rows: Pend[] }>({ due: 0, rows: [] });
     const [pendOpen, setPendOpen] = useState(false);
-    const [cashing, setCashing] = useState<null | { row: Pend; date: string }>(null);
+    const [cashing, setCashing] = useState<null | { row: Pend; date: string; busy?: boolean }>(null);
     const loadPend = (open = false) => api.get('v1/sales/vouchers/pending_cheques/').then(({ data }) => {
         setPend(data);
         if (open && (data.due > 0 || new URLSearchParams(window.location.search).has('cheques'))) setPendOpen(true);
     }).catch(() => { /* keep */ });
-    useEffect(() => { loadPend(true); }, []);
+    useEffect(() => {
+        loadPend(true);
+        // Another window may cash a cheque: refresh the list when this one is used again.
+        const f = () => loadPend();
+        window.addEventListener('focus', f);
+        return () => window.removeEventListener('focus', f);
+    }, []);
     const cashCheque = async () => {
-        if (!cashing) return;
+        if (!cashing || cashing.busy) return;   // one request, however often OK is pressed
+        setCashing({ ...cashing, busy: true });
         try {
             await api.post(`v1/sales/vouchers/${cashing.row.id}/cash_cheque/`, { date: cashing.date });
             toast.success(`Cheque ${cashing.row.chq_no} (${cashing.row.voucher_no}) cashed — now in the ledger.`);
-            setCashing(null); loadPend();
-        } catch (err: any) { toast.error(err?.response?.data?.detail || 'Could not mark the cheque cashed.'); }
+            setCashing(null);
+        } catch (err: any) {
+            const d = err?.response?.data;
+            if (d?.already) { toast(d.detail, { icon: 'ℹ️', duration: 6000 }); setCashing(null); }
+            else { toast.error(d?.detail || 'Could not mark the cheque cashed.'); setCashing((c) => (c ? { ...c, busy: false } : c)); }
+        } finally { loadPend(); }
     };
 
     const balanceOf = (a: Acc) => api.get('v1/sales/vouchers/balance/', { params: { account: a.id } }).then(({ data }) => num(data.balance)).catch(() => null);
@@ -482,7 +493,7 @@ export default function TradeReceiptVoucher() {
             )}
 
             {pendOpen && (
-                <Modal title="Pending Cheques" onClose={() => askClose(() => setPendOpen(false))} wide>
+                <Modal title="Pending Cheques" onClose={() => askClose(() => setPendOpen(false))} xl>
                     <div className="flex min-h-0 flex-1 flex-col gap-2 bg-[#c9c9f9] p-3">
                         {pend.due > 0 && (
                             <div className="border border-red-500 bg-red-600 px-3 py-1.5 text-[14px] font-bold text-white">
@@ -490,32 +501,31 @@ export default function TradeReceiptVoucher() {
                             </div>
                         )}
                         <div className="min-h-[160px] flex-1 overflow-auto border border-slate-500 bg-white">
-                            <table className="w-full min-w-[980px] border-collapse text-[12.5px]">
+                            {/* Fixed widths: every column, the Cashed button too, in one view — no sideways scroll. */}
+                            <table className="w-full table-fixed border-collapse text-[12.5px]">
+                                <colgroup>{[11, 10, 19, 11, 10, 9, 13, 9, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                    <tr>{['Voucher No', 'Acc. ID', 'Account', 'Chq No', 'Bank', 'Received', 'Cash Date', '', 'Amount', ''].map((h, k) =>
-                                        <th key={k} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold ${k === 8 ? 'text-right' : ''}`}>{h}</th>)}</tr>
+                                    <tr>{['Voucher No', 'Acc. ID', 'Account', 'Chq No', 'Bank', 'Received', 'Cash Date', 'Amount', ''].map((h, k) =>
+                                        <th key={k} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold ${k === 7 ? 'text-right' : ''}`}>{h}</th>)}</tr>
                                 </thead>
                                 <tbody>
                                     {pend.rows.map((r) => (
                                         <tr key={r.id} className={`tabular-nums ${r.due ? 'bg-[#ffd9d9] font-semibold text-red-700' : 'text-red-600'}`}>
-                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{r.voucher_no}</td>
-                                            <td className="border-b border-r border-slate-300 px-1.5 py-1 font-mono">{r.acc_id}</td>
-                                            <td className="max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1" title={r.account}>{r.account}</td>
-                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{r.chq_no}</td>
-                                            <td className="max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{r.bank}</td>
-                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{dmy(r.received)}</td>
-                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{dmy(r.cash_date)}</td>
-                                            <td className="whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">
-                                                {r.days === null ? '' : r.days < 0 ? `${-r.days} day${r.days === -1 ? '' : 's'} late` : r.days === 0 ? 'Due today' : `in ${r.days} day${r.days === 1 ? '' : 's'}`}
+                                            {[r.voucher_no, r.acc_id, r.account, r.chq_no, r.bank, dmy(r.received)].map((v, k) => (
+                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 1 ? 'font-mono' : ''}`}>{v}</td>
+                                            ))}
+                                            <td className="overflow-hidden whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-0.5 leading-tight">
+                                                {dmy(r.cash_date)}
+                                                {r.days !== null && <span className="block text-[11px]">{r.days < 0 ? `${-r.days} day${r.days === -1 ? '' : 's'} late` : r.days === 0 ? 'Due today' : `in ${r.days} day${r.days === 1 ? '' : 's'}`}</span>}
                                             </td>
-                                            <td className="border-b border-r border-slate-300 px-1.5 py-1 text-right">{fmt(num(r.amount))}</td>
+                                            <td className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 text-right">{fmt(num(r.amount))}</td>
                                             <td className="border-b border-slate-300 px-1 py-0.5">
                                                 <button type="button" onClick={() => setCashing({ row: r, date: today() })}
-                                                    className="h-7 border border-blue-500 bg-[#dfe9ff] px-2 text-[12px] font-bold text-blue-800 hover:bg-[#c9dcff]">Cashed</button>
+                                                    className="h-7 w-full border border-blue-500 bg-[#dfe9ff] text-[12px] font-bold text-blue-800 hover:bg-[#c9dcff]">Cashed</button>
                                             </td>
                                         </tr>
                                     ))}
-                                    {!pend.rows.length && <tr><td colSpan={10} className="px-3 py-6 text-center text-slate-500">No pending cheques.</td></tr>}
+                                    {!pend.rows.length && <tr><td colSpan={9} className="px-3 py-6 text-center text-slate-500">No pending cheques.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -539,7 +549,9 @@ export default function TradeReceiptVoucher() {
                                 onChange={(e) => e.target.value && setCashing({ ...cashing, date: e.target.value })} className={`${EDIT} w-[170px]`} />
                         </label>
                         <div className="flex justify-end gap-2">
-                            <button type="button" onClick={cashCheque} className={ACTION_BTN}><span className="underline">O</span>K</button>
+                            <button type="button" onClick={cashCheque} disabled={!!cashing.busy} className={ACTION_BTN}>
+                                {cashing.busy ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">O</span>K</>}
+                            </button>
                             <button type="button" onClick={() => setCashing(null)} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                         </div>
                     </div>

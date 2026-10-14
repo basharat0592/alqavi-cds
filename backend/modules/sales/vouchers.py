@@ -362,8 +362,13 @@ class VoucherViewSet(viewsets.ViewSet):
             v = self._qs().select_for_update().filter(pk=pk, vtype='receipt').first()
             if not v:
                 return Response({'detail': 'Voucher not found.'}, status=404)
+            if v.chq_status == 'cashed':
+                # Already done (another window, or OK pressed twice): nothing to do.
+                on_ = v.chq_cash_date.strftime('%d-%m-%Y') if v.chq_cash_date else ''
+                return Response({'detail': f'Cheque {v.chq_no} of {v.voucher_no} was already marked Cashed{" on " + on_ if on_ else ""}.',
+                                 'already': True}, status=409)
             if v.chq_status != 'pending':
-                return Response({'detail': f'Cheque {v.chq_no} of {v.voucher_no} is not pending.'}, status=400)
+                return Response({'detail': f'{v.voucher_no} is not a pending cheque.', 'already': True}, status=409)
             if on < (v.chq_received or v.date):
                 return Response({'detail': 'The cash date cannot be before the day the cheque was received.'}, status=400)
             for ln in v.lines.filter(credit__gt=0).select_related('account'):
