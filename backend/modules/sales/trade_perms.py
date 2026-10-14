@@ -59,6 +59,7 @@ CATALOG = [
         ('expense_voucher', 'Expanse Voucher', [S, V], ['/admin/trade/expense-voucher']),
         ('bank_deposit', 'Bank Deposite', [S, V], []),
         ('bank_withdrawal', 'Bank withdrawal', [S, V], ['/admin/trade/bank-withdrawal']),
+        ('credit_card', 'Credit Card', [S, V, U, D], ['/admin/trade/credit-card']),
         ('sale', 'Sale', [S, V], ['/admin/trade/sale-invoice', '/admin/trade/sale-records']),
         ('sale_return', 'Sale Return', [S, V], ['/admin/trade/sale-return']),
         ('purrate_in_sale', 'PurRate and Pur Value in Sale', [V], []),
@@ -90,7 +91,8 @@ CATALOG = [
     {'id': 'reports3', 'rows': [(k, l, [P], []) for k, l in [
         ('rpt_stock_position', 'Stock Position'), ('rpt_chart_of_account', 'Chart of Account'),
         ('rpt_journal', 'Journal'), ('rpt_account_balances', 'Account Balances'), ('rpt_ledger', 'Ledger'),
-        ('rpt_trial_balance', 'Tribalance'), ('rpt_profit_loss', 'Profit and Loss'), ('rpt_balance_sheet', 'Balance Sheet')]]},
+        ('rpt_trial_balance', 'Tribalance'), ('rpt_profit_loss', 'Profit and Loss'), ('rpt_balance_sheet', 'Balance Sheet'),
+        ('rpt_credit_card', 'Credit Card')]]},
 ]
 LABELS = {r[0]: r[1] for s in CATALOG for r in s['rows']}
 ALL_PERMS = sorted(f'{r[0]}.{a}' for s in CATALOG for r in s['rows'] for a in r[2])
@@ -168,6 +170,8 @@ _crud('sales/trade-financial-years/', 'financial_year')
 _crud('sales/trade-general-vouchers/', 'general_voucher', view_list=True)
 _crud('sales/trade-forward-pl/', 'general_voucher', view_list=True)
 _crud('users/trade-users/', 'new_user', view_list=True)
+RULES += [('GET', r'^sales/trade-cards/entries/$', None, 'credit_card', V), ('POST', r'^sales/trade-cards/entries/$', None, 'credit_card', S)]
+_crud('sales/trade-cards/', 'credit_card')
 RULES += [
     ('POST', r'^products/items/trade_save/$', None, 'product_detail', S),
     ('DELETE', r'^products/items/[^/]+/$', None, 'product_detail', D),

@@ -108,6 +108,7 @@ const MENUS: Menu[] = [
             SEP,
             { label: 'Cheque Management', href: '/admin/trade/cheque-management' },
         ] },
+        { label: 'Credit Card', href: '/admin/trade/credit-card' },
         SEP,
         { label: 'Post Voucher (Manually)', href: '/admin/trade/general-voucher' },
         { label: 'Forward the Profit and Loss', href: '/admin/trade/forward-profit-loss' },

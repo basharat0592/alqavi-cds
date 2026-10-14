@@ -906,3 +906,60 @@ class TradePermission(models.Model):
 
     class Meta:
         db_table = 'trade_user_permissions'
+
+
+class CreditCard(models.Model):
+    """Trade 1.0 Credit Card: one of our own credit cards (money taken on it is a
+    loan in its card account, repaid by the payment date) or a card machine that
+    customers pay on. The bank keeps `charge_pct` of every amount posted — that
+    is our cost (charges account), never the customer's."""
+    KINDS = [('own', 'Our credit card'), ('machine', 'Card machine (customers pay)')]
+    kind = models.CharField(max_length=10, choices=KINDS, default='own')
+    name = models.CharField(max_length=80)
+    bank = models.CharField(max_length=80, blank=True, default='')
+    card_no = models.CharField(max_length=30, blank=True, default='')
+    billing_day = models.PositiveSmallIntegerField(default=5)
+    due_day = models.PositiveSmallIntegerField(default=26)
+    charge_pct = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('1.5'))
+    # Own card: what we owe on the card. Machine: not used.
+    account = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='credit_cards')
+    # The bank charges (expense).
+    charges_account = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='credit_card_charges')
+    # Where the money arrives by default (machine) / is taken into (own card).
+    bank_account = models.ForeignKey('company.LedgerAccount', on_delete=models.SET_NULL, null=True, blank=True, related_name='credit_card_banks')
+    status = models.CharField(max_length=10, default='active')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_credit_cards')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trade_credit_cards'
+        ordering = ['kind', 'name']
+
+
+class CardEntry(models.Model):
+    """One credit card entry, posted as a voucher:
+    post      money taken on our card: Bank Dr (received), Charges Dr, Card Cr (amount posted)
+    customer  a customer paid by card: Bank Dr (received), Charges Dr, Customer Cr (the full amount)
+    pay       our card bill paid: Card Dr, Bank Cr."""
+    KINDS = [('post', 'Card posting'), ('customer', 'Customer paid by card'), ('pay', 'Card bill payment')]
+    card = models.ForeignKey(CreditCard, on_delete=models.PROTECT, related_name='entries')
+    kind = models.CharField(max_length=10, choices=KINDS)
+    voucher = models.OneToOneField(Voucher, on_delete=models.CASCADE, related_name='card_entry')
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    charge_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    charges = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    received = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    bank = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='card_entries_bank')
+    customer_acc = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='card_entries_customer')
+    billing_date = models.DateField(null=True, blank=True)
+    payment_date = models.DateField(null=True, blank=True)
+    note = models.CharField(max_length=255, blank=True, default='')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_card_entries')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trade_card_entries'
+        ordering = ['date', 'id']

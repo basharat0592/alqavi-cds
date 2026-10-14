@@ -14,6 +14,7 @@ Inventory Cr (a return the other way round), plus cash paid at the sale (Cash Dr
 counted from the start of the financial year (earlier years were forwarded to
 Retain Earning), the other accounts from the beginning.
 """
+import calendar
 import datetime
 import re
 from collections import defaultdict
@@ -1394,6 +1395,107 @@ def r_balance_short(ctx):
                 subtitle=f'As on {_dmy(ctx.dto or datetime.date.today())}' + (f' · FY {ctx.fy.title}' if ctx.fy else ''))
 
 
+# ── credit card ──
+
+def _in(ctx, d):
+    return d and (not ctx.dfrom or d >= ctx.dfrom) and (not ctx.dto or d <= ctx.dto)
+
+
+def r_card_sheet(ctx):
+    """Each of our cards as the shop's Excel sheet: what was taken, the bank's charges,
+    what reached us, what is paid back and what is still owed (by the payment date)."""
+    from .models import CreditCard
+    from .trade_cards import card_sheet
+    rows, tot = [], [Z] * 5
+    for c in ctx.scope(CreditCard.objects.filter(kind='own')).select_related('account').order_by('name'):
+        s = card_sheet(c)
+        shown = [r for r in s['rows'] if _in(ctx, r['credit_date'])]
+        if not shown and not s['owed']:
+            continue
+        rows.append(R(f'{c.name}{"  " + c.card_no if c.card_no else ""}{"  ·  " + c.bank if c.bank else ""}  ·  Billing day {c.billing_day}  ·  '
+                      f'Due day {c.due_day}  ·  Charges {c.charge_pct.normalize()}%  ·  Owed now {_f(s["owed"]):,.0f}', t='g'))
+        if s['opening'] and not ctx.dfrom:
+            rows.append(R('', 'Before', '', '', _f(s['opening']), '', '', _f(s['opening'] - s['opening_remaining']),
+                          _f(s['opening_remaining']), '', 'Card balance before these entries'))
+        sub = [Z] * 5
+        for r in shown:
+            late = r['state'] == 'overdue'
+            rows.append(R(r['sno'], _dmy(r['credit_date']), _dmy(r['billing_date']), _dmy(r['payment_date']) + ('  LATE' if late else ''),
+                          _f(r['amount']), _f(r['charges']), _f(r['received']), _f(r['paid']), _f(r['remaining']),
+                          _dmy(r['paid_date']), r['by_bank'], t='p' if late else None))
+            for i, k in enumerate(('amount', 'charges', 'received', 'paid', 'remaining')):
+                sub[i] += _d(r[k])
+        rows.append(R('', f'Total {c.name}', '', '', *[_f(x) for x in sub], '', '', t='s'))
+        tot = [a + b for a, b in zip(tot, sub)]
+    if not rows:
+        rows = [R('No credit card entries for these dates.')]
+    return _out('Credit Card Sheet (Our Cards)', ctx,
+                [('S.No', 'l'), ('Credit Date', 'l'), ('Billing Date', 'l'), ('Payment Date', 'l'), ('Amount Post', 'r'),
+                 ('Bank Charges', 'r'), ('Amount Received', 'r'), ('Amount Paid', 'r'), ('Remaining', 'r'), ('Paid Date', 'l'), ('By Bank', 'l')],
+                rows, ['Total', '', '', '', *[_f(x) for x in tot], '', ''])
+
+
+def r_card_customers(ctx):
+    """Customers who paid by card: credited in full, the bank's charges are ours."""
+    from .models import CardEntry
+    qs = ctx.scope(CardEntry.objects.filter(kind='customer')).select_related('card', 'voucher', 'customer_acc', 'bank')
+    if ctx.dfrom:
+        qs = qs.filter(date__gte=ctx.dfrom)
+    if ctx.dto:
+        qs = qs.filter(date__lte=ctx.dto)
+    rows, t = [], [Z, Z, Z]
+    for e in qs.order_by('date', 'id'):
+        rows.append(R(_dmy(e.date), e.voucher.voucher_no, e.customer_acc.acc_id if e.customer_acc_id else '',
+                      e.customer_acc.name if e.customer_acc_id else '', e.card.name, _f(e.amount), f'{e.charge_pct.normalize()}%',
+                      _f(e.charges), _f(e.received), e.bank.name))
+        t = [t[0] + e.amount, t[1] + e.charges, t[2] + e.received]
+    if not rows:
+        rows = [R('No card payments from customers for these dates.')]
+    return _out('Customers Paid by Credit Card', ctx,
+                [('Date', 'l'), ('Voucher', 'l'), ('Acc ID', 'l'), ('Customer', 'l'), ('Card Machine', 'l'), ('Customer Paid', 'r'),
+                 ('Charges %', 'r'), ('Bank Charges (on us)', 'r'), ('Received in Bank', 'r'), ('Bank', 'l')],
+                rows, ['Total', '', '', f'{len(qs)} payments', '', _f(t[0]), '', _f(t[1]), _f(t[2]), ''])
+
+
+def r_card_profit(ctx):
+    """Month by month: money taken on our cards and what the cards cost us (bank charges,
+    ours and on customers' card payments) against the profit made on goods sold."""
+    from .models import CardEntry
+    m = defaultdict(lambda: [Z] * 5)   # taken, own charges, customer-card charges, sale profit, card bills paid
+    qs = ctx.scope(CardEntry.objects.all())
+    if ctx.dfrom:
+        qs = qs.filter(date__gte=ctx.dfrom)
+    if ctx.dto:
+        qs = qs.filter(date__lte=ctx.dto)
+    for e in qs:
+        k = (e.date.year, e.date.month)
+        if e.kind == 'post':
+            m[k][0] += e.amount; m[k][1] += e.charges
+        elif e.kind == 'customer':
+            m[k][2] += e.charges
+        else:
+            m[k][4] += e.amount
+    for it in _items(ctx):
+        d = _odate(it.order)
+        m[(d.year, d.month)][3] += (_d(it.price) * (it.quantity or 0) - _d(it.discount)
+                                    - _d(it.cost_price) * ((it.quantity or 0) + (it.bonus_quantity or 0)))
+    rows, t = [], [Z] * 5
+    for k in sorted(m):
+        taken, own, cust, profit, paid = m[k]
+        charges = own + cust
+        rows.append(R(f'{calendar.month_abbr[k[1]]} {k[0]}', _f(taken), _f(paid), _f(own), _f(cust), _f(charges), _f(profit), _f(profit - charges),
+                      f'{round(float(charges / profit * 100), 1)}%' if profit > 0 else ''))
+        t = [a + b for a, b in zip(t, (taken, own, cust, profit, paid))]
+    charges = t[1] + t[2]
+    if not rows:
+        rows = [R('No sales or card entries for these dates.')]
+    return _out('Credit Card Charges vs Profit on Goods', ctx,
+                [('Month', 'l'), ('Card Money Taken', 'r'), ('Card Bills Paid', 'r'), ('Charges (Our Cards)', 'r'), ('Charges (Customer Cards)', 'r'),
+                 ('Total Card Charges', 'r'), ('Profit on Goods', 'r'), ('Profit after Card Charges', 'r'), ('Charges % of Profit', 'r')],
+                rows, ['Total', _f(t[0]), _f(t[4]), _f(t[1]), _f(t[2]), _f(charges), _f(t[3]), _f(t[3] - charges),
+                       f'{round(float(charges / t[3] * 100), 1)}%' if t[3] > 0 else ''])
+
+
 def _retitle(fn, title):
     def run(ctx):
         out = fn(ctx)
@@ -1489,6 +1591,10 @@ CATEGORIES = [
         ('profit_loss', 'Income Statement (Detail)', [F_D, F_FY], 'rpt_profit_loss'),
         ('balance_short', 'Balance Sheet (short)', [F_D, F_FY], 'rpt_balance_sheet'),
         ('balance_sheet', 'Balance Sheet (Detail)', [F_D, F_FY], 'rpt_balance_sheet'),
+        None,
+        ('card_sheet', 'Credit Card Sheet (Our Cards)', [F_D], 'rpt_credit_card'),
+        ('card_customers', 'Customers Paid by Credit Card', [F_D], 'rpt_credit_card'),
+        ('card_profit', 'Credit Card Charges vs Profit on Goods', [F_D], 'rpt_credit_card'),
     ]),
 ]
 _EXTRA = {
