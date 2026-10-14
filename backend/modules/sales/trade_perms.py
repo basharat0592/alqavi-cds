@@ -59,7 +59,8 @@ CATALOG = [
         ('expense_voucher', 'Expanse Voucher', [S, V], ['/admin/trade/expense-voucher']),
         ('bank_deposit', 'Bank Deposite', [S, V], []),
         ('bank_withdrawal', 'Bank withdrawal', [S, V], ['/admin/trade/bank-withdrawal']),
-        ('credit_card', 'Credit Card', [S, V, U, D], ['/admin/trade/credit-card']),
+        ('credit_card', 'Credit Card', [S, V, U, D], ['/admin/trade/credit-card', '/admin/trade/credit-card-report']),
+        ('partnership', 'Partnership', [S, V, U, D], ['/admin/trade/partnership']),
         ('sale', 'Sale', [S, V], ['/admin/trade/sale-invoice', '/admin/trade/sale-records']),
         ('sale_return', 'Sale Return', [S, V], ['/admin/trade/sale-return']),
         ('purrate_in_sale', 'PurRate and Pur Value in Sale', [V], []),
@@ -172,6 +173,9 @@ _crud('sales/trade-forward-pl/', 'general_voucher', view_list=True)
 _crud('users/trade-users/', 'new_user', view_list=True)
 RULES += [('GET', r'^sales/trade-cards/entries/$', None, 'credit_card', V), ('POST', r'^sales/trade-cards/entries/$', None, 'credit_card', S)]
 _crud('sales/trade-cards/', 'credit_card')
+RULES += [('POST', r'^sales/trade-partners/(entries|distributions)/$', None, 'partnership', S),
+          ('DELETE', r'^sales/trade-partners/distributions/[0-9]+/$', None, 'partnership', D)]
+_crud('sales/trade-partners/', 'partnership', view_list=True)
 RULES += [
     ('POST', r'^products/items/trade_save/$', None, 'product_detail', S),
     ('DELETE', r'^products/items/[^/]+/$', None, 'product_detail', D),

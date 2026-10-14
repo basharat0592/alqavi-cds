@@ -921,8 +921,20 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     };
     const [saving, setSaving] = useState(false);
 
-    // Bottom bar: Paid Cash / Saleman / Sale Date
+    // Bottom bar: Paid Cash / Paid by Card / Saleman / Sale Date
     const [paidCash, setPaidCash] = useState('');
+    // Paid by card on one of our card machines: the customer is credited in
+    // full, the bank's charges are ours (Credit Card).
+    const [paidCard, setPaidCard] = useState('');
+    const [machines, setMachines] = useState<{ id: number; name: string; charge_pct: number; bank_account: number | null }[]>([]);
+    const [machine, setMachine] = useState('');
+    useEffect(() => {
+        api.get('v1/sales/trade-cards/').then(({ data }) => {
+            const ms = (data || []).filter((c: any) => c.kind === 'machine' && c.status === 'active');
+            setMachines(ms);
+            if (ms.length) setMachine((m) => m || String(ms[0].id));
+        }).catch(() => setMachines([]));
+    }, []);
     const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
     const [salesman, setSalesman] = useState('');
     const [backDate, setBackDate] = useState(false);
@@ -1695,7 +1707,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const totalBonus = lines.reduce((s, l) => s + l.bonus, 0);
     const netAmount = amountBilled - totalDisc;
     const paid = Math.max(0, num(paidCash));
-    const netBalance = prevBal + netAmount - paid;
+    const card = Math.max(0, num(paidCard));
+    const netBalance = prevBal + netAmount - paid - card;
     const invPurValue = lines.reduce((s, l) => s + lineCost(l), 0);
     const invProfit = netAmount - invPurValue;
     const invProfitPct = invPurValue > 0 ? (invProfit / invPurValue) * 100 : 0;
@@ -1704,7 +1717,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const resetInvoice = () => {
         setLines([]); setSelected(-1); setEntry({ ...EMPTY_ENTRY });
         setCustomer(null); setCustInput(''); setPrevBal(0);
-        setPaidCash(''); setBackDate(false); setSaleDate(today());
+        setPaidCash(''); setPaidCard(''); setBackDate(false); setSaleDate(today());
         loadInvoiceNo();
         setTimeout(() => custRef.current?.focus(), 0);
     };
@@ -2031,6 +2044,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         if (saving) return;
         if (saveMissing.length) { toast.error(saveHint); return; }
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
+        if (paid + card > netAmount + 0.001) { toast.error('Paid Cash and Paid by Card are more than the Net Amount.'); return; }
+        const mach = machines.find((m) => String(m.id) === machine);
+        if (card > 0 && !mach) { toast.error('Choose the card machine the customer paid on.'); return; }
+        if (card > 0 && !mach!.bank_account) { toast.error(`Set the bank "${mach!.name}" pays into (Credit Card › Cards…).`, { duration: 7000 }); return; }
         // Opened now, while the click still counts as a user action, so the
         // browser does not block it; it is pointed at the invoice once saved.
         const printWin = print ? window.open('', 'trade:invoice-print', 'popup=yes,width=1100,height=820') : null;
@@ -2078,6 +2095,17 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     });
                 } catch {
                     toast.error('Invoice saved, but recording the cash paid failed — add it from Sale Records.', { duration: 7000 });
+                }
+            }
+            // Paid by card: posted against this invoice (bank charges on us).
+            if (card > 0 && order?.id) {
+                try {
+                    await api.post('v1/sales/trade-cards/entries/', {
+                        kind: 'customer', card: mach!.id, amount: round2(card), bank: mach!.bank_account, order: order.id,
+                        date: backDate ? saleDate : today(), staff: salesman || null, note: `Sale ${no}`,
+                    });
+                } catch (e: any) {
+                    toast.error(`Invoice saved, but the card payment was not recorded (${e?.response?.data?.detail || 'error'}) — enter it in Credit Card.`, { duration: 9000 });
                 }
             }
             toast.success(`Invoice ${no} saved.`);
@@ -2335,12 +2363,24 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 </div>
 
                 {/* Bottom bar — Paid Cash / Saleman / Sale Date / actions */}
-                <div className="grid shrink-0 grid-cols-[1fr_1.2fr_1.1fr_auto] items-end gap-3">
+                <div className="grid shrink-0 grid-cols-[0.8fr_1.3fr_1.1fr_1fr_auto] items-end gap-3">
                     <label className="flex flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Paid Cash</span>
                         <input value={paidCash} onChange={(e) => setPaidCash(e.target.value)} inputMode="decimal" placeholder="0"
                             className={`${EDIT} w-full text-right text-[15px]`} aria-label="Paid cash" />
                     </label>
+                    <div className="flex min-w-0 flex-col gap-0.5" title="Paid by card on our card machine — the customer is credited in full; the bank's charges are ours">
+                        <span className={`${LABEL} text-[15px]`}>Paid by Card</span>
+                        <div className="flex gap-1">
+                            <input value={paidCard} onChange={(e) => setPaidCard(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder="0"
+                                disabled={!machines.length} className={`${EDIT} w-[45%] text-right text-[15px] disabled:opacity-50`} aria-label="Paid by card" />
+                            <select value={machine} onChange={(e) => setMachine(e.target.value)} disabled={!machines.length}
+                                className={`${FIELD} min-w-0 flex-1 border-emerald-300 bg-[#e3fbe3] !px-1 !text-[12px] text-slate-900 disabled:opacity-50`} aria-label="Card machine">
+                                {!machines.length && <option value="">No card machine</option>}
+                                {machines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
                     <label className="flex flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Saleman</span>
                         <select value={salesman} onChange={(e) => setSalesman(e.target.value)}
@@ -2697,7 +2737,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             </tbody>
                         </table>
                         <div className="ml-auto mt-3 w-72 space-y-0.5 text-[13px] tabular-nums">
-                            {[['Amount Billed', amountBilled], ['Special Discount', totalSpecial], ['Shelf Rent', totalShelf], ['Net Amount', netAmount], ['Prev. Balance', prevBal], ['Paid Cash', paid]].map(([k, v]) => (
+                            {[['Amount Billed', amountBilled], ['Special Discount', totalSpecial], ['Shelf Rent', totalShelf], ['Net Amount', netAmount], ['Prev. Balance', prevBal], ['Paid Cash', paid], ...(card > 0 ? [['Paid by Card', card]] : [])].map(([k, v]) => (
                                 <div key={k as string} className="flex justify-between"><span className="text-slate-500">{k}</span><span>{fmt(v as number)}</span></div>
                             ))}
                             <div className="flex justify-between border-t border-slate-800 pt-1 text-[15px] font-black"><span>Net Balance</span><span>{fmt(netBalance)}</span></div>

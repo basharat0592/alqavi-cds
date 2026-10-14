@@ -497,6 +497,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         net = Decimal(str(o.total_amount or 0))
         prev = Decimal(str(o.prev_balance or 0))
         paid = Decimal(str(o.paid_at_sale if o.paid_at_sale is not None else (o.amount_paid or 0)))
+        # Paid by card at the sale (Credit Card machine) counts as paid too.
+        card_paid = sum((Decimal(str(e.amount)) for e in o.card_entries.all()), Decimal('0'))
+        paid += card_paid
         staff = o.staff.name if o.staff_id else (
             (o.salesperson.get_full_name() or o.salesperson.username) if o.salesperson_id else '')
         # Region = the district above the customer's area (chosen when the account
@@ -522,7 +525,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             'totals': {
                 'pieces': sum(l['qty'] for l in lines), 'bonus': sum(l['bonus'] for l in lines),
                 'gross': gross, 'special': special, 'shelf': shelf, 'bill_disc': bill_disc,
-                'net': net, 'prev_balance': prev, 'total': prev + net, 'paid': paid,
+                'net': net, 'prev_balance': prev, 'total': prev + net, 'paid': paid, 'card_paid': card_paid,
                 'balance': prev + net - paid,
             },
         }
@@ -587,7 +590,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             line_disc=Coalesce(Sum('items__discount'), z, output_field=money),
             line_shelf=Coalesce(Sum('items__shelf_discount'), z, output_field=money),
         ).order_by('-sale_date', '-created_at')
-        orders = list(qs[:3000])
+        orders = list(qs.prefetch_related('card_entries')[:3000])
         # Cartons sold on each invoice (lines entered by carton).
         cartons = {}
         for oid, q, per in (OrderItem.objects.filter(order__in=orders, sale_unit='CARTON')
@@ -599,6 +602,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             net = Decimal(str(o.total_amount or 0))
             pre = Decimal(str(o.prev_balance or 0))
             paid = Decimal(str(o.paid_at_sale if o.paid_at_sale is not None else (o.amount_paid or 0)))
+            paid += sum((Decimal(str(e.amount)) for e in o.card_entries.all()), Decimal('0'))   # paid by card at the sale
             code, name = cust_cols(o.customer, o.customer_name)
             staff_name = o.staff.name if o.staff_id else (
                 (o.salesperson.get_full_name() or o.salesperson.username) if o.salesperson_id else '')

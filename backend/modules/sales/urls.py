@@ -8,6 +8,7 @@ from .trade_returns import TradeSaleReturnViewSet
 from .vouchers import VoucherViewSet
 from .trade_purchases import TradePurchaseViewSet, TradePurchaseOrderViewSet, TradePurchaseReturnViewSet
 from .trade_cards import TradeCreditCardViewSet
+from .trade_partners import TradePartnershipViewSet
 from .trade_masters import TradeStaffViewSet, TradeCategoryViewSet, TradeDamageViewSet, TradeAreaViewSet, TradeAccountGroupViewSet, TradeFinancialYearViewSet, TradeOpeningStockViewSet, TradeOpeningVoucherViewSet, TradeCashShortExcessViewSet, TradeBankViewSet, TradePurchaseInvoiceView, TradeGeneralVoucherViewSet, TradeForwardPLViewSet
 from .invoice_share import public_invoice
 from .trade_perms import my_permissions, permission_users, permission_user
@@ -32,6 +33,7 @@ router.register(r'trade-opening-vouchers', TradeOpeningVoucherViewSet, basename=
 router.register(r'trade-cash-short-excess', TradeCashShortExcessViewSet, basename='trade-cash-short-excess')
 router.register(r'trade-bank', TradeBankViewSet, basename='trade-bank')
 router.register(r'trade-cards', TradeCreditCardViewSet, basename='trade-card')
+router.register(r'trade-partners', TradePartnershipViewSet, basename='trade-partner')
 router.register(r'trade-purchase-invoice', TradePurchaseInvoiceView, basename='trade-purchase-invoice')
 router.register(r'trade-general-vouchers', TradeGeneralVoucherViewSet, basename='trade-general-voucher')
 router.register(r'trade-forward-pl', TradeForwardPLViewSet, basename='trade-forward-pl')

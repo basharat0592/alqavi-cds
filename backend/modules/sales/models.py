@@ -953,6 +953,8 @@ class CardEntry(models.Model):
     received = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     bank = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='card_entries_bank')
     customer_acc = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='card_entries_customer')
+    # Paid by card at the sale: the invoice it was paid against.
+    order = models.ForeignKey('sales.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='card_entries')
     billing_date = models.DateField(null=True, blank=True)
     payment_date = models.DateField(null=True, blank=True)
     note = models.CharField(max_length=255, blank=True, default='')
@@ -963,3 +965,69 @@ class CardEntry(models.Model):
     class Meta:
         db_table = 'trade_card_entries'
         ordering = ['date', 'id']
+
+
+class Partner(models.Model):
+    """Trade 1.0 Partnership: one partner of the business. Their capital is their
+    capital account (Equity › Parters Capital 3101); profit and loss is shared by
+    `share_pct` when set, else in proportion to the capital invested — counted
+    only for the days they were partners in the period."""
+    name = models.CharField(max_length=150)
+    father_name = models.CharField(max_length=150, blank=True, default='')
+    cnic = models.CharField(max_length=20, blank=True, default='')
+    phone = models.CharField(max_length=40, blank=True, default='')
+    address = models.CharField(max_length=255, blank=True, default='')
+    joining_date = models.DateField()
+    leaving_date = models.DateField(null=True, blank=True)
+    # Agreed share of profit / loss; empty = by capital invested.
+    share_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    account = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='partners')
+    notes = models.CharField(max_length=255, blank=True, default='')
+    status = models.CharField(max_length=10, default='active')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_partners')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trade_partners'
+        ordering = ['joining_date', 'id']
+
+
+class PartnerEntry(models.Model):
+    """Money in or out of a partner's capital, posted as a voucher:
+    invest     Bank Dr / Partner capital Cr
+    withdraw   Partner capital Dr / Bank Cr   (capital taken back)
+    drawing    Partner capital Dr / Bank Cr   (personal drawings against profit)"""
+    KINDS = [('invest', 'Investment'), ('withdraw', 'Capital withdrawn'), ('drawing', 'Drawings')]
+    partner = models.ForeignKey(Partner, on_delete=models.PROTECT, related_name='entries')
+    kind = models.CharField(max_length=10, choices=KINDS)
+    voucher = models.OneToOneField(Voucher, on_delete=models.CASCADE, related_name='partner_entry')
+    date = models.DateField()
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    bank = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='partner_entries_bank')
+    note = models.CharField(max_length=255, blank=True, default='')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_partner_entries')
+
+    class Meta:
+        db_table = 'trade_partner_entries'
+        ordering = ['date', 'id']
+
+
+class ProfitDistribution(models.Model):
+    """Profit (or loss) of a period shared among the partners and posted:
+    Retain Earning Dr / each partner's capital Cr (a loss the other way)."""
+    date_from = models.DateField()
+    date_to = models.DateField()
+    net_profit = models.DecimalField(max_digits=14, decimal_places=2)
+    basis = models.CharField(max_length=10, default='capital')
+    lines = models.JSONField(default=list)     # [{partner, name, weight_pct, amount, capital, days}]
+    voucher = models.OneToOneField(Voucher, on_delete=models.CASCADE, related_name='profit_distribution')
+    note = models.CharField(max_length=255, blank=True, default='')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_profit_distributions')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trade_profit_distributions'
+        ordering = ['-date_to', '-id']

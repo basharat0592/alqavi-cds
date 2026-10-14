@@ -20,7 +20,7 @@ import datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -271,12 +271,27 @@ class TradeCreditCardViewSet(viewsets.ViewSet):
                 qs = qs.filter(date__gte=q['date_from'])
             if q.get('date_to'):
                 qs = qs.filter(date__lte=q['date_to'])
-            return Response([{
-                'id': e.id, 'voucher_no': e.voucher.voucher_no, 'kind': e.kind, 'date': e.date, 'card': e.card.name,
-                'customer': e.customer_acc.name if e.customer_acc_id else '', 'amount': e.amount, 'charge_pct': e.charge_pct,
-                'charges': e.charges, 'received': e.received, 'bank': e.bank.name, 'billing_date': e.billing_date,
-                'payment_date': e.payment_date, 'note': e.note, 'staff': e.voucher.staff.name if e.voucher.staff_id else '',
-            } for e in qs.order_by('-date', '-id')[:3000]])
+            if q.get('q'):
+                s = q['q'].strip()
+                qs = qs.filter(Q(note__icontains=s) | Q(voucher__detail__icontains=s) | Q(customer_acc__name__icontains=s)
+                               | Q(card__card_no__icontains=s) | Q(card__name__icontains=s) | Q(voucher__voucher_no__icontains=s))
+            # Paid / remaining of each posting on our cards (card bills applied oldest first).
+            sheets = {}
+            for c in {e.card for e in qs if e.kind == 'post'}:
+                sheets.update({r['id']: r for r in card_sheet(c)['rows']})
+            out = []
+            for e in qs.order_by('-date', '-id')[:3000]:
+                s = sheets.get(e.id) or {}
+                out.append({
+                    'id': e.id, 'voucher_no': e.voucher.voucher_no, 'kind': e.kind, 'date': e.date, 'card': e.card.name,
+                    'card_no': e.card.card_no, 'card_kind': e.card.kind, 'customer': e.customer_acc.name if e.customer_acc_id else '',
+                    'customer_acc': e.customer_acc.acc_id if e.customer_acc_id else '', 'amount': e.amount, 'charge_pct': e.charge_pct,
+                    'charges': e.charges, 'received': e.received, 'bank': e.bank.name, 'billing_date': e.billing_date,
+                    'payment_date': e.payment_date, 'paid': s.get('paid'), 'remaining': s.get('remaining'), 'paid_date': s.get('paid_date'),
+                    'state': s.get('state', ''), 'detail': e.voucher.detail, 'note': e.note,
+                    'staff': e.voucher.staff.name if e.voucher.staff_id else '',
+                })
+            return Response(out)
         return self._save_entry(request)
 
     def _save_entry(self, request):
@@ -298,8 +313,16 @@ class TradeCreditCardViewSet(viewsets.ViewSet):
         bank = accs.filter(pk=d.get('bank')).first() if d.get('bank') else None
         if not bank or not self._is_money(bank) or bank.pk == card.account_id:
             return Response({'detail': 'Find the cash / bank account the money ' + ('is paid from.' if kind == 'pay' else 'comes into.')}, status=400)
-        cust = None
-        if kind == 'customer':
+        cust = order = None
+        if kind == 'customer' and d.get('order'):
+            from .models import Order
+            order = scope_to_tenant(request.user, Order.objects.filter(pk=d.get('order')), 'tenant').first()
+            if not order or not order.customer_id:
+                return Response({'detail': 'Invoice not found.'}, status=400)
+            cust = accs.filter(customer_id=order.customer_id).first()
+            if not cust:
+                return Response({'detail': 'The customer has no account in the Chart of Account.'}, status=400)
+        if kind == 'customer' and not cust:
             cust = accs.filter(pk=d.get('customer')).first() if d.get('customer') else None
             if not cust:
                 return Response({'detail': 'Find the customer who paid.'}, status=400)
@@ -332,7 +355,7 @@ class TradeCreditCardViewSet(viewsets.ViewSet):
             vtype = {'post': 'card_post', 'customer': 'card_receipt', 'pay': 'card_pay'}[kind]
             detail = {
                 'post': f'{label}: card posting, due {pay_date.strftime("%d-%m-%Y") if pay_date else ""}',
-                'customer': f'Paid by card ({label}){" - " + cust.name if cust else ""}',
+                'customer': f'Paid by card ({label}){" - " + cust.name if cust else ""}{" - " + order.tracking_id if order else ""}',
                 'pay': f'{label}: card bill paid',
             }[kind]
             if note:
@@ -352,7 +375,8 @@ class TradeCreditCardViewSet(viewsets.ViewSet):
                     line(card.charges_account, dr=charges, det=f'Bank charges {pct}% on {amt:,.0f} ({label})')
                 line(card.account, cr=amt)
             elif kind == 'customer':
-                left = _allocate_to_orders(cust.customer_id, amt, v, request.user, 'bank_transfer') if cust.customer_id else Z
+                left = _allocate_to_orders(cust.customer_id, amt, v, request.user, 'bank_transfer', first=order.pk if order else None) \
+                    if cust.customer_id else Z
                 line(cust, cr=amt, unalloc=left if cust.customer_id else Z)
                 line(bank, dr=received)
                 if charges:
@@ -361,7 +385,7 @@ class TradeCreditCardViewSet(viewsets.ViewSet):
                 line(card.account, dr=amt)
                 line(bank, cr=amt)
             e = CardEntry.objects.create(card=card, kind=kind, voucher=v, date=day, amount=amt, charge_pct=pct, charges=charges,
-                                         received=received, bank=bank, customer_acc=cust, billing_date=bill, payment_date=pay_date,
+                                         received=received, bank=bank, customer_acc=cust, order=order, billing_date=bill, payment_date=pay_date,
                                          note=note, tenant_id=tid)
         return Response({'id': e.id, 'voucher_no': v.voucher_no, 'amount': amt, 'charges': charges, 'received': received,
                          'billing_date': bill, 'payment_date': pay_date}, status=status.HTTP_201_CREATED)

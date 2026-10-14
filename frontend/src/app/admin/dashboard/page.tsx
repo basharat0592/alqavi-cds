@@ -3,10 +3,9 @@
 /*
  * AL-QAVI TRADER'S — Admin Dashboard (Trade 2.1 style)
  * Rebuilt on the alqavi_old branch to mirror the legacy "Trade" desktop app:
- * a top menu bar, a big brand title, a grid of colour-coded action buttons up front,
- * and a right rail with the live "Expiry List" and "Stock Minimum Range" panels.
- * Buttons link to the existing admin routes; the two panels read live product data
- * from useAdminDashboard().
+ * a top menu bar, a big brand title and a grid of colour-coded action buttons.
+ * The "Expiry List" and "Stock Minimum Range List" open as their own windows
+ * from the two buttons at the right of the menu bar (with their counts).
  */
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -131,7 +130,7 @@ const MENUS: Menu[] = [
     ] },
 ];
 
-function MenuBar() {
+function MenuBar({ counts }: { counts?: { expiry: number; low: number } }) {
     const [open, setOpen] = useState<string | null>(null);
     const router = useRouter();
     const ref = useRef<HTMLDivElement>(null);
@@ -209,6 +208,18 @@ function MenuBar() {
                     )}
                 </div>
             ))}
+            <div className="ml-auto flex items-center gap-2">
+                {[
+                    { label: 'Expiry List', href: '/admin/trade/expiry-list', n: counts?.expiry, Icon: CalendarClock },
+                    { label: 'Stock Minimum List', href: '/admin/trade/stock-minimum', n: counts?.low, Icon: Boxes },
+                ].map(({ label, href, n, Icon }) => (
+                    <button key={href} type="button" onClick={() => openPopup(href)}
+                        className="flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-[14px] font-semibold text-white hover:bg-white/20">
+                        <Icon size={15} /> {label}
+                        {n !== undefined && <span className={`min-w-[26px] rounded-full px-1.5 text-center text-[12px] font-bold ${n ? 'bg-[#FFD21F] text-[#1F2370]' : 'bg-white/25'}`}>{n}</span>}
+                    </button>
+                ))}
+            </div>
             {about && <AboutBox onClose={() => setAbout(false)} />}
         </div>
     );
@@ -256,6 +267,7 @@ const THEMES: Record<string, Theme> = {
     sale: { tile: 'bg-[#e7f6ee] hover:bg-[#d6efe2] border-[#b2e0c6] text-[#0b5e38]', icon: 'bg-[#14935C] text-white', ring: 'hover:ring-[#7fcca1]' },
     account: { tile: 'bg-[#e8f3fc] hover:bg-[#d8eafa] border-[#b8d9f3] text-[#124f80]', icon: 'bg-[#2F8FD8] text-white', ring: 'hover:ring-[#8cc0ea]' },
     backup: { tile: 'bg-[#fdeee7] hover:bg-[#fbe1d5] border-[#f2c6b2] text-[#8a3a1b]', icon: 'bg-[#E9825A] text-white', ring: 'hover:ring-[#eda98a]' },
+    card: { tile: 'bg-[#f4eefc] hover:bg-[#eadffa] border-[#d8c6f1] text-[#4b2382]', icon: 'bg-[#7B3FC4] text-white', ring: 'hover:ring-[#b99be6]' },
     report: { tile: 'bg-white hover:bg-[#f3f4fc] border-[#c9cdf0] text-[#1F2370]', icon: 'bg-gradient-to-br from-[#2B2F8F] to-[#2F8FD8] text-white', ring: 'hover:ring-[#9aa0e3]' },
 };
 
@@ -280,6 +292,11 @@ const COLUMNS: Group[] = [
         { name: 'Receipt Voucher', href: '/admin/trade/receipt-voucher', icon: ArrowDownLeft },
         { name: 'Payment Voucher', href: '/admin/trade/payment-voucher', icon: Wallet },
     ] },
+    { theme: THEMES.card, buttons: [
+        { name: 'Credit Card', href: '/admin/trade/credit-card', icon: CreditCard },
+        { name: 'Credit Card Report', href: '/admin/trade/credit-card-report', icon: FileText },
+        { name: 'Partnership', href: '/admin/trade/partnership', icon: Users },
+    ] },
 ];
 
 /* Bottom row, as in the legacy console: Backup DataBase spans the Product and
@@ -288,6 +305,7 @@ const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
     { b: { name: 'Backup Database', href: '/admin/trade/backup', icon: Database }, theme: THEMES.backup, span: true },
     { b: { name: 'Change Password', href: '/admin/trade/change-password', icon: KeyRound }, theme: THEMES.sale },
     { b: { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight }, theme: THEMES.account },
+    { b: { name: 'Partnership Report', href: '/admin/trade/partnership?tab=report', icon: BarChart3 }, theme: THEMES.card },
 ];
 
 const REPORTS: Btn[] = [
@@ -336,7 +354,7 @@ function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: 
     );
 }
 
-/* ───────────────────────── Right-rail data helpers ───────────────────────── */
+/* ───────────────────────── Expiry count helper ───────────────────────── */
 function parseExpiry(v: any): Date | null {
     if (!v) return null;
     const s = String(v).trim();
@@ -346,29 +364,6 @@ function parseExpiry(v: any): Date | null {
     const d = new Date(s);
     return isNaN(d.getTime()) ? null : d;
 }
-// Table dates as DD-MM-YYYY (compact, fully visible); the picker as 14-Apr-2027.
-const pad2 = (n: number) => String(n).padStart(2, '0');
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const fmtDmy = (d: Date) => `${pad2(d.getDate())}-${pad2(d.getMonth() + 1)}-${d.getFullYear()}`;
-// Column widths in `ch` (one digit's width in the table font) + cell padding, so
-// IDs and dates always fit whatever font/zoom the browser renders with.
-const chw = (chars: number) => ({ width: `calc(${chars}ch + 22px)` });
-const fmtPicker = (iso: string) => {
-    const [y, m, d] = iso.split('-').map(Number);
-    return y && m && d ? `${pad2(d)}-${MONTHS[m - 1]}-${y}` : '—';
-};
-
-/* Dense, single-line grid in the legacy style: ~22px rows, cell borders, cream rows. */
-const GRID_TABLE = 'w-full table-fixed border-collapse text-left text-[12.5px] leading-tight';
-const GRID_TH = 'sticky top-0 z-10 whitespace-nowrap border-b border-r border-slate-300 bg-slate-100 px-2.5 py-1.5 font-bold text-slate-700 last:border-r-0';
-const GRID_TD = 'truncate whitespace-nowrap border-b border-r border-[#e6e2c4] px-2.5 py-[5px] last:border-r-0';
-const GRID_ROW = 'bg-[#fffde8] hover:bg-[#fff6c2]';
-const toInputValue = (d: Date) => d.toISOString().slice(0, 10);
-const pid = (p: any) => p.sku || p.product_code || p.id || '—';
-const pname = (p: any) => p.product_name || p.name || 'Unnamed';
-const pqty = (p: any) => Number(p.total_quantity ?? p.available_quantity ?? p.stock ?? p.quantity_in_stock ?? 0);
-const pmin = (p: any) => Number(p.min_count ?? p.min ?? 10);
-const pcompany = (p: any) => p.company_name || p.brand || (typeof p.company === 'string' ? p.company : '') || '—';
 
 /* Dashboard motion: hero entrance, a slow sheen, drifting blobs, staggered tiles. */
 const DASH_CSS = `
@@ -398,16 +393,6 @@ const DASH_CSS = `
 
 /* ───────────────────────── Page ───────────────────────── */
 export default function AdminDashboard() {
-    const [lists, setLists] = useState<{ expiry: any[]; low_stock: any[] }>({ expiry: [], low_stock: [] });
-    const [loading, setLoading] = useState(true);
-    useEffect(() => {
-        let cancelled = false;
-        productService.getDashboardLists()
-            .then((d) => { if (!cancelled) setLists({ expiry: d.expiry || [], low_stock: d.low_stock || [] }); })
-            .finally(() => { if (!cancelled) setLoading(false); });
-        return () => { cancelled = true; };
-    }, []);
-
     // Cheques received and due to be cashed (cash date reached): a red alert.
     const [chq, setChq] = useState<{ due: number; amount: number; names: string[] }>({ due: 0, amount: 0, names: [] });
     useEffect(() => {
@@ -420,22 +405,18 @@ export default function AdminDashboard() {
         return () => window.removeEventListener('focus', load);
     }, []);
 
-    // Default the expiry filter to 6 months out so near-term expiries show by default.
-    const defaultBefore = useMemo(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; }, []);
-    const [before, setBefore] = useState<string>(() => toInputValue(defaultBefore));
-
-    // Expiry rows: one per in-stock batch, already sorted by product name on the
-    // server (like legacy); filtered here by the date picker. Each item:
-    // { pid, name, qty, exp (ISO string), company }.
-    const expiryRows = useMemo(() => {
-        const beforeDate = new Date(before); beforeDate.setHours(23, 59, 59, 999);
-        return (lists.expiry || [])
-            .map((it: any) => ({ it, exp: parseExpiry(it.exp) }))
-            .filter((r) => r.exp && r.exp.getTime() <= beforeDate.getTime());
-    }, [lists, before]);
-
-    // Low-stock rows. Each item: { pid, name, company, min, qty }.
-    const lowStockRows = useMemo(() => (lists.low_stock || []), [lists]);
+    const [counts, setCounts] = useState<{ expiry: number; low: number } | undefined>(undefined);
+    useEffect(() => {
+        let cancelled = false;
+        // Expiry count: batches expiring within 6 months (the list window's default date).
+        const until = new Date(); until.setMonth(until.getMonth() + 6); until.setHours(23, 59, 59, 999);
+        productService.getDashboardLists().then((d) => {
+            if (cancelled) return;
+            const exp = (d.expiry || []).filter((it: any) => { const e = parseExpiry(it.exp); return e && e.getTime() <= until.getTime(); }).length;
+            setCounts({ expiry: exp, low: (d.low_stock || []).length });
+        }).catch(() => { /* no counts */ });
+        return () => { cancelled = true; };
+    }, []);
 
     return (
         // Desktop: scale the whole dashboard to the window in proportion to the
@@ -444,7 +425,7 @@ export default function AdminDashboard() {
         <FitStage width={1440} height={810} minViewport={1024}>
         <div className="flex min-h-full flex-col bg-white font-sans text-slate-800 lg:h-full lg:min-h-0 lg:overflow-hidden">
             <style>{DASH_CSS}</style>
-            <MenuBar />
+            <MenuBar counts={counts} />
             {chq.due > 0 && (
                 <button type="button" onClick={() => openPopup('/admin/trade/receipt-voucher?cheques=1')}
                     className="flex shrink-0 items-center justify-center gap-3 border-y border-red-700 bg-red-600 px-4 py-1.5 text-[14px] font-bold text-white hover:bg-red-700">
@@ -455,7 +436,7 @@ export default function AdminDashboard() {
                 </button>
             )}
 
-            <div className="grid flex-1 grid-cols-1 gap-4 p-3 md:p-4 lg:min-h-0 lg:grid-cols-[minmax(0,1.38fr)_minmax(0,1fr)] lg:gap-6 lg:overflow-hidden lg:p-5">
+            <div className="grid flex-1 grid-cols-1 gap-4 p-3 md:p-4 lg:min-h-0 lg:gap-6 lg:overflow-hidden lg:p-5">
                         {/* ─── Left: brand + action grid ─── */}
                         <div className="flex flex-col lg:min-h-0 lg:overflow-hidden">
                             {/* Brand hero in the visiting card's style */}
@@ -487,7 +468,7 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Colour-coded button columns (matches the legacy layout) */}
-                            <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-4 lg:min-h-0 lg:flex-[4] lg:grid-rows-4 lg:gap-3">
+                            <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-5 lg:min-h-0 lg:flex-[4] lg:grid-rows-4 lg:gap-3">
                                 {COLUMNS.map((g, gi) => (
                                     <div key={gi} className="flex flex-col gap-3 lg:row-span-3 lg:grid lg:grid-rows-3 lg:gap-3">
                                         {g.buttons.map((b) => (
@@ -513,111 +494,6 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
-                        {/* ─── Right rail: Expiry + Low stock ─── */}
-                        <div className="flex flex-col gap-3 lg:min-h-0 lg:gap-5 lg:overflow-hidden">
-                            {/* Expiry list */}
-                            <section className="flex h-[380px] flex-col overflow-hidden rounded-xl border lg:h-auto lg:min-h-0 lg:flex-1 border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
-                                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 bg-[#2B2F8F] px-3 py-1.5">
-                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-white">
-                                        <CalendarClock size={16} /> Expiry List on / Before
-                                    </h3>
-                                    <label className="relative flex cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[12.5px] font-semibold tabular-nums text-slate-700 focus-within:border-[#FFD21F] focus-within:ring-2 focus-within:ring-[#FFD21F]/40">
-                                        {fmtPicker(before)}
-                                        <ChevronDown size={14} className="text-slate-500" />
-                                        {/* Native picker sits invisibly on top so the label can show the legacy format. */}
-                                        <input
-                                            type="date"
-                                            value={before}
-                                            onChange={(e) => e.target.value && setBefore(e.target.value)}
-                                            onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* older browsers */ } }}
-                                            className="absolute inset-0 cursor-pointer opacity-0"
-                                            aria-label="Expiry on or before"
-                                        />
-                                    </label>
-                                </div>
-                                <div className="min-h-0 flex-1 overflow-auto">
-                                    <table className={GRID_TABLE}>
-                                        <colgroup>
-                                            <col style={chw(5.5)} /><col /><col style={chw(6.5)} /><col style={chw(10.5)} /><col style={{ width: 140 }} />
-                                        </colgroup>
-                                        <thead>
-                                            <tr>
-                                                <th className={GRID_TH}>P ID</th>
-                                                <th className={GRID_TH}>Product Name</th>
-                                                <th className={GRID_TH}>Qty(U)</th>
-                                                <th className={GRID_TH}>Exp Date</th>
-                                                <th className={GRID_TH}>Company</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {loading ? (
-                                                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Loading…</td></tr>
-                                            ) : expiryRows.length === 0 ? (
-                                                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">No items expiring on or before this date.</td></tr>
-                                            ) : expiryRows.map(({ it, exp }, i) => {
-                                                const expired = exp!.getTime() < Date.now();
-                                                return (
-                                                    <tr key={i} className={GRID_ROW}>
-                                                        <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.pid}</td>
-                                                        <td className={`${GRID_TD} text-slate-900`} title={it.name}>{it.name}</td>
-                                                        <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.qty}</td>
-                                                        <td className={`${GRID_TD} tabular-nums ${expired ? 'font-semibold text-rose-600' : 'text-slate-700'}`}
-                                                            title={expired ? 'Already expired' : undefined}>{fmtDmy(exp!)}</td>
-                                                        <td className={`${GRID_TD} text-slate-700`} title={it.company || ''}>{it.company || '—'}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#2B2F8F]">
-                                    Total Records = {expiryRows.length}
-                                </div>
-                            </section>
-
-                            {/* Stock minimum range */}
-                            <section className="flex h-[380px] flex-col overflow-hidden rounded-xl border lg:h-auto lg:min-h-0 lg:flex-1 border-[#c9cdf0] bg-white shadow-[0_6px_18px_-14px_rgba(31,35,112,0.7)]">
-                                <div className="shrink-0 bg-[#14935C] px-3 py-2">
-                                    <h3 className="flex items-center gap-2 text-[14px] font-black text-white">
-                                        <Boxes size={16} /> Stock Minimum Range List
-                                    </h3>
-                                </div>
-                                <div className="min-h-0 flex-1 overflow-auto">
-                                    <table className={GRID_TABLE}>
-                                        <colgroup>
-                                            <col style={chw(5.5)} /><col /><col style={{ width: 140 }} /><col style={chw(8.5)} /><col style={chw(5.5)} />
-                                        </colgroup>
-                                        <thead>
-                                            <tr>
-                                                <th className={GRID_TH}>P ID</th>
-                                                <th className={GRID_TH}>Product Name</th>
-                                                <th className={GRID_TH}>Company</th>
-                                                <th className={GRID_TH}>Min Limit</th>
-                                                <th className={GRID_TH}>Stock</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {loading ? (
-                                                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">Loading…</td></tr>
-                                            ) : lowStockRows.length === 0 ? (
-                                                <tr><td colSpan={5} className="px-3 py-8 text-center text-slate-400">All stock above minimum. 🎉</td></tr>
-                                            ) : lowStockRows.map((it: any, i: number) => (
-                                                <tr key={i} className={GRID_ROW}>
-                                                    <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.pid}</td>
-                                                    <td className={`${GRID_TD} text-slate-900`} title={it.name}>{it.name}</td>
-                                                    <td className={`${GRID_TD} text-slate-700`} title={it.company || ''}>{it.company || '—'}</td>
-                                                    <td className={`${GRID_TD} tabular-nums text-slate-700`}>{it.min}</td>
-                                                    <td className={`${GRID_TD} tabular-nums ${it.qty <= 0 ? 'font-semibold text-rose-600' : 'text-slate-700'}`}>{it.qty}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div className="shrink-0 border-t border-slate-200 bg-slate-50 px-3 py-1 text-[12px] font-bold text-[#2B2F8F]">
-                                    Total Records = {lowStockRows.length}
-                                </div>
-                            </section>
-                        </div>
                     </div>
         </div>
         </FitStage>

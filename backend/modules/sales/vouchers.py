@@ -109,7 +109,7 @@ def _allocate_to_purchases(supplier_id, amount, voucher, user, method):
     return left
 
 
-def _allocate_to_orders(customer_id, amount, voucher, user, method, on=None):
+def _allocate_to_orders(customer_id, amount, voucher, user, method, on=None, first=None):
     """Settle the customer's unpaid sale invoices (oldest first). Returns what
     could not be applied."""
     from modules.payments.models import TransactionPayment
@@ -118,7 +118,10 @@ def _allocate_to_orders(customer_id, amount, voucher, user, method, on=None):
     orders = (scope_to_tenant(user, Order.objects.filter(customer_id=customer_id)
                               .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant')
               .order_by('sale_date', 'created_at'))
-    for o in orders.select_for_update():
+    orders = list(orders.select_for_update())
+    if first:   # paid against one invoice (card at the sale): that one first
+        orders.sort(key=lambda o: str(o.pk) != str(first))
+    for o in orders:
         if left <= 0:
             break
         due = _d(o.total_amount) - _d(o.amount_paid)
