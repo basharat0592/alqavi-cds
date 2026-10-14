@@ -54,6 +54,11 @@ function billDates(credit: string, billingDay: number, dueDay: number) {
     return { bill: iso(bill), pay: iso(pay) };
 }
 
+// Grid dates as dd-mm-yy, so every column fits on a laptop screen.
+const dmy2 = (iso: string | null | undefined) => { const s = dmy(iso); return s ? s.slice(0, 6) + s.slice(8) : ''; };
+/* Days from one ISO date to another. */
+const daysBetween = (a?: string | null, b?: string | null) => (a && b ? Math.round((Date.parse(String(b).slice(0, 10)) - Date.parse(String(a).slice(0, 10))) / 86400000) : null);
+
 const KINDS: { v: Kind; label: string }[] = [
     { v: 'post', label: 'Card Posting (our card)' },
     { v: 'customer', label: 'Customer Paid by Card' },
@@ -148,7 +153,15 @@ export default function TradeCreditCard() {
     const rate = kind === 'pay' ? 0 : num(pct);
     const charges = kind === 'pay' ? 0 : Math.round(amt * rate) / 100;
     const received = amt - charges;
-    const dueInfo = kind === 'post' && card ? billDates(dateOn ? date : today(), card.billing_day, card.due_day) : null;
+    // Billing / payment date: worked out from the card's billing and due day, and editable.
+    const creditDate = dateOn ? date : today();
+    const auto = kind === 'post' && card ? billDates(creditDate, card.billing_day, card.due_day) : null;
+    const [billOver, setBillOver] = useState<string | null>(null);
+    const [payOver, setPayOver] = useState<string | null>(null);
+    useEffect(() => { setBillOver(null); setPayOver(null); }, [cardId, creditDate, kind]);
+    const dueInfo = auto ? { bill: billOver || auto.bill, pay: payOver || auto.pay } : null;
+    const billToPay = dueInfo ? daysBetween(dueInfo.bill, dueInfo.pay) : null;
+    const creditToPay = dueInfo ? daysBetween(creditDate, dueInfo.pay) : null;
     const owed = num(sheet?.owed ?? card?.owed);
     const owedAfter = kind === 'post' ? owed + amt : kind === 'pay' ? owed - amt : null;
     const bankAfter = bankBal === null ? null : bankBal + (kind === 'pay' ? -amt : received);
@@ -163,13 +176,15 @@ export default function TradeCreditCard() {
 
     const resetForm = () => {
         setAmount(''); setNote(''); setCust(null); setCustCode(''); setCustBal(null); setDateOn(false); setDate(today());
-        setPct(card ? String(card.charge_pct) : ''); loadNo();
+        setPct(card ? String(card.charge_pct) : ''); setBillOver(null); setPayOver(null); loadNo();
         if (bank) pickBank(bank);
     };
     const [saving, setSaving] = useState(false);
     const save = () => {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(', ')}.`); return; }
+        if (dueInfo && dueInfo.bill < creditDate) { toast.error('The billing date cannot be before the credit date.'); return; }
+        if (dueInfo && dueInfo.pay < dueInfo.bill) { toast.error('The payment date cannot be before the billing date.'); return; }
         const what = kind === 'post' ? `Card posting ${fmt(amt)} on ${card!.name} (charges ${fmt(charges)}, received ${fmt(received)})`
             : kind === 'customer' ? `${cust!.name} paid ${fmt(amt)} by card (bank charges ${fmt(charges)} on us)`
                 : `Card bill payment ${fmt(amt)} to ${card!.name}`;
@@ -180,6 +195,7 @@ export default function TradeCreditCard() {
                 try {
                     const { data } = await api.post('v1/sales/trade-cards/entries/', {
                         kind, card: card!.id, date: dateOn ? date : today(), amount: amt, charge_pct: kind === 'pay' ? null : rate,
+                        billing_date: dueInfo?.bill || null, payment_date: dueInfo?.pay || null,
                         bank: bank!.id, customer: kind === 'customer' ? cust!.id : null, note: note.trim(), staff: staffId || null,
                     });
                     toast.success(`${data.voucher_no} saved${kind === 'post' ? ` — pay ${fmt(amt)} by ${dmy(data.payment_date)}` : ''}.`, { duration: 6000 });
@@ -293,9 +309,24 @@ export default function TradeCreditCard() {
 
                         {kind === 'post' && dueInfo && (<>
                             <span className={`${LABEL} text-[15px]`}>Billing Date</span>
-                            <ReadBox value={dmy(dueInfo.bill)} />
-                            <div className={`${FIELD} flex items-center justify-between border-amber-300 bg-[#fff6d6] font-bold text-amber-800`}>
-                                <span className="text-[12.5px] font-semibold">Payment Date</span>{dmy(dueInfo.pay)}
+                            <input type="date" value={dueInfo.bill} min={creditDate} onChange={(e) => e.target.value && setBillOver(e.target.value)}
+                                title="Worked out from the card's billing day — change it if the statement is on another day" className={`${EDIT} w-full`} />
+                            <label className="flex min-w-0 items-center gap-2">
+                                <span className={`${LABEL} shrink-0 text-[13px] !text-amber-800`}>Payment</span>
+                                <input type="date" value={dueInfo.pay} min={dueInfo.bill} onChange={(e) => e.target.value && setPayOver(e.target.value)}
+                                    title="Worked out from the card's due day — change it if needed"
+                                    className={`${FIELD} min-w-0 flex-1 border-amber-300 bg-[#fff6d6] font-bold text-amber-800 focus:ring-2 focus:ring-amber-200`} />
+                            </label>
+
+                            <span className={`${LABEL} flex items-center gap-2 text-[15px]`}>Days
+                                {(billOver || payOver) && <button type="button" onClick={() => { setBillOver(null); setPayOver(null); }} title="Back to the dates from the card's billing / due day"
+                                    className="text-[12px] font-semibold text-[#1f2bd6] underline">Reset</button>}
+                            </span>
+                            <div className={`${FIELD} col-span-2 flex items-center gap-3 whitespace-nowrap border-amber-300 bg-[#fffbea] text-[12.5px] text-amber-900`}
+                                title="Billing → payment: days to pay after the statement · Credit → payment: days the money is used before it is paid back">
+                                <span>Billing → Payment <b className="text-[14px]">{billToPay ?? '—'}</b> days</span>
+                                <span className="text-slate-400">|</span>
+                                <span>Credit → Payment <b className="text-[14px]">{creditToPay ?? '—'}</b> days</span>
                             </div>
                         </>)}
 
@@ -324,10 +355,11 @@ export default function TradeCreditCard() {
                                 </tbody>
                             </table>
                         ) : (
-                            <table className="w-full border-collapse bg-white text-[12px]">
+                            <table className="w-full table-fixed border-collapse bg-white text-[11px]">
+                                <colgroup>{[4, 10.5, 10.5, 12, 10, 7, 10, 8.5, 10, 10, 7.5].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
                                     <tr>{['S.No', 'Credit Date', 'Billing', 'Payment Date', 'Amount Post', 'Charges', 'Received', 'Paid', 'Remaining', 'Paid Date', 'By Bank'].map((h, k) =>
-                                        <th key={h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold ${k >= 4 && k <= 8 ? 'text-right' : ''}`}>{h}</th>)}</tr>
+                                        <th key={h} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-400 px-1 py-1.5 font-semibold ${k >= 4 && k <= 8 ? 'text-right' : ''}`}>{h}</th>)}</tr>
                                 </thead>
                                 <tbody>
                                     {num(sheet?.opening) > 0 && (
@@ -342,9 +374,11 @@ export default function TradeCreditCard() {
                                     )}
                                     {ownRows.map((r) => (
                                         <tr key={r.voucher_no} className={`tabular-nums ${rowTone(r.state)}`} title={r.note || r.voucher_no}>
-                                            {[r.sno, dmy(r.credit_date), dmy(r.billing_date), dmy(r.payment_date), fmt(num(r.amount)), fmt(num(r.charges)), fmt(num(r.received)),
-                                              fmt(num(r.paid)), fmt(num(r.remaining)), dmy(r.paid_date), r.by_bank].map((v, k) => (
-                                                <td key={k} className={`whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 4 && k <= 8 ? 'text-right' : ''}`}>{v}</td>
+                                            {[r.sno, dmy2(r.credit_date), dmy2(r.billing_date),
+                                              <span key="p" className="leading-tight">{dmy2(r.payment_date)}<span className="block text-[10px] opacity-75">{daysBetween(r.billing_date, r.payment_date)} d after billing</span></span>,
+                                              fmt(num(r.amount)), fmt(num(r.charges)), fmt(num(r.received)),
+                                              fmt(num(r.paid)), fmt(num(r.remaining)), dmy2(r.paid_date), r.by_bank].map((v, k) => (
+                                                <td key={k} title={typeof v === 'string' ? v : undefined} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1 py-1 ${k >= 4 && k <= 8 ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}

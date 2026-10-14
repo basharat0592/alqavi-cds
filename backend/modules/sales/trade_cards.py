@@ -349,6 +349,16 @@ class TradeCreditCardViewSet(viewsets.ViewSet):
         bill = pay_date = None
         if kind == 'post':
             bill, pay_date = bill_dates(day, card.billing_day, card.due_day)
+            # The user may set them (a statement that came on another day).
+            try:
+                bill = datetime.date.fromisoformat(str(d.get('billing_date'))[:10]) if d.get('billing_date') else bill
+                pay_date = datetime.date.fromisoformat(str(d.get('payment_date'))[:10]) if d.get('payment_date') else pay_date
+            except ValueError:
+                return Response({'detail': 'Invalid billing / payment date.'}, status=400)
+            if bill < day:
+                return Response({'detail': 'The billing date cannot be before the credit date.'}, status=400)
+            if pay_date < bill:
+                return Response({'detail': 'The payment date cannot be before the billing date.'}, status=400)
         tid = tenant_id_for(request.user) or card.tenant_id
         label = card.name
         with transaction.atomic():
