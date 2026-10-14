@@ -322,11 +322,11 @@ export default function TradeCreditCard() {
                                 {(billOver || payOver) && <button type="button" onClick={() => { setBillOver(null); setPayOver(null); }} title="Back to the dates from the card's billing / due day"
                                     className="text-[12px] font-semibold text-[#1f2bd6] underline">Reset</button>}
                             </span>
-                            <div className={`${FIELD} col-span-2 flex items-center gap-3 whitespace-nowrap border-amber-300 bg-[#fffbea] text-[12.5px] text-amber-900`}
+                            <div className={`${FIELD} col-span-2 flex items-center justify-between gap-2 overflow-hidden whitespace-nowrap border-blue-300 bg-[#e6efff] !px-2 text-[12px] font-semibold text-blue-800`}
                                 title="Billing → payment: days to pay after the statement · Credit → payment: days the money is used before it is paid back">
-                                <span>Billing → Payment <b className="text-[14px]">{billToPay ?? '—'}</b> days</span>
-                                <span className="text-slate-400">|</span>
-                                <span>Credit → Payment <b className="text-[14px]">{creditToPay ?? '—'}</b> days</span>
+                                <span>Billing→Payment <b className="text-[14px] text-blue-700">{billToPay ?? '—'}</b> days</span>
+                                <span className="text-blue-300">|</span>
+                                <span>Credit→Payment <b className="text-[14px] text-blue-700">{creditToPay ?? '—'}</b> days</span>
                             </div>
                         </>)}
 
@@ -375,7 +375,7 @@ export default function TradeCreditCard() {
                                     {ownRows.map((r) => (
                                         <tr key={r.voucher_no} className={`tabular-nums ${rowTone(r.state)}`} title={r.note || r.voucher_no}>
                                             {[r.sno, dmy2(r.credit_date), dmy2(r.billing_date),
-                                              <span key="p" className="leading-tight">{dmy2(r.payment_date)}<span className="block text-[10px] opacity-75">{daysBetween(r.billing_date, r.payment_date)} d after billing</span></span>,
+                                              <span key="p" className="leading-tight">{dmy2(r.payment_date)}<span className="block text-[10px] font-semibold text-blue-700">{daysBetween(r.billing_date, r.payment_date)} days after billing</span></span>,
                                               fmt(num(r.amount)), fmt(num(r.charges)), fmt(num(r.received)),
                                               fmt(num(r.paid)), fmt(num(r.remaining)), dmy2(r.paid_date), r.by_bank].map((v, k) => (
                                                 <td key={k} title={typeof v === 'string' ? v : undefined} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1 py-1 ${k >= 4 && k <= 8 ? 'text-right' : ''}`}>{v}</td>
