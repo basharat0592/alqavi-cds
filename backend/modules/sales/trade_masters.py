@@ -1116,12 +1116,12 @@ class TradeBankViewSet(viewsets.ViewSet):
 # ───────────────────────── Purchase invoice (print) ─────────────────────────
 
 class TradePurchaseInvoiceView(viewsets.ViewSet):
-    """One saved purchase with its header totals and lines, for the printed purchase invoice."""
+    """One saved purchase (P…) or purchase order (K…) with its header totals and lines, for printing."""
     permission_classes = [permissions.IsAdminUser]
 
     def retrieve(self, request, pk=None):
         from .models import PurchaseOrder
-        po = (scope_to_tenant(request.user, PurchaseOrder.objects.filter(purchase_number__startswith='P'), 'tenant')
+        po = (scope_to_tenant(request.user, PurchaseOrder.objects.filter(purchase_number__regex=r'^[PK]'), 'tenant')
               .select_related('supplier__ledger_account').prefetch_related('items__product').filter(pk=pk).first())
         if not po:
             return Response({'detail': 'Purchase not found.'}, status=404)
@@ -1132,7 +1132,8 @@ class TradePurchaseInvoiceView(viewsets.ViewSet):
                  for it in po.items.all().order_by('id')]
         amount = sum((l['sub_total'] for l in lines), Z)
         return Response({
-            'id': po.id, 'purchase_no': po.purchase_number, 'date': po.order_date.date() if po.order_date else None,
+            'id': po.id, 'purchase_no': po.purchase_number, 'kind': 'order' if po.purchase_number.startswith('K') else 'purchase',
+            'date': po.order_date.date() if po.order_date else None,
             'bill_no': po.reference_number or '', 'supplier_acc': acc.acc_id if acc else '',
             'supplier': (acc.name if acc else '') or (po.supplier.name if po.supplier_id else ''),
             'amount': amount, 'extra_disc': po.extra_discount, 'freight': po.shipping_cost, 'fare': po.fare_amount,

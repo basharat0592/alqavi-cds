@@ -23,8 +23,10 @@ export function useOwnPrint(enabled = true) {
 }
 
 /** Print with two choices (Sale Invoice, Purchase): the current page as shown, or the invoice. */
-export function PrintChoiceButton({ onInvoice, invoiceDisabled, invoiceHint, className, label = 'Print' }: {
-    onInvoice: () => void; invoiceDisabled?: boolean; invoiceHint?: string; className: string; label?: string;
+export function PrintChoiceButton({ onInvoice, invoiceDisabled, invoiceHint, className, label = 'Print', choices }: {
+    onInvoice?: () => void; invoiceDisabled?: boolean; invoiceHint?: string; className: string; label?: string;
+    /* Instead of the one "Invoice" item: several (e.g. with / without prices). */
+    choices?: { label: string; onClick: () => void; disabled?: boolean; hint?: string }[];
 }) {
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -47,7 +49,9 @@ export function PrintChoiceButton({ onInvoice, invoiceDisabled, invoiceHint, cla
             </button>
             {open && (
                 <div className="absolute bottom-full right-0 z-50 mb-1 w-52 border border-slate-300 bg-white py-1 shadow-xl">
-                    <button type="button" onClick={() => { setOpen(false); onInvoice(); }} disabled={invoiceDisabled} title={invoiceHint} className={item}>Invoice</button>
+                    {(choices || [{ label: 'Invoice', onClick: () => onInvoice?.(), disabled: invoiceDisabled, hint: invoiceHint }]).map((c) => (
+                        <button key={c.label} type="button" onClick={() => { setOpen(false); c.onClick(); }} disabled={c.disabled} title={c.hint} className={item}>{c.label}</button>
+                    ))}
                     <button type="button" onClick={page} className={item}>Current page</button>
                 </div>
             )}
