@@ -322,11 +322,11 @@ export default function TradeCreditCard() {
                                 {(billOver || payOver) && <button type="button" onClick={() => { setBillOver(null); setPayOver(null); }} title="Back to the dates from the card's billing / due day"
                                     className="text-[12px] font-semibold text-[#1f2bd6] underline">Reset</button>}
                             </span>
-                            <div className={`${FIELD} col-span-2 flex items-center justify-between gap-2 overflow-hidden whitespace-nowrap border-blue-300 bg-[#e6efff] !px-2 text-[12px] font-semibold text-blue-800`}
+                            <div className={`${FIELD} col-span-2 flex !h-auto min-h-8 min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0 py-0.5 leading-tight border-blue-300 bg-[#e6efff] !px-2 !text-[11px] !font-normal text-blue-800`}
                                 title="Billing → payment: days to pay after the statement · Credit → payment: days the money is used before it is paid back">
-                                <span>Billing→Payment <b className="text-[14px] text-blue-700">{billToPay ?? '—'}</b> days</span>
+                                <span className="whitespace-nowrap">Billing→Payment <b className="text-[12.5px] font-extrabold text-blue-700">{billToPay ?? '—'}</b> days</span>
                                 <span className="text-blue-300">|</span>
-                                <span>Credit→Payment <b className="text-[14px] text-blue-700">{creditToPay ?? '—'}</b> days</span>
+                                <span className="whitespace-nowrap">Credit→Payment <b className="text-[12.5px] font-extrabold text-blue-700">{creditToPay ?? '—'}</b> days</span>
                             </div>
                         </>)}
 
