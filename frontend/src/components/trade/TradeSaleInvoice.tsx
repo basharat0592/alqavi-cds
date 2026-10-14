@@ -929,11 +929,14 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const [machines, setMachines] = useState<{ id: number; name: string; charge_pct: number; bank_account: number | null }[]>([]);
     const [machine, setMachine] = useState('');
     useEffect(() => {
-        api.get('v1/sales/trade-cards/').then(({ data }) => {
+        const load = () => api.get('v1/sales/trade-cards/').then(({ data }) => {
             const ms = (data || []).filter((c: any) => c.kind === 'machine' && c.status === 'active');
             setMachines(ms);
-            if (ms.length) setMachine((m) => m || String(ms[0].id));
+            setMachine((m) => (ms.some((x: any) => String(x.id) === m) ? m : ms.length ? String(ms[0].id) : ''));
         }).catch(() => setMachines([]));
+        load();
+        window.addEventListener('focus', load);
+        return () => window.removeEventListener('focus', load);
     }, []);
     const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
     const [salesman, setSalesman] = useState('');
@@ -2046,7 +2049,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
         if (paid + card > netAmount + 0.001) { toast.error('Paid Cash and Paid by Card are more than the Net Amount.'); return; }
         const mach = machines.find((m) => String(m.id) === machine);
-        if (card > 0 && !mach) { toast.error('Choose the card machine the customer paid on.'); return; }
+        if (card > 0 && !mach) { toast.error(machines.length ? 'Choose the card machine the customer paid on.' : 'Add the card machine first: choose “+ Add card machine…”.', { duration: 7000 }); return; }
         if (card > 0 && !mach!.bank_account) { toast.error(`Set the bank "${mach!.name}" pays into (Credit Card › Cards…).`, { duration: 7000 }); return; }
         // Opened now, while the click still counts as a user action, so the
         // browser does not block it; it is pointed at the invoice once saved.
@@ -2373,11 +2376,13 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         <span className={`${LABEL} text-[15px]`}>Paid by Card</span>
                         <div className="flex gap-1">
                             <input value={paidCard} onChange={(e) => setPaidCard(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder="0"
-                                disabled={!machines.length} className={`${EDIT} w-[45%] text-right text-[15px] disabled:opacity-50`} aria-label="Paid by card" />
-                            <select value={machine} onChange={(e) => setMachine(e.target.value)} disabled={!machines.length}
-                                className={`${FIELD} min-w-0 flex-1 border-emerald-300 bg-[#e3fbe3] !px-1 !text-[12px] text-slate-900 disabled:opacity-50`} aria-label="Card machine">
-                                {!machines.length && <option value="">No card machine</option>}
+                                className={`${EDIT} w-[45%] text-right text-[15px]`} aria-label="Paid by card" />
+                            {/* The machine the customer's card was swiped on; a new one is set up in Credit Card › Cards… */}
+                            <select value={machine} onChange={(e) => { if (e.target.value === 'add') { openPopup('/admin/trade/credit-card?cards=machine'); return; } setMachine(e.target.value); }}
+                                className={`${FIELD} min-w-0 flex-1 border-emerald-300 bg-[#e3fbe3] !px-1 !text-[12px] text-slate-900`} aria-label="Card machine">
+                                {!machines.length && <option value="">Card machine…</option>}
                                 {machines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                <option value="add">+ Add card machine…</option>
                             </select>
                         </div>
                     </div>

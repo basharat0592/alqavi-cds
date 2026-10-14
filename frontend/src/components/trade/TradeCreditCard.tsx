@@ -192,6 +192,11 @@ export default function TradeCreditCard() {
     };
 
     const [cardsOpen, setCardsOpen] = useState(false);
+    const [newKind, setNewKind] = useState<'own' | 'machine'>('own');
+    useEffect(() => {
+        const k = new URLSearchParams(window.location.search).get('cards');
+        if (k) { setNewKind(k === 'machine' ? 'machine' : 'own'); setCardsOpen(true); if (k === 'machine') setKind('customer'); }
+    }, []);
     const [view, setView] = useState<null | { rows: any[] | null }>(null);
     const [vFrom, setVFrom] = useState('');
     const [vTo, setVTo] = useState('');
@@ -397,7 +402,7 @@ export default function TradeCreditCard() {
                     onAddNew={() => openPopup('/admin/trade/chart-of-account')} />
             )}
 
-            {cardsOpen && <CardsWindow cards={cards || []} accounts={accounts || []} askClose={askClose}
+            {cardsOpen && <CardsWindow cards={cards || []} accounts={accounts || []} askClose={askClose} newKind={newKind}
                 onClose={() => setCardsOpen(false)} onSaved={() => { loadCards(); loadSheet(); }} />}
 
             {view && (
@@ -448,10 +453,10 @@ export default function TradeCreditCard() {
 }
 
 /* Cards: our credit cards and the card machines customers pay on. */
-function CardsWindow({ cards, accounts, askClose, onClose, onSaved }: {
-    cards: Card[]; accounts: Acc[]; askClose: (fn: () => void, msg?: string) => void; onClose: () => void; onSaved: () => void;
+function CardsWindow({ cards, accounts, askClose, onClose, onSaved, newKind = 'own' }: {
+    cards: Card[]; accounts: Acc[]; askClose: (fn: () => void, msg?: string) => void; onClose: () => void; onSaved: () => void; newKind?: 'own' | 'machine';
 }) {
-    const blank = { id: 0, kind: 'own', name: '', bank: '', card_no: '', billing_day: '5', due_day: '26', charge_pct: '1.5', account: 'new', charges_account: 'new', bank_account: '', status: 'active' };
+    const blank = { id: 0, kind: newKind as string, name: '', bank: '', card_no: '', billing_day: '5', due_day: '26', charge_pct: '1.5', account: 'new', charges_account: 'new', bank_account: '', status: 'active' };
     const [f, setF] = useState<any>(blank);
     const [sel, setSel] = useState(-1);
     const [busy, setBusy] = useState(false);
@@ -483,8 +488,8 @@ function CardsWindow({ cards, accounts, askClose, onClose, onSaved }: {
         try { await api.delete(`v1/sales/trade-cards/${f.id}/`); toast.success('Card deleted.'); onSaved(); setF(blank); setSel(-1); }
         catch (err: any) { toast.error(err?.response?.data?.detail || 'Could not delete the card.'); }
     };
-    const accSelect = (k: string, list: Acc[], newLabel: string) => (
-        <select value={f[k]} onChange={(e) => set(k, e.target.value)} className={`${COA_SELECT} w-full`}>
+    const accSelect = (k: string, list: Acc[], newLabel: string, hint = '') => (
+        <select value={f[k]} onChange={(e) => set(k, e.target.value)} title={f[k] === 'new' ? hint : undefined} className={`${COA_SELECT} w-full`}>
             {newLabel && <option value="new">{newLabel}</option>}
             {!newLabel && <option value="">—</option>}
             {list.map((a) => <option key={a.id} value={a.id}>{a.acc_id}  {a.name}</option>)}
@@ -542,14 +547,16 @@ function CardsWindow({ cards, accounts, askClose, onClose, onSaved }: {
                             <span className={L}>Due Day</span>
                             <input value={f.due_day} onChange={(e) => set('due_day', e.target.value.replace(/\D/g, ''))} className={`${EDIT} w-full text-right`} />
                             <span className={L}>Card Account</span>
-                            {accSelect('account', cardAccs, '+ New account (Bank 2203)')}
+                            {accSelect('account', cardAccs, '+ New account', 'A new account is made under Bank (2203) with the card name')}
                         </>)}
 
                         <span className={L}>Charges Account</span>
-                        {accSelect('charges_account', chargeAccs, '+ New account (credit card tax 5501)')}
+                        {accSelect('charges_account', chargeAccs, '+ New account', 'A new account is made under credit card tax (5501): "<card name> (tax)"')}
                         <span className={L}>{f.kind === 'own' ? 'Money goes to' : 'Paid into'}</span>
                         {accSelect('bank_account', bankAccs, '')}
-                        <span className="col-span-2 text-[12px] text-slate-500">The bank charges always go to the charges account (our expense).</span>
+                        <span className="col-span-2 text-[12px] leading-snug text-slate-500">
+                            &ldquo;+ New account&rdquo; makes the account for you{f.kind === 'own' ? ': the card under Bank (2203), the charges under credit card tax (5501)' : ': the charges under credit card tax (5501)'}. The bank charges always go to the charges account (our expense).
+                        </span>
                     </div>
                 </fieldset>
                 <div className="flex items-center justify-end gap-2">
