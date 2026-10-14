@@ -92,11 +92,28 @@ def _capital_days(p, f, t):
     return max(total, Z)
 
 
-def net_profit(user, f, t):
+def profit_statement(user, f, t):
+    """(net profit, groups): the period's income and every expense (cost of goods,
+    salaries, fares, rent, bank / card charges …) by account group — what is left
+    after all of them is the profit the partners share."""
     from .trade_reports import Ctx, _pl
     ctx = Ctx(SimpleNamespace(user=user, query_params={'date_from': f.isoformat(), 'date_to': t.isoformat()}))
     _, inc, exp = _pl(ctx)
-    return sum((v for _, v in inc), Z) - sum((v for _, v in exp), Z)
+    groups = {}
+    for kind, items in (('income', inc), ('expense', exp)):
+        for a, v in items:
+            g = a.group
+            key = (kind, g.code if g else 0)
+            row = groups.setdefault(key, {'kind': kind, 'code': g.code if g else '', 'name': g.name if g else 'Other',
+                                         'amount': Z, 'accounts': []})
+            row['amount'] += v
+            row['accounts'].append({'acc_id': a.acc_id, 'name': a.name, 'amount': _money(v)})
+    rows = [dict(r, amount=_money(r['amount'])) for _, r in sorted(groups.items(), key=lambda kv: (kv[0][0] != 'income', str(kv[0][1])))]
+    return sum((v for _, v in inc), Z) - sum((v for _, v in exp), Z), rows
+
+
+def net_profit(user, f, t):
+    return profit_statement(user, f, t)[0]
 
 
 def share_out(partners, f, t, basis, profit):
@@ -316,14 +333,17 @@ class TradePartnershipViewSet(viewsets.ViewSet):
             missing = [p.name for p in ps if p.share_pct is None and _active_days(p, f, t)[0]]
             if missing:
                 return None, f'No agreed share % for {", ".join(missing)} — set it, or share by capital.'
-        ledger = profit = net_profit(self.request.user, f, t)
+        ledger, statement = profit_statement(self.request.user, f, t)
+        profit = ledger
         if 'amount' in d and d.get('amount') not in (None, ''):
             profit = _money(d.get('amount'))        # a different figure, e.g. after adjustments
         rows = share_out(ps, f, t, basis, profit)
         if not rows:
             return None, 'No partner was a partner in this period.'
         done = scope_to_tenant(self.request.user, ProfitDistribution.objects.filter(date_from__lte=t, date_to__gte=f), 'tenant')
-        return {'date_from': f, 'date_to': t, 'basis': basis, 'net_profit': _money(profit), 'ledger_profit': _money(ledger),
+        return {'date_from': f, 'date_to': t, 'basis': basis, 'net_profit': _money(profit), 'ledger_profit': _money(ledger), 'statement': statement,
+                'total_income': _money(sum((r['amount'] for r in statement if r['kind'] == 'income'), Z)),
+                'total_expense': _money(sum((r['amount'] for r in statement if r['kind'] == 'expense'), Z)),
                 'rows': rows, 'overlaps': [{'id': x.id, 'from': x.date_from, 'to': x.date_to, 'voucher_no': x.voucher.voucher_no} for x in done]}, None
 
     @action(detail=False, methods=['get'])

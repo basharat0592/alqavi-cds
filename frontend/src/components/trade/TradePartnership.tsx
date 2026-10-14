@@ -405,10 +405,40 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                         </div>
                     </div>
                     {pv.overlaps?.length > 0 && <div className="shrink-0 border border-amber-400 bg-[#fff6d6] px-3 py-1 text-[13px] font-semibold text-amber-800">⚠ Already distributed for part of this period: {pv.overlaps.map((o: any) => `${o.voucher_no} (${dmy(o.from)}–${dmy(o.to)})`).join(', ')}</div>}
-                    <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
+                    <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)] gap-2">
+                    {/* The period's Profit and Loss: everything taken out before the partners share */}
+                    <div className="min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
+                        <div className="sticky top-0 z-10 bg-[#e8e8f4] px-2 py-1 text-[13px] font-bold">Profit and Loss of the period</div>
+                        <table className="w-full table-fixed border-collapse text-[12.5px]">
+                            <colgroup><col /><col style={{ width: '36%' }} /></colgroup>
+                            <tbody>
+                                {(['income', 'expense'] as const).map((kind) => {
+                                    const gs = (pv.statement || []).filter((g: any) => g.kind === kind);
+                                    return [
+                                        <tr key={kind}><td colSpan={2} className="bg-[#f2f2fa] px-2 py-1 font-bold text-[#1f2bd6]">{kind === 'income' ? 'Income (sales …)' : 'Less: all expenses'}</td></tr>,
+                                        ...gs.map((g: any) => (
+                                            <tr key={`${kind}${g.code}`} className="tabular-nums" title={g.accounts.map((a: any) => `${a.acc_id} ${a.name}: ${fmt(num(a.amount))}`).join(' · ')}>
+                                                <td className={TD}>{g.name}<span className="ml-1 text-[10.5px] text-slate-500">{g.code}</span></td>
+                                                <td className={`${TD} text-right ${kind === 'expense' ? 'text-red-700' : ''}`}>{kind === 'expense' ? `(${fmt(num(g.amount))})` : fmt(num(g.amount))}</td>
+                                            </tr>
+                                        )),
+                                        <tr key={`${kind}t`} className="bg-[#fafafa] font-bold tabular-nums">
+                                            <td className={TD}>{kind === 'income' ? 'Total Income' : 'Total Expenses'}</td>
+                                            <td className={`${TD} text-right ${kind === 'expense' ? 'text-red-700' : ''}`}>{fmt(num(kind === 'income' ? pv.total_income : pv.total_expense))}</td>
+                                        </tr>,
+                                    ];
+                                })}
+                                <tr className={`font-black tabular-nums ${num(pv.ledger_profit) >= 0 ? 'bg-[#c9f6ff]' : 'bg-[#ffe1e1] text-red-700'}`}>
+                                    <td className={TD}>{num(pv.ledger_profit) >= 0 ? 'Net Profit to share' : 'Net Loss to share'}</td>
+                                    <td className={`${TD} text-right text-[14px]`}>{fmt(num(pv.ledger_profit))}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
                         <table className="w-full table-fixed border-collapse text-[13px]">
-                            <colgroup>{[26, 12, 18, 12, 14, 18].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                            <thead><tr>{['Partner', 'Days', 'Capital Invested', 'Agreed %', 'Share %', np >= 0 ? 'Profit Share' : 'Loss Share'].map((h, k) => <th key={h} className={`${TH} ${k ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
+                            <colgroup>{[26, 10, 20, 12, 13, 19].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                            <thead><tr>{['Partner', 'Days', 'Capital', 'Agreed %', 'Share %', np >= 0 ? 'Profit Share' : 'Loss Share'].map((h, k) => <th key={h} className={`${TH} ${k ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
                             <tbody>
                                 {pv.rows.map((r: any) => (
                                     <tr key={r.partner} className="tabular-nums">
@@ -426,7 +456,8 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                             </tfoot>
                         </table>
                     </div>
-                    <p className="shrink-0 text-[12px] text-slate-600">{basis === 'capital'
+                    </div>
+                    <p className="shrink-0 text-[12px] text-slate-600">Net profit = all income less every expense of the period (cost of goods, salaries, fares, rent, bank and card charges …); only that is shared. {basis === 'capital'
                         ? 'Each partner’s share = capital invested on each day they were a partner, as a part of all partners’ capital-days.'
                         : 'Each partner’s share = agreed % × days they were a partner, as a part of all partners’ total.'} Post credits each partner&apos;s capital account (a loss is taken off) against Retain Earning.</p>
                 </>) : (
