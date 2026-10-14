@@ -19,7 +19,7 @@ import re
 from collections import defaultdict
 from decimal import Decimal
 
-from django.db.models import Q
+from django.db.models import Case, DateField, F, Q, When
 from rest_framework import permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -594,24 +594,34 @@ def r_cash_access(ctx):
 
 # ───────────────────────── accounts ─────────────────────────
 
-def _ledger(ctx, upto=None, since=None):
+def _vline_date():
+    """The day a voucher line counts: a cashed cheque from the day it was cashed, else the voucher date."""
+    return Case(When(voucher__chq_status='cashed', voucher__chq_cash_date__isnull=False, then=F('voucher__chq_cash_date')),
+                default=F('voucher__date'), output_field=DateField())
+
+
+def _ledger(ctx, upto=None, since=None, pending=False):
     """Every entry (date, voucher_no, account, detail, debit, credit, staff_id) — vouchers plus the
-    sales / returns made in this system (they post no voucher)."""
+    sales / returns made in this system (they post no voucher). Cheques not cashed yet are left
+    out; `pending=True` returns only those."""
     from modules.company.models import LedgerAccount
     from .models import VoucherLine, Order, OrderItem, TradeSaleReturn, TradeSaleReturnItem
     accs = {a.acc_id: a for a in ctx.scope(LedgerAccount.objects.all()).select_related('group')}
     out = []
-    lines = ctx.scope(VoucherLine.objects.all(), 'voucher__tenant')
+    lines = ctx.scope(VoucherLine.objects.all(), 'voucher__tenant').annotate(on=_vline_date())
+    lines = lines.filter(voucher__chq_status='pending') if pending else lines.exclude(voucher__chq_status='pending')
     if upto:
-        lines = lines.filter(voucher__date__lte=upto)
+        lines = lines.filter(on__lte=upto)
     if since:
-        lines = lines.filter(voucher__date__gte=since)
+        lines = lines.filter(on__gte=since)
     by_pk = {a.pk: a for a in accs.values()}
-    for d, no, vdet, st, aid, det, dr, cr in lines.order_by('voucher__date', 'voucher_id', 'line').values_list(
-            'voucher__date', 'voucher__voucher_no', 'voucher__detail', 'voucher__staff_id', 'account_id', 'detail', 'debit', 'credit'):
+    for d, no, vdet, st, aid, det, dr, cr in lines.order_by('on', 'voucher_id', 'line').values_list(
+            'on', 'voucher__voucher_no', 'voucher__detail', 'voucher__staff_id', 'account_id', 'detail', 'debit', 'credit'):
         a = by_pk.get(aid)
         if a is not None:
             out.append((d, no, a, det or vdet, _d(dr), _d(cr), st))
+    if pending:
+        return out
     # Bills already booked by a (legacy) voucher.
     from .models import Voucher
     booked = set()
@@ -714,20 +724,26 @@ def r_ledger(ctx):
     if not acc:
         return _out('Ledger', ctx, [('', 'l')], [R('Find the account (Acc ID) first.')], subtitle='')
     opening, rows = Z, []
-    entries = [e for e in _ledger(ctx, upto=ctx.dto) if e[2].pk == acc.pk]
+    entries = [e + (False,) for e in _ledger(ctx, upto=ctx.dto) if e[2].pk == acc.pk]
+    # Cheques received but not cashed: shown in red on the day received, not in the balance.
+    entries += [e + (True,) for e in _ledger(ctx, upto=ctx.dto, since=ctx.dfrom, pending=True) if e[2].pk == acc.pk]
+    entries.sort(key=lambda e: (e[0], e[1]))
     bal = Z
-    for d, no, a, det, dr, cr, st in entries:
+    for d, no, a, det, dr, cr, st, pend in entries:
         if ctx.dfrom and d < ctx.dfrom:
             opening += dr - cr
             continue
         if not rows:
             bal = opening
             rows.append(R('', '', 'Opening Balance', '', '', _f(abs(opening)) if opening else '0', 'Dr' if opening >= 0 else 'Cr'))
+        if pend:
+            rows.append(R(_dmy(d), no, f'{det}  (cheque pending - not in balance)', _f(dr) if dr else '', _f(cr) if cr else '', 'Pending', '', t='p'))
+            continue
         bal += dr - cr
         rows.append(R(_dmy(d), no, det, _f(dr) if dr else '', _f(cr) if cr else '', _f(abs(bal)), 'Dr' if bal >= 0 else 'Cr'))
     if not rows:
         rows.append(R('', '', 'Opening Balance', '', '', _f(abs(opening)), 'Dr' if opening >= 0 else 'Cr')); bal = opening
-    td = sum(_d(r['c'][3] or 0) for r in rows); tc = sum(_d(r['c'][4] or 0) for r in rows)
+    td = sum(_d(r['c'][3] or 0) for r in rows if r['t'] != 'p'); tc = sum(_d(r['c'][4] or 0) for r in rows if r['t'] != 'p')
     return _out(f'Ledger — {acc.acc_id} {acc.name}', ctx, [('Date', 'l'), ('Voucher', 'l'), ('Detail', 'l'), ('Debit', 'r'), ('Credit', 'r'), ('Balance', 'r'), ('', 'l')],
                 rows, ['Total', '', '', _f(td), _f(tc), _f(abs(bal)), 'Dr' if bal >= 0 else 'Cr'])
 

@@ -9,6 +9,10 @@
  * customer's receipt settles their unpaid sale invoices, oldest first.
  * View: the legacy "View Receipt Voucher Detail" — voucher no / date range,
  * every line with Total Debit / Total Credits.
+ *
+ * Cheques: a cheque is saved Pending (red — not in the ledger or the balance
+ * yet) or Cashed (blue — counts). Pending cheques are listed under Pending
+ * Cheques, red once their cash date comes, and marked Cashed from there.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -25,7 +29,7 @@ export type Acc = {
     id: number; acc_id: string; name: string; group: number; group_name: string; level2_name: string;
     area_name: string | null; status: string;
 };
-type Line = { account: Acc; amount: number };
+type Line = { account: Acc; amount: number; note: string };
 
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -125,6 +129,7 @@ export default function TradeReceiptVoucher() {
     const [fromAcc, setFromAcc] = useState<Acc | null>(null);
     const [fromBal, setFromBal] = useState<number | null>(null);
     const [amount, setAmount] = useState('');
+    const [note, setNote] = useState('');
     const [lines, setLines] = useState<Line[]>([]);
     const [sel, setSel] = useState(-1);
     const amountRef = useRef<HTMLInputElement>(null);
@@ -139,7 +144,30 @@ export default function TradeReceiptVoucher() {
     const [bank, setBank] = useState('');
     const [detail, setDetail] = useState('');
     const [staffId, setStaffId] = useState('');
+    const [chqStatus, setChqStatus] = useState<'pending' | 'cashed'>('pending');
+    const [chqReceived, setChqReceived] = useState(today);
+    const [chqCashDate, setChqCashDate] = useState(today);
     const [saving, setSaving] = useState(false);
+
+    // Pending cheques (alert when one is due to be cashed)
+    type Pend = { id: number; voucher_no: string; chq_no: string; chq_date: string | null; bank: string; received: string; cash_date: string | null;
+        amount: number; account: string; acc_id: string; staff: string; days: number | null; due: boolean };
+    const [pend, setPend] = useState<{ due: number; rows: Pend[] }>({ due: 0, rows: [] });
+    const [pendOpen, setPendOpen] = useState(false);
+    const [cashing, setCashing] = useState<null | { row: Pend; date: string }>(null);
+    const loadPend = (open = false) => api.get('v1/sales/vouchers/pending_cheques/').then(({ data }) => {
+        setPend(data);
+        if (open && (data.due > 0 || new URLSearchParams(window.location.search).has('cheques'))) setPendOpen(true);
+    }).catch(() => { /* keep */ });
+    useEffect(() => { loadPend(true); }, []);
+    const cashCheque = async () => {
+        if (!cashing) return;
+        try {
+            await api.post(`v1/sales/vouchers/${cashing.row.id}/cash_cheque/`, { date: cashing.date });
+            toast.success(`Cheque ${cashing.row.chq_no} (${cashing.row.voucher_no}) cashed — now in the ledger.`);
+            setCashing(null); loadPend();
+        } catch (err: any) { toast.error(err?.response?.data?.detail || 'Could not mark the cheque cashed.'); }
+    };
 
     const balanceOf = (a: Acc) => api.get('v1/sales/vouchers/balance/', { params: { account: a.id } }).then(({ data }) => num(data.balance)).catch(() => null);
 
@@ -170,8 +198,8 @@ export default function TradeReceiptVoucher() {
         if (amt <= 0) { toast.error('Enter the amount received.'); amountRef.current?.focus(); return; }
         if (asAcc && asAcc.id === fromAcc.id) { toast.error('Receipt From and Receipt as cannot be the same account.'); return; }
         if (lines.some((l) => l.account.id === fromAcc.id)) { toast.error(`${fromAcc.name} is already in the list — remove it first to change the amount.`); return; }
-        setLines((ls) => [...ls, { account: fromAcc, amount: amt }]);
-        setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setSel(-1);
+        setLines((ls) => [...ls, { account: fromAcc, amount: amt, note: note.trim() }]);
+        setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote(''); setSel(-1);
         setTimeout(() => fromCodeRef.current?.focus(), 0);
     };
     const removeLine = () => {
@@ -181,25 +209,27 @@ export default function TradeReceiptVoucher() {
 
     const missing = [!lines.length && 'a Receipt From line', !asAcc && 'the Receipt as account'].filter(Boolean) as string[];
     const resetForm = () => {
-        setLines([]); setSel(-1); setFromAcc(null); setFromCode(''); setFromBal(null); setAmount('');
+        setLines([]); setSel(-1); setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote('');
         setAsAcc(null); setAsCode(''); setAsBal(null); setChqNo(''); setChqDate(today()); setBank(''); setDetail('');
+        setChqStatus('pending'); setChqReceived(today()); setChqCashDate(today());
         setStaffId(''); setDateOn(false); setDate(today()); loadNo();
     };
     const save = () => {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
         setAsk({
-            msg: `Save Receipt Voucher ${voucherNo} for ${fmt(total)} ?`,
+            msg: `Save Receipt Voucher ${voucherNo} for ${fmt(total)}${isChq ? (chqStatus === 'pending' ? ' — cheque PENDING (not in the ledger until cashed)' : ' — cheque CASHED') : ''} ?`,
             yes: async () => {
                 setSaving(true);
                 try {
                     const { data } = await api.post('v1/sales/vouchers/', {
                         date: dateOn ? date : today(), receipt_as: asAcc!.id, staff: staffId || null,
-                        chq_no: chqNo.trim(), chq_date: chqNo.trim() ? chqDate : null, bank: bank.trim(), detail: detail.trim(),
-                        lines: lines.map((l) => ({ account: l.account.id, amount: l.amount })),
+                        chq_no: chqNo.trim(), chq_date: isChq ? chqDate : null, bank: bank.trim(), detail: detail.trim(),
+                        chq_status: isChq ? chqStatus : '', chq_received: isChq ? chqReceived : null, chq_cash_date: isChq ? chqCashDate : null,
+                        lines: lines.map((l) => ({ account: l.account.id, amount: l.amount, note: l.note })),
                     });
-                    toast.success(`Receipt Voucher ${data.voucher_no} saved — ${fmt(num(data.total))}.`);
-                    resetForm();
+                    toast.success(`Receipt Voucher ${data.voucher_no} saved — ${fmt(num(data.total))}${data.chq_status === 'pending' ? ' (cheque pending)' : ''}.`);
+                    resetForm(); loadPend();
                 } catch (err: any) {
                     const d = err?.response?.data;
                     toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not save the voucher.'), { duration: 7000 });
@@ -235,6 +265,13 @@ export default function TradeReceiptVoucher() {
     const legend = (t: string) => <legend className="px-1.5 text-[17px] font-black tracking-tight text-[#c0192f]">{t}</legend>;
     const findBtn = 'h-8 shrink-0 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] px-3 text-[13px] font-bold text-slate-800 shadow-sm hover:to-[#d9d9e6] active:translate-y-px';
     const BAL = `${FIELD} flex items-center justify-end border-sky-300 bg-[#c9f6ff] font-bold text-slate-900`;
+    // Balances move as the amount is typed: the account after this receipt.
+    const fromAfter = fromBal === null ? null : fromBal - num(amount);
+    const asAfter = asBal === null ? null : asBal + total;
+    // Cheque boxes: red while the cheque is pending, blue once cashed.
+    const isChq = !!chqNo.trim();
+    const tone = !isChq ? '' : chqStatus === 'pending' ? '!border-red-400 !bg-[#ffe1e1] !text-red-700' : '!border-blue-400 !bg-[#dfe9ff] !text-blue-800';
+    const chqDateCls = (on: boolean) => `${FIELD} w-full ${on ? `border-emerald-300 bg-[#e3fbe3] ${tone}` : 'border-slate-300 bg-[#ececf3] text-slate-500'}`;
 
     return (
         <div className="min-h-screen bg-[#dcdcf7] font-sans text-slate-900">
@@ -268,10 +305,14 @@ export default function TradeReceiptVoucher() {
                         <span className={`${LABEL} text-[15px]`}>Amount</span>
                         <input ref={amountRef} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal"
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLine(); } }} className={`${EDIT} w-full text-right`} />
-                        <div className={BAL}>{fromAcc ? (fromBal === null ? '…' : fmt(fromBal)) : ''}</div>
+                        <div className={`${BAL} ${num(amount) > 0 && fromAfter !== null ? 'text-[#1f2bd6]' : ''}`}
+                            title={fromBal !== null ? `Previous balance ${fmt(fromBal)}${num(amount) > 0 ? ` − ${fmt(num(amount))}` : ''}` : undefined}>
+                            {fromAcc ? (fromAfter === null ? '…' : fmt(fromAfter)) : ''}
+                        </div>
 
-                        <span />
-                        <span />
+                        <span className={`${LABEL} text-[15px]`}>Note</span>
+                        <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={120}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addLine(); } }} className={`${EDIT} w-full`} />
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={addLine} disabled={!fromAcc || num(amount) <= 0} className={`${ACTION_BTN} !min-w-0`}><span className="underline">A</span>dd</button>
                             <button type="button" onClick={removeLine} disabled={sel < 0} className={`${ACTION_BTN} !min-w-0`}><span className="underline">R</span>emove</button>
@@ -292,7 +333,9 @@ export default function TradeReceiptVoucher() {
                                     <tr key={l.account.id} onClick={() => setSel(i)} className={`cursor-pointer tabular-nums ${sel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
                                         <td className="border-b border-r border-slate-300 px-1.5 py-1">{i + 1}</td>
                                         <td className="border-b border-r border-slate-300 px-1.5 py-1 font-mono">{l.account.acc_id}</td>
-                                        <td className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1" title={l.account.name}>{l.account.name}</td>
+                                        <td className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1" title={l.note ? `${l.account.name} — ${l.note}` : l.account.name}>
+                                            {l.account.name}{l.note && <span className={sel === i ? 'text-white/80' : 'text-slate-500'}>{`  — ${l.note}`}</span>}
+                                        </td>
                                         <td className="border-b border-r border-slate-300 px-1.5 py-1 text-right font-semibold">{fmt(l.amount)}</td>
                                     </tr>
                                 ))}
@@ -312,10 +355,9 @@ export default function TradeReceiptVoucher() {
                         <ReadBox value={asAcc ? asAcc.name : ''} className="col-span-6" />
 
                         <span className={`${LABEL} text-right text-[15px]`}>Chq No</span>
-                        <input value={chqNo} onChange={(e) => setChqNo(e.target.value)} maxLength={40} className={`${EDIT} w-full`} />
+                        <input value={chqNo} onChange={(e) => setChqNo(e.target.value)} maxLength={40} className={`${EDIT} w-full ${tone}`} />
                         <span className={`${LABEL} text-right text-[15px]`}>Date Chq</span>
-                        <input type="date" value={chqDate} disabled={!chqNo.trim()} onChange={(e) => e.target.value && setChqDate(e.target.value)}
-                            className={`${FIELD} w-full ${chqNo.trim() ? 'border-emerald-300 bg-[#e3fbe3]' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
+                        <input type="date" value={chqDate} disabled={!isChq} onChange={(e) => e.target.value && setChqDate(e.target.value)} className={chqDateCls(isChq)} />
                         <span className={`${LABEL} text-right text-[15px]`}>Staff</span>
                         <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className={`${COA_SELECT} col-span-3`}>
                             <option value="">Select any one</option>
@@ -323,18 +365,44 @@ export default function TradeReceiptVoucher() {
                         </select>
 
                         <span className={`${LABEL} text-right text-[15px]`}>Bank</span>
-                        <input value={bank} onChange={(e) => setBank(e.target.value)} maxLength={80} className={`${EDIT} w-full`} />
+                        <input value={bank} onChange={(e) => setBank(e.target.value)} maxLength={80} className={`${EDIT} w-full ${tone}`} />
                         <span className={`${LABEL} text-right text-[15px]`}>Detail</span>
-                        <input value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={255} className={`${EDIT} w-full`} />
+                        <input value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={255} className={`${EDIT} w-full ${tone}`} />
                         <span className={`${LABEL} text-right text-[15px]`}>Account Balance</span>
-                        <div className={BAL}>{asAcc ? (asBal === null ? '…' : fmt(asBal)) : ''}</div>
+                        <div className={`${BAL} ${tone}`} title={asBal !== null ? `Previous balance ${fmt(asBal)}${total ? ` + ${fmt(total)}` : ''}` : undefined}>
+                            {asAcc ? (asAfter === null ? '…' : fmt(asAfter)) : ''}
+                        </div>
                         <span className={`${LABEL} text-right text-[15px]`}>Total</span>
-                        <div className={BAL}>{fmt(total)}</div>
+                        <div className={`${BAL} ${tone}`}>{fmt(total)}</div>
+
+                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>Chq Received</span>
+                        <input type="date" value={chqReceived} max={today()} disabled={!isChq} onChange={(e) => e.target.value && setChqReceived(e.target.value)} className={chqDateCls(isChq)} />
+                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>Cash Date</span>
+                        <input type="date" value={chqCashDate} min={chqReceived} max={chqStatus === 'cashed' ? today() : undefined} disabled={!isChq}
+                            onChange={(e) => e.target.value && setChqCashDate(e.target.value)} className={chqDateCls(isChq)}
+                            title={chqStatus === 'pending' ? 'The day the cheque is to be cashed — an alert shows from that day' : 'The day the cheque was cashed'} />
+                        <span className={`${LABEL} text-right text-[15px]`}>Status</span>
+                        <select value={chqStatus} disabled={!isChq}
+                            onChange={(e) => { const s = e.target.value as 'pending' | 'cashed'; setChqStatus(s); if (s === 'cashed' && chqCashDate > today()) setChqCashDate(today()); }}
+                            className={`${COA_SELECT} ${isChq ? tone : 'opacity-60'}`}>
+                            <option value="pending">Pending</option>
+                            <option value="cashed">Cashed</option>
+                        </select>
+                        <span className={`col-span-2 text-[13px] font-bold ${!isChq ? 'text-slate-400' : chqStatus === 'pending' ? 'text-red-600' : 'text-blue-700'}`}>
+                            {!isChq ? 'Enter the Chq No for a cheque' : chqStatus === 'pending' ? 'Not in the ledger until cashed' : 'Counts in the ledger'}
+                        </span>
                     </div>
                 </fieldset>
 
                 <div className="flex flex-wrap items-center justify-end gap-3 lg:col-span-2">
+                    {pend.rows.length > 0 && (
+                        <button type="button" onClick={() => setPendOpen(true)}
+                            className={`h-9 border px-3 text-[13px] font-bold ${pend.due ? 'animate-pulse border-red-500 bg-red-600 text-white' : 'border-red-300 bg-[#ffe1e1] text-red-700'}`}>
+                            {pend.due ? `⚠ ${pend.due} cheque${pend.due > 1 ? 's' : ''} due for cashing` : `${pend.rows.length} cheque${pend.rows.length > 1 ? 's' : ''} pending`} — Show
+                        </button>
+                    )}
                     {missing.length > 0 && <span className="mr-auto text-[12.5px] text-slate-500">To save, add {missing.join(' and ')}.</span>}
+                    {!missing.length && <span className="mr-auto" />}
                     <button type="button" onClick={save} disabled={saving || missing.length > 0} className={ACTION_BTN}>
                         {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                     </button>
@@ -354,21 +422,22 @@ export default function TradeReceiptVoucher() {
                     <div className="relative flex min-h-0 flex-1 flex-col gap-2 bg-[#c9c9f9] p-3">
                         <div className="min-h-0 flex-1 overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
                             <table className="w-full min-w-[1100px] table-fixed border-collapse bg-white text-[12px]">
-                                <colgroup>{[9, 8, 8, 19, 18, 7, 8, 8, 7, 8, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                                <colgroup>{[9, 7, 8, 17, 17, 7, 7, 8, 6, 6, 8, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                    <tr>{['Voucher No', 'Date', 'Acc. ID', 'Account', 'Detail', 'Chq No', 'Date Chq', 'Bank', 'Staff', 'Debit', 'Credit'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
+                                    <tr>{['Voucher No', 'Date', 'Acc. ID', 'Account', 'Detail', 'Chq No', 'Date Chq', 'Bank', 'Chq', 'Staff', 'Debit', 'Credit'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
                                 </thead>
                                 <tbody>
                                     {vRows.map((r, i) => (
-                                        <tr key={i} className={`tabular-nums ${r.line === 1 && i > 0 ? 'border-t-2 border-t-slate-400' : ''} ${num(r.debit) > 0 ? 'bg-[#eaffea]' : 'bg-white'}`}>
-                                            {[r.voucher_no, dmy(r.date), r.acc_id, r.account, r.detail, r.chq_no, dmy(r.chq_date), r.bank, r.staff,
+                                        <tr key={i} className={`tabular-nums ${r.line === 1 && i > 0 ? 'border-t-2 border-t-slate-400' : ''} ${num(r.debit) > 0 ? 'bg-[#eaffea]' : 'bg-white'} ${r.chq_status === 'pending' ? 'font-semibold text-red-600' : r.chq_status === 'cashed' ? 'text-blue-700' : ''}`}>
+                                            {[r.voucher_no, dmy(r.date), r.acc_id, r.account, r.detail, r.chq_no, dmy(r.chq_date), r.bank,
+                                              r.chq_status === 'pending' ? 'Pending' : r.chq_status === 'cashed' ? `Cashed ${dmy(r.chq_cash_date)}` : '', r.staff,
                                               num(r.debit) ? fmt(num(r.debit)) : '', num(r.credit) ? fmt(num(r.credit)) : ''].map((v, k) => (
-                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 9 ? 'text-right' : ''}`}>{v}</td>
+                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 10 ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
-                                    {view.rows && !vRows.length && <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-500">No receipt vouchers for this search.</td></tr>}
-                                    {!view.rows && !view.filter && <tr><td colSpan={11} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
+                                    {view.rows && !vRows.length && <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-500">No receipt vouchers for this search.</td></tr>}
+                                    {!view.rows && !view.filter && <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -408,6 +477,71 @@ export default function TradeReceiptVoucher() {
                                 </fieldset>
                             </div>
                         )}
+                    </div>
+                </Modal>
+            )}
+
+            {pendOpen && (
+                <Modal title="Pending Cheques" onClose={() => askClose(() => setPendOpen(false))} wide>
+                    <div className="flex min-h-0 flex-1 flex-col gap-2 bg-[#c9c9f9] p-3">
+                        {pend.due > 0 && (
+                            <div className="border border-red-500 bg-red-600 px-3 py-1.5 text-[14px] font-bold text-white">
+                                ⚠ {pend.due} cheque{pend.due > 1 ? 's are' : ' is'} due for cashing — cash {pend.due > 1 ? 'them' : 'it'} and mark Cashed.
+                            </div>
+                        )}
+                        <div className="min-h-[160px] flex-1 overflow-auto border border-slate-500 bg-white">
+                            <table className="w-full min-w-[980px] border-collapse text-[12.5px]">
+                                <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                    <tr>{['Voucher No', 'Acc. ID', 'Account', 'Chq No', 'Bank', 'Received', 'Cash Date', '', 'Amount', ''].map((h, k) =>
+                                        <th key={k} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold ${k === 8 ? 'text-right' : ''}`}>{h}</th>)}</tr>
+                                </thead>
+                                <tbody>
+                                    {pend.rows.map((r) => (
+                                        <tr key={r.id} className={`tabular-nums ${r.due ? 'bg-[#ffd9d9] font-semibold text-red-700' : 'text-red-600'}`}>
+                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{r.voucher_no}</td>
+                                            <td className="border-b border-r border-slate-300 px-1.5 py-1 font-mono">{r.acc_id}</td>
+                                            <td className="max-w-[260px] overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1" title={r.account}>{r.account}</td>
+                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{r.chq_no}</td>
+                                            <td className="max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">{r.bank}</td>
+                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{dmy(r.received)}</td>
+                                            <td className="border-b border-r border-slate-300 px-1.5 py-1">{dmy(r.cash_date)}</td>
+                                            <td className="whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1">
+                                                {r.days === null ? '' : r.days < 0 ? `${-r.days} day${r.days === -1 ? '' : 's'} late` : r.days === 0 ? 'Due today' : `in ${r.days} day${r.days === 1 ? '' : 's'}`}
+                                            </td>
+                                            <td className="border-b border-r border-slate-300 px-1.5 py-1 text-right">{fmt(num(r.amount))}</td>
+                                            <td className="border-b border-slate-300 px-1 py-0.5">
+                                                <button type="button" onClick={() => setCashing({ row: r, date: today() })}
+                                                    className="h-7 border border-blue-500 bg-[#dfe9ff] px-2 text-[12px] font-bold text-blue-800 hover:bg-[#c9dcff]">Cashed</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {!pend.rows.length && <tr><td colSpan={10} className="px-3 py-6 text-center text-slate-500">No pending cheques.</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <ReadBox value={<span className="text-red-700">{pend.rows.length} pending · {fmt(pend.rows.reduce((s, r) => s + num(r.amount), 0))}</span>} className="w-[260px]" />
+                            <span className="flex-1" />
+                            <button type="button" onClick={() => askClose(() => setPendOpen(false))} className={ACTION_BTN}><span className="underline">C</span>lose</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {cashing && (
+                <Modal title="Cheque Cashed" onClose={() => setCashing(null)} small>
+                    <div className="flex flex-col gap-3 bg-[#e4e4fb] p-4 text-[14px]">
+                        <p>Cheque <b>{cashing.row.chq_no}</b> of <b>{cashing.row.voucher_no}</b> — {cashing.row.account}, <b>{fmt(num(cashing.row.amount))}</b>.
+                            Once cashed it counts in the ledger and is taken off the balance.</p>
+                        <label className="flex items-center gap-3">
+                            <span className={`${LABEL} text-[15px]`}>Cashed on</span>
+                            <input type="date" value={cashing.date} min={String(cashing.row.received).slice(0, 10)} max={today()}
+                                onChange={(e) => e.target.value && setCashing({ ...cashing, date: e.target.value })} className={`${EDIT} w-[170px]`} />
+                        </label>
+                        <div className="flex justify-end gap-2">
+                            <button type="button" onClick={cashCheque} className={ACTION_BTN}><span className="underline">O</span>K</button>
+                            <button type="button" onClick={() => setCashing(null)} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
+                        </div>
                     </div>
                 </Modal>
             )}

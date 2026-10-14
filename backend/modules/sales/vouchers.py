@@ -6,6 +6,11 @@ to that customer's unpaid sale invoices, oldest first, as confirmed
 installments — exactly how cash paid at a sale is recorded — so their balance,
 Sale Records and the ledger report all follow. Anything beyond what they owe
 stays on the voucher line as unallocated credit and is taken off their balance.
+
+A receipt by cheque can be saved as Pending: it is kept, but left out of the
+ledger and every balance (the ledger shows it in red) until it is marked
+Cashed - only then is it applied to the customer's invoices, from the day it
+was cashed.
 """
 import datetime
 from decimal import Decimal
@@ -66,7 +71,7 @@ def account_balance(acc, user):
             owed -= max(_d(po.total_amount) - _d(po.paid_amount), Z)
         extra = VoucherLine.objects.filter(account=acc, voucher__legacy=False).aggregate(u=Sum('unallocated'))['u'] or Z
         return owed - extra
-    agg = VoucherLine.objects.filter(account=acc).aggregate(d=Sum('debit'), c=Sum('credit'))
+    agg = VoucherLine.objects.filter(account=acc).exclude(voucher__chq_status='pending').aggregate(d=Sum('debit'), c=Sum('credit'))
     return (agg['d'] or Z) - (agg['c'] or Z)
 
 
@@ -104,7 +109,7 @@ def _allocate_to_purchases(supplier_id, amount, voucher, user, method):
     return left
 
 
-def _allocate_to_orders(customer_id, amount, voucher, user, method):
+def _allocate_to_orders(customer_id, amount, voucher, user, method, on=None):
     """Settle the customer's unpaid sale invoices (oldest first). Returns what
     could not be applied."""
     from modules.payments.models import TransactionPayment
@@ -132,7 +137,7 @@ def _allocate_to_orders(customer_id, amount, voucher, user, method):
         pay = min(due, left)
         tp = TransactionPayment.objects.create(
             source_type='order', source_id=str(o.id), amount=pay, method=method,
-            paid_at=datetime.datetime.combine(voucher.date, datetime.time(12, 0)),
+            paid_at=datetime.datetime.combine(on or voucher.date, datetime.time(12, 0)),
             reference=voucher.voucher_no, note=f'Receipt Voucher {voucher.voucher_no}', status='confirmed',
             direction='inbound', created_by=user if user.is_staff else None,
             warehouse_id=o.warehouse_id, tenant_id=o.tenant_id)
@@ -260,7 +265,8 @@ class VoucherViewSet(viewsets.ViewSet):
 
     def _create_receipt(self, request):
         """Receipt voucher. Body: {date?, receipt_as (cash/bank account id), staff?,
-        chq_no?, chq_date?, bank?, detail?, lines: [{account, amount}]}"""
+        chq_no?, chq_date?, bank?, detail?, lines: [{account, amount, note?}],
+        cheque only: chq_status ('pending' | 'cashed'), chq_received?, chq_cash_date?}"""
         from modules.company.models import LedgerAccount
         d = request.data
         accounts = scope_to_tenant(request.user, LedgerAccount.objects.all(), 'tenant')
@@ -277,34 +283,96 @@ class VoucherViewSet(viewsets.ViewSet):
                 return Response({'detail': f'Enter an amount for {acc.name}.'}, status=400)
             if acc.pk == cash.pk:
                 return Response({'detail': 'Receipt From and Receipt as cannot be the same account.'}, status=400)
-            lines.append((acc, amt))
+            lines.append((acc, amt, str(x.get('note') or '').strip()[:255]))
         if not lines:
             return Response({'detail': 'Add at least one Receipt From account with an amount.'}, status=400)
+        day = lambda k: datetime.date.fromisoformat(str(d.get(k))[:10]) if d.get(k) else None
         try:
-            vdate = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
-            chq_date = datetime.date.fromisoformat(str(d.get('chq_date'))[:10]) if d.get('chq_date') else None
+            vdate = day('date') or datetime.date.today()
+            chq_date, chq_received, chq_cash_date = day('chq_date'), day('chq_received'), day('chq_cash_date')
         except ValueError:
             return Response({'detail': 'Invalid date.'}, status=400)
         if vdate > datetime.date.today():
             return Response({'detail': 'The voucher date cannot be in the future.'}, status=400)
         chq_no = str(d.get('chq_no') or '').strip()[:40]
+        chq_status = ''
+        if chq_no:
+            chq_status = 'cashed' if d.get('chq_status') == 'cashed' else 'pending'
+            chq_received = chq_received or vdate
+            if chq_status == 'cashed':
+                chq_cash_date = chq_cash_date or datetime.date.today()
+                if chq_cash_date > datetime.date.today():
+                    return Response({'detail': 'A cashed cheque cannot have a cash date in the future - save it as Pending.'}, status=400)
+            if chq_cash_date and chq_cash_date < chq_received:
+                return Response({'detail': 'The cheque cash date cannot be before the day it was received.'}, status=400)
+        else:
+            chq_received = chq_cash_date = None
+        pending = chq_status == 'pending'
         method = 'cheque' if chq_no else ('bank_transfer' if cash.group_id and str(cash.acc_id).startswith('1204') and not cash.name.lower().startswith('cash') else 'cash')
         staff = SalesStaff.objects.filter(pk=d.get('staff')).first() if d.get('staff') else None
         detail = str(d.get('detail') or '').strip()[:255]
-        total = sum((a for _, a in lines), Z)
+        total = sum((a for _, a, _ in lines), Z)
         tid = tenant_id_for(request.user) or cash.tenant_id
         with transaction.atomic():
             v = Voucher.objects.create(
                 voucher_no=self.next_no(vdate), vtype='receipt', date=vdate, staff=staff,
                 chq_no=chq_no, chq_date=chq_date, bank=str(d.get('bank') or '').strip()[:80], detail=detail,
+                chq_status=chq_status, chq_received=chq_received, chq_cash_date=chq_cash_date,
                 total=total, created_by=request.user, tenant_id=tid)
-            for i, (acc, amt) in enumerate(lines, 1):
-                left = _allocate_to_orders(acc.customer_id, amt, v, request.user, method) if acc.customer_id else Z
+            for i, (acc, amt, note) in enumerate(lines, 1):
+                # A pending cheque settles nothing yet: it is applied when cashed.
+                left = _allocate_to_orders(acc.customer_id, amt, v, request.user, method, chq_cash_date) \
+                    if (acc.customer_id and not pending) else Z
                 VoucherLine.objects.create(voucher=v, line=i, account=acc, credit=amt, unallocated=left if acc.customer_id else Z,
-                                           detail=detail or f'Received from {acc.name}')
+                                           detail=' - '.join(x for x in (note, detail) if x) or f'Received from {acc.name}')
             VoucherLine.objects.create(voucher=v, line=len(lines) + 1, account=cash, debit=total,
                                        detail=detail or f'Receipt {v.voucher_no}')
-        return Response({'id': v.id, 'voucher_no': v.voucher_no, 'total': total}, status=status.HTTP_201_CREATED)
+        return Response({'id': v.id, 'voucher_no': v.voucher_no, 'total': total, 'chq_status': chq_status},
+                        status=status.HTTP_201_CREATED)
+
+    # Cheques received and not cashed yet
+    @action(detail=False, methods=['get'])
+    def pending_cheques(self, request):
+        """Pending cheques, the due ones (cash date reached) first; `due` counts them."""
+        today = datetime.date.today()
+        rows = []
+        for v in self._qs().filter(vtype='receipt', chq_status='pending').select_related('staff').prefetch_related('lines__account'):
+            frm = [ln for ln in v.lines.all() if ln.credit > 0]
+            days = (v.chq_cash_date - today).days if v.chq_cash_date else None
+            rows.append({
+                'id': v.id, 'voucher_no': v.voucher_no, 'date': v.date, 'chq_no': v.chq_no, 'chq_date': v.chq_date,
+                'bank': v.bank, 'received': v.chq_received or v.date, 'cash_date': v.chq_cash_date, 'amount': v.total,
+                'account': ', '.join(ln.account.name for ln in frm), 'acc_id': ', '.join(ln.account.acc_id for ln in frm),
+                'staff': v.staff.name if v.staff_id else '', 'days': days, 'due': days is not None and days <= 0,
+            })
+        rows.sort(key=lambda r: (not r['due'], str(r['cash_date'] or '9999'), r['voucher_no']))
+        return Response({'due': sum(1 for r in rows if r['due']), 'rows': rows})
+
+    @action(detail=True, methods=['post'])
+    def cash_cheque(self, request, pk=None):
+        """Mark a pending cheque Cashed (body: {date?}, default today). From that day it
+        counts in the ledger and is applied to the customer's unpaid invoices."""
+        try:
+            on = datetime.date.fromisoformat(str(request.data.get('date'))[:10]) if request.data.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        if on > datetime.date.today():
+            return Response({'detail': 'The cash date cannot be in the future.'}, status=400)
+        with transaction.atomic():
+            v = self._qs().select_for_update().filter(pk=pk, vtype='receipt').first()
+            if not v:
+                return Response({'detail': 'Voucher not found.'}, status=404)
+            if v.chq_status != 'pending':
+                return Response({'detail': f'Cheque {v.chq_no} of {v.voucher_no} is not pending.'}, status=400)
+            if on < (v.chq_received or v.date):
+                return Response({'detail': 'The cash date cannot be before the day the cheque was received.'}, status=400)
+            for ln in v.lines.filter(credit__gt=0).select_related('account'):
+                if ln.account.customer_id:
+                    ln.unallocated = _allocate_to_orders(ln.account.customer_id, ln.credit, v, request.user, 'cheque', on)
+                    ln.save(update_fields=['unallocated'])
+            v.chq_status, v.chq_cash_date = 'cashed', on
+            v.save(update_fields=['chq_status', 'chq_cash_date'])
+        return Response({'voucher_no': v.voucher_no, 'chq_status': 'cashed', 'cash_date': on})
 
     def list(self, request):
         """View Receipt Voucher Detail: ?voucher_no=, ?date_from=, ?date_to= — one row per line."""
@@ -327,6 +395,7 @@ class VoucherViewSet(viewsets.ViewSet):
                 'voucher_id': v.id, 'voucher_no': v.voucher_no, 'date': v.date, 'line': ln.line,
                 'acc_id': ln.account.acc_id, 'account': ln.account.name, 'detail': ln.detail,
                 'chq_no': v.chq_no, 'chq_date': v.chq_date, 'bank': v.bank,
+                'chq_status': v.chq_status, 'chq_received': v.chq_received, 'chq_cash_date': v.chq_cash_date,
                 'staff': v.staff.name if v.staff_id else '', 'debit': ln.debit, 'credit': ln.credit,
             })
         return Response(rows)

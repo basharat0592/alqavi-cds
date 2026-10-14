@@ -1060,6 +1060,7 @@ class TradeBankViewSet(viewsets.ViewSet):
         q = request.query_params
         lines = (scope_to_tenant(request.user, VoucherLine.objects.filter(account__acc_id=CHQ_ACC, debit__gt=0,
                                                                           cleared_by__isnull=True), 'voucher__tenant')
+                 .exclude(voucher__chq_status='pending')    # still with us - not cashed yet
                  .select_related('voucher', 'account'))
         out = []
         for l in lines.order_by('voucher__date', 'id')[:3000]:
@@ -1093,7 +1094,7 @@ class TradeBankViewSet(viewsets.ViewSet):
         with transaction.atomic():
             lines = list(scope_to_tenant(request.user, VoucherLine.objects.select_for_update().filter(
                 pk__in=d.get('lines') or [], account__acc_id=CHQ_ACC, debit__gt=0, cleared_by__isnull=True), 'voucher__tenant')
-                .select_related('voucher'))
+                .exclude(voucher__chq_status='pending').select_related('voucher'))
             if not lines:
                 return Response({'detail': 'Select the cheques to send.'}, status=400)
             total = sum((l.debit for l in lines), Z)

@@ -28,7 +28,8 @@ import FitStage from '@/components/trade/FitStage';
 
 type Rep = { key: string; label: string; filters: string[] };
 type Cat = { code: string; label: string; reports: (Rep | null)[] };
-type Row = { c: any[]; t: null | 'g' | 's' };
+// t: g group heading, s subtotal, p cheque pending (red, not in the balance)
+type Row = { c: any[]; t: null | 'g' | 's' | 'p' };
 type Result = { title: string; subtitle: string; columns: { h: string; a: 'l' | 'r' }[]; rows: Row[]; total: any[] | null };
 type Pick = { id: string; code: string; name: string } | null;
 
@@ -177,7 +178,7 @@ export default function TradeReports() {
                 {rows.map((r, i) => (r.t === 'g' ? (
                     <tr key={i}><td colSpan={res.columns.length} className="border border-slate-400 bg-[#f2f2fa] px-1.5 py-[3px] font-bold text-[#1f2bd6]">{r.c[0]}</td></tr>
                 ) : (
-                    <tr key={i} className={r.t === 's' ? 'bg-[#fafafa] font-bold' : ''}>
+                    <tr key={i} className={r.t === 's' ? 'bg-[#fafafa] font-bold' : r.t === 'p' ? 'font-semibold text-red-600' : ''}>
                         {res.columns.map((c, k) => (
                             <td key={k} className={`max-w-[60mm] overflow-hidden text-ellipsis whitespace-nowrap border border-slate-300 px-1.5 py-[2px] tabular-nums ${c.a === 'r' ? 'text-right' : ''}`}>{show(r.c[k])}</td>
                         ))}

@@ -52,6 +52,12 @@ class Voucher(models.Model):
     bank = models.CharField(max_length=80, blank=True, default='')
     detail = models.CharField(max_length=255, blank=True, default='')
     total = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    # Receipt by cheque: 'pending' until it is cashed — a pending cheque is
+    # left out of the ledger and balances (shown in red); 'cashed' counts.
+    chq_status = models.CharField(max_length=10, blank=True, default='')
+    chq_received = models.DateField(null=True, blank=True)
+    # Pending: the day it is due to be cashed (alert from then on). Cashed: the day it was.
+    chq_cash_date = models.DateField(null=True, blank=True)
     # Imported from the legacy Trade VoucherDetail (re-import replaces only these).
     legacy = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

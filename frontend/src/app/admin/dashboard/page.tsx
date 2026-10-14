@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
+import api from '@/lib/axios';
 import { openPopup } from '@/lib/popup';
 import FitStage from '@/components/trade/FitStage';
 import { canOpen, loadMyPerms, type MyPerms } from '@/lib/tradePerms';
@@ -406,6 +407,18 @@ export default function AdminDashboard() {
         return () => { cancelled = true; };
     }, []);
 
+    // Cheques received and due to be cashed (cash date reached): a red alert.
+    const [chq, setChq] = useState<{ due: number; amount: number; names: string[] }>({ due: 0, amount: 0, names: [] });
+    useEffect(() => {
+        const load = () => api.get('v1/sales/vouchers/pending_cheques/').then(({ data }) => {
+            const due = (data.rows || []).filter((r: any) => r.due);
+            setChq({ due: due.length, amount: due.reduce((s: number, r: any) => s + (parseFloat(r.amount) || 0), 0), names: due.slice(0, 3).map((r: any) => r.account) });
+        }).catch(() => { /* no alert */ });
+        load();
+        window.addEventListener('focus', load);
+        return () => window.removeEventListener('focus', load);
+    }, []);
+
     // Default the expiry filter to 6 months out so near-term expiries show by default.
     const defaultBefore = useMemo(() => { const d = new Date(); d.setMonth(d.getMonth() + 6); return d; }, []);
     const [before, setBefore] = useState<string>(() => toInputValue(defaultBefore));
@@ -431,6 +444,15 @@ export default function AdminDashboard() {
         <div className="flex min-h-full flex-col bg-white font-sans text-slate-800 lg:h-full lg:min-h-0 lg:overflow-hidden">
             <style>{DASH_CSS}</style>
             <MenuBar />
+            {chq.due > 0 && (
+                <button type="button" onClick={() => openPopup('/admin/trade/receipt-voucher?cheques=1')}
+                    className="flex shrink-0 items-center justify-center gap-3 border-y border-red-700 bg-red-600 px-4 py-1.5 text-[14px] font-bold text-white hover:bg-red-700">
+                    <span className="animate-pulse">⚠</span>
+                    {chq.due} cheque{chq.due > 1 ? 's' : ''} due for cashing — {chq.amount.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                    {chq.names.length > 0 && <span className="font-semibold text-red-100">({chq.names.join(', ')}{chq.due > chq.names.length ? ' …' : ''})</span>}
+                    <span className="underline">Show</span>
+                </button>
+            )}
 
             <div className="grid flex-1 grid-cols-1 gap-4 p-3 md:p-4 lg:min-h-0 lg:grid-cols-[minmax(0,1.38fr)_minmax(0,1fr)] lg:gap-6 lg:overflow-hidden lg:p-5">
                         {/* ─── Left: brand + action grid ─── */}
