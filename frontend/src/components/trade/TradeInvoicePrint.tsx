@@ -9,6 +9,9 @@
  *   stacked in one narrow column.
  *
  * `@page` is document-wide, so only the chosen layout is rendered.
+ *
+ * Without prices (?prices=0, or the toolbar choice): products, cartons,
+ * quantity and bonus only — no rates, amounts, discounts or balances.
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -188,6 +191,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     const [size, setSize] = useState<InvoiceSize>('a4');
     const [custom, setCustom] = useState({ w: 210, h: 297 });
     const [autoPrint, setAutoPrint] = useState(false);
+    const [prices, setPrices] = useState(() => typeof window === 'undefined' || new URLSearchParams(window.location.search).get('prices') !== '0');
     // A roll has no fixed page length: the slip's page is exactly as long as
     // its content (measured after layout), so the printer feeds no blank paper.
     const [slipH, setSlipH] = useState(0);
@@ -268,7 +272,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     const downloadPdf = async () => {
         if (busy || !inv) return;
         setBusy(true);
-        try { (await makePdf()).save(`Invoice-${inv.invoice_no}.pdf`); }
+        try { (await makePdf()).save(`Invoice-${inv.invoice_no}${prices ? '' : '-no-prices'}.pdf`); }
         catch (e: any) { setErr(e?.message || 'Could not make the PDF.'); }
         finally { setBusy(false); }
     };
@@ -341,6 +345,13 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                     </span>
                 )}
                 <span className="mx-1 h-6 w-px bg-slate-200" />
+                {[true, false].map((v) => (
+                    <button key={String(v)} type="button" onClick={() => setPrices(v)}
+                        className={`h-8 rounded-md border px-3 text-[13px] font-semibold ${prices === v ? 'border-[#3d3f95] bg-[#3d3f95] text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}>
+                        {v ? 'With prices' : 'Without prices'}
+                    </button>
+                ))}
+                <span className="mx-1 h-6 w-px bg-slate-200" />
                 {!token && <>
                 <button type="button" onClick={sendWhatsApp} disabled={!inv || sharing}
                     className="h-8 rounded-md bg-[#25D366] px-3 text-[13px] font-bold text-white hover:bg-[#1eb457] disabled:opacity-50">
@@ -391,8 +402,8 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             {err && <p className="no-print text-center text-[14px] font-semibold text-red-600">{err}</p>}
             {!inv && !err && <p className="no-print text-center text-[14px] text-slate-500">Loading invoice…</p>}
 
-            {inv && !isSlip && <Sheet inv={inv} paper={paper} />}
-            {inv && isSlip && <Slip inv={inv} widthMm={slipW} onHeight={setSlipH} />}
+            {inv && !isSlip && <Sheet inv={inv} paper={paper} prices={prices} />}
+            {inv && isSlip && <Slip inv={inv} widthMm={slipW} onHeight={setSlipH} prices={prices} />}
         </div>
     );
 }
@@ -410,7 +421,7 @@ const B = '0.3mm solid #222';
 export const SOLE_DISTRIBUTORS = 'SOLE DISTRIBUTORS of Mother Care, BNB Cosmetics, Baba Cosmetics, Doctor Paste, Bio Amla, Kidi Diapers, '
     + 'Santex Ladies Pads, Aish, Face Fresh, Luvel, Amour Diapers, Grace, Pink and White, Perfume — and products of all companies are available at reasonable prices.';
 
-function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m: number } }) {
+function Sheet({ inv, paper, prices = true }: { inv: Invoice; paper: { w: number; h: number; m: number }; prices?: boolean }) {
     const t = inv.totals;
     const c = inv.customer;
     const pf = inv.profile || DEFAULT_PROFILE;
@@ -456,7 +467,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
             if (i >= rows.length) { out.push([]); break; } // totals alone on a last sheet
         }
         setPages(out.length ? out : [[]]);
-    }, [inv, zoom, pageH, paper.m, layoutTick]);
+    }, [inv, zoom, pageH, paper.m, layoutTick, prices]);
     // Fonts and images arriving can change heights: measure again when they do.
     useEffect(() => {
         const el = mRef.current;
@@ -573,9 +584,10 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
     const Thead = (
                             <thead>
                                 <tr style={{ background: '#ececec' }}>
-                                    {th('S.No', false, mm(8, 8.5))}{th('PID', false, mm(11, 11.5))}{th('Product Name')}{th('Carton', true, mm(12, 11))}{th('Qty', true, mm(10, 9))}
-                                    {th('Bon', true, mm(8, 7.5))}{th('TP', true, mm(15, 15.5))}{th('Retail', true, mm(15, 15.5))}{th('Special Disc %', true, mm(13, 14))}
-                                    {th('Shelf Rent %', true, mm(12, 13))}{th('Net Amount', true, mm(20, 21))}
+                                    {th('S.No', false, mm(8, 8.5))}{th('PID', false, mm(11, 11.5))}{th('Product Name')}{th('Carton', true, prices ? mm(12, 11) : mm(16, 15))}{th('Qty', true, prices ? mm(10, 9) : mm(16, 15))}
+                                    {th('Bon', true, prices ? mm(8, 7.5) : mm(14, 13))}
+                                    {prices && <>{th('TP', true, mm(15, 15.5))}{th('Retail', true, mm(15, 15.5))}{th('Special Disc %', true, mm(13, 14))}
+                                    {th('Shelf Rent %', true, mm(12, 13))}{th('Net Amount', true, mm(20, 21))}</>}
                                 </tr>
                             </thead>
     );
@@ -584,18 +596,19 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                         {td(i + 1, true)}{td(l.pid)}
                                         {td(<>{pn(l.name, fs(5.8))}{l.expiry_date ? <span style={{ color: '#666', fontSize: compact ? fs(5.4) : fs(6.3) }}> · Exp {dmy(l.expiry_date)}</span> : null}</>)}
                                         {td(isCarton(l) ? cartonCount(l).replace(' Ctn', '') : '', true)}
-                                        {td(qtyFmt(l.qty), true)}{td(qtyFmt(l.bonus), true)}{td(money(l.tp), true)}{td(money(l.retail), true)}
-                                        {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}{td(money(l.net), true, true)}
+                                        {td(qtyFmt(l.qty), true, !prices)}{td(qtyFmt(l.bonus), true)}
+                                        {prices && <>{td(money(l.tp), true)}{td(money(l.retail), true)}
+                                        {td(money(l.special_pct), true)}{td(money(l.shelf_pct), true)}{td(money(l.net), true, true)}</>}
                                     </tr>
     );
     const Total = (
                                 <tr data-m="total" style={{ background: '#f4f4f4', fontWeight: 700 }}>
                                     <td colSpan={3} style={{ border: B, padding: '0.6mm 1.1mm' }}>Total ({inv.lines.length} item{inv.lines.length === 1 ? '' : 's'})</td>
                                     {td(cartons || '', true, true)}{td(qtyFmt(t.pieces), true, true)}{td(qtyFmt(t.bonus), true, true)}
-                                    <td colSpan={2} style={{ border: B }} />
+                                    {prices && <><td colSpan={2} style={{ border: B }} />
                                     {td(<span style={compact ? { fontSize: fs(6.3) } : undefined}>{money(inv.lines.reduce((a, l) => a + n(l.special_pct), 0))}%</span>, true, true)}
                                     {td(<span style={compact ? { fontSize: fs(6.3) } : undefined}>{money(inv.lines.reduce((a, l) => a + n(l.shelf_pct), 0))}%</span>, true, true)}
-                                    {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}
+                                    {td(money(n(t.gross) - n(t.special) - n(t.shelf)), true, true)}</>}
                                 </tr>
     );
     const Summary = (
@@ -655,7 +668,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                 <div style={part}>
                     <div data-m="details">{Details}</div>
                     <table data-m="mtable" style={tbl}>{Thead}<tbody>{inv.lines.map(Row)}{Total}</tbody></table>
-                    <div data-m="summary">{Summary}</div>
+                    <div data-m="summary">{prices && Summary}</div>
                 </div>
                 <div data-m="foot">{Foot}</div>
             </div>
@@ -674,7 +687,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
                                     <tbody>{idx.map((i) => Row(inv.lines[i], i))}{last && Total}</tbody>
                                 </table>
                             )}
-                            {last && <div>{Summary}</div>}
+                            {last && prices && <div>{Summary}</div>}
                         </div>
                         {Foot}
                     </div>
@@ -689,7 +702,7 @@ function Sheet({ inv, paper }: { inv: Invoice; paper: { w: number; h: number; m:
    monogram, Urdu name, "Sale Invoice", proprietor + region + phones; invoice /
    customer details; lines; totals; the 15-day alert; shops, distributors,
    terms and signatures. Black only — thermal heads print no colour. */
-function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHeight: (mm: number) => void }) {
+function Slip({ inv, widthMm, onHeight, prices = true }: { inv: Invoice; widthMm: number; onHeight: (mm: number) => void; prices?: boolean }) {
     const ref = useRef<HTMLDivElement>(null);
     useLayoutEffect(() => {
         const el = ref.current;
@@ -753,12 +766,12 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
                     <div style={{ fontWeight: 600 }}>{i + 1}. {pn(l.name)}</div>
                     <div className="flex justify-between">
                         <span>
-                            {isCarton(l) ? `Carton ${cartonCount(l)} = ${qtyFmt(l.qty)} pcs` : `Piece ${qtyFmt(l.qty)} pcs`} × {money(l.tp)}
+                            {isCarton(l) ? `Carton ${cartonCount(l)} = ${qtyFmt(l.qty)} pcs` : `Piece ${qtyFmt(l.qty)} pcs`}{prices ? ` × ${money(l.tp)}` : ''}
                             {l.bonus ? ` +${qtyFmt(l.bonus)} bon` : ''}
                         </span>
-                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>{money(l.gross)}</span>
+                        {prices && <span style={{ fontVariantNumeric: 'tabular-nums' }}>{money(l.gross)}</span>}
                     </div>
-                    {(n(l.special) > 0 || n(l.shelf) > 0) && (
+                    {prices && (n(l.special) > 0 || n(l.shelf) > 0) && (
                         <div className="flex justify-between" style={{ fontSize: `${fs - 0.5}pt` }}>
                             <span>{[n(l.special) > 0 ? `Special Disc ${pct(l.special_pct)}` : '', n(l.shelf) > 0 ? `Shelf Rent ${pct(l.shelf_pct)}` : ''].filter(Boolean).join(' · ')}</span>
                             <span>-{money(n(l.special) + n(l.shelf))}</span>
@@ -768,6 +781,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             ))}
             {rule}
             <div>Total Carton = {inv.lines.reduce((s2, l) => s2 + (isCarton(l) ? Math.floor(l.qty / l.carton) : 0), 0)} · Total Pcs = {qtyFmt(t.pieces)}{t.bonus ? ` (+${qtyFmt(t.bonus)} bonus)` : ''}</div>
+            {prices && <>
             {row('Previous Amount', t.prev_balance)}
             {row('Total Amount', t.gross, true)}
             {row('Total Special Discount', n(t.special) + n(t.bill_disc))}
@@ -776,6 +790,7 @@ function Slip({ inv, widthMm, onHeight }: { inv: Invoice; widthMm: number; onHei
             <div style={{ borderTop: '0.4mm solid #000', marginTop: '0.8mm', paddingTop: '0.4mm' }}>
                 {row('Total Remaining Balance', n(t.prev_balance) + n(t.gross) - n(t.special) - n(t.shelf) - n(t.bill_disc) - n(t.paid), true)}
             </div>
+            </>}
             {rule}
             {/* Footer — as on the page invoice */}
             {shop(SHOP_GILGIT_UR)}

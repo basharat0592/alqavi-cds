@@ -7,9 +7,10 @@
  * Tax / Net Amount / Paid Cash / Balance. Printed through a PDF like the sale
  * invoice, so every printer gives the same page. ?print=1 prints on open.
  *
- * A purchase order (K…) prints as "Purchase Order": PID, product, cartons and
- * quantity, with Pur.Rate / Sub Total / Amount — or, "Without prices"
- * (?prices=0, or the toolbar choice), the products and quantities only.
+ * A purchase order (K…) prints as "Purchase Order": PID, product and
+ * quantity, with Pur.Rate / Sub Total / Amount. Either one "Without prices"
+ * (?prices=0, or the toolbar choice): products, quantities (bonus, expiry)
+ * only — no rates, amounts or totals.
  */
 import { useEffect, useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
@@ -76,7 +77,7 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
             <div className="mx-auto mb-4 flex w-fit items-center gap-2 border border-slate-300 bg-white px-3 py-2 shadow-sm">
                 <span className="text-[13px] font-bold text-slate-600">{title} {p.purchase_no}</span>
                 <span className="mx-1 h-6 w-px bg-slate-200" />
-                {isOrder && (<>
+                {(<>
                     {[true, false].map((v) => (
                         <button key={String(v)} type="button" onClick={() => setPrices(v)}
                             className={`h-8 border px-3 text-[13px] font-semibold ${prices === v ? 'border-[#3d3f95] bg-[#3d3f95] text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}>
@@ -85,7 +86,7 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
                     ))}
                     <span className="mx-1 h-6 w-px bg-slate-200" />
                 </>)}
-                <button type="button" onClick={() => run(`${isOrder ? 'Purchase-Order' : 'Purchase'}-${p.purchase_no}${isOrder && !prices ? '-no-prices' : ''}.pdf`)} disabled={busy} className="h-8 border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">PDF</button>
+                <button type="button" onClick={() => run(`${isOrder ? 'Purchase-Order' : 'Purchase'}-${p.purchase_no}${!prices ? '-no-prices' : ''}.pdf`)} disabled={busy} className="h-8 border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">PDF</button>
                 <button type="button" onClick={() => run()} disabled={busy} className="flex h-8 items-center gap-1.5 bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
                     <Printer size={14} /> {busy ? 'Preparing…' : 'Print'}
                 </button>
@@ -141,23 +142,25 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
                                 </table>
                                 ) : (
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt' }}>
-                                    <thead><tr>{th('S.No', true, '9mm')}{th('PID', false, '13mm')}{th('Product Name')}{th('Qty', true, '12mm')}{th('Bonus', true, '11mm')}{th('Exp.Date', false, '18mm')}{th('Pur.Rate', true, '17mm')}{th('Sale Rate', true, '16mm')}{th('Retail', true, '15mm')}{th('Sub Total', true, '22mm')}</tr></thead>
+                                    <thead><tr>{th('S.No', true, '9mm')}{th('PID', false, '13mm')}{th('Product Name')}{th('Qty', true, prices ? '12mm' : '20mm')}{th('Bonus', true, prices ? '11mm' : '18mm')}{th('Exp.Date', false, prices ? '18mm' : '24mm')}
+                                        {prices && <>{th('Pur.Rate', true, '17mm')}{th('Sale Rate', true, '16mm')}{th('Retail', true, '15mm')}{th('Sub Total', true, '22mm')}</>}</tr></thead>
                                     <tbody>
                                         {idx.map((i) => {
                                             const l = p.lines[i];
-                                            return <tr key={i}>{td(i + 1, true)}{td(l.pid)}{td(pn(l.name, '6.5pt'))}{td(qty(l.qty), true)}{td(n(l.bonus) ? qty(l.bonus) : '', true)}{td(dmy(l.expiry_date))}{td(money(l.pur_rate), true)}{td(money(l.sale_rate), true)}{td(money(l.retail_rate), true)}{td(money(l.sub_total), true, true)}</tr>;
+                                            return <tr key={i}>{td(i + 1, true)}{td(l.pid)}{td(pn(l.name, '6.5pt'))}{td(qty(l.qty), true, !prices)}{td(n(l.bonus) ? qty(l.bonus) : '', true)}{td(dmy(l.expiry_date))}
+                                                {prices && <>{td(money(l.pur_rate), true)}{td(money(l.sale_rate), true)}{td(money(l.retail_rate), true)}{td(money(l.sub_total), true, true)}</>}</tr>;
                                         })}
                                         {last && (
                                             <tr style={{ background: '#f4f4f4', fontWeight: 700 }}>
                                                 <td colSpan={3} style={{ border: B, padding: '0.8mm 1.2mm' }}>Total ({p.lines.length} item{p.lines.length === 1 ? '' : 's'})</td>
                                                 {td(qty(p.lines.reduce((s, l) => s + n(l.qty), 0)), true, true)}{td(qty(p.lines.reduce((s, l) => s + n(l.bonus), 0)), true, true)}
-                                                <td colSpan={4} style={{ border: B }} />{td(money(p.amount), true, true)}
+                                                {prices ? <><td colSpan={4} style={{ border: B }} />{td(money(p.amount), true, true)}</> : <td style={{ border: B }} />}
                                             </tr>
                                         )}
                                     </tbody>
                                 </table>
                                 )}
-                                {last && !isOrder && (
+                                {last && !isOrder && prices && (
                                     <table style={{ marginTop: '3mm', marginLeft: 'auto', width: '80mm', borderCollapse: 'collapse', fontSize: '8.5pt' }}>
                                         <tbody>
                                             {([['Amount', p.amount], ['Extra Disc', p.extra_disc], ['Freight', p.freight], ['Fare', p.fare], ['Goods', p.goods], ['Extra Tax', p.tax], ['Net Amount', p.net], ['Paid Cash', p.paid], ['Balance', balance]] as const)

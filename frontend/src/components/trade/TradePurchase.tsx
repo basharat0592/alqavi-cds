@@ -220,12 +220,12 @@ export default function TradePurchase() {
         setBillNo(''); setExtraDisc(''); setFreight(''); setFare(''); setGoods(''); setTax(''); setPaid(''); setStaffId(''); setDate(today()); setHistory([]); loadNo();
     };
     const [saving, setSaving] = useState(false);
-    const printInvoice = () => {
-        if (lines.length) { save(true); return; }
-        if (lastId) { openPopup(`/admin/trade/purchase-invoice/${lastId}?print=1`); return; }
+    const printInvoice = (prices = true) => {
+        if (lines.length) { save(true, prices); return; }
+        if (lastId) { openPopup(`/admin/trade/purchase-invoice/${lastId}?print=1${prices ? '' : '&prices=0'}`); return; }
         toast.error('Save a purchase first (or enter one and choose Print › Invoice).');
     };
-    const save = (print = false) => {
+    const save = (print = false, prices = true) => {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
         if (num(paid) > net + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
@@ -246,7 +246,7 @@ export default function TradePurchase() {
                     toast.success(`Purchase ${data.purchase_no} saved${data.voucher_no ? ` — Voucher ${data.voucher_no}` : ''}.`);
                     setLastId(data.id);
                     if (print) {
-                        const url = `/admin/trade/purchase-invoice/${data.id}?print=1`;
+                        const url = `/admin/trade/purchase-invoice/${data.id}?print=1${prices ? '' : '&prices=0'}`;
                         if (win && !win.closed) win.location.href = url; else openPopup(url);
                     }
                     setVoucherNo(data.voucher_no || '');
@@ -427,8 +427,12 @@ export default function TradePurchase() {
                             <button type="button" onClick={() => save()} disabled={saving || missing.length > 0} className={ACTION_BTN}>
                                 {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                             </button>
-                            <PrintChoiceButton onInvoice={printInvoice} invoiceDisabled={saving || (!lastId && missing.length > 0)}
-                                invoiceHint={lines.length ? 'Save and print the purchase invoice' : 'Print the last purchase saved'} className={`${ACTION_BTN} !min-w-0 !px-3`} />
+                            <PrintChoiceButton className={`${ACTION_BTN} !min-w-0 !px-3`} choices={[
+                                { label: 'Invoice — with prices', onClick: () => printInvoice(true), disabled: saving || (!lastId && missing.length > 0),
+                                  hint: lines.length ? 'Save and print the purchase invoice' : 'Print the last purchase saved' },
+                                { label: 'Invoice — without prices', onClick: () => printInvoice(false), disabled: saving || (!lastId && missing.length > 0),
+                                  hint: 'Products, quantities, bonus and expiry only' },
+                            ]} />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => setView({ rows: null, filter: true })} className={`${ACTION_BTN} !min-w-0`}><span className="underline">V</span>iew</button>

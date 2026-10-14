@@ -1749,14 +1749,14 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const [srSel, setSrSel] = useState('');
     // Clicking a record opens the legacy action box.
     const [srAction, setSrAction] = useState<any | null>(null);
-    const [srChoice, setSrChoice] = useState<'print' | 'return_all' | 'return_some'>('print');
+    const [srChoice, setSrChoice] = useState<'print' | 'print_np' | 'return_all' | 'return_some'>('print');
     const runSrAction = () => {
         const r = srAction;
         if (!r) return;
         setSrAction(null);
-        if (srChoice === 'print') {
+        if (srChoice === 'print' || srChoice === 'print_np') {
             if (!r.id) { toast.error('This record has no printable invoice.'); return; }
-            openPopup(`/admin/trade/invoice/${r.id}?print=1`);
+            openPopup(`/admin/trade/invoice/${r.id}?print=1${srChoice === 'print_np' ? '&prices=0' : ''}`);
         } else if (!r.id) {
             toast.error('Pick a sale (not a return) to make a return from.');
         } else if (srChoice === 'return_all') {
@@ -2043,7 +2043,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     ].filter(Boolean) as string[];
     const saveHint = saveMissing.length ? `To save, fill in: ${saveMissing.join(', ')}` : 'Save the invoice';
 
-    const saveInvoice = async (print: boolean) => {
+    const saveInvoice = async (print: boolean, prices = true) => {
         if (saving) return;
         if (saveMissing.length) { toast.error(saveHint); return; }
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
@@ -2120,7 +2120,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     .catch(() => { /* not connected / no number: share from the invoice page */ });
             }
             if (print && order?.id) {
-                const url = `/admin/trade/invoice/${order.id}?print=1&size=${printSize}`;
+                const url = `/admin/trade/invoice/${order.id}?print=1&size=${printSize}${prices ? '' : '&prices=0'}`;
                 if (printWin && !printWin.closed) printWin.location.href = url;
                 else openPopup(url);
             }
@@ -2415,8 +2415,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             {INVOICE_SIZES.map((o) => <option key={o.v} value={o.v}>{o.v === 'a5s' ? 'A5 sideways' : o.v === 'a5' ? 'A5 upright' : o.label.replace('Slip ', '')}</option>)}
                         </select>
                         {/* Print: the invoice (saves it first, Ctrl+P) or the window as shown. */}
-                        <PrintChoiceButton onInvoice={() => saveInvoice(true)} invoiceDisabled={saving || saveMissing.length > 0}
-                            invoiceHint={saveHint || 'Save and print the invoice (Ctrl+P)'} className={ACTION_BTN} />
+                        <PrintChoiceButton className={ACTION_BTN} choices={[
+                            { label: 'Invoice — with prices', onClick: () => saveInvoice(true), disabled: saving || saveMissing.length > 0, hint: saveHint || 'Save and print the invoice (Ctrl+P)' },
+                            { label: 'Invoice — without prices', onClick: () => saveInvoice(true, false), disabled: saving || saveMissing.length > 0, hint: saveHint || 'Save and print products and quantities only' },
+                        ]} />
                         <button type="button" onClick={() => openSaleRecords()} className={ACTION_BTN}><span className="underline">V</span>iew</button>
                         <button type="button" onClick={closeWindow} className={ACTION_BTN}><span className="underline">C</span>lose</button>
                     </div>
@@ -2868,7 +2870,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 <Modal title={`Sale Records — ${srAction.sale_id}`} onClose={() => askClose(() => setSrAction(null))} small>
                     <div className="flex items-center gap-4 bg-[#e4e4fb] p-5">
                         <div className="flex flex-1 flex-col gap-3 rounded-lg border-2 border-[#3b3f8f] bg-[#ececfd] px-5 py-4">
-                            {([['print', 'Print Sale Invoice'], ['return_all', 'Sale Return Complete Bill'], ['return_some', 'Sale Return Random']] as const).map(([v, label]) => (
+                            {([['print', 'Print Sale Invoice'], ['print_np', 'Print Sale Invoice (without prices)'], ['return_all', 'Sale Return Complete Bill'], ['return_some', 'Sale Return Random']] as const).map(([v, label]) => (
                                 <label key={v} className="flex cursor-pointer items-center gap-3 text-[16px] font-bold text-slate-800">
                                     <input type="radio" name="sr-action" checked={srChoice === v} onChange={() => setSrChoice(v)}
                                         className="h-4 w-4 accent-[#3b3f8f]" />
