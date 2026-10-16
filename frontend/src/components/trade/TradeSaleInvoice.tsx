@@ -43,6 +43,8 @@ type Line = {
 type Entry = {
     product: LookupProduct | null; batchId: string;
     code: string; unit: SaleUnit; qtyP: string; qtyU: string; bonus: string; tp: string; discPct: string; shelfPct: string;
+    // Pieces per carton typed here when the product has none yet (the legacy data kept no cartons).
+    ctn?: string;
 };
 // PIECE: Qty(P) packs × Packing + Qty(U) loose pieces. CARTON: Qty(C) cartons × pieces per carton + Qty(U).
 
@@ -955,6 +957,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const codeRef = useRef<HTMLInputElement>(null);
     const unitRef = useRef<HTMLSelectElement>(null);
     const qtyPRef = useRef<HTMLInputElement>(null);
+    const ctnRef = useRef<HTMLInputElement>(null);
     const qtyURef = useRef<HTMLInputElement>(null);
     const bonRef = useRef<HTMLInputElement>(null);
     const tpRef = useRef<HTMLInputElement>(null);
@@ -1644,10 +1647,11 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const p = entry.product;
     const batch = p?.batches.find((b) => b.id === entry.batchId) || null;
     const packing = p?.packing || 1;
-    const cartonPcs = p?.carton || 0;
-    // With no product loaded the chosen unit is kept for the next one.
-    const unit: SaleUnit = entry.unit === 'CARTON' && (!p || cartonPcs > 0) ? 'CARTON' : 'PIECE';
-    const perQty = unit === 'CARTON' ? cartonPcs || 1 : packing;
+    // A product with no carton size yet: Carton can still be chosen and Pcs/Ctn typed (saved to the product).
+    const needCtn = !!p && !(p.carton > 0);
+    const cartonPcs = p?.carton || Math.max(0, Math.floor(num(entry.ctn)));
+    const unit: SaleUnit = entry.unit === 'CARTON' ? 'CARTON' : 'PIECE';
+    const perQty = unit === 'CARTON' ? cartonPcs : packing;
     const totalUnits = num(entry.qtyP) * perQty + num(entry.qtyU);
     const bonus = num(entry.bonus);
     const tp = num(entry.tp);
@@ -1665,6 +1669,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const addLine = () => {
         if (!p) { toast.error('Enter a product code first.'); codeRef.current?.focus(); return; }
         if (!batch) { toast.error('This product has no stock batch to sell from.'); return; }
+        if (unit === 'CARTON' && cartonPcs < 2) { toast.error('Enter the pieces in one carton (Pcs/Ctn).'); ctnRef.current?.focus(); return; }
         if (totalUnits <= 0) { toast.error('Enter a quantity.'); qtyPRef.current?.focus(); return; }
         if (totalUnits + bonus > batchLeft) {
             toast.error(`Only ${batchLeft} unit(s) left in batch ${ymd(batch.expiry_date)}.`);
@@ -1676,6 +1681,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             qty: totalUnits, bonus, tp, retail: num(batch.retail_price) || num(p.retail_price),
             discPct, shelfPct, cost: purRate, unit, carton: cartonPcs,
         }]);
+        // The carton size typed for a product that had none: kept on the product from now on.
+        if (unit === 'CARTON' && needCtn) {
+            api.post('v1/products/items/set_carton/', { id: p.id, carton: cartonPcs })
+                .then(() => toast.success(`${p.name}: ${cartonPcs} pieces per carton saved.`))
+                .catch(() => toast.error('Could not save the carton size on the product.'));
+        }
         // The next line starts with the same unit and shelf rate (one shop's shelf).
         setEntry({ ...EMPTY_ENTRY, unit: entry.unit, shelfPct: entry.shelfPct });
         setSelected(-1);
@@ -2043,7 +2054,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         !lines.length && 'at least one Product',
         !salesman && 'Saleman',
         !backDate && 'Sale Date (tick it)',
-        paidCash.trim() === '' && 'Paid Cash (0 for credit)',
+        // Cash or card is enough; 0 in Paid Cash for a sale fully on credit.
+        paidCash.trim() === '' && paidCard.trim() === '' && 'Paid Cash or Paid by Card (0 for credit)',
     ].filter(Boolean) as string[];
     const saveHint = saveMissing.length ? `To save, fill in: ${saveMissing.join(', ')}` : 'Save the invoice';
 
@@ -2219,17 +2231,25 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     </button>
                     <input ref={codeRef} value={entry.code} onChange={setE('code')} onKeyDown={onEnter(resolveCode)} className={`${EDIT} w-full`} aria-label="Product code" />
                     <select ref={unitRef} value={unit} aria-label="Sell by"
-                        onChange={(e) => setEntry((x) => ({ ...x, unit: e.target.value as SaleUnit }))}
+                        onChange={(e) => {
+                            const u = e.target.value as SaleUnit;
+                            setEntry((x) => ({ ...x, unit: u }));
+                            if (u === 'CARTON' && needCtn) setTimeout(() => ctnRef.current?.focus(), 0);
+                        }}
                         onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); qtyPRef.current?.focus(); } }}
-                        title={p && !cartonPcs ? 'No carton size set for this product (Product Detail › Carton)' : undefined}
                         className={`${EDIT} w-full px-1.5`}>
                         <option value="PIECE">Piece</option>
-                        <option value="CARTON" disabled={!!p && !cartonPcs}>Carton</option>
+                        <option value="CARTON">Carton</option>
                     </select>
                     <input ref={qtyPRef} value={entry.qtyP} onChange={setE('qtyP')} onKeyDown={onEnter(() => qtyURef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label={unit === 'CARTON' ? 'Quantity in cartons' : 'Quantity in packs'} />
                     <input ref={qtyURef} value={entry.qtyU} onChange={setE('qtyU')} onKeyDown={onEnter(() => bonRef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Quantity in units" />
                     <ReadBox value={totalUnits ? fmt(totalUnits) : ''} className="justify-end" />
-                    <ReadBox value={p ? perQty : ''} className="justify-end" />
+                    {unit === 'CARTON' && needCtn ? (
+                        <input ref={ctnRef} value={entry.ctn || ''} onChange={(e) => setEntry((x) => ({ ...x, ctn: e.target.value.replace(/\D/g, '') }))}
+                            onKeyDown={onEnter(() => qtyPRef.current?.focus())} inputMode="numeric" placeholder="pcs"
+                            title="This product has no carton size yet — enter the pieces in one carton (saved to the product)"
+                            className={`${EDIT} w-full !border-amber-400 !bg-[#fff6d6] text-right`} aria-label="Pieces per carton" />
+                    ) : <ReadBox value={p ? perQty : ''} className="justify-end" />}
                     <input ref={bonRef} value={entry.bonus} onChange={setE('bonus')} onKeyDown={onEnter(() => tpRef.current?.focus())} inputMode="numeric" className={`${EDIT} w-full`} aria-label="Bonus units" />
                     <input ref={tpRef} value={entry.tp} onChange={setE('tp')} onKeyDown={onEnter(() => discRef.current?.focus())} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Unit trade price" />
                     <input ref={discRef} value={entry.discPct} onChange={setE('discPct')} onKeyDown={onEnter(() => shelfRef.current?.focus())} inputMode="decimal" className={`${EDIT} w-full`} aria-label="Special discount percent" />

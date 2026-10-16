@@ -470,6 +470,23 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             b.refresh_from_db()
         return Response(self._rate_row(p, b, date.today()))
 
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def set_carton(self, request):
+        """Pieces per carton of one product (body: {id, carton}), set from the Sale
+        Invoice when a product has none yet — the legacy data never kept cartons."""
+        p = self.get_queryset().filter(pk=request.data.get('id')).first()
+        if not p:
+            return Response({'error': 'Product not found.'}, status=404)
+        try:
+            n = int(request.data.get('carton') or 0)
+        except (TypeError, ValueError):
+            n = 0
+        if n < 2 or n > 100000:
+            return Response({'error': 'Enter the pieces in one carton (2 or more).'}, status=400)
+        p.carton_qty = n
+        p.save(update_fields=['carton_qty'])
+        return Response({'id': str(p.id), 'carton': n})
+
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
     def trade_save(self, request):
         """Save the Product Detail form (multipart). No ``id`` -> new product with
