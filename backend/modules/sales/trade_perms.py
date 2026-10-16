@@ -92,8 +92,7 @@ CATALOG = [
     {'id': 'reports3', 'rows': [(k, l, [P], []) for k, l in [
         ('rpt_stock_position', 'Stock Position'), ('rpt_chart_of_account', 'Chart of Account'),
         ('rpt_journal', 'Journal'), ('rpt_account_balances', 'Account Balances'), ('rpt_ledger', 'Ledger'),
-        ('rpt_trial_balance', 'Tribalance'), ('rpt_profit_loss', 'Profit and Loss'), ('rpt_balance_sheet', 'Balance Sheet'),
-        ('rpt_credit_card', 'Credit Card')]]},
+        ('rpt_trial_balance', 'Tribalance'), ('rpt_profit_loss', 'Profit and Loss'), ('rpt_balance_sheet', 'Balance Sheet')]]},
 ]
 LABELS = {r[0]: r[1] for s in CATALOG for r in s['rows']}
 ALL_PERMS = sorted(f'{r[0]}.{a}' for s in CATALOG for r in s['rows'] for a in r[2])
@@ -171,7 +170,8 @@ _crud('sales/trade-financial-years/', 'financial_year')
 _crud('sales/trade-general-vouchers/', 'general_voucher', view_list=True)
 _crud('sales/trade-forward-pl/', 'general_voucher', view_list=True)
 _crud('users/trade-users/', 'new_user', view_list=True)
-RULES += [('GET', r'^sales/trade-cards/entries/$', None, 'credit_card', V), ('POST', r'^sales/trade-cards/entries/$', None, 'credit_card', S)]
+RULES += [('GET', r'^sales/trade-cards/payments/$', None, 'credit_card', V),
+          ('POST', r'^sales/trade-cards/payments/$', None, 'sale', S)]   # paid by card on the Sale Invoice
 _crud('sales/trade-cards/', 'credit_card')
 RULES += [('POST', r'^sales/trade-partners/(entries|distributions)/$', None, 'partnership', S),
           ('DELETE', r'^sales/trade-partners/distributions/[0-9]+/$', None, 'partnership', D)]

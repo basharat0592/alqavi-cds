@@ -923,23 +923,31 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
 
     // Bottom bar: Paid Cash / Paid by Card / Saleman / Sale Date
     const [paidCash, setPaidCash] = useState('');
-    // Paid by card on one of our card machines: the customer is credited in
-    // full, the bank's charges are ours (Credit Card).
+    // Paid by card: the amount, the card it is received on (the saleman's) and
+    // the customer's card that pays (Add Credit Card). The customer is credited
+    // the full amount; the card tax goes to the Credit Card Report only.
     const [paidCard, setPaidCard] = useState('');
-    const [machines, setMachines] = useState<{ id: number; name: string; charge_pct: number; bank_account: number | null }[]>([]);
-    const [machine, setMachine] = useState('');
+    const [cardList, setCardList] = useState<{ id: number; holder_type: string; label: string; staff: number | null; customer_id: string | null; tax_pct: number }[]>([]);
+    const [recvCard, setRecvCard] = useState('');
+    const [payerCard, setPayerCard] = useState('');
     useEffect(() => {
-        const load = () => api.get('v1/sales/trade-cards/').then(({ data }) => {
-            const ms = (data || []).filter((c: any) => c.kind === 'machine' && c.status === 'active');
-            setMachines(ms);
-            setMachine((m) => (ms.some((x: any) => String(x.id) === m) ? m : ms.length ? String(ms[0].id) : ''));
-        }).catch(() => setMachines([]));
+        const load = () => api.get('v1/sales/trade-cards/').then(({ data }) => setCardList((data || []).filter((c: any) => c.status === 'active')))
+            .catch(() => setCardList([]));
         load();
-        window.addEventListener('focus', load);
+        window.addEventListener('focus', load);   // a card added in Add Credit Card shows up on return
         return () => window.removeEventListener('focus', load);
     }, []);
     const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
     const [salesman, setSalesman] = useState('');
+    // The saleman's card receives, the customer's card pays — picked for you when they have one.
+    useEffect(() => {
+        const mine = cardList.find((c) => c.holder_type === 'saleman' && String(c.staff) === salesman);
+        if (mine) setRecvCard(String(mine.id));
+    }, [salesman, cardList]);
+    useEffect(() => {
+        const theirs = customer ? cardList.find((c) => c.holder_type === 'customer' && String(c.customer_id) === String(customer.id)) : null;
+        setPayerCard(theirs ? String(theirs.id) : '');
+    }, [customer, cardList]);
     const [backDate, setBackDate] = useState(false);
     const today = () => new Date().toISOString().slice(0, 10);
     const [saleDate, setSaleDate] = useState(today);
@@ -1720,7 +1728,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const resetInvoice = () => {
         setLines([]); setSelected(-1); setEntry({ ...EMPTY_ENTRY });
         setCustomer(null); setCustInput(''); setPrevBal(0);
-        setPaidCash(''); setPaidCard(''); setBackDate(false); setSaleDate(today());
+        setPaidCash(''); setPaidCard(''); setPayerCard(''); setBackDate(false); setSaleDate(today());
         loadInvoiceNo();
         setTimeout(() => custRef.current?.focus(), 0);
     };
@@ -2048,9 +2056,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         if (saveMissing.length) { toast.error(saveHint); return; }
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
         if (paid + card > netAmount + 0.001) { toast.error('Paid Cash and Paid by Card are more than the Net Amount.'); return; }
-        const mach = machines.find((m) => String(m.id) === machine);
-        if (card > 0 && !mach) { toast.error(machines.length ? 'Choose the card machine the customer paid on.' : 'Add the card machine first: choose “+ Add card machine…”.', { duration: 7000 }); return; }
-        if (card > 0 && !mach!.bank_account) { toast.error(`Set the bank "${mach!.name}" pays into (Credit Card › Cards…).`, { duration: 7000 }); return; }
+        if (card > 0 && !recvCard) { toast.error(cardList.length ? 'Choose the Receiver Card (the card the money is received on).' : 'Add the cards first: Receiver Card › “+ Add Credit Card…”.', { duration: 7000 }); return; }
         // Opened now, while the click still counts as a user action, so the
         // browser does not block it; it is pointed at the invoice once saved.
         const printWin = print ? window.open('', 'trade:invoice-print', 'popup=yes,width=1100,height=820') : null;
@@ -2100,15 +2106,15 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     toast.error('Invoice saved, but recording the cash paid failed — add it from Sale Records.', { duration: 7000 });
                 }
             }
-            // Paid by card: posted against this invoice (bank charges on us).
+            // Paid by card: posted against this invoice; the card tax goes to the report only.
             if (card > 0 && order?.id) {
                 try {
-                    await api.post('v1/sales/trade-cards/entries/', {
-                        kind: 'customer', card: mach!.id, amount: round2(card), bank: mach!.bank_account, order: order.id,
+                    await api.post('v1/sales/trade-cards/payments/', {
+                        order: order.id, amount: round2(card), receiver_card: recvCard, payer_card: payerCard || null,
                         date: backDate ? saleDate : today(), staff: salesman || null, note: `Sale ${no}`,
                     });
                 } catch (e: any) {
-                    toast.error(`Invoice saved, but the card payment was not recorded (${e?.response?.data?.detail || 'error'}) — enter it in Credit Card.`, { duration: 9000 });
+                    toast.error(`Invoice saved, but the card payment was not recorded (${e?.response?.data?.detail || 'error'}).`, { duration: 9000 });
                 }
             }
             toast.success(`Invoice ${no} saved.`);
@@ -2366,26 +2372,32 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 </div>
 
                 {/* Bottom bar — Paid Cash / Saleman / Sale Date / actions */}
-                <div className="grid shrink-0 grid-cols-[0.8fr_1.3fr_1.1fr_1fr_auto] items-end gap-3">
+                <div className="grid shrink-0 grid-cols-[0.8fr_0.8fr_1.35fr_1.35fr_1.05fr_0.95fr] items-end gap-x-3 gap-y-2">
                     <label className="flex flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Paid Cash</span>
                         <input value={paidCash} onChange={(e) => setPaidCash(e.target.value)} inputMode="decimal" placeholder="0"
                             className={`${EDIT} w-full text-right text-[15px]`} aria-label="Paid cash" />
                     </label>
-                    <div className="flex min-w-0 flex-col gap-0.5" title="Paid by card on our card machine — the customer is credited in full; the bank's charges are ours">
+                    <label className="flex min-w-0 flex-col gap-0.5" title="Paid by card — the customer is credited the full amount; the card tax is kept in the Credit Card Report">
                         <span className={`${LABEL} text-[15px]`}>Paid by Card</span>
-                        <div className="flex gap-1">
-                            <input value={paidCard} onChange={(e) => setPaidCard(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder="0"
-                                className={`${EDIT} w-[45%] text-right text-[15px]`} aria-label="Paid by card" />
-                            {/* The machine the customer's card was swiped on; a new one is set up in Credit Card › Cards… */}
-                            <select value={machine} onChange={(e) => { if (e.target.value === 'add') { openPopup('/admin/trade/credit-card?cards=machine'); return; } setMachine(e.target.value); }}
-                                className={`${FIELD} min-w-0 flex-1 border-emerald-300 bg-[#e3fbe3] !px-1 !text-[12px] text-slate-900`} aria-label="Card machine">
-                                {!machines.length && <option value="">Card machine…</option>}
-                                {machines.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                                <option value="add">+ Add card machine…</option>
+                        <input value={paidCard} onChange={(e) => setPaidCard(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder="0"
+                            className={`${EDIT} w-full text-right text-[15px]`} aria-label="Paid by card" />
+                    </label>
+                    {([['Receiver Card', recvCard, setRecvCard, 'saleman'], ['Payer Card', payerCard, setPayerCard, 'customer']] as const).map(([label, val, setVal, own]) => (
+                        <label key={label} className="flex min-w-0 flex-col gap-0.5">
+                            <span className={`${LABEL} text-[15px]`}>{label}</span>
+                            <select value={val} title={cardList.find((c) => String(c.id) === val)?.label || ''}
+                                onChange={(e) => { if (e.target.value === 'add') { openPopup('/admin/trade/credit-card'); return; } setVal(e.target.value); }}
+                                className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3] !px-1.5 !text-[13px] text-slate-900 ${num(paidCard) > 0 ? '' : 'opacity-70'}`} aria-label={label}>
+                                <option value="">{own === 'saleman' ? 'Select any one' : 'Not known'}</option>
+                                {cardList.filter((c) => c.holder_type === own).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                {cardList.some((c) => c.holder_type !== own) && (
+                                    <optgroup label="Other cards">{cardList.filter((c) => c.holder_type !== own).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</optgroup>
+                                )}
+                                <option value="add">+ Add Credit Card…</option>
                             </select>
-                        </div>
-                    </div>
+                        </label>
+                    ))}
                     <label className="flex flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Saleman</span>
                         <select value={salesman} onChange={(e) => setSalesman(e.target.value)}
@@ -2404,7 +2416,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             className={`${FIELD} w-full ${backDate ? 'border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:ring-2 focus:ring-emerald-200' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`}
                             aria-label="Sale date" />
                     </div>
-                    <div className="flex gap-2">
+                    {/* The buttons on their own row, so the payment boxes above have room. */}
+                    <div className="col-span-6 flex justify-end gap-2">
                         <button type="button" onClick={newInvoice} className={ACTION_BTN}><span className="underline">N</span>ew Invoice</button>
                         <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint} className={ACTION_BTN}>
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}

@@ -2,6 +2,7 @@
 
 import WindowPrintButton from '@/components/trade/WindowPrintButton';
 import TradePermGuard from '@/components/trade/TradePermGuard';
+import FullTextOnHover from '@/components/trade/FullTextOnHover';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import AuthGuard from '@/components/auth/AuthGuard';
 import AdminSidebar from '@/components/layout/AdminSidebar';
@@ -437,6 +438,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
                     <ReadOnlyController />
                     {/* Print the window as shown (not on the dashboard or the printed invoices). */}
+                    <FullTextOnHover />
                     {!isDashboardRoute && !pathname?.startsWith('/admin/trade/invoice') && !pathname?.startsWith('/admin/trade/purchase-invoice') && <WindowPrintButton />}
                     {pathname?.startsWith('/admin/trade/') ? <TradePermGuard path={pathname}>{children}</TradePermGuard> : children}
                 </div>

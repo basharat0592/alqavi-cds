@@ -107,7 +107,8 @@ const MENUS: Menu[] = [
             SEP,
             { label: 'Cheque Management', href: '/admin/trade/cheque-management' },
         ] },
-        { label: 'Credit Card', href: '/admin/trade/credit-card' },
+        { label: 'Add Credit Card', href: '/admin/trade/credit-card' },
+        { label: 'Credit Card Report', href: '/admin/trade/credit-card-report' },
         SEP,
         { label: 'Post Voucher (Manually)', href: '/admin/trade/general-voucher' },
         { label: 'Forward the Profit and Loss', href: '/admin/trade/forward-profit-loss' },
@@ -293,7 +294,7 @@ const COLUMNS: Group[] = [
         { name: 'Payment Voucher', href: '/admin/trade/payment-voucher', icon: Wallet },
     ] },
     { theme: THEMES.card, buttons: [
-        { name: 'Credit Card', href: '/admin/trade/credit-card', icon: CreditCard },
+        { name: 'Add Credit Card', href: '/admin/trade/credit-card', icon: CreditCard },
         { name: 'Credit Card Report', href: '/admin/trade/credit-card-report', icon: FileText },
         { name: 'Partnership', href: '/admin/trade/partnership', icon: Users },
     ] },
