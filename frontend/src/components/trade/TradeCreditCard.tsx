@@ -19,6 +19,7 @@ import {
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
 
+import { sortByMatch } from '@/lib/searchRank';
 export type Card = {
     id: number; holder_type: 'saleman' | 'customer' | 'company'; holder: string; label: string; staff: number | null;
     customer_acc: number | null; customer_code: string; customer_id: string | null; holder_name: string; bank: string;
@@ -79,7 +80,8 @@ export default function TradeCreditCard() {
     };
 
     const [q, setQ] = useState('');
-    const rows = useMemo(() => (cards || []).filter((c) => !q.trim() || `${c.label} ${HOLDER[c.holder_type]} ${c.notes}`.toLowerCase().includes(q.trim().toLowerCase())), [cards, q]);
+    const rows = useMemo(() => sortByMatch((cards || []).filter((c) => !q.trim() || `${c.label} ${HOLDER[c.holder_type]} ${c.notes}`.toLowerCase().includes(q.trim().toLowerCase())),
+        q, (c) => [c.holder, c.bank, c.card_no, c.notes]), [cards, q]);
     const L = `${LABEL} text-[15px]`;
     const TH = 'sticky top-0 z-10 whitespace-nowrap border-b border-r border-slate-400 bg-gradient-to-b from-white to-[#e9e9f1] px-2 py-1.5 text-left font-semibold';
     const TD = 'border-b border-r border-slate-300 px-2 py-1 align-top';

@@ -20,6 +20,7 @@ import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { openPopup } from '@/lib/popup';
+import { sortByMatch } from '@/lib/searchRank';
 import {
     Modal, ConfirmBox, ReadBox, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT,
     guardWindowClose, closeTradeWindow,
@@ -48,8 +49,9 @@ export function FindAccountWindow({ accounts, cashOnly, initial, askClose, onPic
     const gridRef = useRef<HTMLDivElement>(null);
     const rows = useMemo(() => {
         const s = q.trim().toLowerCase();
-        return (accounts || []).filter((a) => a.status !== 'inactive' && (!cashOnly || isCashBank(a)) &&
-            (!s || a.name.toLowerCase().includes(s) || a.acc_id.includes(s) || (a.area_name || '').toLowerCase().includes(s)));
+        return sortByMatch((accounts || []).filter((a) => a.status !== 'inactive' && (!cashOnly || isCashBank(a)) &&
+            (!s || a.name.toLowerCase().includes(s) || a.acc_id.includes(s) || (a.area_name || '').toLowerCase().includes(s))), s,
+            (a) => [a.name, a.acc_id, a.area_name]);
     }, [accounts, q, cashOnly]);
     useEffect(() => { setSel(-1); }, [q]);
     const keys = (e: React.KeyboardEvent) => {

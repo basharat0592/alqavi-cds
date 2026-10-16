@@ -26,6 +26,7 @@ import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVouc
 import { useOwnPrint } from '@/components/trade/WindowPrintButton';
 import FitStage from '@/components/trade/FitStage';
 
+import { sortByMatch } from '@/lib/searchRank';
 type Rep = { key: string; label: string; filters: string[] };
 type Cat = { code: string; label: string; reports: (Rep | null)[] };
 // t: g group heading, s subtotal, p cheque pending (red, not in the balance)
@@ -105,7 +106,8 @@ export default function TradeReports() {
     const [allAreas, setAllAreas] = useState(true);
     const [picked, setPicked] = useState<Set<number>>(new Set());
     const [areaQ, setAreaQ] = useState('');
-    const areaList = areas.filter((a) => !areaQ.trim() || `${a.name} ${a.main_name} ${a.district_name}`.toLowerCase().includes(areaQ.trim().toLowerCase()));
+    const areaList = sortByMatch(areas.filter((a) => !areaQ.trim() || `${a.name} ${a.main_name} ${a.district_name}`.toLowerCase().includes(areaQ.trim().toLowerCase())),
+        areaQ, (a) => [a.name, a.main_name, a.district_name]);
     const setPick = (k: string, p: Pick) => { setPicks((s) => ({ ...s, [k]: p })); setFinder(null); };
     const accGroup = (g: number | null) => (accounts || []).filter((a) => g === null || a.group === g);
 

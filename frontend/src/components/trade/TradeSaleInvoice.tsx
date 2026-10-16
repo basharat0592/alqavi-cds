@@ -24,6 +24,7 @@ import FitStage from '@/components/trade/FitStage';
 import { PrintChoiceButton, useOwnPrint } from '@/components/trade/WindowPrintButton';
 import { INVOICE_SIZES, savedInvoiceSize, type InvoiceSize } from '@/components/trade/TradeInvoicePrint';
 
+import { sortByMatch } from '@/lib/searchRank';
 /* ───────────────────────── types & helpers ───────────────────────── */
 type Batch = {
     id: string; expiry_date: string | null; quantity: number;
@@ -323,7 +324,7 @@ export function FindCompanyWindow({ companies, current, askClose, reload, onPick
     const [adding, setAdding] = useState(false);
     const rows = useMemo(() => {
         const s = q.trim().toLowerCase();
-        return [...companies].sort(byCode).filter((c) => !s || String(c.name).toLowerCase().includes(s) || String(c.code ?? '') === s);
+        return sortByMatch([...companies].sort(byCode).filter((c) => !s || String(c.name).toLowerCase().includes(s) || String(c.code ?? '') === s), s, (c) => [c.name, c.code]);
     }, [companies, q]);
     const enter = () => { const c = rows.find((r) => String(r.id) === sel) || rows[0]; if (c) onPick(c); };
 
@@ -636,8 +637,8 @@ function ProductDetailWindow({ companies, reloadCompanies, initialName, askClose
     const rows = useMemo(() => {
         if (!list) return [];
         const q = search.trim().toLowerCase();
-        return list.filter((r) => !q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q)
-            || String(r.barcode).toLowerCase().includes(q) || String(r.company).toLowerCase().includes(q));
+        return sortByMatch(list.filter((r) => !q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q)
+            || String(r.barcode).toLowerCase().includes(q) || String(r.company).toLowerCase().includes(q)), q, (r) => [r.name, r.pid, r.barcode, r.company]);
     }, [list, search]);
 
     const exportRows = () => downloadXlsx('products', 'Products', PD_VIEW_COLS.map((c) => c.h),
@@ -801,10 +802,10 @@ export function ReturnFindProductWindow({ companies, askClose, onPick, onAddNew,
     const rows = useMemo(() => {
         const q = name.trim().toLowerCase();
         const bc = barcode.trim().toLowerCase();
-        return (all || []).filter((r) =>
+        return sortByMatch((all || []).filter((r) =>
             (!company || String(r.company_id) === company) &&
             (!q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q)) &&
-            (!bc || String(r.barcode || '').toLowerCase() === bc));
+            (!bc || String(r.barcode || '').toLowerCase() === bc)), q, (r) => [r.name, r.pid]);
     }, [all, company, name, barcode]);
     useEffect(() => { setSel(-1); }, [company, name, barcode]);
     const keys = (e: React.KeyboardEvent) => {
@@ -1110,12 +1111,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         if (!coaList) return [];
         const q = coaSearch.trim().toLowerCase();
         const byLevel = !coaSel;
-        return coaList.filter((a) =>
+        return sortByMatch(coaList.filter((a) =>
             (!byLevel || !coaV.main || String(a.main) === coaV.main) &&
             (!byLevel || !coaV.l2 || String(a.level2) === coaV.l2) &&
             (!byLevel || !coaV.l3 || String(a.group) === coaV.l3) &&
             (!q || String(a.acc_id).includes(q) || String(a.name).toLowerCase().includes(q)
-                || String(a.area_name || '').toLowerCase().includes(q)));
+                || String(a.area_name || '').toLowerCase().includes(q))), q, (a) => [a.name, a.acc_id, a.area_name]);
     }, [coaList, coaV.main, coaV.l2, coaV.l3, coaSearch, coaSel]);
 
     const pickCoaRow = (a: any) => {
@@ -1194,7 +1195,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const subAreaRows = useMemo(() => {
         const q = areaSearch.trim().toLowerCase();
         const byLevel = !areaSel;
-        return areas
+        return sortByMatch(areas
             .filter((a) => areaKind(a) === 'A')
             .map((a) => {
                 const main = areaById.get(String(a.parent));
@@ -1207,7 +1208,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 (!q || String(r.a.name).toLowerCase().includes(q) || String(r.id).includes(q)))
             .sort((x, y) => String(x.dist?.name || '').localeCompare(String(y.dist?.name || ''))
                 || String(x.main?.name || '').localeCompare(String(y.main?.name || ''))
-                || x.id - y.id);
+                || x.id - y.id), q, (r) => [r.a.name, r.id]);   // a typed name: best matches first
     }, [areas, areaById, areaV.district, areaV.main, areaSearch, areaSel]);
 
     const viewAreas = () => {
@@ -1459,9 +1460,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         const q = custQuery.trim().toLowerCase();
         const list = customers.filter((c) => c.is_active !== false);
         if (!q) return list.slice(0, 200);
-        return list.filter((c) =>
+        return sortByMatch(list.filter((c) =>
             custCode(c).toLowerCase().includes(q) || custName(c).toLowerCase().includes(q) ||
-            String(c.area_name || '').toLowerCase().includes(q) || String(c.phone || '').includes(q)).slice(0, 200);
+            String(c.area_name || '').toLowerCase().includes(q) || String(c.phone || '').includes(q)), q,
+            (c) => [custName(c), custCode(c), c.area_name, c.phone]).slice(0, 200);
     }, [customers, custQuery]);
     const custGridKeys = (e: React.KeyboardEvent) => {
         const n = custMatches.length;
@@ -1519,6 +1521,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const [stockLoading, setStockLoading] = useState(false);
     const [histRows, setHistRows] = useState<any[]>([]);
     const [fpSel, setFpSel] = useState('');
+    // A stock row's key: its batch, or the product when it has no stock batch yet.
+    const rowKey = (r: { batch_id: string; product_id: string }) => r.batch_id || `p${r.product_id}`;
     // Who asked for Find Product: the invoice entry row, or the Sale Return history filter.
     const fpTarget = useRef<'invoice' | 'return'>('invoice');
     const [fpHistSel, setFpHistSel] = useState(-1);
@@ -1556,9 +1560,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Purchase history narrows by the chosen company and the typed name too.
     const histShown = useMemo(() => {
         const q = fpName.trim().toLowerCase();
-        return histRows.filter((r) =>
+        return sortByMatch(histRows.filter((r) =>
             (!fpCompany || String(r.company_id) === fpCompany) &&
-            (!q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q)));
+            (!q || String(r.name).toLowerCase().includes(q) || String(r.pid).includes(q))), q, (r) => [r.name, r.pid]);
     }, [histRows, fpCompany, fpName]);
 
     // Available stock follows the filters (debounced).
@@ -2631,8 +2635,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 <span className={LABEL}>Product Name</span>
                                 <input autoFocus value={fpName} onChange={(e) => setFpName(e.target.value)}
                                     onKeyDown={(e) => {
-                                        if (e.key === 'Enter') { const r = stockRows.find((x) => x.batch_id === fpSel) || stockRows[0]; if (r) pickStockRow(r); }
-                                        else if (e.key === 'ArrowDown' && stockRows.length) { e.preventDefault(); if (!fpSel) setFpSel(stockRows[0].batch_id); fpStockRef.current?.focus(); }
+                                        if (e.key === 'Enter') { const r = stockRows.find((x) => rowKey(x) === fpSel) || stockRows[0]; if (r) pickStockRow(r); }
+                                        else if (e.key === 'ArrowDown' && stockRows.length) { e.preventDefault(); if (!fpSel) setFpSel(rowKey(stockRows[0])); fpStockRef.current?.focus(); }
                                     }}
                                     placeholder="Name or PID" className={`${EDIT} w-full`} />
                             </div>
@@ -2656,8 +2660,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         {/* Available stock — one row per in-stock batch */}
                         <div className="flex min-h-[120px] flex-[3] flex-col overflow-hidden border border-slate-500 bg-[#9ea1ad]">
                             <div ref={fpStockRef} tabIndex={0} className="min-h-0 flex-1 overflow-auto outline-none focus:ring-2 focus:ring-inset focus:ring-[#2f5bd3]"
-                                onKeyDown={gridKeys(stockRows.length, stockRows.findIndex((x) => x.batch_id === fpSel),
-                                    (i) => setFpSel(stockRows[i].batch_id), (i) => pickStockRow(stockRows[i]), fpStockRef)}>
+                                onKeyDown={gridKeys(stockRows.length, stockRows.findIndex((x) => rowKey(x) === fpSel),
+                                    (i) => setFpSel(rowKey(stockRows[i])), (i) => pickStockRow(stockRows[i]), fpStockRef)}>
                                 <table className="w-full min-w-[900px] table-fixed border-collapse bg-white text-[13px]">
                                     <colgroup>{FP_STOCK_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                     <thead className="sticky top-0 z-10 bg-[#ffe1b8] text-left">
@@ -2665,8 +2669,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                     </thead>
                                     <tbody>
                                         {stockRows.map((r) => (
-                                            <tr key={r.batch_id} onClick={() => setFpSel(r.batch_id)} onDoubleClick={() => pickStockRow(r)}
-                                                className={`cursor-pointer tabular-nums ${fpSel === r.batch_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
+                                            <tr key={rowKey(r)} onClick={() => setFpSel(rowKey(r))} onDoubleClick={() => pickStockRow(r)}
+                                                className={`cursor-pointer tabular-nums ${fpSel === rowKey(r) ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
                                                 title="Click to select · Enter or double-click to add">
                                                 {[r.pid, r.category, pn(r.name), r.pack, ymd(r.expiry_date), fmt(num(r.qty)), fmt(num(r.tp)), fmt(num(r.retail)), r.company].map((v, k) => (
                                                     <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k === 2 ? 'font-semibold' : ''}`}>{v}</td>

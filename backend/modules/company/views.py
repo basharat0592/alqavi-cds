@@ -258,6 +258,8 @@ class LedgerAccountViewSet(viewsets.ViewSet):
         q = (request.query_params.get('q') or '').strip()
         if q:
             qs = qs.filter(Q(name__icontains=q) | Q(acc_id__icontains=q))
+            from core.search import rank_key   # best matches first
+            return Response([_ledger_row(a) for a in sorted(qs[:2000], key=lambda a: rank_key(q, a.name, a.acc_id))])
         return Response([_ledger_row(a) for a in qs[:2000]])
 
     @action(detail=False, methods=['get'])

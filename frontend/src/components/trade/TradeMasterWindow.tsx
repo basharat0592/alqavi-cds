@@ -21,6 +21,7 @@ import {
 } from '@/components/trade/TradeSaleInvoice';
 import FitStage from '@/components/trade/FitStage';
 
+import { sortByMatch } from '@/lib/searchRank';
 export type MasterField = {
     key: string; label: string; required?: boolean; max?: number; half?: boolean;
     options?: { value: string; label: string }[]; placeholder?: string; digits?: boolean;
@@ -94,7 +95,9 @@ export default function TradeMasterWindow({ cfg }: { cfg: MasterConfig }) {
         if (!rows) return [];
         const list = cfg.keepOrder ? [...rows] : [...rows].sort((a, b) => (Number(a.code) || 1e9) - (Number(b.code) || 1e9));
         const s = q.trim().toLowerCase();
-        return s && cfg.search ? list.filter((r) => cfg.search!.keys.some((k) => String(r[k] ?? '').toLowerCase().includes(s))) : list;
+        return s && cfg.search
+            ? sortByMatch(list.filter((r) => cfg.search!.keys.some((k) => String(r[k] ?? '').toLowerCase().includes(s))), s, (r) => cfg.search!.keys.map((k) => r[k]))
+            : list;
     }, [rows, q, cfg.keepOrder, cfg.search]);
     const reload = async () => {
         try { setRows(await loadAll(cfg.url, cfg.params)); } catch { toast.error('Could not load the list.'); setRows((r) => r || []); }

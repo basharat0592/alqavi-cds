@@ -247,6 +247,9 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'company': sp.company.name if (sp and sp.company_id) else '',
             })
         rows.sort(key=lambda r: ((r['name'] or '').lower(), r['expiry_date'] is None, str(r['expiry_date'] or '')))
+        if q:   # names starting with what was typed first, then a word starting with it, then the rest
+            from core.search import rank_key
+            rows.sort(key=lambda r: rank_key(q, r['name'], r['pid']))
         return Response(rows)
 
     @action(detail=False, methods=['get'])
@@ -266,7 +269,11 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             qs = qs.filter(Q(product_name__icontains=q) | Q(sku__icontains=q)).order_by('product_name')
         else:
             return Response([])
-        products = list(qs[:50])
+        if q and not code:   # best matches first (starts with, then a word, then contains)
+            from core.search import rank_key
+            products = sorted(qs[:1000], key=lambda p: rank_key(q, p.product_name, p.sku))[:50]
+        else:
+            products = list(qs[:50])
         batches = {}
         for b in (ProductBatch.objects.filter(product__in=products, quantity__gt=0)
                   .order_by('expiry_date')):
@@ -414,6 +421,9 @@ class ProductViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 rows = [r for r in rows if Decimal(str(r['pur_rate'])) == pr]
             except InvalidOperation:
                 pass
+        if f.get('name'):   # best matches first (starts with, then a word, then contains)
+            from core.search import rank_key
+            rows.sort(key=lambda r: rank_key(f['name'], r.get('name'), r.get('pid')))
         return Response(rows)
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated, HasModulePermission])
