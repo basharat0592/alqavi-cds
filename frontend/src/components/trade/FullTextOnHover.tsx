@@ -1,45 +1,49 @@
 "use client";
 
 /*
- * Every window: pointing at something shows its full text in a large, easy
- * to read tooltip (bigger than the window's own text):
- *   - text that does not fit its box (a cut grid cell ending in "…"),
- *   - a long value in a narrow input, a dropdown's chosen item,
- *   - anything with a hint (`title`) — shown in this tooltip instead of the
- *     browser's small one.
- * One listener for the whole app.
+ * Every window: where a box cannot show all its text, pointing at it shows the
+ * full text in a large, easy to read tooltip — and only there:
+ *   - a cut text cell / label (one line, ending in "…"),
+ *   - an input whose value is longer than the box,
+ *   - a dropdown whose chosen item is wider than the dropdown.
+ * Text that fits (menus, buttons, tiles …) shows nothing.
  */
 import { useEffect } from 'react';
 
 const MAX = 800;
 const DELAY = 280;
 
-const clipped = (el: HTMLElement) => {
+/* One-line text cut by its box (Tailwind `truncate` / `text-ellipsis whitespace-nowrap`). */
+const cutText = (el: HTMLElement) => {
     const cs = getComputedStyle(el);
-    const clipsX = cs.overflowX === 'hidden' || cs.overflowX === 'clip' || cs.textOverflow === 'ellipsis';
-    const clipsY = cs.overflowY === 'hidden' || cs.overflowY === 'clip';
-    return (clipsX && el.scrollWidth > el.clientWidth + 1) || (clipsY && el.scrollHeight > el.clientHeight + 2);
+    const oneLine = cs.whiteSpace === 'nowrap' || cs.whiteSpace === 'pre';
+    const clips = cs.textOverflow === 'ellipsis' || (oneLine && (cs.overflowX === 'hidden' || cs.overflowX === 'clip'));
+    return clips && el.scrollWidth > el.clientWidth + 1;
 };
-const clean = (s: string) => s.replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim().slice(0, MAX);
+let ctx: CanvasRenderingContext2D | null = null;
+const textWidth = (text: string, el: HTMLElement) => {
+    ctx = ctx || document.createElement('canvas').getContext('2d');
+    if (!ctx) return 0;
+    const cs = getComputedStyle(el);
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    return ctx.measureText(text).width;
+};
 
-/* The element under the pointer that has something to show, and what. */
+/* The element under the pointer whose text does not fit, and that text. */
 function tipFor(start: HTMLElement | null): { el: HTMLElement; text: string } | null {
     let el = start;
-    for (let i = 0; el && i < 6 && el !== document.body; i++, el = el.parentElement) {
-        // A hint of its own: keep it out of the browser's small tooltip, show it in ours.
-        const own = el.getAttribute('title');
-        if (own) { el.dataset.tip = own; el.removeAttribute('title'); }
-        if (el.dataset.tip) return { el, text: el.dataset.tip };
+    for (let i = 0; el && i < 4 && el !== document.body; i++, el = el.parentElement) {
         if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
             if (el.type === 'checkbox' || el.type === 'radio' || el.type === 'date') return null;
             return el.value && el.scrollWidth > el.clientWidth + 1 ? { el, text: el.value } : null;
         }
         if (el instanceof HTMLSelectElement) {
             const t = el.selectedOptions[0]?.text || '';
-            return t && t.length > 18 ? { el, text: t } : null;
+            // the arrow and padding take about 34px of the box
+            return t && textWidth(t, el) > el.clientWidth - 34 ? { el, text: t } : null;
         }
-        // Only small text boxes (a cell, a label) — never a whole clipped panel.
-        if (el.childElementCount <= 4 && (el.innerText || '').length <= MAX && clipped(el)) return { el, text: el.innerText };
+        if (el instanceof HTMLButtonElement || el.tagName === 'A' || el.tagName === 'NAV') return null;
+        if (el.childElementCount <= 4 && (el.innerText || '').length <= MAX && cutText(el)) return { el, text: el.innerText };
     }
     return null;
 }
@@ -72,8 +76,11 @@ export default function FullTextOnHover() {
             if (hit.el === cur) return;
             hide();
             cur = hit.el;
-            const text = clean(hit.text);
+            const text = hit.text.replace(/[ \t]+/g, ' ').replace(/\n\s*\n+/g, '\n').trim().slice(0, MAX);
             if (!text) return;
+            // Its own small browser hint would show as well: hold it back while ours shows.
+            const own = hit.el.getAttribute('title');
+            if (own) { hit.el.dataset.ownTitle = own; hit.el.removeAttribute('title'); }
             timer = setTimeout(() => {
                 if (cur !== hit.el) return;
                 box.textContent = text;
@@ -83,7 +90,9 @@ export default function FullTextOnHover() {
         };
         const move = (e: MouseEvent) => { x = e.clientX; y = e.clientY; if (box.style.display === 'block') place(); };
         const out = (e: MouseEvent) => {
-            if (cur && !(e.relatedTarget instanceof Node && cur.contains(e.relatedTarget))) hide();
+            if (!cur || (e.relatedTarget instanceof Node && cur.contains(e.relatedTarget))) return;
+            if (cur.dataset.ownTitle) { cur.setAttribute('title', cur.dataset.ownTitle); delete cur.dataset.ownTitle; }
+            hide();
         };
         document.addEventListener('mouseover', over, true);
         document.addEventListener('mousemove', move, true);

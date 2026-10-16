@@ -2386,10 +2386,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 onChange={(e) => { if (e.target.value === 'add') { openPopup('/admin/trade/credit-card'); return; } setVal(e.target.value); }}
                                 className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3] !px-1.5 !text-[13px] text-slate-900 ${num(paidCard) > 0 ? '' : 'opacity-70'}`} aria-label={label}>
                                 <option value="">Select any one</option>
-                                {cardList.filter((c) => c.holder_type === own).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                                {cardList.some((c) => c.holder_type !== own) && (
-                                    <optgroup label="Other cards">{cardList.filter((c) => c.holder_type !== own).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</optgroup>
-                                )}
+                                {/* The money is received on a saleman's card or one of the company's own cards. */}
+                                {([[own, 'Saleman cards'], ['company', 'Company cards']] as const).map(([kind, group]) => cardList.some((c) => c.holder_type === kind) && (
+                                    <optgroup key={kind} label={group}>
+                                        {cardList.filter((c) => c.holder_type === kind).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                    </optgroup>
+                                ))}
                                 <option value="add">+ Add Credit Card…</option>
                             </select>
                         </label>
