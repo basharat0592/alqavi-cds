@@ -310,6 +310,20 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     const isHalf = size === 'a4half';
     const [busy, setBusy] = useState(false);
     const makePdf = () => (isHalf ? halfA4Pdf() : buildPdf(isSlip ? null : { w: paper.w, h: paper.h }, size === 'a5s'));
+    // Half A4 on screen: the very sheets that print — A4 pages with the invoice in the left half.
+    const [halfPages, setHalfPages] = useState<string[] | null>(null);
+    useEffect(() => {
+        if (!isHalf || !inv) { setHalfPages(null); return; }
+        let live = true;
+        setHalfPages(null);
+        const imgs = Array.from(document.images).map((im) => (im.complete ? Promise.resolve() : new Promise((r) => { im.onload = im.onerror = () => r(null); })));
+        Promise.all([(document as any).fonts?.ready, ...imgs])
+            .then(() => new Promise((r) => setTimeout(r, 250)))
+            .then(() => halfA4Pages())
+            .then((pages) => { if (live) setHalfPages(pages); })
+            .catch(() => { if (live) setHalfPages([]); });
+        return () => { live = false; };
+    }, [isHalf, inv, prices]);
     const printNow = async () => {
         if (busy) return;
         setBusy(true);
@@ -457,11 +471,18 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             {!inv && !err && <p className="no-print text-center text-[14px] text-slate-500">Loading invoice…</p>}
 
             {inv && !isSlip && !isHalf && <Sheet inv={inv} paper={paper} prices={prices} />}
-            {inv && isHalf && (
-                <div className="inv-half relative mx-auto" style={{ width: `${HALF.w}mm` }}>
+            {inv && isHalf && (<>
+                {/* The strip itself, off screen: the sheets below are made from it. */}
+                <div aria-hidden className="inv-half no-print" style={{ position: 'absolute', left: -10000, top: 0, width: `${HALF.w}mm` }}>
                     <Slip inv={inv} widthMm={HALF.w} onHeight={() => { /* page length is A4 */ }} prices={prices} fontPt={9} />
                 </div>
-            )}
+                {!halfPages && <p className="no-print text-center text-[14px] text-slate-500">Preparing the half-A4 sheets…</p>}
+                {halfPages?.map((src, i) => (
+                    <div key={i} className="mx-auto mb-6 bg-white shadow-xl" style={{ width: '210mm', height: '297mm' }}>
+                        <img src={src} alt={`Sheet ${i + 1}`} style={{ width: '210mm', height: '297mm', display: 'block' }} />
+                    </div>
+                ))}
+            </>)}
             {inv && isSlip && <Slip inv={inv} widthMm={slipW} onHeight={setSlipH} prices={prices} />}
         </div>
     );
