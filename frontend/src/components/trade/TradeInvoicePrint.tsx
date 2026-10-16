@@ -7,6 +7,9 @@
  *   invoice layout, drawn at A4 width and scaled to the chosen paper.
  *   80 / 58  Thermal slip for a small receipt printer — the same content
  *   stacked in one narrow column.
+ *   Half A4  that one-column layout, 95 mm wide, in the left half of an upright
+ *   A4 sheet (the right half stays blank, to tear off); a long bill carries on
+ *   to more sheets, always broken between lines.
  *
  * `@page` is document-wide, so only the chosen layout is rendered.
  *
@@ -23,11 +26,12 @@ import { jsPDF } from 'jspdf';
 import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
 import { printImages } from '@/lib/printWindow';
 
-export type InvoiceSize = 'a4' | 'a5' | 'a5s' | 'letter' | 'legal' | 'custom' | '80' | '58';
+export type InvoiceSize = 'a4' | 'a5' | 'a5s' | 'a4half' | 'letter' | 'legal' | 'custom' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
     { v: 'a4', label: 'A4' },
     { v: 'a5s', label: 'A5 sideways (half A4)' },
     { v: 'a5', label: 'A5 upright' },
+    { v: 'a4half', label: 'Half A4 (left, upright)' },
     { v: 'letter', label: 'Letter' },
     { v: 'legal', label: 'Legal' },
     { v: 'custom', label: 'Custom size' },
@@ -160,6 +164,54 @@ async function buildPdf(paperMm: { w: number; h: number } | null, sideways = fal
     }
     return pdf!;
 }
+/* Half A4: the one-column invoice (95 mm) cut into pages between its lines and
+   drawn on the left half of upright A4 sheets — page pictures for Print / PDF. */
+const HALF = { w: 95, contentH: 285, margin: 6 };   // mm
+async function halfA4Pages(): Promise<string[]> {
+    const box = document.querySelector<HTMLElement>('.inv-half');
+    const slip = box?.firstElementChild as HTMLElement | null;
+    if (!box || !slip) throw new Error('Nothing to print yet.');
+    await (document as any).fonts?.ready;
+    const shot = await toJpeg(slip, { quality: 0.95, pixelRatio: 3, backgroundColor: '#ffffff', cacheBust: false, style: { margin: '0', boxShadow: 'none' } });
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = shot; });
+    const k = img.height / slip.offsetHeight;                 // picture px per screen px
+    const pageH = HALF.contentH * PX_PER_MM;                  // one sheet's height, screen px
+    // Where a sheet may break: between the invoice's lines (never through one).
+    const ends = Array.from(slip.children).map((c) => (c as HTMLElement).offsetTop + (c as HTMLElement).offsetHeight);
+    // the content's end (the strip's bottom padding does not make a page of its own)
+    const total = Math.min(slip.offsetHeight, Math.max(...ends) + 4);
+    const cuts: [number, number][] = [];
+    for (let start = 0; start < total - 6;) {
+        const fit = ends.filter((e) => e > start + 1 && e - start <= pageH);
+        const end = fit.length ? Math.max(...fit) : Math.min(total, start + pageH);
+        cuts.push([start, end]);
+        start = end;
+    }
+    const mm = img.width / HALF.w;                            // picture px per mm
+    return cuts.map(([a, b], i) => {
+        const c = document.createElement('canvas');
+        c.width = Math.round(210 * mm); c.height = Math.round(297 * mm);
+        const ctx = c.getContext('2d')!;
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        const sy = Math.round(a * k), sh = Math.round((b - a) * k);
+        ctx.drawImage(img, 0, sy, img.width, sh, HALF.margin * mm, HALF.margin * mm, img.width, sh);
+        if (cuts.length > 1) {   // page number under the strip
+            ctx.fillStyle = '#333';
+            ctx.font = `${Math.round(2.6 * mm)}px Inter, sans-serif`;
+            ctx.textAlign = 'right';
+            ctx.fillText(`P. No ${i + 1} of ${cuts.length}`, (HALF.margin + HALF.w) * mm, (HALF.margin + HALF.contentH + 3.5) * mm);
+        }
+        return c.toDataURL('image/jpeg', 0.95);
+    });
+}
+async function halfA4Pdf() {
+    const pages = await halfA4Pages();
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+    pages.forEach((src, i) => { if (i) pdf.addPage('a4', 'portrait'); pdf.addImage(src, 'JPEG', 0, 0, 210, 297, undefined, 'FAST'); });
+    return pdf;
+}
+
 async function captureSheets() {
     const sheets = Array.from(document.querySelectorAll<HTMLElement>('.inv-page'));
     if (!sheets.length) throw new Error('Nothing to print yet.');
@@ -255,8 +307,9 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     useEffect(() => guardWindowClose(), []);
 
     const isSlip = size === '80' || size === '58';
+    const isHalf = size === 'a4half';
     const [busy, setBusy] = useState(false);
-    const makePdf = () => buildPdf(isSlip ? null : { w: paper.w, h: paper.h }, size === 'a5s');
+    const makePdf = () => (isHalf ? halfA4Pdf() : buildPdf(isSlip ? null : { w: paper.w, h: paper.h }, size === 'a5s'));
     const printNow = async () => {
         if (busy) return;
         setBusy(true);
@@ -264,6 +317,7 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             // Sheets print fitted to the printer's paper (and turned to suit it);
             // a slip keeps its own roll-length page.
             if (isSlip) printPdfBlob((await makePdf()).output('blob'));
+            else if (isHalf) await printImages(await halfA4Pages(), 0.95);
             else await printImages(await captureSheets(), 0.95);
         }
         catch (e: any) { setErr(e?.message || 'Could not prepare the print.'); }
@@ -402,7 +456,12 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             {err && <p className="no-print text-center text-[14px] font-semibold text-red-600">{err}</p>}
             {!inv && !err && <p className="no-print text-center text-[14px] text-slate-500">Loading invoice…</p>}
 
-            {inv && !isSlip && <Sheet inv={inv} paper={paper} prices={prices} />}
+            {inv && !isSlip && !isHalf && <Sheet inv={inv} paper={paper} prices={prices} />}
+            {inv && isHalf && (
+                <div className="inv-half relative mx-auto" style={{ width: `${HALF.w}mm` }}>
+                    <Slip inv={inv} widthMm={HALF.w} onHeight={() => { /* page length is A4 */ }} prices={prices} fontPt={9} />
+                </div>
+            )}
             {inv && isSlip && <Slip inv={inv} widthMm={slipW} onHeight={setSlipH} prices={prices} />}
         </div>
     );
@@ -702,7 +761,7 @@ function Sheet({ inv, paper, prices = true }: { inv: Invoice; paper: { w: number
    monogram, Urdu name, "Sale Invoice", proprietor + region + phones; invoice /
    customer details; lines; totals; the 15-day alert; shops, distributors,
    terms and signatures. Black only — thermal heads print no colour. */
-function Slip({ inv, widthMm, onHeight, prices = true }: { inv: Invoice; widthMm: number; onHeight: (mm: number) => void; prices?: boolean }) {
+function Slip({ inv, widthMm, onHeight, prices = true, fontPt }: { inv: Invoice; widthMm: number; onHeight: (mm: number) => void; prices?: boolean; fontPt?: number }) {
     const ref = useRef<HTMLDivElement>(null);
     useLayoutEffect(() => {
         const el = ref.current;
@@ -718,7 +777,7 @@ function Slip({ inv, widthMm, onHeight, prices = true }: { inv: Invoice; widthMm
     const region = inv.region || { code: 'GLT', name: 'Gilgit' };
     const pf = inv.profile || DEFAULT_PROFILE;
     const small = widthMm < 60;
-    const fs = small ? 7 : 8;
+    const fs = fontPt ?? (small ? 7 : 8);
     const due = dueInfo(inv);
     const d = inv.date ? new Date(`${String(inv.date).slice(0, 10)}T00:00:00`) : null;
     const day = d ? d.toLocaleDateString('en-GB', { weekday: 'long' }) : '';
