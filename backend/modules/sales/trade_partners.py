@@ -5,11 +5,17 @@ date, the capital invested (value) and their share (percent). The share is the
 agreed percent when one is set, else the capital invested as a part of all the
 partners' capital. Money in / out of capital posts a voucher (PartnerEntry).
 
+Capital: what the partner has in the business — money brought in, less capital
+taken back, PLUS profit shared to them and not drawn (kept profit is
+re-invested); drawings come off it.
+
 Profit distribution: the period's net profit (or loss) — the Profit and Loss of
-the ledger — is shared out, each partner counted only for the days they were a
-partner in the period:
-  capital basis  weight = capital invested × days (capital as it stood each day)
-  agreed basis   weight = agreed percent × days
+the ledger, every expense taken out — is shared out, each partner counted only
+for the days they were a partner in the period:
+  capital basis  a partner with an agreed % gets that % (of the period's profit,
+                 for their days); the rest is shared by the others'
+                 capital × days (capital as it stood each day)
+  agreed basis   every partner by agreed % × days
 and posted: Retain Earning Dr / each partner's capital Cr (a loss the other way).
 """
 import datetime
@@ -49,9 +55,9 @@ def _day(v, default=None):
     return datetime.date.fromisoformat(str(v)[:10])
 
 
-def _capital_moves(p):
-    """[(date, +/-amount)] of the capital invested: every entry on the capital
-    account except profit shares and drawings (those are profit, not capital)."""
+def _money_moves(p):
+    """[(date, +/-amount)] of money put in / taken back: every entry on the capital
+    account except profit shares and drawings."""
     drawings = PartnerEntry.objects.filter(partner__account_id=p.account_id, kind='drawing').values_list('voucher_id', flat=True)
     lines = (VoucherLine.objects.filter(account_id=p.account_id).exclude(voucher__vtype=DIST_VTYPE)
              .exclude(voucher_id__in=drawings).exclude(voucher__chq_status='pending')
@@ -59,16 +65,25 @@ def _capital_moves(p):
     return sorted((d, _d(cr) - _d(dr)) for d, cr, dr in lines)
 
 
+def _capital_moves(p):
+    """[(date, +/-amount)] of the partner's capital: everything on the capital account —
+    money in / out, profit shared (kept profit counts as capital), drawings (taken off)."""
+    lines = (VoucherLine.objects.filter(account_id=p.account_id).exclude(voucher__chq_status='pending')
+             .values_list('voucher__date', 'credit', 'debit'))
+    return sorted((d, _d(cr) - _d(dr)) for d, cr, dr in lines)
+
+
 def partner_stats(p, upto=None):
     upto = upto or datetime.date.today()
-    invested = sum((a for d, a in _capital_moves(p) if d <= upto), Z)
+    invested = sum((a for d, a in _money_moves(p) if d <= upto), Z)
     agg = lambda qs: qs.aggregate(c=Sum('credit'), d=Sum('debit'))
     a = agg(VoucherLine.objects.filter(account_id=p.account_id, voucher__vtype=DIST_VTYPE, voucher__date__lte=upto))
     profit = (a['c'] or Z) - (a['d'] or Z)
     drawings = PartnerEntry.objects.filter(partner=p, kind='drawing', date__lte=upto).aggregate(s=Sum('amount'))['s'] or Z
     a = agg(VoucherLine.objects.filter(account_id=p.account_id, voucher__date__lte=upto).exclude(voucher__chq_status='pending'))
     balance = (a['c'] or Z) - (a['d'] or Z)
-    return {'invested': invested, 'profit': profit, 'drawings': drawings, 'balance': balance}
+    # capital = money in + profit kept − drawings: what the shares go by
+    return {'invested': invested, 'profit': profit, 'drawings': drawings, 'balance': balance, 'capital': balance}
 
 
 def _active_days(p, f, t):
@@ -78,7 +93,7 @@ def _active_days(p, f, t):
 
 
 def _capital_days(p, f, t):
-    """Capital invested × days, day by day over the partner's days in the period."""
+    """Capital (with kept profit) × days, day by day over the partner's days in the period."""
     n, start, end = _active_days(p, f, t)
     if not n:
         return Z
@@ -117,25 +132,46 @@ def net_profit(user, f, t):
 
 
 def share_out(partners, f, t, basis, profit):
-    """[{partner, name, days, capital, basis_value, weight_pct, amount}] — amounts add up to `profit`."""
+    """[{partner, name, days, capital, share_pct, method, weight_pct, amount}] — amounts add up to `profit`.
+
+    capital basis: a partner with an agreed % gets exactly that % of the period's
+    profit, for the days they were a partner (20 % for 61 of 365 days = 3.34 %);
+    whatever is left goes to the partners without an agreed %, by capital × days.
+    agreed basis: every partner by agreed % × days (scaled to the whole profit)."""
+    period = Decimal((t - f).days + 1)
     rows = []
     for p in partners:
         n, _, _ = _active_days(p, f, t)
         if not n:
             continue
-        cap = partner_stats(p, t)['invested']
-        w = _capital_days(p, f, t) if basis == 'capital' else _d(p.share_pct) * n
-        rows.append({'partner': p.id, 'name': p.name, 'days': n, 'capital': cap,
-                     'share_pct': p.share_pct, 'w': w})
-    tw = sum((r['w'] for r in rows), Z)
-    left = _money(profit)
-    for i, r in enumerate(rows):
-        r['weight_pct'] = (r['w'] / tw * 100).quantize(Decimal('0.01')) if tw else Z
-        r['amount'] = _money(profit * r['w'] / tw) if tw else Z
-    if rows and tw:   # rounding: the last partner takes the odd paisa
-        rows[-1]['amount'] += left - sum((r['amount'] for r in rows), Z)
+        fixed = basis == 'agreed' or p.share_pct is not None
+        rows.append({'partner': p.id, 'name': p.name, 'days': n, 'capital': partner_stats(p, t)['capital'],
+                     'share_pct': p.share_pct, 'method': 'agreed' if fixed else 'capital',
+                     'w': _d(p.share_pct) * n if fixed else _capital_days(p, f, t)})
+    if not rows:
+        return rows
+    fixed = [r for r in rows if r['method'] == 'agreed']
+    pool = [r for r in rows if r['method'] == 'capital']
+    if basis == 'agreed' or not pool:
+        # all by agreed %: scaled so the whole profit is shared
+        tw = sum((r['w'] for r in rows), Z)
+        for r in rows:
+            r['frac'] = r['w'] / tw if tw else Z
+    else:
+        for r in fixed:   # agreed % of the profit, for their days in the period
+            r['frac'] = _d(r['share_pct']) / 100 * Decimal(r['days']) / period
+        rest = Decimal(1) - sum((r['frac'] for r in fixed), Z)
+        tw = sum((r['w'] for r in pool), Z)
+        for r in pool:
+            r['frac'] = rest * r['w'] / tw if tw else Z
     for r in rows:
-        r.pop('w')
+        r['weight_pct'] = (r['frac'] * 100).quantize(Decimal('0.01'))
+        r['amount'] = _money(profit * r['frac'])
+    shared = sum((r['amount'] for r in rows), Z)
+    if any(r['frac'] for r in rows):   # rounding: the biggest share takes the odd paisa
+        max(rows, key=lambda r: r['frac'])['amount'] += _money(profit) - shared
+    for r in rows:
+        r.pop('w'); r.pop('frac')
     return rows
 
 
@@ -157,13 +193,13 @@ class TradePartnershipViewSet(viewsets.ViewSet):
             'status': p.status, 'account': p.account_id, 'acc_id': p.account.acc_id, 'account_name': p.account.name, **s,
         }
         if total_invested is not None:
-            out['capital_pct'] = (s['invested'] / total_invested * 100).quantize(Decimal('0.01')) if total_invested > 0 else Z
+            out['capital_pct'] = (s['capital'] / total_invested * 100).quantize(Decimal('0.01')) if total_invested > 0 and s['capital'] > 0 else Z
         return out
 
     def list(self, request):
         ps = list(self._partners())
         stats = {p.id: partner_stats(p) for p in ps}
-        total = sum((stats[p.id]['invested'] for p in ps if p.status == 'active' and stats[p.id]['invested'] > 0), Z)
+        total = sum((stats[p.id]['capital'] for p in ps if p.status == 'active' and stats[p.id]['capital'] > 0), Z)
         return Response([self._row(p, total) for p in ps])
 
     def _apply(self, p, d):
@@ -333,6 +369,10 @@ class TradePartnershipViewSet(viewsets.ViewSet):
             missing = [p.name for p in ps if p.share_pct is None and _active_days(p, f, t)[0]]
             if missing:
                 return None, f'No agreed share % for {", ".join(missing)} — set it, or share by capital.'
+        else:
+            agreed = sum((_d(p.share_pct) for p in ps if p.share_pct is not None and _active_days(p, f, t)[0]), Z)
+            if agreed > 100:
+                return None, f'The agreed shares add up to {agreed}% — more than 100%. Correct them in Partners.'
         ledger, statement = profit_statement(self.request.user, f, t)
         profit = ledger
         if 'amount' in d and d.get('amount') not in (None, ''):
@@ -341,10 +381,18 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         if not rows:
             return None, 'No partner was a partner in this period.'
         done = scope_to_tenant(self.request.user, ProfitDistribution.objects.filter(date_from__lte=t, date_to__gte=f), 'tenant')
+        # A partner joining or leaving inside the period: counted for their days only, which
+        # assumes the profit came evenly. Exact: share the profit up to that date first.
+        notes = []
+        for p in ps:
+            if f < p.joining_date <= t:
+                notes.append(f'{p.name} joined on {p.joining_date:%d-%m-%Y} — for exact shares, distribute up to {p.joining_date - datetime.timedelta(days=1):%d-%m-%Y} first, then from {p.joining_date:%d-%m-%Y}.')
+            if p.leaving_date and f <= p.leaving_date < t:
+                notes.append(f'{p.name} left on {p.leaving_date:%d-%m-%Y} — for exact shares, distribute up to {p.leaving_date:%d-%m-%Y} first, then pay out their capital (Capital In / Out › Capital withdrawn).')
         return {'date_from': f, 'date_to': t, 'basis': basis, 'net_profit': _money(profit), 'ledger_profit': _money(ledger), 'statement': statement,
                 'total_income': _money(sum((r['amount'] for r in statement if r['kind'] == 'income'), Z)),
                 'total_expense': _money(sum((r['amount'] for r in statement if r['kind'] == 'expense'), Z)),
-                'rows': rows, 'overlaps': [{'id': x.id, 'from': x.date_from, 'to': x.date_to, 'voucher_no': x.voucher.voucher_no} for x in done]}, None
+                'rows': rows, 'notes': notes, 'overlaps': [{'id': x.id, 'from': x.date_from, 'to': x.date_to, 'voucher_no': x.voucher.voucher_no} for x in done]}, None
 
     @action(detail=False, methods=['get'])
     def preview(self, request):

@@ -178,7 +178,7 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
                 <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
                     <table className="w-full table-fixed border-collapse text-[11.5px]">
                         <colgroup>{[19, 8.5, 12, 7.5, 7.5, 12, 9.5, 14, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                        <thead><tr>{['Partner', 'Joining', 'Capital', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Balance', 'Status'].map((h, k) =>
+                        <thead><tr>{['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Capital', 'Status'].map((h, k) =>
                             <th key={h} className={`${TH} ${k >= 2 && k <= 7 ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
                         <tbody>
                             {list.map((p) => (
@@ -214,7 +214,7 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
                         )}
                     </table>
                 </div>
-                <p className="shrink-0 text-[12px] text-slate-600">Capital % = the partner&apos;s capital invested as a part of all active partners&apos; capital. Profit and loss is shared by Agreed % when every partner has one, else by capital — counting only the days each was a partner.</p>
+                <p className="shrink-0 text-[12px] text-slate-600">Invested = money brought in less capital taken back. Capital = invested + profit kept in the business − drawings (undrawn profit is re-invested). Cap. % = capital as a part of all active partners&apos; capital. A partner with an Agreed % gets that % of the profit; the rest is shared by capital — counting only the days each was a partner.</p>
             </div>
         </div>
     );
@@ -271,7 +271,7 @@ function CapitalTab({ partners, banks, reload, setAsk }: { partners: Partner[]; 
                     </select>
                     <span className={L}>Note</span><input value={f.note} onChange={(e) => set('note', e.target.value)} className={`${EDIT} w-full`} />
                 </div>
-                {p && <ReadBox value={<span>Capital {fmt(num(p.invested))} · Balance {fmt(num(p.balance))}</span>} className="mt-3" />}
+                {p && <ReadBox value={<span>Invested {fmt(num(p.invested))} · Capital {fmt(num(p.balance))}</span>} className="mt-3" />}
                 <div className="mt-3 flex justify-end">
                     <button type="button" onClick={save} disabled={busy} className={ACTION_BTN}>{busy ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}</button>
                 </div>
@@ -366,7 +366,7 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                         <span className={L}>To Date</span><input type="date" value={to} onChange={(e) => { if (e.target.value) { setTo(e.target.value); setPv(null); } }} className={dateIn} />
                         <span className={L}>Share by</span>
                         <div className="flex flex-col gap-1 text-[13px] font-semibold">
-                            <label className="flex items-center gap-2"><input type="radio" checked={basis === 'capital'} onChange={() => { setBasis('capital'); setPv(null); }} className="accent-[#3b3f8f]" /> Capital invested × days</label>
+                            <label className="flex items-center gap-2" title="Partners with an agreed % get exactly that %; the rest is shared by capital × days"><input type="radio" checked={basis === 'capital'} onChange={() => { setBasis('capital'); setPv(null); }} className="accent-[#3b3f8f]" /> Capital × days (+ agreed %)</label>
                             <label className="flex items-center gap-2"><input type="radio" checked={basis === 'agreed'} onChange={() => { setBasis('agreed'); setPv(null); }} className="accent-[#3b3f8f]" /> Agreed share % × days</label>
                         </div>
                         <label className={`${L} flex items-center gap-1.5`}><input type="checkbox" checked={own} onChange={(e) => { setOwn(e.target.checked); setPv(null); }} className="h-4 w-4 accent-[#3b3f8f]" /> Amount</label>
@@ -406,6 +406,7 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                             <span className="text-[12px] font-semibold">{np >= 0 ? 'Profit to share' : 'Loss to share'}</span>{fmt(np)}
                         </div>
                     </div>
+                    {pv.notes?.map((n: string) => <div key={n} className="shrink-0 border border-sky-400 bg-[#e6f4ff] px-3 py-1 text-[12.5px] font-semibold text-sky-900">ℹ {n}</div>)}
                     {pv.overlaps?.length > 0 && <div className="shrink-0 border border-amber-400 bg-[#fff6d6] px-3 py-1 text-[13px] font-semibold text-amber-800">⚠ Already distributed for part of this period: {pv.overlaps.map((o: any) => `${o.voucher_no} (${dmy(o.from)}–${dmy(o.to)})`).join(', ')}</div>}
                     <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)] gap-2">
                     {/* The period's Profit and Loss: everything taken out before the partners share */}
@@ -460,7 +461,7 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                     </div>
                     </div>
                     <p className="shrink-0 text-[12px] text-slate-600">Net profit = all income less every expense of the period (cost of goods, salaries, fares, rent, bank and card charges …); only that is shared. {basis === 'capital'
-                        ? 'Each partner’s share = capital invested on each day they were a partner, as a part of all partners’ capital-days.'
+                        ? 'A partner with an agreed % gets that % of the profit (for their days); the rest goes to the others by capital (invested + profit kept) on each day they were a partner.'
                         : 'Each partner’s share = agreed % × days they were a partner, as a part of all partners’ total.'} Post credits each partner&apos;s capital account (a loss is taken off) against Retain Earning.</p>
                 </>) : (
                     <div className="flex flex-1 items-center justify-center rounded border border-dashed border-slate-400 bg-white/60 text-[14px] text-slate-500">Choose the period and press “Work it out” to see each partner’s share.</div>
@@ -513,7 +514,7 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                 </div>
                 <table className="w-full table-fixed border-collapse text-[11.5px]">
                     <colgroup>{[21, 9, 13, 8, 8, 14, 11, 16].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                    <thead><tr>{['Partner', 'Joining', 'Capital', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Balance'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
+                    <thead><tr>{['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Capital'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
                     <tbody>
                         {partners.map((p) => (
                             <tr key={p.id} className={`tabular-nums ${p.status !== 'active' ? 'text-slate-400' : ''}`}>
