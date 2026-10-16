@@ -23,6 +23,8 @@ import type { Card } from '@/components/trade/TradeCreditCard';
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const today = () => new Date().toISOString().slice(0, 10);
+// Overall tax %: the tax as a part of the amount (right even when the cards' rates differ).
+const pctOf = (tax: number, amount: number) => (amount > 0 ? `${(Math.round((tax / amount) * 10000) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%` : '');
 const dmy = (iso: string | null | undefined) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
 
 type Row = {
@@ -132,7 +134,7 @@ export default function TradeCreditCardReport() {
                     <tr className="bg-[#e8e8f4] font-bold tabular-nums">
                         <td className="border border-slate-400 px-1.5 py-1" colSpan={5}>Total ({list.length} payment{list.length === 1 ? '' : 's'})</td>
                         <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(total('amount'))}</td>
-                        <td className="border border-slate-400" />
+                        <td className="border border-slate-400 px-1.5 py-1 text-right" title="Overall tax % = total card tax ÷ total amount">{pctOf(total('tax'), total('amount'))}</td>
                         <td className="border border-slate-400 px-1.5 py-1 text-right text-red-700">{fmt(total('tax'))}</td>
                         <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(total('net'))}</td>
                         <td className="border border-slate-400" />
@@ -222,7 +224,7 @@ export default function TradeCreditCardReport() {
                             <div key={x.label} className="border-b border-slate-200 px-2 py-1.5 text-[13px] leading-tight">
                                 <div className="break-words font-semibold">{x.label}</div>
                                 <div className="mt-0.5 flex justify-between tabular-nums"><span className="text-slate-600">{x.n} payment{x.n === 1 ? '' : 's'}</span><b>{fmt(x.amount)}</b></div>
-                                <div className="flex justify-between tabular-nums text-red-700"><span>Card tax</span><span>{fmt(x.tax)}</span></div>
+                                <div className="flex justify-between tabular-nums text-red-700"><span>Card tax {pctOf(x.tax, x.amount)}</span><span>{fmt(x.tax)}</span></div>
                             </div>
                         ))}
                         {!byReceiver.length && <p className="px-2 py-4 text-center text-[13px] text-slate-500">—</p>}
@@ -233,7 +235,7 @@ export default function TradeCreditCardReport() {
                     <div className="grid min-w-0 flex-1 grid-cols-4 gap-2">
                         {box('Payments', String(list.length))}
                         {box('Paid by Card (customers credited)', fmt(total('amount')))}
-                        {box('Card Tax (not the customer’s)', fmt(total('tax')), true)}
+                        {box(`Card Tax ${pctOf(total('tax'), total('amount'))} (not the customer’s)`, fmt(total('tax')), true)}
                         {box('After Card Tax', fmt(total('net')))}
                     </div>
                     <button type="button" onClick={() => print()} disabled={!rows || printing} className={ACTION_BTN}>{printing ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">P</span>rint</>}</button>
@@ -260,7 +262,7 @@ export default function TradeCreditCardReport() {
                             {i === pages.length - 1 && (
                                 <div className="mt-2 flex gap-8 border-t border-slate-400 pt-1.5 text-[11px]">
                                     <span>Payments <b>{list.length}</b></span><span>Paid by card <b>{fmt(total('amount'))}</b></span>
-                                    <span>Card tax <b>{fmt(total('tax'))}</b></span><span>After tax <b>{fmt(total('net'))}</b></span>
+                                    <span>Card tax <b>{fmt(total('tax'))}</b> ({pctOf(total('tax'), total('amount'))})</span><span>After tax <b>{fmt(total('net'))}</b></span>
                                 </div>
                             )}
                         </div>
