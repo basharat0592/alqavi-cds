@@ -195,6 +195,8 @@ class TradeCardViewSet(viewsets.ViewSet):
             cust = accs.filter(pk=d.get('customer'), customer__isnull=False).first() if d.get('customer') else None
         if not cust:
             return Response({'detail': 'The customer has no account in the Chart of Account.'}, status=400)
+        if payer is None:   # not asked on the invoice: the customer's own card, when they have one
+            payer = cards.filter(holder_type='customer', customer_acc=cust, status='active').first()
         amt = _money(d.get('amount'))
         if amt <= 0:
             return Response({'detail': 'Enter the amount paid by card.'}, status=400)

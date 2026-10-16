@@ -29,6 +29,8 @@ const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', {
 const pct = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 })}%`;
 const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (iso: string | null | undefined) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
+// Grid dates as dd-mm-yy so they fit their column.
+const dmy2 = (iso: string | null | undefined) => { const s = dmy(iso); return s ? s.slice(0, 6) + s.slice(8) : ''; };
 
 type Partner = {
     id: number; name: string; father_name: string; cnic: string; phone: string; address: string; joining_date: string;
@@ -40,8 +42,8 @@ const TABS: { v: Tab; label: string }[] = [
     { v: 'partners', label: 'Partners' }, { v: 'capital', label: 'Capital In / Out' },
     { v: 'profit', label: 'Profit Distribution' }, { v: 'report', label: 'Report' },
 ];
-const TH = 'sticky top-0 z-10 overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-400 bg-gradient-to-b from-white to-[#e9e9f1] px-1.5 py-1.5 text-left font-semibold';
-const TD = 'overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1';
+const TH = 'sticky top-0 z-10 overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-400 bg-gradient-to-b from-white to-[#e9e9f1] px-1 py-1.5 text-left font-semibold';
+const TD = 'overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1 py-1';
 
 export default function TradePartnership() {
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
@@ -174,16 +176,16 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
 
             <div className="flex min-h-0 flex-col gap-2">
                 <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
-                    <table className="w-full table-fixed border-collapse text-[12.5px]">
-                        <colgroup>{[16, 11, 13, 9, 9, 12, 10, 12, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                        <thead><tr>{['Partner', 'Joining', 'Capital Invested', 'Capital %', 'Agreed %', 'Profit / Loss', 'Drawings', 'Balance', 'Status'].map((h, k) =>
+                    <table className="w-full table-fixed border-collapse text-[11.5px]">
+                        <colgroup>{[19, 8.5, 12, 7.5, 7.5, 12, 9.5, 14, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                        <thead><tr>{['Partner', 'Joining', 'Capital', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Balance', 'Status'].map((h, k) =>
                             <th key={h} className={`${TH} ${k >= 2 && k <= 7 ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
                         <tbody>
                             {list.map((p) => (
                                 <tr key={p.id} onClick={() => edit(p)} title="Click to update"
                                     className={`cursor-pointer tabular-nums ${f.id === p.id ? 'bg-[#2f5bd3] text-white' : p.status !== 'active' ? 'text-slate-400 hover:bg-indigo-50' : 'hover:bg-indigo-50'}`}>
-                                    <td className={TD} title={`${p.acc_id} ${p.account_name}`}>{p.name}<span className="block text-[10.5px] opacity-70">{p.acc_id}{p.phone ? ` · ${p.phone}` : ''}</span></td>
-                                    <td className={TD}>{dmy(p.joining_date)}{p.leaving_date && <span className="block text-[10.5px]">left {dmy(p.leaving_date)}</span>}</td>
+                                    <td className={TD} title={`${p.acc_id} ${p.account_name}`}>{p.name}<span className="block text-[10px] opacity-70">{p.acc_id}{p.phone ? ` · ${p.phone}` : ''}</span></td>
+                                    <td className={TD}>{dmy2(p.joining_date)}{p.leaving_date && <span className="block text-[10px]">left {dmy2(p.leaving_date)}</span>}</td>
                                     <td className={`${TD} text-right font-semibold`}>{fmt(num(p.invested))}</td>
                                     <td className={`${TD} text-right`}>{pct(num(p.capital_pct))}</td>
                                     <td className={`${TD} text-right`}>{p.share_pct === null ? '—' : pct(num(p.share_pct))}</td>
@@ -275,13 +277,13 @@ function CapitalTab({ partners, banks, reload, setAsk }: { partners: Partner[]; 
                 </div>
             </fieldset>
             <div className="min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
-                <table className="w-full table-fixed border-collapse text-[12.5px]">
-                    <colgroup>{[12, 12, 18, 15, 12, 15, 16].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                <table className="w-full table-fixed border-collapse text-[11.5px]">
+                    <colgroup>{[12, 9, 20, 15, 13, 15, 16].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                     <thead><tr>{['Voucher No', 'Date', 'Partner', 'Entry', 'Amount', 'Cash / Bank', 'Note'].map((h, k) => <th key={h} className={`${TH} ${k === 4 ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
                     <tbody>
                         {(rows || []).map((r) => (
                             <tr key={r.id} className={`tabular-nums ${r.kind === 'invest' ? '' : 'text-red-700'}`}>
-                                {[r.voucher_no, dmy(r.date), r.partner, KIND[r.kind], fmt(num(r.amount)), r.bank, r.note].map((v, k) => (
+                                {[r.voucher_no, dmy2(r.date), r.partner, KIND[r.kind], fmt(num(r.amount)), r.bank, r.note].map((v, k) => (
                                     <td key={k} title={String(v ?? '')} className={`${TD} ${k === 4 ? 'text-right font-semibold' : ''}`}>{v}</td>
                                 ))}
                             </tr>
@@ -409,8 +411,8 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                     {/* The period's Profit and Loss: everything taken out before the partners share */}
                     <div className="min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
                         <div className="sticky top-0 z-10 bg-[#e8e8f4] px-2 py-1 text-[13px] font-bold">Profit and Loss of the period</div>
-                        <table className="w-full table-fixed border-collapse text-[12.5px]">
-                            <colgroup><col /><col style={{ width: '36%' }} /></colgroup>
+                        <table className="w-full table-fixed border-collapse text-[12px]">
+                            <colgroup><col /><col style={{ width: '38%' }} /></colgroup>
                             <tbody>
                                 {(['income', 'expense'] as const).map((kind) => {
                                     const gs = (pv.statement || []).filter((g: any) => g.kind === kind);
@@ -436,8 +438,8 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                         </table>
                     </div>
                     <div className="min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
-                        <table className="w-full table-fixed border-collapse text-[13px]">
-                            <colgroup>{[26, 10, 20, 12, 13, 19].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                        <table className="w-full table-fixed border-collapse text-[12px]">
+                            <colgroup>{[27, 8, 19, 11, 12, 23].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                             <thead><tr>{['Partner', 'Days', 'Capital', 'Agreed %', 'Share %', np >= 0 ? 'Profit Share' : 'Loss Share'].map((h, k) => <th key={h} className={`${TH} ${k ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
                             <tbody>
                                 {pv.rows.map((r: any) => (
@@ -509,14 +511,14 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                     <div className="text-[16px] font-black">AL-QAVI TRADERS — Partnership Summary</div>
                     <div className="text-[12px] text-slate-600">As on {dmy(today())} · {act.length} active partner{act.length === 1 ? '' : 's'}</div>
                 </div>
-                <table className="w-full table-fixed border-collapse text-[12.5px]">
-                    <colgroup>{[20, 11, 13, 9, 9, 13, 11, 14].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                    <thead><tr>{['Partner', 'Joining', 'Capital Invested', 'Capital %', 'Agreed %', 'Profit / Loss', 'Drawings', 'Balance'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
+                <table className="w-full table-fixed border-collapse text-[11.5px]">
+                    <colgroup>{[21, 9, 13, 8, 8, 14, 11, 16].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                    <thead><tr>{['Partner', 'Joining', 'Capital', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Balance'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
                     <tbody>
                         {partners.map((p) => (
                             <tr key={p.id} className={`tabular-nums ${p.status !== 'active' ? 'text-slate-400' : ''}`}>
                                 <td className="truncate border border-slate-300 px-1.5 py-1">{p.name}</td>
-                                <td className="border border-slate-300 px-1.5 py-1">{dmy(p.joining_date)}</td>
+                                <td className="border border-slate-300 px-1.5 py-1">{dmy2(p.joining_date)}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.invested))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{pct(num(p.capital_pct))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{p.share_pct === null ? '—' : pct(num(p.share_pct))}</td>
@@ -540,14 +542,14 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                 {st && (
                     <div>
                         <div className="text-[15px] font-black">Capital Statement — {st.partner.name} <span className="text-[12px] font-semibold text-slate-600">({st.partner.acc_id} {st.partner.account_name} · joined {dmy(st.partner.joining_date)})</span></div>
-                        <table className="mt-1 w-full table-fixed border-collapse text-[12.5px]">
+                        <table className="mt-1 w-full table-fixed border-collapse text-[11.5px]">
                             <colgroup>{[10, 11, 13, 36, 10, 10, 10].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                             <thead><tr>{['Date', 'Voucher', 'Entry', 'Detail', 'Debit', 'Credit', 'Balance'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 4 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
                             <tbody>
                                 <tr className="tabular-nums text-slate-600"><td className="border border-slate-300 px-1.5 py-1" colSpan={6}>Opening Balance</td><td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(st.opening))}</td></tr>
                                 {st.rows.map((r: any, i: number) => (
                                     <tr key={i} className={`tabular-nums ${r.kind.includes('Loss') || r.kind === 'Drawings' || r.kind === 'Capital out' ? 'text-red-700' : r.kind === 'Profit share' ? 'text-[#1f2bd6]' : ''}`}>
-                                        <td className="border border-slate-300 px-1.5 py-1">{dmy(r.date)}</td>
+                                        <td className="border border-slate-300 px-1.5 py-1">{dmy2(r.date)}</td>
                                         <td className="border border-slate-300 px-1.5 py-1">{r.voucher_no}</td>
                                         <td className="border border-slate-300 px-1.5 py-1">{r.kind}</td>
                                         <td className="truncate border border-slate-300 px-1.5 py-1" title={r.detail}>{r.detail}</td>

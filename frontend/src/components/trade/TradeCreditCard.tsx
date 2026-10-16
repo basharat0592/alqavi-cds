@@ -5,9 +5,9 @@
  *
  * The cards in the system, each held by a saleman (the card a customer's card
  * payment is received on), a customer (the card that pays) or the company:
- * bank, card number and the bank's tax %. The Sale Invoice offers them in its
- * Receiver Card / Payer Card lists; the tax is recorded in the Credit Card
- * Report only — never charged to the customer.
+ * bank, card number and the bank's tax %. The Sale Invoice offers them as its
+ * Receiver Card; a customer's own card is put in the Credit Card Report as the
+ * paying card. The tax is recorded there only — never charged to the customer.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
@@ -97,7 +97,7 @@ export default function TradeCreditCard() {
                         <span className={L}>Card of</span>
                         <div className="flex gap-1.5">
                             {(['saleman', 'customer', 'company'] as const).map((k) => (
-                                <label key={k} className={`flex h-9 flex-1 cursor-pointer items-center justify-center gap-1.5 border text-[14px] font-bold ${f.holder_type === k ? 'border-[#3b3f8f] bg-[#3b3f8f] text-white' : 'border-[#9da1d8] bg-white text-slate-700'}`}>
+                                <label key={k} className={`flex h-9 min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 border text-[13px] font-bold ${f.holder_type === k ? 'border-[#3b3f8f] bg-[#3b3f8f] text-white' : 'border-[#9da1d8] bg-white text-slate-700'}`}>
                                     <input type="radio" checked={f.holder_type === k} onChange={() => set('holder_type', k)} className="hidden" />{HOLDER[k]}
                                 </label>
                             ))}
@@ -140,9 +140,9 @@ export default function TradeCreditCard() {
                         </select>
                     </div>
                     <p className="mt-3 text-[12.5px] leading-snug text-slate-600">
-                        A <b>saleman&apos;s</b> card receives a customer&apos;s card payment; a <b>customer&apos;s</b> card pays.
-                        On the Sale Invoice choose them under <b>Receiver Card</b> and <b>Payer Card</b>. The card tax is kept in the
-                        Credit Card Report for later calculation — the customer is always credited the full amount.
+                        A <b>saleman&apos;s</b> card receives a customer&apos;s card payment — choose it on the Sale Invoice under
+                        <b> Receiver Card</b>. A <b>customer&apos;s</b> card, when added, is put in the Credit Card Report by itself as the
+                        paying card. The card tax is kept in that report for later calculation — the customer is always credited the full amount.
                     </p>
                     <div className="mt-3 flex flex-wrap justify-end gap-2">
                         <button type="button" onClick={reset} className={ACTION_BTN}><span>Add <span className="underline">N</span>ew</span></button>
