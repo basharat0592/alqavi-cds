@@ -73,13 +73,18 @@ def _capital_moves(p):
     return sorted((d, _d(cr) - _d(dr)) for d, cr, dr in lines)
 
 
-def partner_stats(p, upto=None):
+def partner_stats(p, upto=None, since=None):
+    """Invested and capital as on `upto`; profit / loss and drawings from `since` (all, when empty) to `upto`."""
     upto = upto or datetime.date.today()
     invested = sum((a for d, a in _money_moves(p) if d <= upto), Z)
     agg = lambda qs: qs.aggregate(c=Sum('credit'), d=Sum('debit'))
-    a = agg(VoucherLine.objects.filter(account_id=p.account_id, voucher__vtype=DIST_VTYPE, voucher__date__lte=upto))
+    dist = VoucherLine.objects.filter(account_id=p.account_id, voucher__vtype=DIST_VTYPE, voucher__date__lte=upto)
+    draw = PartnerEntry.objects.filter(partner=p, kind='drawing', date__lte=upto)
+    if since:
+        dist, draw = dist.filter(voucher__date__gte=since), draw.filter(date__gte=since)
+    a = agg(dist)
     profit = (a['c'] or Z) - (a['d'] or Z)
-    drawings = PartnerEntry.objects.filter(partner=p, kind='drawing', date__lte=upto).aggregate(s=Sum('amount'))['s'] or Z
+    drawings = draw.aggregate(s=Sum('amount'))['s'] or Z
     a = agg(VoucherLine.objects.filter(account_id=p.account_id, voucher__date__lte=upto).exclude(voucher__chq_status='pending'))
     balance = (a['c'] or Z) - (a['d'] or Z)
     # capital = money in + profit kept − drawings: what the shares go by
@@ -185,8 +190,8 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         from modules.company.models import LedgerAccount
         return scope_to_tenant(self.request.user, LedgerAccount.objects.all(), 'tenant').select_related('group')
 
-    def _row(self, p, total_invested=None):
-        s = partner_stats(p)
+    def _row(self, p, total_invested=None, s=None):
+        s = s or partner_stats(p)
         out = {
             'id': p.id, 'name': p.name, 'father_name': p.father_name, 'cnic': p.cnic, 'phone': p.phone, 'address': p.address,
             'joining_date': p.joining_date, 'leaving_date': p.leaving_date, 'share_pct': p.share_pct, 'notes': p.notes,
@@ -197,10 +202,19 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         return out
 
     def list(self, request):
+        """?date_to: capital as on that day (partners who had joined by then); ?date_from: profit /
+        loss and drawings from that day."""
+        try:
+            upto, since = _day(request.query_params.get('date_to')), _day(request.query_params.get('date_from'))
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
         ps = list(self._partners())
-        stats = {p.id: partner_stats(p) for p in ps}
-        total = sum((stats[p.id]['capital'] for p in ps if p.status == 'active' and stats[p.id]['capital'] > 0), Z)
-        return Response([self._row(p, total) for p in ps])
+        if upto:
+            ps = [p for p in ps if p.joining_date <= upto]
+        stats = {p.id: partner_stats(p, upto, since) for p in ps}
+        live = lambda p: p.status == 'active' and not (upto and p.leaving_date and p.leaving_date < upto)
+        total = sum((stats[p.id]['capital'] for p in ps if live(p) and stats[p.id]['capital'] > 0), Z)
+        return Response([self._row(p, total, stats[p.id]) for p in ps])
 
     def _apply(self, p, d):
         name = str(d.get('name', p.name) or '').strip()[:150]

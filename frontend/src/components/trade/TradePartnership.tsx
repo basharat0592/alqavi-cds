@@ -479,13 +479,27 @@ function ReportTab({ partners }: { partners: Partner[] }) {
     const [to, setTo] = useState(today);
     const [st, setSt] = useState<any>(null);
     const ref = useRef<HTMLDivElement>(null);
+    // The dates take effect on Apply (summary and statement together).
+    const [applied, setApplied] = useState<{ fromOn: boolean; from: string; to: string }>(() => ({ fromOn: false, from: `${new Date().getFullYear()}-01-01`, to: today() }));
+    const dirty = applied.fromOn !== fromOn || (fromOn && applied.from !== from) || applied.to !== to;
+    const apply = () => {
+        if (fromOn && from > to) { toast.error('The From date is after the To date.'); return; }
+        setApplied({ fromOn, from, to });
+    };
+    const params = { ...(applied.fromOn ? { date_from: applied.from } : {}), date_to: applied.to };
+    const [rows, setRows] = useState<Partner[] | null>(null);
+    useEffect(() => {
+        setRows(null);
+        api.get('v1/sales/trade-partners/', { params }).then(({ data }) => setRows(data)).catch(() => setRows([]));
+    }, [applied, partners]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (!pid) { setSt(null); return; }
-        api.get('v1/sales/trade-partners/statement/', { params: { partner: pid, ...(fromOn ? { date_from: from } : {}), date_to: to } })
+        api.get('v1/sales/trade-partners/statement/', { params: { partner: pid, ...params } })
             .then(({ data }) => setSt(data)).catch(() => setSt(null));
-    }, [pid, fromOn, from, to]);
-    const act = partners.filter((p) => p.status === 'active');
-    const sumOf = (k: keyof Partner) => partners.reduce((s, p) => s + num(p[k]), 0);
+    }, [pid, applied]); // eslint-disable-line react-hooks/exhaustive-deps
+    const list = rows || [];
+    const act = list.filter((p) => p.status === 'active');
+    const sumOf = (k: keyof Partner) => list.reduce((s, p) => s + num(p[k]), 0);
     const [printing, setPrinting] = useState(false);
     const doPrint = async () => {
         if (!ref.current || printing) return;
@@ -503,20 +517,25 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                 <label className={`${LABEL} flex items-center gap-1.5 text-[14px]`}><input type="checkbox" checked={fromOn} onChange={(e) => setFromOn(e.target.checked)} className="h-4 w-4 accent-[#3b3f8f]" /> From</label>
                 <input type="date" value={from} disabled={!fromOn} onChange={(e) => e.target.value && setFrom(e.target.value)} className={`${FIELD} w-[160px] ${fromOn ? 'border-emerald-300 bg-[#e3fbe3]' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
                 <span className={`${LABEL} text-[14px]`}>To</span>
-                <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} className={`${EDIT} w-[160px]`} />
+                <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') apply(); }} className={`${EDIT} w-[160px]`} />
+                <button type="button" onClick={apply} title="Show the summary and the statement for these dates"
+                    className={`${ACTION_BTN} !min-w-[90px] ${dirty ? '!border-[#3b3f8f] !from-[#3b3f8f] !to-[#2b2f7f] !text-white animate-pulse' : ''}`}><span className="underline">A</span>pply</button>
                 <span className="flex-1" />
                 <button type="button" onClick={doPrint} disabled={printing} className={ACTION_BTN}>{printing ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">P</span>rint</>}</button>
             </div>
             <div ref={ref} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-white p-3">
                 <div>
                     <div className="text-[16px] font-black">AL-QAVI TRADERS — Partnership Summary</div>
-                    <div className="text-[12px] text-slate-600">As on {dmy(today())} · {act.length} active partner{act.length === 1 ? '' : 's'}</div>
+                    <div className="text-[12px] text-slate-600">
+                        Capital as on {dmy(applied.to)} · Profit / Loss and Drawings {applied.fromOn ? `from ${dmy(applied.from)} to ${dmy(applied.to)}` : `up to ${dmy(applied.to)}`} · {act.length} active partner{act.length === 1 ? '' : 's'}
+                    </div>
                 </div>
                 <table className="w-full table-fixed border-collapse text-[11.5px]">
                     <colgroup>{[21, 9, 13, 8, 8, 14, 11, 16].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                     <thead><tr>{['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Capital'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
                     <tbody>
-                        {partners.map((p) => (
+                        {!rows && <tr><td colSpan={8} className="px-3 py-4 text-center text-slate-500">Loading…</td></tr>}
+                        {list.map((p) => (
                             <tr key={p.id} className={`tabular-nums ${p.status !== 'active' ? 'text-slate-400' : ''}`}>
                                 <td className="truncate border border-slate-300 px-1.5 py-1">{p.name}</td>
                                 <td className="border border-slate-300 px-1.5 py-1">{dmy2(p.joining_date)}</td>
