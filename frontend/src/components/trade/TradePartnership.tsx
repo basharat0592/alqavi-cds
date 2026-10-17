@@ -531,10 +531,10 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                     </div>
                 </div>
                 <table className="w-full table-fixed border-collapse text-[11.5px]">
-                    <colgroup>{[21, 9, 13, 8, 8, 14, 11, 16].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                    <thead><tr>{['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Capital'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
+                    <colgroup>{[19, 8, 12, 7, 7, 13, 10, 10, 14].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                    <thead><tr>{['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Donations', 'Capital'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
                     <tbody>
-                        {!rows && <tr><td colSpan={8} className="px-3 py-4 text-center text-slate-500">Loading…</td></tr>}
+                        {!rows && <tr><td colSpan={9} className="px-3 py-4 text-center text-slate-500">Loading…</td></tr>}
                         {list.map((p) => (
                             <tr key={p.id} className={`tabular-nums ${p.status !== 'active' ? 'text-slate-400' : ''}`}>
                                 <td className="truncate border border-slate-300 px-1.5 py-1">{p.name}</td>
@@ -544,6 +544,7 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{p.share_pct === null ? '—' : pct(num(p.share_pct))}</td>
                                 <td className={`border border-slate-300 px-1.5 py-1 text-right ${num(p.profit) < 0 ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.drawings))}</td>
+                                <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num((p as any).donations))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right font-bold">{fmt(num(p.balance))}</td>
                             </tr>
                         ))}
@@ -554,6 +555,7 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                             <td className="border border-slate-400" />
                             <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('profit'))}</td>
                             <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('drawings'))}</td>
+                            <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(list.reduce((s, p) => s + num((p as any).donations), 0))}</td>
                             <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('balance'))}</td>
                         </tr>
                     </tbody>
@@ -568,7 +570,7 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                             <tbody>
                                 <tr className="tabular-nums text-slate-600"><td className="border border-slate-300 px-1.5 py-1" colSpan={6}>Opening Balance</td><td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(st.opening))}</td></tr>
                                 {st.rows.map((r: any, i: number) => (
-                                    <tr key={i} className={`tabular-nums ${r.kind.includes('Loss') || r.kind === 'Drawings' || r.kind === 'Capital out' ? 'text-red-700' : r.kind === 'Profit share' ? 'text-[#1f2bd6]' : ''}`}>
+                                    <tr key={i} className={`tabular-nums ${r.kind.includes('Loss') || r.kind === 'Drawings' || r.kind === 'Donation' || r.kind === 'Capital out' ? 'text-red-700' : r.kind === 'Profit share' ? 'text-[#1f2bd6]' : ''}`}>
                                         <td className="border border-slate-300 px-1.5 py-1">{dmy2(r.date)}</td>
                                         <td className="border border-slate-300 px-1.5 py-1">{r.voucher_no}</td>
                                         <td className="border border-slate-300 px-1.5 py-1">{r.kind}</td>

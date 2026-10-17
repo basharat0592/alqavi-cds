@@ -1021,3 +1021,45 @@ class ProfitDistribution(models.Model):
     class Meta:
         db_table = 'trade_profit_distributions'
         ordering = ['-date_to', '-id']
+
+
+class DonationType(models.Model):
+    """Trade 1.0 Donation types: Zakat 2.5 %, Khums 5 %, Sadqa … — `pct` is the
+    usual rate (empty: an amount is entered each time)."""
+    name = models.CharField(max_length=60)
+    pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    status = models.CharField(max_length=10, default='active')
+    sno = models.PositiveIntegerField(default=0)
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_donation_types')
+
+    class Meta:
+        db_table = 'trade_donation_types'
+        ordering = ['sno', 'id']
+
+
+class Donation(models.Model):
+    """A donation given on behalf of a partner, taken from that partner's
+    profit / capital: Partner capital Dr / Cash-Bank Cr (like drawings).
+    basis: 'profit' (pct of the profit shared to them From–To), 'capital'
+    (pct of their capital on the date) or 'amount' (entered)."""
+    partner = models.ForeignKey(Partner, on_delete=models.PROTECT, related_name='donations')
+    dtype = models.ForeignKey(DonationType, on_delete=models.PROTECT, related_name='donations')
+    voucher = models.OneToOneField(Voucher, on_delete=models.CASCADE, related_name='donation')
+    date = models.DateField()
+    basis = models.CharField(max_length=10, default='profit')
+    date_from = models.DateField(null=True, blank=True)
+    date_to = models.DateField(null=True, blank=True)
+    pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    base_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=14, decimal_places=2)
+    bank = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='donations_paid')
+    paid_to = models.CharField(max_length=150, blank=True, default='')
+    note = models.CharField(max_length=255, blank=True, default='')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_donations')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trade_donations'
+        ordering = ['-date', '-id']

@@ -15,7 +15,7 @@ import {
     Package, Boxes, CalendarClock, ShoppingCart, ScanLine, RefreshCcw,
     TrendingUp, RotateCcw, ClipboardList, CreditCard, ArrowDownLeft, ArrowUpRight,
     BookOpen, Database, KeyRound, Receipt, Wallet, BarChart3, FileText, Users,
-    ChevronDown, ChevronRight, X,
+    ChevronDown, ChevronRight, X, Heart,
 } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
@@ -112,6 +112,9 @@ const MENUS: Menu[] = [
         SEP,
         { label: 'Post Voucher (Manually)', href: '/admin/trade/general-voucher' },
         { label: 'Forward the Profit and Loss', href: '/admin/trade/forward-profit-loss' },
+        SEP,
+        { label: 'Partnership', href: '/admin/trade/partnership' },
+        { label: 'Donation', href: '/admin/trade/donation' },
     ] },
     { title: 'Setup', items: [
         { label: 'New User', href: '/admin/trade/new-user' },
@@ -268,6 +271,7 @@ const THEMES: Record<string, Theme> = {
     sale: { tile: 'bg-[#e7f6ee] hover:bg-[#d6efe2] border-[#b2e0c6] text-[#0b5e38]', icon: 'bg-[#14935C] text-white', ring: 'hover:ring-[#7fcca1]' },
     account: { tile: 'bg-[#e8f3fc] hover:bg-[#d8eafa] border-[#b8d9f3] text-[#124f80]', icon: 'bg-[#2F8FD8] text-white', ring: 'hover:ring-[#8cc0ea]' },
     backup: { tile: 'bg-[#fdeee7] hover:bg-[#fbe1d5] border-[#f2c6b2] text-[#8a3a1b]', icon: 'bg-[#E9825A] text-white', ring: 'hover:ring-[#eda98a]' },
+    donation: { tile: 'bg-[#e9f7f3] hover:bg-[#d8f0e9] border-[#a9dcca] text-[#0d5a45]', icon: 'bg-[#0f8a69] text-white', ring: 'hover:ring-[#7fcab3]' },
     card: { tile: 'bg-[#f4eefc] hover:bg-[#eadffa] border-[#d8c6f1] text-[#4b2382]', icon: 'bg-[#7B3FC4] text-white', ring: 'hover:ring-[#b99be6]' },
     report: { tile: 'bg-white hover:bg-[#f3f4fc] border-[#c9cdf0] text-[#1F2370]', icon: 'bg-gradient-to-br from-[#2B2F8F] to-[#2F8FD8] text-white', ring: 'hover:ring-[#9aa0e3]' },
 };
@@ -303,7 +307,8 @@ const COLUMNS: Group[] = [
 /* Bottom row, as in the legacy console: Backup DataBase spans the Product and
    Purchase columns, then Change Password (Sale column) and Expense Voucher. */
 const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
-    { b: { name: 'Backup Database', href: '/admin/trade/backup', icon: Database }, theme: THEMES.backup, span: true },
+    { b: { name: 'Backup Database', href: '/admin/trade/backup', icon: Database }, theme: THEMES.backup },
+    { b: { name: 'Donation', href: '/admin/trade/donation', icon: Heart }, theme: THEMES.donation },
     { b: { name: 'Change Password', href: '/admin/trade/change-password', icon: KeyRound }, theme: THEMES.sale },
     { b: { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight }, theme: THEMES.account },
     { b: { name: 'Partnership Report', href: '/admin/trade/partnership?tab=report', icon: BarChart3 }, theme: THEMES.card },

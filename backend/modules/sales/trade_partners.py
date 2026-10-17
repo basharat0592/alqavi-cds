@@ -59,7 +59,7 @@ def _money_moves(p):
     """[(date, +/-amount)] of money put in / taken back: every entry on the capital
     account except profit shares and drawings."""
     drawings = PartnerEntry.objects.filter(partner__account_id=p.account_id, kind='drawing').values_list('voucher_id', flat=True)
-    lines = (VoucherLine.objects.filter(account_id=p.account_id).exclude(voucher__vtype=DIST_VTYPE)
+    lines = (VoucherLine.objects.filter(account_id=p.account_id).exclude(voucher__vtype__in=[DIST_VTYPE, 'donation'])
              .exclude(voucher_id__in=drawings).exclude(voucher__chq_status='pending')
              .values_list('voucher__date', 'credit', 'debit'))
     return sorted((d, _d(cr) - _d(dr)) for d, cr, dr in lines)
@@ -85,10 +85,15 @@ def partner_stats(p, upto=None, since=None):
     a = agg(dist)
     profit = (a['c'] or Z) - (a['d'] or Z)
     drawings = draw.aggregate(s=Sum('amount'))['s'] or Z
+    from .models import Donation
+    don = Donation.objects.filter(partner=p, date__lte=upto)
+    if since:
+        don = don.filter(date__gte=since)
+    donations = don.aggregate(s=Sum('amount'))['s'] or Z
     a = agg(VoucherLine.objects.filter(account_id=p.account_id, voucher__date__lte=upto).exclude(voucher__chq_status='pending'))
     balance = (a['c'] or Z) - (a['d'] or Z)
     # capital = money in + profit kept − drawings: what the shares go by
-    return {'invested': invested, 'profit': profit, 'drawings': drawings, 'balance': balance, 'capital': balance}
+    return {'invested': invested, 'profit': profit, 'drawings': drawings, 'donations': donations, 'balance': balance, 'capital': balance}
 
 
 def _active_days(p, f, t):
@@ -495,6 +500,7 @@ class TradePartnershipViewSet(viewsets.ViewSet):
                 bal = opening
             bal += amt
             kind = ('Profit share' if amt >= 0 else 'Loss share') if l.voucher.vtype == DIST_VTYPE else \
+                'Donation' if l.voucher.vtype == 'donation' else \
                 'Drawings' if l.voucher_id in drawings else ('Capital in' if amt >= 0 else 'Capital out')
             rows.append({'date': d, 'voucher_no': l.voucher.voucher_no, 'kind': kind, 'detail': l.detail or l.voucher.detail,
                          'debit': l.debit, 'credit': l.credit, 'balance': bal})
