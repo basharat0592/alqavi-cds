@@ -50,6 +50,7 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
     const run = async (save?: string) => {
         if (busy || !p) return;
         setBusy(true);
+        // each A4 sheet fits half A4 upright exactly (× 0.707)
         try { await printSheets(sheets(), save); } catch { setErr('Could not prepare the print.'); } finally { setBusy(false); }
     };
     // Print once the data and the letterhead images are in.

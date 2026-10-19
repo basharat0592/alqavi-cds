@@ -675,7 +675,7 @@ function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
     const doPrint = async () => {
         if (!ref.current || printing) return;
         setPrinting(true);
-        try { await printWindow(ref.current); } catch { toast.error('Could not prepare the print.'); } finally { setPrinting(false); }
+        try { await printWindow(ref.current || undefined, 760); } catch { toast.error('Could not prepare the print.'); } finally { setPrinting(false); }
     };
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-2">

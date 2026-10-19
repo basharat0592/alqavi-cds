@@ -916,7 +916,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     };
     const [showPV, setShowPV] = useState(false);
     // Printed invoice size: Half A4 landscape or a thermal slip (remembered per browser).
-    const [printSize, setPrintSize] = useState<InvoiceSize>('a4');
+    const [printSize, setPrintSize] = useState<InvoiceSize>('a5');
     useEffect(() => { setPrintSize(savedInvoiceSize()); }, []);
     const choosePrintSize = (v: InvoiceSize) => {
         setPrintSize(v);

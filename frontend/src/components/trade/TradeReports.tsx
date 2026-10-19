@@ -140,9 +140,9 @@ export default function TradeReports() {
         finally { setBusy(false); }
     };
 
-    // Print / PDF: A4 sheets, a header on each and page numbers.
+    // Print / PDF: half A4 upright sheets (148 × 210 mm), a header on each and page numbers.
     const wide = (res?.columns.length || 0) > 6;
-    const perPage = wide ? 30 : 44;
+    const perPage = wide ? 30 : 34;
     const pages = useMemo(() => {
         if (!res) return [] as Row[][];
         const out: Row[][] = [];
@@ -158,7 +158,7 @@ export default function TradeReports() {
             await new Promise((r) => setTimeout(r, 400));   // let the A4 sheets render
             const sheets = Array.from(sheetsRef.current?.querySelectorAll<HTMLElement>('.rpt-page') || []);
             // Text-only pages: a lighter picture keeps long reports small and quick to print.
-            await printSheets(sheets, save, wide ? 'landscape' : 'portrait', 2);
+            await printSheets(sheets, save, 3);
         } catch { toast.error('Could not prepare the print.'); }
         finally { setPrinting(false); }
     };
@@ -320,19 +320,19 @@ export default function TradeReports() {
             {res && printing && (
                 <div ref={sheetsRef} aria-hidden style={{ position: 'fixed', left: -20000, top: 0 }}>
                     {pages.map((rows, pi) => (
-                        <div key={pi} className="rpt-page flex flex-col bg-white" style={{ width: wide ? '297mm' : '210mm', height: wide ? '210mm' : '297mm', padding: '9mm', boxSizing: 'border-box', color: '#111' }}>
+                        <div key={pi} className="rpt-page flex flex-col bg-white" style={{ width: '148mm', height: '210mm', padding: '6mm', boxSizing: 'border-box', color: '#111' }}>
                             <div className="flex items-end justify-between" style={{ borderBottom: '0.4mm solid #222', paddingBottom: '2mm', marginBottom: '2.5mm' }}>
                                 <div>
-                                    <div style={{ fontSize: '14pt', fontWeight: 800 }}>AL-QAVI TRADERS</div>
-                                    <div style={{ fontSize: '12pt', fontWeight: 700, color: '#1f2bd6' }}>{res.title}</div>
-                                    <div style={{ fontSize: '8.5pt', color: '#444' }}>{res.subtitle}</div>
+                                    <div style={{ fontSize: '11pt', fontWeight: 800 }}>AL-QAVI TRADERS</div>
+                                    <div style={{ fontSize: '9.5pt', fontWeight: 700, color: '#1f2bd6' }}>{res.title}</div>
+                                    <div style={{ fontSize: '6.5pt', color: '#444' }}>{res.subtitle}</div>
                                 </div>
-                                <div style={{ fontSize: '8pt', textAlign: 'right', color: '#444' }}>
+                                <div style={{ fontSize: '6.5pt', textAlign: 'right', color: '#444' }}>
                                     <div>Page {pi + 1} of {pages.length}</div>
                                     <div>Printed {new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</div>
                                 </div>
                             </div>
-                            <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{table(rows, '8pt', pi === pages.length - 1)}</div>
+                            <div className="rpt-half" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{table(rows, wide ? '5.6pt' : '6.6pt', pi === pages.length - 1)}</div>
                         </div>
                     ))}
                 </div>

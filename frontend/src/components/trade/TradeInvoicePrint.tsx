@@ -38,11 +38,11 @@ export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
     { v: '80', label: 'Slip 80 mm' },
     { v: '58', label: 'Slip 58 mm' },
 ];
-const SIZE_KEY = 'trade.invoice.size';
+const SIZE_KEY = 'trade.invoice.size.v2';   // v2: every print starts on half A4 upright
 const CUSTOM_KEY = 'trade.invoice.custom';
 const isSize = (v: any): v is InvoiceSize => INVOICE_SIZES.some((o) => o.v === v);
 export const savedInvoiceSize = (): InvoiceSize => {
-    try { const v = localStorage.getItem(SIZE_KEY); return isSize(v) ? v : 'a4'; } catch { return 'a4'; }
+    try { const v = localStorage.getItem(SIZE_KEY); return isSize(v) ? v : 'a5'; } catch { return 'a5'; }
 };
 
 /* Paper sizes, portrait, in mm. The layout is designed at A4 width. */
@@ -240,7 +240,7 @@ function printPdfBlob(blob: Blob) {
 export default function TradeInvoicePrint({ id, token }: { id?: string; token?: string }) {
     const [inv, setInv] = useState<Invoice | null>(null);
     const [err, setErr] = useState('');
-    const [size, setSize] = useState<InvoiceSize>('a4');
+    const [size, setSize] = useState<InvoiceSize>('a5');
     const [custom, setCustom] = useState({ w: 210, h: 297 });
     const [autoPrint, setAutoPrint] = useState(false);
     const [prices, setPrices] = useState(() => typeof window === 'undefined' || new URLSearchParams(window.location.search).get('prices') !== '0');
@@ -331,9 +331,9 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             // Sheets print fitted to the printer's paper (and turned to suit it);
             // a slip keeps its own roll-length page.
             if (isSlip) printPdfBlob((await makePdf()).output('blob'));
-            else if (isHalf) await printImages(await halfA4Pages(), 0.95);
-            // A4 fits whatever paper the printer has; any other chosen paper is sent as that size.
-            else await printImages(await captureSheets(), 0.95, size === 'a4' ? undefined : size === 'a5s' ? { w: paper.h, h: paper.w } : { w: paper.w, h: paper.h });
+            else if (isHalf) await printImages(await halfA4Pages(), 0.95, { w: 210, h: 297 });
+            // The chosen paper is sent as that size (half A4 upright unless another is chosen).
+            else await printImages(await captureSheets(), 0.95, size === 'a5s' ? { w: paper.h, h: paper.w } : { w: paper.w, h: paper.h }, size === 'a5s');
         }
         catch (e: any) { setErr(e?.message || 'Could not prepare the print.'); }
         finally { setBusy(false); }

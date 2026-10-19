@@ -144,10 +144,10 @@ export default function TradeCreditCardReport() {
         </table>
     );
 
-    // Print: A4 landscape pages
+    // Print: half A4 upright pages (148 × 210 mm)
     const sheetsRef = useRef<HTMLDivElement>(null);
     const [printing, setPrinting] = useState(false);
-    const PER = 18;
+    const PER = 22;
     const pages = useMemo(() => {
         const out: Row[][] = [];
         for (let i = 0; i < Math.max(1, list.length); i += PER) out.push(list.slice(i, i + PER));
@@ -158,7 +158,7 @@ export default function TradeCreditCardReport() {
         setPrinting(true);
         try {
             await new Promise((r) => setTimeout(r, 300));
-            await printSheets(Array.from(sheetsRef.current?.querySelectorAll<HTMLElement>('.cc-page') || []), save, 'landscape', 2);
+            await printSheets(Array.from(sheetsRef.current?.querySelectorAll<HTMLElement>('.cc-page') || []), save, 3);
         } catch { toast.error('Could not prepare the print.'); }
         finally { setPrinting(false); }
     };
@@ -250,18 +250,18 @@ export default function TradeCreditCardReport() {
             {rows && (
                 <div ref={sheetsRef} aria-hidden style={{ position: 'fixed', left: -20000, top: 0 }}>
                     {pages.map((rs, i) => (
-                        <div key={i} className="cc-page bg-white text-slate-900" style={{ width: '297mm', height: '210mm', padding: '9mm', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-                            <div className="mb-2 flex items-end justify-between border-b-2 border-slate-800 pb-1">
+                        <div key={i} className="cc-page bg-white text-slate-900" style={{ width: '148mm', height: '210mm', padding: '6mm', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
+                            <div className="mb-1.5 flex items-end justify-between border-b-2 border-slate-800 pb-1">
                                 <div>
-                                    <div className="text-[17px] font-black">AL-QAVI TRADERS</div>
-                                    <div className="text-[13px] font-bold">Credit Card Report</div>
-                                    <div className="text-[10.5px] text-slate-600">{subtitle}</div>
+                                    <div className="text-[13px] font-black">AL-QAVI TRADERS</div>
+                                    <div className="text-[11px] font-bold">Credit Card Report</div>
+                                    <div className="text-[8px] text-slate-600">{subtitle}</div>
                                 </div>
-                                <div className="text-right text-[10px] text-slate-600">Printed {dmy(today())}<br />Page {i + 1} of {pages.length}</div>
+                                <div className="text-right text-[8px] text-slate-600">Printed {dmy(today())}<br />Page {i + 1} of {pages.length}</div>
                             </div>
-                            <div className="min-h-0 flex-1">{table(rs, '10px', i === pages.length - 1)}</div>
+                            <div className="min-h-0 flex-1">{table(rs, '6.5px', i === pages.length - 1)}</div>
                             {i === pages.length - 1 && (
-                                <div className="mt-2 flex gap-8 border-t border-slate-400 pt-1.5 text-[11px]">
+                                <div className="mt-1.5 flex flex-wrap gap-x-4 border-t border-slate-400 pt-1 text-[8px]">
                                     <span>Payments <b>{list.length}</b></span><span>Paid by card <b>{fmt(total('amount'))}</b></span>
                                     <span>Card tax <b>{fmt(total('tax'))}</b> ({pctOf(total('tax'), total('amount'))})</span><span>After tax <b>{fmt(total('net'))}</b></span>
                                 </div>

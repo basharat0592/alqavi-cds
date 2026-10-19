@@ -139,7 +139,7 @@ export default function TradeDonation() {
     const doPrint = async () => {
         if (!listRef.current || printing) return;
         setPrinting(true);
-        try { await printWindow(listRef.current); } catch { toast.error('Could not prepare the print.'); } finally { setPrinting(false); }
+        try { await printWindow(listRef.current || undefined, 760); } catch { toast.error('Could not prepare the print.'); } finally { setPrinting(false); }
     };
     const [typesOpen, setTypesOpen] = useState(false);
     const L = `${LABEL} text-[14px]`;
