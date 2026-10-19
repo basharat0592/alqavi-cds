@@ -29,9 +29,9 @@ import { printImages } from '@/lib/printWindow';
 export type InvoiceSize = 'a4' | 'a5' | 'a5s' | 'a4half' | 'letter' | 'legal' | 'custom' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
     { v: 'a4', label: 'A4' },
-    { v: 'a5s', label: 'A5 sideways (half A4)' },
-    { v: 'a5', label: 'A5 upright' },
-    { v: 'a4half', label: 'Half A4 (left, upright)' },
+    { v: 'a5', label: 'Half A4 upright (148×210)' },
+    { v: 'a5s', label: 'Half A4 sideways (210×148)' },
+    { v: 'a4half', label: 'A4 sheet, invoice on left half' },
     { v: 'letter', label: 'Letter' },
     { v: 'legal', label: 'Legal' },
     { v: 'custom', label: 'Custom size' },
@@ -332,7 +332,8 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             // a slip keeps its own roll-length page.
             if (isSlip) printPdfBlob((await makePdf()).output('blob'));
             else if (isHalf) await printImages(await halfA4Pages(), 0.95);
-            else await printImages(await captureSheets(), 0.95);
+            // A4 fits whatever paper the printer has; any other chosen paper is sent as that size.
+            else await printImages(await captureSheets(), 0.95, size === 'a4' ? undefined : size === 'a5s' ? { w: paper.h, h: paper.w } : { w: paper.w, h: paper.h });
         }
         catch (e: any) { setErr(e?.message || 'Could not prepare the print.'); }
         finally { setBusy(false); }

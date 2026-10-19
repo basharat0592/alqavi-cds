@@ -31,7 +31,7 @@ const toBlobUrl = async (src: string) => URL.createObjectURL(await (await fetch(
  * decide the page; each picture is drawn upright and turned, and CSS shows the
  * one whose shape matches the page.
  */
-export async function printImages(pages: string[], quality = 0.92) {
+export async function printImages(pages: string[], quality = 0.92, paper?: { w: number; h: number }) {
     if (!pages.length) throw new Error('Nothing to print.');
     const urls: string[] = [];
     const body: string[] = [];
@@ -42,10 +42,13 @@ export async function printImages(pages: string[], quality = 0.92) {
         urls.push(up, turned);
         body.push(`<div class="pg ${wide ? 'wide' : 'tall'}"><img class="u" src="${up}"><img class="r" src="${turned}"></div>`);
     }
+    // A chosen paper (e.g. half A4 stood up, 148 × 210 mm) is sent to the printer as
+    // that exact size; otherwise the printer's own paper decides.
+    const page = paper ? `@page { size: ${paper.w}mm ${paper.h}mm; margin: 0; }` : '@page { size: auto; margin: 3mm; }';
     const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-@page { size: auto; margin: 3mm; }
+${page}
 html, body { margin: 0; padding: 0; background: #fff; }
-.pg { width: 100%; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; break-after: page; page-break-after: always; }
+.pg { width: 100%; height: ${paper ? `${paper.h}mm` : '100vh'}; display: flex; align-items: center; justify-content: center; overflow: hidden; break-after: page; page-break-after: always; }
 .pg:last-child { break-after: auto; page-break-after: auto; }
 .pg img { max-width: 100%; max-height: 100%; display: block; }
 .pg .r { display: none; }

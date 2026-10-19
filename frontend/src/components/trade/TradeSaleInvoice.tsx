@@ -2447,7 +2447,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         {/* Save & Print straight from the window (no preview step); paper size kept for next time. */}
                         <select value={printSize} onChange={(e) => choosePrintSize(e.target.value as InvoiceSize)} title="Print size"
                             className={`${FIELD} h-9 w-[110px] border-slate-300 bg-white !px-1 !text-[12px] !font-normal`} aria-label="Print size">
-                            {INVOICE_SIZES.map((o) => <option key={o.v} value={o.v}>{o.v === 'a5s' ? 'A5 sideways' : o.v === 'a5' ? 'A5 upright' : o.v === 'a4half' ? 'Half A4 left' : o.label.replace('Slip ', '')}</option>)}
+                            {INVOICE_SIZES.map((o) => <option key={o.v} value={o.v}>{o.v === 'a5s' ? 'Half A4 sideways' : o.v === 'a5' ? 'Half A4 upright' : o.v === 'a4half' ? 'A4, left half' : o.label.replace('Slip ', '')}</option>)}
                         </select>
                         {/* Print: the invoice (saves it first, Ctrl+P) or the window as shown. */}
                         <PrintChoiceButton className={ACTION_BTN} choices={[
