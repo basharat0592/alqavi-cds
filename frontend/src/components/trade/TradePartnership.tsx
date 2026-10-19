@@ -134,7 +134,9 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
         try { await api.delete(`v1/sales/trade-partners/${f.id}/`); toast.success('Partner deleted.'); setF(blank); reload(); }
         catch (e: any) { toast.error(e?.response?.data?.detail || 'Could not delete.'); }
     };
-    const list = partners || [];
+    const [q, setQ] = useState('');
+    const list = (partners || []).filter((p) => !q.trim() || `${p.name} ${p.acc_id} ${p.phone || ''}`.toLowerCase().includes(q.trim().toLowerCase()));
+    const picked = f.id ? (partners || []).find((p) => p.id === f.id) : undefined;
     const isInv = kind === 'investor';
     const invTotal = list.filter((p) => p.status === 'active').reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
     const agreed = list.filter((p) => p.status === 'active').reduce((s, p) => s + num(p.share_pct), 0);
@@ -193,7 +195,12 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
             </fieldset>
 
             <div className="flex min-h-0 flex-col gap-2">
-                <div className={`min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white ${isInv ? 'flex-[5]' : 'flex-1'}`}>
+                <div className="flex shrink-0 items-center gap-2">
+                    <span className={`${LABEL} text-[14px]`}>Search {isInv ? 'Investor' : 'Partner'}</span>
+                    <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name, account or phone — then click the name" className={`${EDIT} w-[340px]`} />
+                    {q && <button type="button" onClick={() => setQ('')} className="text-[12px] font-bold text-[#1f2bd6] underline">Clear</button>}
+                </div>
+                <div className={`min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white ${isInv ? 'flex-[4]' : 'flex-1'}`}>
                     <table className="w-full table-fixed border-collapse text-[11.5px]">
                         <colgroup>{(isInv ? [17, 8.5, 12, 7, 9.5, 12, 9.5, 13.5, 8] : [19, 8.5, 12, 7.5, 7.5, 12, 9.5, 14, 8]).map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                         <thead><tr>{(isInv ? ['Investor', 'Joining', 'Invested', 'Share', 'Return / yr', 'Return earned', 'Drawings', 'Balance', 'Status']
@@ -208,7 +215,7 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                                     <td className={`${TD} text-right font-semibold`}>{fmt(num(p.invested))}</td>
                                     <td className={`${TD} text-right`}>{isInv ? pct(invTotal ? num(p.invested) / invTotal * 100 : 0) : pct(num(p.capital_pct))}</td>
                                     <td className={`${TD} text-right ${isInv && p.share_pct === null && f.id !== p.id ? 'font-bold text-red-600' : ''}`}>{p.share_pct === null ? (isInv ? 'set it' : '—') : pct(num(p.share_pct))}</td>
-                                    <td className={`${TD} text-right ${num(p.profit) < 0 && f.id !== p.id ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}{num(p.accrued) > 0 && <div className="text-[11px] text-[#1f2bd6]" title="Worked out by the agreed % a year — not posted yet (posted with Partnership › Profit Distribution)">{Math.abs(num(p.accrued) - num(p.profit)) < 0.005 ? 'not posted yet' : `${fmt(num(p.accrued))} not posted`}</div>}</td>
+                                    <td className={`${TD} text-right ${num(p.profit) < 0 && f.id !== p.id ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}{num(p.accrued) > 0 && <div className={`text-[11px] ${f.id === p.id ? 'text-white/85' : 'text-[#1f2bd6]'}`} title="Worked out by the agreed % a year — not posted yet (posted with Partnership › Profit Distribution)">{Math.abs(num(p.accrued) - num(p.profit)) < 0.005 ? 'not posted yet' : `${fmt(num(p.accrued))} not posted`}</div>}</td>
                                     <td className={`${TD} text-right`}>{fmt(num(p.drawings))}</td>
                                     <td className={`${TD} text-right font-bold`}>{fmt(num(p.balance))}</td>
                                     <td className={TD}>{p.status === 'active' ? 'Active' : 'Inactive'}</td>
@@ -237,7 +244,7 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                 </div>
                 {isInv && (
                     <div className="min-h-0 flex-[4] overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
-                        <InvestDetails key={(partners || []).map((p) => `${p.id}:${p.invested}:${p.share_pct}:${p.status}`).join()} />
+                        <InvestorPanel key={picked ? `${picked.id}:${picked.invested}:${picked.share_pct}:${picked.status}` : 'none'} p={picked} />
                     </div>
                 )}
                 <p className="shrink-0 text-[12px] text-slate-600">{isInv
@@ -534,20 +541,43 @@ function InvRateTotal({ list }: { list: Partner[] }) {
 
 /* Investment details: every amount an investor put in (or took back), with the
    days it was in and the return it earned — amount × rate × days ÷ 365. */
-function InvestDetails({ from, to, print }: { from?: string; to?: string; print?: boolean }) {
+/* One investor's details, with their own From / To dates (Investors tab). */
+function InvestorPanel({ p }: { p?: Partner }) {
+    const [fromOn, setFromOn] = useState(false);
+    const [from, setFrom] = useState(() => `${new Date().getFullYear()}-01-01`);
+    const [to, setTo] = useState(today);
+    const [applied, setApplied] = useState({ fromOn: false, from, to });
+    const dirty = applied.fromOn !== fromOn || (fromOn && applied.from !== from) || applied.to !== to;
+    if (!p) return <div className="flex h-full items-center justify-center px-4 text-center text-[13px] text-slate-500">Search an investor and click the name to see each amount invested and the return it earned.</div>;
+    return (
+        <div className="text-[11.5px]">
+            <div className="sticky top-0 z-20 flex flex-wrap items-center gap-2 border-b border-slate-300 bg-[#f2f2fa] px-1.5 py-1">
+                <span className="text-[12.5px] font-bold text-[#1f2bd6]">{p.name} <span className="font-semibold text-slate-500">({p.acc_id})</span></span>
+                <label className="ml-auto flex items-center gap-1 font-semibold"><input type="checkbox" checked={fromOn} onChange={(e) => setFromOn(e.target.checked)} className="h-3.5 w-3.5 accent-[#3b3f8f]" /> From</label>
+                <input type="date" value={from} disabled={!fromOn} onChange={(e) => e.target.value && setFrom(e.target.value)} className={`${EDIT} !h-7 w-[130px] !text-[12px] ${fromOn ? '' : 'opacity-50'}`} />
+                <span className="font-semibold">To</span>
+                <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} className={`${EDIT} !h-7 w-[130px] !text-[12px]`} />
+                <button type="button" onClick={() => setApplied({ fromOn, from, to })} className={`${ACTION_BTN} !h-7 !min-w-[60px] !text-[12px] ${dirty ? 'ring-2 ring-[#1f2bd6]' : ''}`}><span className="underline">A</span>pply</button>
+            </div>
+            <InvestDetails key={JSON.stringify(applied)} only={p.id} from={applied.fromOn ? applied.from : undefined} to={applied.to} />
+        </div>
+    );
+}
+
+function InvestDetails({ from, to, print, only }: { from?: string; to?: string; print?: boolean; only?: number }) {
     const [rows, setRows] = useState<any[] | null>(null);
     useEffect(() => {
         api.get('v1/sales/trade-partners/investments/', { params: { ...(from ? { date_from: from } : {}), ...(to ? { date_to: to } : {}) } })
-            .then(({ data }) => setRows(data)).catch(() => setRows([]));
-    }, [from, to]);
+            .then(({ data }) => setRows(only ? data.filter((r: any) => r.partner === only) : data)).catch(() => setRows([]));
+    }, [from, to, only]);
     const B = print ? 'border border-slate-300 px-1.5 py-1' : 'border-b border-r border-slate-300 px-1.5 py-[3px]';
-    const H = print ? 'border border-slate-400 bg-[#ececec] px-1.5 py-1' : `${TH}`;
+    const H = print ? 'border border-slate-400 bg-[#ececec] px-1.5 py-1' : 'border-b border-r border-slate-400 bg-gradient-to-b from-white to-[#e9e9f1] px-1 py-1.5 font-semibold';
     const all = (rows || []).filter((r) => r.items.length);
     return (
         <div className={print ? '' : 'text-[11.5px]'}>
             {print
-                ? <div className="text-[15px] font-black">Investment Details <span className="text-[12px] font-semibold text-slate-600">— return on each amount{from ? ` from ${dmy(from)}` : ''} to {dmy(to || today())}</span></div>
-                : <div className="bg-[#f2f2fa] px-1.5 py-1 text-[12px] font-bold text-[#1f2bd6]">Investment details — return on each amount, up to today</div>}
+                ? <div className="text-[15px] font-black">Investment Details{only && all[0] ? ` — ${all[0].name}` : ''} <span className="text-[12px] font-semibold text-slate-600">— return on each amount{from ? ` from ${dmy(from)}` : ''} to {dmy(to || today())}</span></div>
+                : null}
             <table className={`w-full table-fixed border-collapse tabular-nums ${print ? 'mt-1 text-[11.5px]' : ''}`}>
                 <colgroup>{[22, 11, 14, 11, 11, 8, 9, 14].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                 <thead><tr>{['Investor', 'Date', 'Amount', 'From', 'To', 'Days', 'Rate / yr', 'Return earned'].map((h, k) =>
@@ -576,7 +606,7 @@ function InvestDetails({ from, to, print }: { from?: string; to?: string; print?
                         </tr>,
                     ])}
                 </tbody>
-                {all.length > 0 && (
+                {all.length > 1 && (
                     <tfoot className={`${print ? '' : 'sticky bottom-0'} bg-[#e8e8f4] font-bold`}>
                         <tr>
                             <td className={B} colSpan={2}>All investors</td>
@@ -683,7 +713,7 @@ function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
                     </tbody>
                 </table>
 
-                {isInv && <InvestDetails key={JSON.stringify(applied)} from={applied.fromOn ? applied.from : undefined} to={applied.to} print />}
+                {isInv && pid && <InvestDetails key={`${pid}:${JSON.stringify(applied)}`} only={Number(pid)} from={applied.fromOn ? applied.from : undefined} to={applied.to} print />}
 
                 {st && (
                     <div>
