@@ -36,6 +36,7 @@ type Partner = {
     id: number; name: string; father_name: string; cnic: string; phone: string; address: string; joining_date: string;
     leaving_date: string | null; share_pct: number | null; notes: string; status: string; account: number; acc_id: string;
     account_name: string; invested: number; profit: number; drawings: number; balance: number; capital_pct: number;
+    kind?: 'partner' | 'investor';
 };
 type Tab = 'partners' | 'capital' | 'profit' | 'report';
 const TABS: { v: Tab; label: string }[] = [
@@ -45,10 +46,14 @@ const TABS: { v: Tab; label: string }[] = [
 const TH = 'sticky top-0 z-10 overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-400 bg-gradient-to-b from-white to-[#e9e9f1] px-1 py-1.5 text-left font-semibold';
 const TD = 'overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1 py-1';
 
-export default function TradePartnership() {
+type Kind = 'partner' | 'investor';
+export default function TradePartnership({ kind = 'partner' }: { kind?: Kind }) {
+    const inv = kind === 'investor';
+    const title = inv ? 'Investors' : 'Partnership';
+    const tabs = inv ? [{ v: 'partners' as Tab, label: 'Investors' }, TABS[1], TABS[3]] : TABS;
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
     const askClose = (fn: () => void, msg = 'Do you want to Close the Form ?') => setAsk({ msg, yes: fn });
-    useEffect(() => { document.title = 'AL-QAVI TRADERS  Trade 1.0  ( Partnership )'; }, []);
+    useEffect(() => { document.title = `AL-QAVI TRADERS  Trade 1.0  ( ${title} )`; }, [title]);
     useEffect(() => guardWindowClose(), []);
     const [tab, setTab] = useState<Tab>('partners');
     useEffect(() => { const t = new URLSearchParams(window.location.search).get('tab'); if (TABS.some((x) => x.v === t)) setTab(t as Tab); }, []);
@@ -62,15 +67,17 @@ export default function TradePartnership() {
     }, []);
     const banks = useMemo(() => accounts.filter(isCashBank), [accounts]);
     const capitalAccs = useMemo(() => accounts.filter((a) => a.group === 3101), [accounts]);
+    // This window's people: the partners, or the investors (the Profit Distribution takes both).
+    const mine = useMemo(() => (partners ? partners.filter((p) => (p.kind || 'partner') === kind) : null), [partners, kind]);
 
     return (
         <div className="flex h-screen flex-col bg-[#dcdcf7] font-sans text-slate-900">
             <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[10px] font-black text-white">AQ</span>
-                <span className="text-[13px] font-semibold text-slate-800">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( Partnership )</span>
+                <span className="text-[13px] font-semibold text-slate-800">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( {title} )</span>
             </div>
             <div className="flex shrink-0 items-center gap-2 px-3 pt-2">
-                {TABS.map((t) => (
+                {tabs.map((t) => (
                     <button key={t.v} type="button" onClick={() => setTab(t.v)}
                         className={`h-9 border px-4 text-[14px] font-bold ${tab === t.v ? 'border-[#3b3f8f] bg-[#3b3f8f] text-white' : 'border-[#9da1d8] bg-[#ececfd] text-slate-800 hover:bg-white'}`}>{t.label}</button>
                 ))}
@@ -78,10 +85,11 @@ export default function TradePartnership() {
                 <button type="button" onClick={() => askClose(closeTradeWindow)} className={ACTION_BTN}><span className="underline">C</span>lose</button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col p-3">
-                {tab === 'partners' && <PartnersTab partners={partners} capitalAccs={capitalAccs} banks={banks} reload={loadPartners} askClose={askClose} />}
-                {tab === 'capital' && <CapitalTab partners={partners || []} banks={banks} reload={loadPartners} setAsk={setAsk} />}
-                {tab === 'profit' && <ProfitTab partners={partners || []} reload={loadPartners} setAsk={setAsk} />}
-                {tab === 'report' && <ReportTab partners={partners || []} />}
+                {tab === 'partners' && <PartnersTab kind={kind} partners={mine} capitalAccs={capitalAccs} banks={banks} reload={loadPartners} askClose={askClose} />}
+                {tab === 'capital' && <CapitalTab kind={kind} partners={mine || []} banks={banks} reload={loadPartners} setAsk={setAsk} />}
+                {tab === 'profit' && !inv && <ProfitTab partners={partners || []} reload={loadPartners} setAsk={setAsk} />}
+                {tab === 'report' && <ReportTab kind={kind} partners={mine || []} />}
+
             </div>
             {ask && <ConfirmBox msg={ask.msg} onNo={() => setAsk(null)} onYes={() => { const fn = ask.yes; setAsk(null); fn(); }} />}
         </div>
@@ -92,16 +100,16 @@ const dateIn = `${EDIT} w-full`;
 const legend = (t: string) => <legend className="px-1.5 text-[16px] font-black text-[#c0192f]">{t}</legend>;
 
 /* ── Partners ── */
-function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
-    partners: Partner[] | null; capitalAccs: Acc[]; banks: Acc[]; reload: () => void; askClose: (fn: () => void, msg?: string) => void;
+function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
+    kind: Kind; partners: Partner[] | null; capitalAccs: Acc[]; banks: Acc[]; reload: () => void; askClose: (fn: () => void, msg?: string) => void;
 }) {
-    const blank = { id: 0, name: '', father_name: '', cnic: '', phone: '', address: '', joining_date: today(), leaving_on: false, leaving_date: today(),
+    const blank = { id: 0, kind, name: '', father_name: '', cnic: '', phone: '', address: '', joining_date: today(), leaving_on: false, leaving_date: today(),
         share_pct: '', account: 'new', investment: '', bank: '', notes: '', status: 'active' };
     const [f, setF] = useState<any>(blank);
     const set = (k: string, v: any) => setF((x: any) => ({ ...x, [k]: v }));
     const [busy, setBusy] = useState(false);
     const edit = (p: Partner) => setF({
-        id: p.id, name: p.name, father_name: p.father_name, cnic: p.cnic, phone: p.phone, address: p.address, joining_date: p.joining_date,
+        id: p.id, kind: p.kind || 'partner', name: p.name, father_name: p.father_name, cnic: p.cnic, phone: p.phone, address: p.address, joining_date: p.joining_date,
         leaving_on: !!p.leaving_date, leaving_date: p.leaving_date || today(), share_pct: p.share_pct === null ? '' : String(p.share_pct),
         account: String(p.account), investment: '', bank: '', notes: p.notes, status: p.status,
     });
@@ -126,14 +134,22 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
         catch (e: any) { toast.error(e?.response?.data?.detail || 'Could not delete.'); }
     };
     const list = partners || [];
+    const isInv = kind === 'investor';
+    const invTotal = list.filter((p) => p.status === 'active').reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
     const agreed = list.filter((p) => p.status === 'active').reduce((s, p) => s + num(p.share_pct), 0);
     const L = `${LABEL} text-[14px]`;
     return (
         <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)] gap-3">
             <fieldset className="min-h-0 overflow-y-auto rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-3 pt-1">
-                {legend(f.id ? 'Update Partner' : 'Add Partner')}
+                {legend(f.id ? (f.kind === 'investor' ? 'Update Investor' : 'Update Partner') : (f.kind === 'investor' ? 'Add Investor' : 'Add Partner'))}
                 <div className="grid grid-cols-[120px_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
-                    <span className={L}>Partner Name</span><input value={f.name} onChange={(e) => set('name', e.target.value)} className={`${EDIT} w-full`} />
+                    <span className={L}>Type</span>
+                    <select value={f.kind} onChange={(e) => set('kind', e.target.value)} className={COA_SELECT}
+                        title="Partner: shares the profit by capital. Investor: gets the agreed % a year on the money invested">
+                        <option value="partner">Partner (shares the profit by capital)</option>
+                        <option value="investor">Investor (agreed % a year on investment)</option>
+                    </select>
+                    <span className={L}>{f.kind === 'investor' ? 'Investor Name' : 'Partner Name'}</span><input value={f.name} onChange={(e) => set('name', e.target.value)} className={`${EDIT} w-full`} />
                     <span className={L}>Father Name</span><input value={f.father_name} onChange={(e) => set('father_name', e.target.value)} className={`${EDIT} w-full`} />
                     <span className={L}>CNIC</span><input value={f.cnic} onChange={(e) => set('cnic', e.target.value)} placeholder="00000-0000000-0" className={`${EDIT} w-full`} />
                     <span className={L}>Phone</span><input value={f.phone} onChange={(e) => set('phone', e.target.value)} className={`${EDIT} w-full`} />
@@ -157,8 +173,9 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
                             {banks.map((a) => <option key={a.id} value={a.id}>{a.acc_id}  {a.name}</option>)}
                         </select>
                     </>)}
-                    <span className={L}>Agreed Share %</span>
-                    <input value={f.share_pct} onChange={(e) => set('share_pct', e.target.value.replace(/[^\d.]/g, ''))} placeholder="Empty = by capital invested"
+                    <span className={L}>{f.kind === 'investor' ? 'Return % a year' : 'Agreed Share %'}</span>
+                    <input value={f.share_pct} onChange={(e) => set('share_pct', e.target.value.replace(/[^\d.]/g, ''))}
+                        placeholder={f.kind === 'investor' ? 'e.g. 18 (of the investment, a year)' : 'Empty = by capital invested'}
                         className={`${EDIT} w-full text-right`} />
                     <span className={L}>Notes</span><input value={f.notes} onChange={(e) => set('notes', e.target.value)} className={`${EDIT} w-full`} />
                     <span className={L}>Status</span>
@@ -177,8 +194,9 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
             <div className="flex min-h-0 flex-col gap-2">
                 <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
                     <table className="w-full table-fixed border-collapse text-[11.5px]">
-                        <colgroup>{[19, 8.5, 12, 7.5, 7.5, 12, 9.5, 14, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                        <thead><tr>{['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Capital', 'Status'].map((h, k) =>
+                        <colgroup>{(isInv ? [17, 8.5, 12, 7, 9.5, 12, 9.5, 13.5, 8] : [19, 8.5, 12, 7.5, 7.5, 12, 9.5, 14, 8]).map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                        <thead><tr>{(isInv ? ['Investor', 'Joining', 'Invested', 'Share', 'Return / yr', 'Return earned', 'Drawings', 'Balance', 'Status']
+                            : ['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Capital', 'Status']).map((h, k) =>
                             <th key={h} className={`${TH} ${k >= 2 && k <= 7 ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
                         <tbody>
                             {list.map((p) => (
@@ -187,15 +205,15 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
                                     <td className={TD} title={`${p.acc_id} ${p.account_name}`}>{p.name}<span className="block text-[10px] opacity-70">{p.acc_id}{p.phone ? ` · ${p.phone}` : ''}</span></td>
                                     <td className={TD}>{dmy2(p.joining_date)}{p.leaving_date && <span className="block text-[10px]">left {dmy2(p.leaving_date)}</span>}</td>
                                     <td className={`${TD} text-right font-semibold`}>{fmt(num(p.invested))}</td>
-                                    <td className={`${TD} text-right`}>{pct(num(p.capital_pct))}</td>
-                                    <td className={`${TD} text-right`}>{p.share_pct === null ? '—' : pct(num(p.share_pct))}</td>
+                                    <td className={`${TD} text-right`}>{isInv ? pct(invTotal ? num(p.invested) / invTotal * 100 : 0) : pct(num(p.capital_pct))}</td>
+                                    <td className={`${TD} text-right ${isInv && p.share_pct === null && f.id !== p.id ? 'font-bold text-red-600' : ''}`}>{p.share_pct === null ? (isInv ? 'set it' : '—') : pct(num(p.share_pct))}</td>
                                     <td className={`${TD} text-right ${num(p.profit) < 0 && f.id !== p.id ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}</td>
                                     <td className={`${TD} text-right`}>{fmt(num(p.drawings))}</td>
                                     <td className={`${TD} text-right font-bold`}>{fmt(num(p.balance))}</td>
                                     <td className={TD}>{p.status === 'active' ? 'Active' : 'Inactive'}</td>
                                 </tr>
                             ))}
-                            {partners && !list.length && <tr><td colSpan={9} className="px-3 py-6 text-center text-slate-500">No partners yet — add one on the left.</td></tr>}
+                            {partners && !list.length && <tr><td colSpan={9} className="px-3 py-6 text-center text-slate-500">No {isInv ? 'investors' : 'partners'} yet — add one on the left.</td></tr>}
                             {!partners && <tr><td colSpan={9} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
                         </tbody>
                         {list.length > 0 && (
@@ -204,7 +222,9 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
                                     <td className={TD} colSpan={2}>Total ({list.length})</td>
                                     <td className={`${TD} text-right`}>{fmt(list.filter((p) => p.status === 'active').reduce((s, p) => s + num(p.invested), 0))}</td>
                                     <td className={`${TD} text-right`}>100%</td>
-                                    <td className={`${TD} text-right ${agreed && Math.abs(agreed - 100) > 0.01 ? 'text-red-600' : ''}`} title="Agreed shares should add up to 100%">{agreed ? pct(agreed) : '—'}</td>
+                                    <td className={`${TD} text-right ${!isInv && agreed && Math.abs(agreed - 100) > 0.01 ? 'text-red-600' : ''}`} title={isInv ? 'Average return a year, by investment' : 'Agreed shares should add up to 100%'}>
+                                        {isInv ? (invTotal ? pct(list.filter((p) => p.status === 'active').reduce((s, p) => s + num(p.invested) * num(p.share_pct), 0) / invTotal) : '—') : agreed ? pct(agreed) : '—'}
+                                    </td>
                                     <td className={`${TD} text-right`}>{fmt(list.reduce((s, p) => s + num(p.profit), 0))}</td>
                                     <td className={`${TD} text-right`}>{fmt(list.reduce((s, p) => s + num(p.drawings), 0))}</td>
                                     <td className={`${TD} text-right`}>{fmt(list.reduce((s, p) => s + num(p.balance), 0))}</td>
@@ -214,18 +234,20 @@ function PartnersTab({ partners, capitalAccs, banks, reload, askClose }: {
                         )}
                     </table>
                 </div>
-                <p className="shrink-0 text-[12px] text-slate-600">Invested = money brought in less capital taken back. Capital = invested + profit kept in the business − drawings (undrawn profit is re-invested). Cap. % = capital as a part of all active partners&apos; capital. A partner with an Agreed % gets that % of the profit; the rest is shared by capital — counting only the days each was a partner.</p>
+                <p className="shrink-0 text-[12px] text-slate-600">{isInv
+                    ? 'An investor gets the agreed Return % a year on the money invested (counted by days) — paid first from the profit, posted in Partnership › Profit Distribution. The return is not added to the investment; drawings and donations come off the balance.'
+                    : 'Invested = money brought in less capital taken back. Capital = invested + profit kept in the business − drawings (undrawn profit is re-invested). Cap. % = capital as a part of all active partners’ capital. The partners share what is left after the investors’ returns — by capital, or a partner’s agreed %.'}</p>
             </div>
         </div>
     );
 }
 
 /* ── Capital In / Out ── */
-function CapitalTab({ partners, banks, reload, setAsk }: { partners: Partner[]; banks: Acc[]; reload: () => void; setAsk: (a: any) => void }) {
+function CapitalTab({ kind, partners, banks, reload, setAsk }: { kind: Kind; partners: Partner[]; banks: Acc[]; reload: () => void; setAsk: (a: any) => void }) {
     const [f, setF] = useState({ partner: '', kind: 'invest', date: today(), amount: '', bank: '', note: '' });
     const set = (k: string, v: any) => setF((x) => ({ ...x, [k]: v }));
     const [rows, setRows] = useState<any[] | null>(null);
-    const load = () => api.get('v1/sales/trade-partners/entries/').then(({ data }) => setRows(data)).catch(() => setRows([]));
+    const load = () => api.get('v1/sales/trade-partners/entries/', { params: { kind } }).then(({ data }) => setRows(data)).catch(() => setRows([]));
     useEffect(() => { load(); }, []);
     const [busy, setBusy] = useState(false);
     const KIND: Record<string, string> = { invest: 'Investment', withdraw: 'Capital withdrawn', drawing: 'Drawings' };
@@ -440,28 +462,51 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
                     </div>
                     <div className="min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
                         <table className="w-full table-fixed border-collapse text-[12px]">
-                            <colgroup>{[27, 8, 19, 11, 12, 23].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                            <thead><tr>{['Partner', 'Days', 'Capital', 'Agreed %', 'Share %', np >= 0 ? 'Profit Share' : 'Loss Share'].map((h, k) => <th key={h} className={`${TH} ${k ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
+                            <colgroup>{[24, 9, 17, 13, 14, 23].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                            <thead><tr>{['Name', 'Days', 'Capital', 'Agreed', 'Share %', np >= 0 ? 'Profit Share' : 'Loss Share'].map((h, k) => <th key={h} className={`${TH} ${k ? '!text-right' : ''}`}>{h}</th>)}</tr></thead>
                             <tbody>
-                                {pv.rows.map((r: any) => (
-                                    <tr key={r.partner} className="tabular-nums">
-                                        <td className={TD}>{r.name}</td>
-                                        <td className={`${TD} text-right`}>{r.days}</td>
-                                        <td className={`${TD} text-right`}>{fmt(num(r.capital))}</td>
-                                        <td className={`${TD} text-right`}>{r.share_pct === null ? '—' : pct(num(r.share_pct))}</td>
-                                        <td className={`${TD} text-right font-semibold`}>{pct(num(r.weight_pct))}</td>
-                                        <td className={`${TD} text-right font-bold ${num(r.amount) < 0 ? 'text-red-600' : 'text-[#1f2bd6]'}`}>{fmt(num(r.amount))}</td>
-                                    </tr>
-                                ))}
+                                {([['investor', 'Investors — agreed % a year on investment, paid first'], ['partner', 'Partners — share the rest by capital']] as const).map(([k, head]) => {
+                                    const rs = pv.rows.filter((r: any) => (r.kind || 'partner') === k);
+                                    if (!rs.length) return null;
+                                    const sum = (f: string) => rs.reduce((s: number, r: any) => s + num(r[f]), 0);
+                                    return [
+                                        <tr key={`${k}h`}><td colSpan={6} className="bg-[#f2f2fa] px-1.5 py-1 font-bold text-[#1f2bd6]">{head}</td></tr>,
+                                        ...rs.map((r: any) => (
+                                            <tr key={r.partner} className="tabular-nums">
+                                                <td className={TD}>{r.name}</td>
+                                                <td className={`${TD} text-right`}>{r.days}</td>
+                                                <td className={`${TD} text-right`}>{fmt(num(r.capital))}</td>
+                                                <td className={`${TD} text-right`} title={k === 'investor' && r.due != null ? `Due for the period: ${fmt(num(r.due))}` : undefined}>
+                                                    {r.share_pct === null ? '—' : `${pct(num(r.share_pct))}${k === 'investor' ? ' /yr' : ''}`}
+                                                </td>
+                                                <td className={`${TD} text-right font-semibold`}>{pct(num(r.weight_pct))}</td>
+                                                <td className={`${TD} text-right font-bold ${num(r.amount) < 0 ? 'text-red-600' : 'text-[#1f2bd6]'}`}>{fmt(num(r.amount))}</td>
+                                            </tr>
+                                        )),
+                                        <tr key={`${k}t`} className="bg-[#fafafa] font-semibold tabular-nums">
+                                            <td className={TD} colSpan={2}>{k === 'investor' ? 'Investors' : 'Partners'} ({rs.length})</td>
+                                            <td className={`${TD} text-right`}>{fmt(sum('capital'))}</td>
+                                            <td className={`${TD} text-right`}>{k === 'partner' ? (rs.some((r: any) => r.share_pct !== null) ? pct(sum('share_pct')) : '—') : ''}</td>
+                                            <td className={`${TD} text-right`}>{pct(sum('weight_pct'))}</td>
+                                            <td className={`${TD} text-right`}>{fmt(sum('amount'))}</td>
+                                        </tr>,
+                                    ];
+                                })}
                             </tbody>
                             <tfoot className="bg-[#e8e8f4] font-bold tabular-nums">
-                                <tr><td className={TD} colSpan={4}>Total</td><td className={`${TD} text-right`}>100%</td><td className={`${TD} text-right`}>{fmt(pv.rows.reduce((s: number, r: any) => s + num(r.amount), 0))}</td></tr>
+                                <tr>
+                                    <td className={TD} colSpan={2}>Total</td>
+                                    <td className={`${TD} text-right`} title="Total capital: partners' capital + investors' investment">{fmt(pv.rows.reduce((s: number, r: any) => s + num(r.capital), 0))}</td>
+                                    <td className={`${TD} text-right`} title="Partners' agreed shares">{pv.rows.some((r: any) => (r.kind || 'partner') === 'partner' && r.share_pct !== null) ? pct(pv.rows.filter((r: any) => (r.kind || 'partner') === 'partner').reduce((s: number, r: any) => s + num(r.share_pct), 0)) : '—'}</td>
+                                    <td className={`${TD} text-right`}>100%</td>
+                                    <td className={`${TD} text-right`}>{fmt(pv.rows.reduce((s: number, r: any) => s + num(r.amount), 0))}</td>
+                                </tr>
                             </tfoot>
                         </table>
                     </div>
                     </div>
                     <p className="shrink-0 text-[12px] text-slate-600">Net profit = all income less every expense of the period (cost of goods, salaries, fares, rent, bank and card charges …); only that is shared. {basis === 'capital'
-                        ? 'A partner with an agreed % gets that % of the profit (for their days); the rest goes to the others by capital (invested + profit kept) on each day they were a partner.'
+                        ? 'Investors are paid first: their agreed % a year on the money invested, for their days (if the profit is less, they share it; a loss is the partners’ alone). The partners share the rest — a partner with an agreed % gets that %, the others by capital (invested + profit kept) on each day.'
                         : 'Each partner’s share = agreed % × days they were a partner, as a part of all partners’ total.'} Post credits each partner&apos;s capital account (a loss is taken off) against Retain Earning.</p>
                 </>) : (
                     <div className="flex flex-1 items-center justify-center rounded border border-dashed border-slate-400 bg-white/60 text-[14px] text-slate-500">Choose the period and press “Work it out” to see each partner’s share.</div>
@@ -472,7 +517,8 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
 }
 
 /* ── Report ── */
-function ReportTab({ partners }: { partners: Partner[] }) {
+function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
+    const isInv = kind === 'investor';
     const [pid, setPid] = useState('');
     const [fromOn, setFromOn] = useState(false);
     const [from, setFrom] = useState(() => `${new Date().getFullYear()}-01-01`);
@@ -497,8 +543,9 @@ function ReportTab({ partners }: { partners: Partner[] }) {
         api.get('v1/sales/trade-partners/statement/', { params: { partner: pid, ...params } })
             .then(({ data }) => setSt(data)).catch(() => setSt(null));
     }, [pid, applied]); // eslint-disable-line react-hooks/exhaustive-deps
-    const list = rows || [];
+    const list = (rows || []).filter((p) => (p.kind || 'partner') === kind);
     const act = list.filter((p) => p.status === 'active');
+    const invTot = act.reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
     const sumOf = (k: keyof Partner) => list.reduce((s, p) => s + num(p[k]), 0);
     const [printing, setPrinting] = useState(false);
     const doPrint = async () => {
@@ -509,7 +556,7 @@ function ReportTab({ partners }: { partners: Partner[] }) {
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
             <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-3 py-2">
-                <span className={`${LABEL} text-[14px]`}>Partner Statement</span>
+                <span className={`${LABEL} text-[14px]`}>{isInv ? 'Investor' : 'Partner'} Statement</span>
                 <select value={pid} onChange={(e) => setPid(e.target.value)} className={`${COA_SELECT} !w-[240px]`}>
                     <option value="">Summary only</option>
                     {partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -525,14 +572,15 @@ function ReportTab({ partners }: { partners: Partner[] }) {
             </div>
             <div ref={ref} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-white p-3">
                 <div>
-                    <div className="text-[16px] font-black">AL-QAVI TRADERS — Partnership Summary</div>
+                    <div className="text-[16px] font-black">AL-QAVI TRADERS — {isInv ? 'Investors Summary' : 'Partnership Summary'}</div>
                     <div className="text-[12px] text-slate-600">
-                        Capital as on {dmy(applied.to)} · Profit / Loss and Drawings {applied.fromOn ? `from ${dmy(applied.from)} to ${dmy(applied.to)}` : `up to ${dmy(applied.to)}`} · {act.length} active partner{act.length === 1 ? '' : 's'}
+                        Capital as on {dmy(applied.to)} · {isInv ? 'Return' : 'Profit / Loss'} and Drawings {applied.fromOn ? `from ${dmy(applied.from)} to ${dmy(applied.to)}` : `up to ${dmy(applied.to)}`} · {act.length} active {isInv ? 'investor' : 'partner'}{act.length === 1 ? '' : 's'}
                     </div>
                 </div>
                 <table className="w-full table-fixed border-collapse text-[11.5px]">
                     <colgroup>{[19, 8, 12, 7, 7, 13, 10, 10, 14].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                    <thead><tr>{['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Donations', 'Capital'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
+                    <thead><tr>{(isInv ? ['Investor', 'Joining', 'Invested', 'Share', 'Return / yr', 'Return earned', 'Drawings', 'Donations', 'Balance']
+                        : ['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Donations', 'Capital']).map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
                     <tbody>
                         {!rows && <tr><td colSpan={9} className="px-3 py-4 text-center text-slate-500">Loading…</td></tr>}
                         {list.map((p) => (
@@ -540,7 +588,7 @@ function ReportTab({ partners }: { partners: Partner[] }) {
                                 <td className="truncate border border-slate-300 px-1.5 py-1">{p.name}</td>
                                 <td className="border border-slate-300 px-1.5 py-1">{dmy2(p.joining_date)}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.invested))}</td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-right">{pct(num(p.capital_pct))}</td>
+                                <td className="border border-slate-300 px-1.5 py-1 text-right">{isInv ? pct(invTot ? num(p.invested) / invTot * 100 : 0) : pct(num(p.capital_pct))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{p.share_pct === null ? '—' : pct(num(p.share_pct))}</td>
                                 <td className={`border border-slate-300 px-1.5 py-1 text-right ${num(p.profit) < 0 ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.drawings))}</td>

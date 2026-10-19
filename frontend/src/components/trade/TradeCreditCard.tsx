@@ -28,6 +28,19 @@ export type Card = {
 const HOLDER: Record<string, string> = { saleman: 'Saleman', customer: 'Customer', company: 'Company' };
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 
+/** One window for cards: Credit Cards | Credit Card Report (switched in the title bar). */
+export function CardTabs({ on }: { on: 'cards' | 'report' }) {
+    const go = (href: string) => window.location.replace(href);
+    return (
+        <div className="ml-6 flex gap-1">
+            {([['cards', 'Credit Cards', '/admin/trade/credit-card'], ['report', 'Credit Card Report', '/admin/trade/credit-card-report']] as const).map(([k, label, href]) => (
+                <button key={k} type="button" onClick={() => k !== on && go(href)}
+                    className={`h-6 border px-3 text-[12px] font-bold ${k === on ? 'border-[#3b3f8f] bg-[#3b3f8f] text-white' : 'border-[#9da1d8] bg-[#ececfd] text-slate-800 hover:bg-white'}`}>{label}</button>
+            ))}
+        </div>
+    );
+}
+
 export default function TradeCreditCard() {
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
     const askClose = (fn: () => void, msg = 'Do you want to Close the Form ?') => setAsk({ msg, yes: fn });
@@ -91,6 +104,7 @@ export default function TradeCreditCard() {
             <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[10px] font-black text-white">AQ</span>
                 <span className="text-[13px] font-semibold text-slate-800">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( Add Credit Card )</span>
+                <CardTabs on="cards" />
             </div>
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)] gap-3 p-3">
                 <fieldset className="min-h-0 overflow-y-auto rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-3 pt-1">

@@ -969,7 +969,10 @@ class Partner(models.Model):
     address = models.CharField(max_length=255, blank=True, default='')
     joining_date = models.DateField()
     leaving_date = models.DateField(null=True, blank=True)
-    # Agreed share of profit / loss; empty = by capital invested.
+    # partner: shares the profit by capital (kept profit adds to it), or by an agreed share.
+    # investor: gets `share_pct` % a year of the money invested (paid before the partners share).
+    kind = models.CharField(max_length=10, default='partner')
+    # Partner: agreed share of profit / loss (empty = by capital). Investor: return % a year.
     share_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
     account = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='partners')
     notes = models.CharField(max_length=255, blank=True, default='')

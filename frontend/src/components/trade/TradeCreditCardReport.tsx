@@ -18,7 +18,7 @@ import { printSheets } from '@/lib/printWindow';
 import {
     ConfirmBox, ReadBox, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT, guardWindowClose, closeTradeWindow, downloadXlsx,
 } from '@/components/trade/TradeSaleInvoice';
-import type { Card } from '@/components/trade/TradeCreditCard';
+import { CardTabs, type Card } from '@/components/trade/TradeCreditCard';
 
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -182,6 +182,7 @@ export default function TradeCreditCardReport() {
             <div className="flex shrink-0 items-center gap-2 border-b border-[#9da1d8] bg-gradient-to-r from-[#c9d6f5] via-[#dfe7fb] to-[#c9d6f5] px-3 py-1">
                 <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-600 text-[10px] font-black text-white">AQ</span>
                 <span className="text-[13px] font-semibold text-slate-800">AL-QAVI TRADERS&nbsp;&nbsp;&nbsp;Trade 1.0&nbsp;&nbsp;( Credit Card Report )</span>
+                <CardTabs on="report" />
             </div>
             <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
                 <fieldset className="shrink-0 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-3 pt-1">

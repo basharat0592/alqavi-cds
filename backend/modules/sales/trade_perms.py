@@ -60,7 +60,7 @@ CATALOG = [
         ('bank_deposit', 'Bank Deposite', [S, V], []),
         ('bank_withdrawal', 'Bank withdrawal', [S, V], ['/admin/trade/bank-withdrawal']),
         ('credit_card', 'Credit Card', [S, V, U, D], ['/admin/trade/credit-card', '/admin/trade/credit-card-report']),
-        ('partnership', 'Partnership', [S, V, U, D], ['/admin/trade/partnership']),
+        ('partnership', 'Partnership', [S, V, U, D], ['/admin/trade/partnership', '/admin/trade/investors']),
         ('donation', 'Donation', [S, V, U, D], ['/admin/trade/donation']),
         ('sale', 'Sale', [S, V], ['/admin/trade/sale-invoice', '/admin/trade/sale-records']),
         ('sale_return', 'Sale Return', [S, V], ['/admin/trade/sale-return']),

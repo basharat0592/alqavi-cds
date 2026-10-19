@@ -15,8 +15,7 @@ import {
     Package, Boxes, CalendarClock, ShoppingCart, ScanLine, RefreshCcw,
     TrendingUp, RotateCcw, ClipboardList, CreditCard, ArrowDownLeft, ArrowUpRight,
     BookOpen, Database, KeyRound, Receipt, Wallet, BarChart3, FileText, Users,
-    ChevronDown, ChevronRight, X, Heart,
-} from 'lucide-react';
+    ChevronDown, ChevronRight, X, Heart, PiggyBank } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
 import api from '@/lib/axios';
@@ -114,6 +113,7 @@ const MENUS: Menu[] = [
         { label: 'Forward the Profit and Loss', href: '/admin/trade/forward-profit-loss' },
         SEP,
         { label: 'Partnership', href: '/admin/trade/partnership' },
+        { label: 'Investors', href: '/admin/trade/investors' },
         { label: 'Donation', href: '/admin/trade/donation' },
     ] },
     { title: 'Setup', items: [
@@ -261,7 +261,7 @@ function AboutBox({ onClose }: { onClose: () => void }) {
 /* ───────────────────────── Action button grid ───────────────────────── */
 type Btn = { name: string; href: string; icon: any; disabled?: boolean };
 type Theme = { tile: string; icon: string; ring: string };
-type Group = { theme: Theme; buttons: Btn[] };
+type Group = { theme: Theme; buttons: Btn[]; tall?: boolean };
 
 /* Colours of the Al-Qavi visiting card: royal blue, green, yellow, sky blue and
    the logo's orange. Each legacy column keeps its own colour. */
@@ -297,10 +297,10 @@ const COLUMNS: Group[] = [
         { name: 'Receipt Voucher', href: '/admin/trade/receipt-voucher', icon: ArrowDownLeft },
         { name: 'Payment Voucher', href: '/admin/trade/payment-voucher', icon: Wallet },
     ] },
-    { theme: THEMES.card, buttons: [
-        { name: 'Add Credit Card', href: '/admin/trade/credit-card', icon: CreditCard },
-        { name: 'Credit Card Report', href: '/admin/trade/credit-card-report', icon: FileText },
-        { name: 'Partnership', href: '/admin/trade/partnership', icon: Users },
+    { theme: THEMES.card, tall: true, buttons: [
+        { name: 'Credit Card & Reports', href: '/admin/trade/credit-card', icon: CreditCard },
+        { name: 'Partnership & Reports', href: '/admin/trade/partnership', icon: Users },
+        { name: 'Investors & Reports', href: '/admin/trade/investors', icon: PiggyBank },
     ] },
 ];
 
@@ -311,7 +311,6 @@ const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
     { b: { name: 'Donation', href: '/admin/trade/donation', icon: Heart }, theme: THEMES.donation },
     { b: { name: 'Change Password', href: '/admin/trade/change-password', icon: KeyRound }, theme: THEMES.sale },
     { b: { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight }, theme: THEMES.account },
-    { b: { name: 'Partnership Report', href: '/admin/trade/partnership?tab=report', icon: BarChart3 }, theme: THEMES.card },
 ];
 
 const REPORTS: Btn[] = [
@@ -476,7 +475,7 @@ export default function AdminDashboard() {
                             {/* Colour-coded button columns (matches the legacy layout) */}
                             <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-5 lg:min-h-0 lg:flex-[4] lg:grid-rows-4 lg:gap-3">
                                 {COLUMNS.map((g, gi) => (
-                                    <div key={gi} className="flex flex-col gap-3 lg:row-span-3 lg:grid lg:grid-rows-3 lg:gap-3">
+                                    <div key={gi} className={`flex flex-col gap-3 lg:grid lg:grid-rows-3 lg:gap-3 ${g.tall ? 'lg:col-start-5 lg:row-span-4 lg:row-start-1' : 'lg:row-span-3'}`}>
                                         {g.buttons.map((b) => (
                                             <ActionTile key={b.name + b.href} b={b} theme={g.theme} delay={gi * 60 + g.buttons.indexOf(b) * 90} />
                                         ))}

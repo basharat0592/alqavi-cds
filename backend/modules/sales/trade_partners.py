@@ -33,6 +33,7 @@ from core.scoping import scope_to_tenant, tenant_id_for
 from .models import Partner, PartnerEntry, ProfitDistribution, Voucher, VoucherLine
 
 Z = Decimal('0')
+YEAR_DAYS = Decimal(365)
 CAPITAL_GROUP = 3101
 RETAIN_ACC = '32010001'
 DIST_VTYPE = 'profit_dist'
@@ -102,12 +103,13 @@ def _active_days(p, f, t):
     return max((end - start).days + 1, 0), start, end
 
 
-def _capital_days(p, f, t):
-    """Capital (with kept profit) × days, day by day over the partner's days in the period."""
+def _capital_days(p, f, t, moves=None):
+    """Capital (with kept profit) × days, day by day over the partner's days in the period
+    (`moves`: other movements, e.g. only the money invested)."""
     n, start, end = _active_days(p, f, t)
     if not n:
         return Z
-    moves = _capital_moves(p)
+    moves = _capital_moves(p) if moves is None else moves
     cap = sum((a for d, a in moves if d < start), Z)
     total, cur = Z, start
     for d, a in [(d, a) for d, a in moves if start <= d <= end]:
@@ -141,47 +143,79 @@ def net_profit(user, f, t):
     return profit_statement(user, f, t)[0]
 
 
-def share_out(partners, f, t, basis, profit):
-    """[{partner, name, days, capital, share_pct, method, weight_pct, amount}] — amounts add up to `profit`.
+def investor_due(p, f, t):
+    """An investor's return for the period: their agreed % a year on the money they
+    invested, day by day (money in / out only — their profit is not re-invested)."""
+    return _capital_days(p, f, t, _money_moves(p)) * _d(p.share_pct) / 100 / YEAR_DAYS
 
-    capital basis: a partner with an agreed % gets exactly that % of the period's
-    profit, for the days they were a partner (20 % for 61 of 365 days = 3.34 %);
-    whatever is left goes to the partners without an agreed %, by capital × days.
-    agreed basis: every partner by agreed % × days (scaled to the whole profit)."""
+
+def share_out(partners, f, t, basis, profit):
+    """[{partner, name, kind, days, capital, share_pct, method, weight_pct, amount}] — amounts add up to `profit`.
+
+    1. Investors first: each gets their agreed % a year on the money they invested,
+       for their days (18 % on 600,000 for a full year = 108,000). If the profit is
+       less than all that is due, they share the profit in that proportion; a loss
+       is borne by the partners alone.
+    2. Partners share what is left:
+       capital basis — a partner with an agreed % gets that % of it (for their
+       days); the rest goes to the partners without one, by capital × days
+       (capital = money in + profit kept − drawings);
+       agreed basis — every partner by agreed % × days (scaled to the whole)."""
     period = Decimal((t - f).days + 1)
+    profit = _money(profit)
     rows = []
     for p in partners:
         n, _, _ = _active_days(p, f, t)
         if not n:
             continue
+        if p.kind == 'investor':
+            rows.append({'partner': p.id, 'name': p.name, 'kind': 'investor', 'days': n, 'capital': partner_stats(p, t)['invested'],
+                         'share_pct': p.share_pct, 'method': 'investor', 'due': _money(investor_due(p, f, t))})
+            continue
         fixed = basis == 'agreed' or p.share_pct is not None
-        rows.append({'partner': p.id, 'name': p.name, 'days': n, 'capital': partner_stats(p, t)['capital'],
+        rows.append({'partner': p.id, 'name': p.name, 'kind': 'partner', 'days': n, 'capital': partner_stats(p, t)['capital'],
                      'share_pct': p.share_pct, 'method': 'agreed' if fixed else 'capital',
                      'w': _d(p.share_pct) * n if fixed else _capital_days(p, f, t)})
     if not rows:
         return rows
-    fixed = [r for r in rows if r['method'] == 'agreed']
-    pool = [r for r in rows if r['method'] == 'capital']
-    if basis == 'agreed' or not pool:
-        # all by agreed %: scaled so the whole profit is shared
-        tw = sum((r['w'] for r in rows), Z)
-        for r in rows:
-            r['frac'] = r['w'] / tw if tw else Z
-    else:
-        for r in fixed:   # agreed % of the profit, for their days in the period
-            r['frac'] = _d(r['share_pct']) / 100 * Decimal(r['days']) / period
-        rest = Decimal(1) - sum((r['frac'] for r in fixed), Z)
-        tw = sum((r['w'] for r in pool), Z)
-        for r in pool:
-            r['frac'] = rest * r['w'] / tw if tw else Z
+    investors = [r for r in rows if r['kind'] == 'investor']
+    partners_ = [r for r in rows if r['kind'] == 'partner']
+    due = sum((r['due'] for r in investors), Z)
+    # 1. the investors' returns
+    if profit <= 0 or not investors:
+        for r in investors:
+            r['amount'] = Z
+    elif due <= profit or not partners_:
+        for r in investors:
+            r['amount'] = r['due'] if due <= profit else _money(profit * r['due'] / due) if due else Z
+    else:   # less profit than is due: shared in proportion
+        for r in investors:
+            r['amount'] = _money(profit * r['due'] / due) if due else Z
+    rest = profit - sum((r['amount'] for r in investors), Z)
+    # 2. the partners share the rest
+    if partners_:
+        fixed = [r for r in partners_ if r['method'] == 'agreed']
+        pool = [r for r in partners_ if r['method'] == 'capital']
+        if basis == 'agreed' or not pool:
+            tw = sum((r['w'] for r in partners_), Z)
+            for r in partners_:
+                r['frac'] = r['w'] / tw if tw else Z
+        else:
+            for r in fixed:
+                r['frac'] = _d(r['share_pct']) / 100 * Decimal(r['days']) / period
+            left = Decimal(1) - sum((r['frac'] for r in fixed), Z)
+            tw = sum((r['w'] for r in pool), Z)
+            for r in pool:
+                r['frac'] = left * r['w'] / tw if tw else Z
+        for r in partners_:
+            r['amount'] = _money(rest * r['frac'])
+        if any(r['frac'] for r in partners_):   # rounding: the biggest share takes the odd paisa
+            max(partners_, key=lambda r: r['frac'])['amount'] += rest - sum((r['amount'] for r in partners_), Z)
+    elif investors and rest:   # no partners: the investors take it all
+        max(investors, key=lambda r: r['due'])['amount'] += rest
     for r in rows:
-        r['weight_pct'] = (r['frac'] * 100).quantize(Decimal('0.01'))
-        r['amount'] = _money(profit * r['frac'])
-    shared = sum((r['amount'] for r in rows), Z)
-    if any(r['frac'] for r in rows):   # rounding: the biggest share takes the odd paisa
-        max(rows, key=lambda r: r['frac'])['amount'] += _money(profit) - shared
-    for r in rows:
-        r.pop('w'); r.pop('frac')
+        r['weight_pct'] = abs(r['amount'] / profit * 100).quantize(Decimal('0.01')) * (1 if r['amount'] * profit >= 0 else -1) if profit and r['amount'] else Z
+        r.pop('w', None); r.pop('frac', None)
     return rows
 
 
@@ -200,10 +234,11 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         out = {
             'id': p.id, 'name': p.name, 'father_name': p.father_name, 'cnic': p.cnic, 'phone': p.phone, 'address': p.address,
             'joining_date': p.joining_date, 'leaving_date': p.leaving_date, 'share_pct': p.share_pct, 'notes': p.notes,
-            'status': p.status, 'account': p.account_id, 'acc_id': p.account.acc_id, 'account_name': p.account.name, **s,
+            'status': p.status, 'kind': p.kind, 'account': p.account_id, 'acc_id': p.account.acc_id, 'account_name': p.account.name, **s,
         }
         if total_invested is not None:
-            out['capital_pct'] = (s['capital'] / total_invested * 100).quantize(Decimal('0.01')) if total_invested > 0 and s['capital'] > 0 else Z
+            out['capital_pct'] = (s['capital'] / total_invested * 100).quantize(Decimal('0.01')) \
+                if p.kind == 'partner' and total_invested > 0 and s['capital'] > 0 else Z
         return out
 
     def list(self, request):
@@ -217,7 +252,7 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         if upto:
             ps = [p for p in ps if p.joining_date <= upto]
         stats = {p.id: partner_stats(p, upto, since) for p in ps}
-        live = lambda p: p.status == 'active' and not (upto and p.leaving_date and p.leaving_date < upto)
+        live = lambda p: p.kind == 'partner' and p.status == 'active' and not (upto and p.leaving_date and p.leaving_date < upto)
         total = sum((stats[p.id]['capital'] for p in ps if live(p) and stats[p.id]['capital'] > 0), Z)
         return Response([self._row(p, total, stats[p.id]) for p in ps])
 
@@ -247,6 +282,10 @@ class TradePartnershipViewSet(viewsets.ViewSet):
                 setattr(p, k, str(d.get(k) or '').strip()[:n])
         if 'status' in d:
             p.status = 'inactive' if str(d.get('status')).lower() == 'inactive' else 'active'
+        if 'kind' in d:
+            p.kind = 'investor' if d.get('kind') == 'investor' else 'partner'
+        if p.kind == 'investor' and (p.share_pct is None or p.share_pct <= 0):
+            return 'Enter the investor\'s agreed return % a year (e.g. 18).'
         if 'account' in d and d.get('account') not in (None, '', 'new'):
             acc = self._accounts().filter(pk=d.get('account')).first()
             if not acc:
@@ -334,6 +373,8 @@ class TradePartnershipViewSet(viewsets.ViewSet):
             qs = scope_to_tenant(request.user, PartnerEntry.objects.all(), 'tenant').select_related('partner', 'voucher', 'bank')
             if q.get('partner'):
                 qs = qs.filter(partner_id=q['partner'])
+            if q.get('kind'):
+                qs = qs.filter(partner__kind=q['kind'])
             if q.get('date_from'):
                 qs = qs.filter(date__gte=q['date_from'])
             if q.get('date_to'):
@@ -384,12 +425,15 @@ class TradePartnershipViewSet(viewsets.ViewSet):
             return None, err
         basis = 'agreed' if d.get('basis') == 'agreed' else 'capital'
         ps = [p for p in self._partners() if p.status == 'active' or (p.leaving_date and p.leaving_date >= f)]
+        no_rate = [p.name for p in ps if p.kind == 'investor' and not p.share_pct and _active_days(p, f, t)[0]]
+        if no_rate:
+            return None, f'No agreed return % for the investor{"s" if len(no_rate) > 1 else ""} {", ".join(no_rate)} — set it in Investors.'
         if basis == 'agreed':
-            missing = [p.name for p in ps if p.share_pct is None and _active_days(p, f, t)[0]]
+            missing = [p.name for p in ps if p.kind == 'partner' and p.share_pct is None and _active_days(p, f, t)[0]]
             if missing:
                 return None, f'No agreed share % for {", ".join(missing)} — set it, or share by capital.'
         else:
-            agreed = sum((_d(p.share_pct) for p in ps if p.share_pct is not None and _active_days(p, f, t)[0]), Z)
+            agreed = sum((_d(p.share_pct) for p in ps if p.kind == 'partner' and p.share_pct is not None and _active_days(p, f, t)[0]), Z)
             if agreed > 100:
                 return None, f'The agreed shares add up to {agreed}% — more than 100%. Correct them in Partners.'
         ledger, statement = profit_statement(self.request.user, f, t)
@@ -456,11 +500,13 @@ class TradePartnershipViewSet(viewsets.ViewSet):
                 n += 1
                 a = r['amount']
                 VoucherLine.objects.create(voucher=v, line=n, account=partners[r['partner']].account, credit=max(a, Z), debit=max(-a, Z),
-                                           detail=f'{word} share {r["weight_pct"]}% - {r["name"]}')
+                                           detail=(f'Investor return {_d(r["share_pct"]).normalize()}% a year - {r["name"]}' if r['kind'] == 'investor'
+                                                   else f'{word} share {r["weight_pct"]}% - {r["name"]}'))
             x = ProfitDistribution.objects.create(
                 date_from=out['date_from'], date_to=out['date_to'], net_profit=profit, basis=out['basis'], voucher=v, note=note,
                 tenant_id=v.tenant_id,
                 lines=[{**r, 'capital': str(r['capital']), 'weight_pct': str(r['weight_pct']), 'amount': str(r['amount']),
+                        'due': str(r['due']) if r.get('due') is not None else None,
                         'share_pct': str(r['share_pct']) if r['share_pct'] is not None else None} for r in out['rows']])
         return Response({'id': x.id, 'voucher_no': v.voucher_no, 'net_profit': profit}, status=status.HTTP_201_CREATED)
 
@@ -499,7 +545,7 @@ class TradePartnershipViewSet(viewsets.ViewSet):
             if bal is None:
                 bal = opening
             bal += amt
-            kind = ('Profit share' if amt >= 0 else 'Loss share') if l.voucher.vtype == DIST_VTYPE else \
+            kind = ('Investor return' if p.kind == 'investor' else 'Profit share' if amt >= 0 else 'Loss share') if l.voucher.vtype == DIST_VTYPE else \
                 'Donation' if l.voucher.vtype == 'donation' else \
                 'Drawings' if l.voucher_id in drawings else ('Capital in' if amt >= 0 else 'Capital out')
             rows.append({'date': d, 'voucher_no': l.voucher.voucher_no, 'kind': kind, 'detail': l.detail or l.voucher.detail,
