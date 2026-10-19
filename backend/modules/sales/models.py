@@ -974,6 +974,9 @@ class Partner(models.Model):
     kind = models.CharField(max_length=10, default='partner')
     # Partner: agreed share of profit / loss (empty = by capital). Investor: return % a year.
     share_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    # Investor: the return % changed from a date on — [{"from": "2025-01-01", "pct": "18"}];
+    # share_pct is the rate from joining until the first change.
+    rates = models.JSONField(default=list, blank=True)
     account = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='partners')
     notes = models.CharField(max_length=255, blank=True, default='')
     status = models.CharField(max_length=10, default='active')

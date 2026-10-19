@@ -143,10 +143,46 @@ def net_profit(user, f, t):
     return profit_statement(user, f, t)[0]
 
 
+def rate_changes(p):
+    """[(from date, pct)] sorted — the investor's return % changes."""
+    out = []
+    for r in p.rates or []:
+        try:
+            out.append((datetime.date.fromisoformat(str(r.get('from'))[:10]), _d(r.get('pct'))))
+        except (ValueError, AttributeError):
+            continue
+    return sorted(out)
+
+
+def rate_on(p, day):
+    pct = _d(p.share_pct) if p.share_pct is not None else None
+    for d, r in rate_changes(p):
+        if d <= day:
+            pct = r
+    return pct
+
+
+def rate_segments(p, f, t):
+    """[(start, end, pct)] covering f–t: the rate from joining (share_pct), then each change."""
+    segs, start, pct = [], f, _d(p.share_pct)
+    for d, r in rate_changes(p):
+        if d <= start:
+            pct = r
+            continue
+        if d > t:
+            break
+        segs.append((start, d - datetime.timedelta(days=1), pct))
+        start, pct = d, r
+    segs.append((start, t, pct))
+    return segs
+
+
 def investor_due(p, f, t):
     """An investor's return for the period: their agreed % a year on the money they
-    invested, day by day (money in / out only — their profit is not re-invested)."""
-    return _capital_days(p, f, t, _money_moves(p)) * _d(p.share_pct) / 100 / YEAR_DAYS
+    invested, day by day (money in / out only — their profit is not re-invested), at the
+    rate that applied on each day."""
+    moves = _money_moves(p)
+    return sum((_capital_days(p, s, e, moves) * pct / 100 / YEAR_DAYS for s, e, pct in rate_segments(p, f, t)), Z)
 
 
 def share_out(partners, f, t, basis, profit):
@@ -240,7 +276,8 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         out = {
             'id': p.id, 'name': p.name, 'father_name': p.father_name, 'cnic': p.cnic, 'phone': p.phone, 'address': p.address,
             'joining_date': p.joining_date, 'leaving_date': p.leaving_date, 'share_pct': p.share_pct, 'notes': p.notes,
-            'status': p.status, 'kind': p.kind, 'account': p.account_id, 'acc_id': p.account.acc_id, 'account_name': p.account.name, **s,
+            'status': p.status, 'kind': p.kind, 'rates': p.rates or [],
+            'rate_now': rate_on(p, datetime.date.today()) if p.kind == 'investor' else None, 'account': p.account_id, 'acc_id': p.account.acc_id, 'account_name': p.account.name, **s,
         }
         if total_invested is not None:
             out['capital_pct'] = (s['capital'] / total_invested * 100).quantize(Decimal('0.01')) \
@@ -301,11 +338,13 @@ class TradePartnershipViewSet(viewsets.ViewSet):
                 if d > upto or not amt:
                     continue
                 start = max(d, p.joining_date, since) if since else max(d, p.joining_date)
-                days = max((end - start).days + 1, 0) if earns else 0
-                items.append({'date': d, 'kind': 'in' if amt > 0 else 'out', 'amount': amt, 'from': start, 'to': end,
-                              'days': days, 'earned': _money(amt * rate * days / 100 / YEAR_DAYS)})
+                segs = rate_segments(p, start, end) if start <= end else [(start, end, rate)]
+                for k, (s, e, pct) in enumerate(segs):
+                    days = max((e - s).days + 1, 0)
+                    items.append({'date': d, 'first': k == 0, 'kind': 'in' if amt > 0 else 'out', 'amount': amt, 'from': s, 'to': e,
+                                  'days': days, 'rate': pct, 'earned': _money(amt * pct * days / 100 / YEAR_DAYS)})
             out.append({'partner': p.id, 'name': p.name, 'acc_id': p.account.acc_id, 'rate': p.share_pct, 'status': p.status,
-                        'items': items, 'invested': sum((i['amount'] for i in items), Z),
+                        'items': items, 'invested': sum((i['amount'] for i in items if i['first']), Z),
                         'earned': sum((i['earned'] for i in items), Z)})
         return Response(out)
 
@@ -337,6 +376,23 @@ class TradePartnershipViewSet(viewsets.ViewSet):
             p.status = 'inactive' if str(d.get('status')).lower() == 'inactive' else 'active'
         if 'kind' in d:
             p.kind = 'investor' if d.get('kind') == 'investor' else 'partner'
+        if 'rates' in d:
+            rates, seen = [], set()
+            for r in d.get('rates') or []:
+                if not r or (not r.get('from') and r.get('pct') in (None, '')):
+                    continue
+                try:
+                    day = datetime.date.fromisoformat(str(r.get('from'))[:10])
+                except ValueError:
+                    return 'Enter the date each return % change starts from.'
+                pct = _d(r.get('pct'))
+                if not (0 < pct <= 100):
+                    return f'The return % from {day:%d-%m-%Y} must be more than 0 and up to 100.'
+                if day in seen:
+                    return f'Two return % changes on {day:%d-%m-%Y}.'
+                seen.add(day)
+                rates.append({'from': day.isoformat(), 'pct': str(pct.normalize())})
+            p.rates = sorted(rates, key=lambda r: r['from'])
         if p.kind == 'investor' and (p.share_pct is None or p.share_pct <= 0):
             return 'Enter the investor\'s agreed return % a year (e.g. 18).'
         if 'account' in d and d.get('account') not in (None, '', 'new'):

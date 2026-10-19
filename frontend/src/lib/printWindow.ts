@@ -2,8 +2,10 @@
  * Print what is on screen (a Trade window) or one element (a printable page).
  * Each page is captured as a picture, so nothing can shift or be cut off, and
  * printed fitted to whatever paper the printer has (A4, A5, Letter, Legal …):
- * the picture fills the page keeping its shape, and turns a quarter turn when
- * the paper lies the other way, so it always prints as large as it can.
+ * the picture fills the page keeping its shape, always upright (read top to
+ * bottom) — a wide window simply prints smaller on upright paper, or fills the
+ * page when Landscape is chosen in the print dialog. Only a chosen paper size
+ * (an invoice on half A4 sideways) turns the picture to suit it.
  * Saving a PDF still makes A4 pages. Elements marked `data-no-print` (the
  * print button itself) are left out.
  */
@@ -38,7 +40,8 @@ export async function printImages(pages: string[], quality = 0.92, paper?: { w: 
     for (const src of pages) {
         const img = await loadImage(src);
         const wide = img.naturalWidth > img.naturalHeight;
-        const up = await toBlobUrl(src), turned = await toBlobUrl(await rotateCw(src, quality));
+        // Turned only to suit a chosen paper; otherwise it prints upright, top to bottom.
+        const up = await toBlobUrl(src), turned = paper ? await toBlobUrl(await rotateCw(src, quality)) : up;
         urls.push(up, turned);
         body.push(`<div class="pg ${wide ? 'wide' : 'tall'}"><img class="u" src="${up}"><img class="r" src="${turned}"></div>`);
     }
@@ -52,8 +55,9 @@ html, body { margin: 0; padding: 0; background: #fff; }
 .pg:last-child { break-after: auto; page-break-after: auto; }
 .pg img { max-width: 100%; max-height: 100%; display: block; }
 .pg .r { display: none; }
-@media (orientation: landscape) { .tall .u { display: none; } .tall .r { display: block; } }
-@media (orientation: portrait) { .wide .u { display: none; } .wide .r { display: block; } }
+${paper ? '' : '.pg { align-items: flex-start; }'}
+${paper ? `@media (orientation: landscape) { .tall .u { display: none; } .tall .r { display: block; } }
+@media (orientation: portrait) { .wide .u { display: none; } .wide .r { display: block; } }` : ''}
 </style></head><body>${body.join('')}</body></html>`;
     const frame = document.createElement('iframe');
     frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';

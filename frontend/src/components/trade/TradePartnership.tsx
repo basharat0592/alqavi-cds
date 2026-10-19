@@ -37,7 +37,7 @@ type Partner = {
     leaving_date: string | null; share_pct: number | null; notes: string; status: string; account: number; acc_id: string;
     account_name: string; invested: number; profit: number; drawings: number; balance: number; capital_pct: number;
     kind?: 'partner' | 'investor';
-    accrued?: number; posted?: number;
+    accrued?: number; posted?: number; rates?: { from: string; pct: string }[]; rate_now?: number | null;
 };
 type Tab = 'partners' | 'capital' | 'profit' | 'report';
 const TABS: { v: Tab; label: string }[] = [
@@ -105,13 +105,14 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
     kind: Kind; partners: Partner[] | null; capitalAccs: Acc[]; banks: Acc[]; reload: () => void; askClose: (fn: () => void, msg?: string) => void;
 }) {
     const blank = { id: 0, kind, name: '', father_name: '', cnic: '', phone: '', address: '', joining_date: today(), leaving_on: false, leaving_date: today(),
-        share_pct: '', account: 'new', investment: '', bank: '', notes: '', status: 'active' };
+        share_pct: '', rates: [] as { from: string; pct: string }[], account: 'new', investment: '', bank: '', notes: '', status: 'active' };
     const [f, setF] = useState<any>(blank);
     const set = (k: string, v: any) => setF((x: any) => ({ ...x, [k]: v }));
     const [busy, setBusy] = useState(false);
     const edit = (p: Partner) => setF({
         id: p.id, kind: p.kind || 'partner', name: p.name, father_name: p.father_name, cnic: p.cnic, phone: p.phone, address: p.address, joining_date: p.joining_date,
         leaving_on: !!p.leaving_date, leaving_date: p.leaving_date || today(), share_pct: p.share_pct === null ? '' : String(p.share_pct),
+        rates: (p.rates || []).map((r) => ({ from: r.from, pct: String(r.pct) })),
         account: String(p.account), investment: '', bank: '', notes: p.notes, status: p.status,
     });
     // Capital accounts not yet given to another partner.
@@ -176,10 +177,28 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                             {banks.map((a) => <option key={a.id} value={a.id}>{a.acc_id}  {a.name}</option>)}
                         </select>
                     </>)}
-                    <span className={L}>{f.kind === 'investor' ? 'Return % a year' : 'Agreed Share %'}</span>
+                    <span className={L}>{f.kind === 'investor' ? (f.rates.length ? 'Return % (joining)' : 'Return % a year') : 'Agreed Share %'}</span>
                     <input value={f.share_pct} onChange={(e) => set('share_pct', e.target.value.replace(/[^\d.]/g, ''))}
                         placeholder={f.kind === 'investor' ? 'e.g. 18 (of the investment, a year)' : 'Empty = by capital invested'}
                         className={`${EDIT} w-full text-right`} />
+                    {f.kind === 'investor' && (<>
+                        <span className={`${L} self-start pt-1`}>Return % changes</span>
+                        <div className="flex flex-col gap-1">
+                            {f.rates.map((r: any, i: number) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                    <span className="text-[12px] font-semibold text-slate-600">from</span>
+                                    <input type="date" value={r.from} onChange={(e) => set('rates', f.rates.map((x: any, k: number) => (k === i ? { ...x, from: e.target.value } : x)))} className={`${EDIT} !h-8 w-[150px]`} />
+                                    <input value={r.pct} onChange={(e) => set('rates', f.rates.map((x: any, k: number) => (k === i ? { ...x, pct: e.target.value.replace(/[^\d.]/g, '') } : x)))}
+                                        placeholder="%" className={`${EDIT} !h-8 w-[64px] text-right`} />
+                                    <span className="whitespace-nowrap text-[12px] font-semibold">% / yr</span>
+                                    <button type="button" onClick={() => set('rates', f.rates.filter((_: any, k: number) => k !== i))} title="Remove this change"
+                                        className="ml-auto h-7 w-7 border border-red-300 bg-[#ffe1e1] text-[13px] font-bold text-red-700">×</button>
+                                </div>
+                            ))}
+                            <button type="button" onClick={() => set('rates', [...f.rates, { from: today(), pct: '' }])}
+                                className="h-7 w-fit border border-[#9da1d8] bg-white px-2.5 text-[12px] font-bold text-[#1f2bd6] hover:bg-indigo-50">+ Change the % from a date</button>
+                        </div>
+                    </>)}
                     <span className={L}>Notes</span><input value={f.notes} onChange={(e) => set('notes', e.target.value)} className={`${EDIT} w-full`} />
                     <span className={L}>Status</span>
                     <select value={f.status} onChange={(e) => set('status', e.target.value)} className={COA_SELECT}>
@@ -214,7 +233,7 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                                     <td className={TD}>{dmy2(p.joining_date)}{p.leaving_date && <span className="block text-[10px]">left {dmy2(p.leaving_date)}</span>}</td>
                                     <td className={`${TD} text-right font-semibold`}>{fmt(num(p.invested))}</td>
                                     <td className={`${TD} text-right`}>{isInv ? pct(invTotal ? num(p.invested) / invTotal * 100 : 0) : pct(num(p.capital_pct))}</td>
-                                    <td className={`${TD} text-right ${isInv && p.share_pct === null && f.id !== p.id ? 'font-bold text-red-600' : ''}`}>{p.share_pct === null ? (isInv ? 'set it' : '—') : pct(num(p.share_pct))}</td>
+                                    <td className={`${TD} text-right ${isInv && p.share_pct === null && f.id !== p.id ? 'font-bold text-red-600' : ''}`}>{p.share_pct === null ? (isInv ? 'set it' : '—') : pct(num(isInv && p.rate_now != null ? p.rate_now : p.share_pct))}{isInv && !!p.rates?.length && <div className={`text-[10px] ${f.id === p.id ? 'text-white/85' : 'text-[#1f2bd6]'}`} title={[`From joining: ${pct(num(p.share_pct))}`, ...(p.rates || []).map((r) => `From ${dmy(r.from)}: ${pct(num(r.pct))}`)].join('\n')}>{p.rates.length} change{p.rates.length > 1 ? 's' : ''}</div>}</td>
                                     <td className={`${TD} text-right ${num(p.profit) < 0 && f.id !== p.id ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}{num(p.accrued) > 0 && <div className={`text-[11px] ${f.id === p.id ? 'text-white/85' : 'text-[#1f2bd6]'}`} title="Worked out by the agreed % a year — not posted yet (posted with Partnership › Profit Distribution)">{Math.abs(num(p.accrued) - num(p.profit)) < 0.005 ? 'not posted yet' : `${fmt(num(p.accrued))} not posted`}</div>}</td>
                                     <td className={`${TD} text-right`}>{fmt(num(p.drawings))}</td>
                                     <td className={`${TD} text-right font-bold`}>{fmt(num(p.balance))}</td>
@@ -534,8 +553,9 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
 function InvRateTotal({ list }: { list: Partner[] }) {
     const act = list.filter((p) => p.status === 'active');
     const inv = act.reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
-    const sum = act.reduce((s, p) => s + num(p.share_pct), 0);
-    const avg = inv ? act.reduce((s, p) => s + Math.max(0, num(p.invested)) * num(p.share_pct), 0) / inv : 0;
+    const r = (p: Partner) => num(p.rate_now != null ? p.rate_now : p.share_pct);
+    const sum = act.reduce((s, p) => s + r(p), 0);
+    const avg = inv ? act.reduce((s, p) => s + Math.max(0, num(p.invested)) * r(p), 0) / inv : 0;
     return <span title="Total of the active investors' rates; avg = the average return a year on the money invested">{pct(sum)}<span className="block text-[10px] font-semibold opacity-75">avg {pct(avg)}</span></span>;
 }
 
@@ -589,12 +609,12 @@ function InvestDetails({ from, to, print, only }: { from?: string; to?: string; 
                         ...r.items.map((i: any, k: number) => (
                             <tr key={`${r.partner}-${k}`} className={`${i.kind === 'out' ? 'text-red-700' : ''} ${r.status !== 'active' ? 'text-slate-400' : ''}`}>
                                 <td className={B}>{k === 0 ? <b>{r.name}</b> : ''}{k === 0 && r.status !== 'active' ? ' (inactive)' : ''}</td>
-                                <td className={B}>{dmy2(i.date)}</td>
-                                <td className={`${B} text-right`}>{i.kind === 'out' ? 'taken back ' : ''}{fmt(Math.abs(num(i.amount)))}</td>
+                                <td className={B}>{i.first !== false ? dmy2(i.date) : ''}</td>
+                                <td className={`${B} text-right`}>{i.first !== false ? `${i.kind === 'out' ? 'taken back ' : ''}${fmt(Math.abs(num(i.amount)))}` : <span className="text-[10.5px] text-slate-500">rate changed</span>}</td>
                                 <td className={B}>{i.days ? dmy2(i.from) : '—'}</td>
                                 <td className={B}>{i.days ? dmy2(i.to) : '—'}</td>
                                 <td className={`${B} text-right`}>{i.days}</td>
-                                <td className={`${B} text-right`}>{r.rate === null ? <span className="font-bold text-red-600">set it</span> : pct(num(r.rate))}</td>
+                                <td className={`${B} text-right`}>{r.rate === null ? <span className="font-bold text-red-600">set it</span> : pct(num(i.rate ?? r.rate))}</td>
                                 <td className={`${B} text-right font-semibold ${num(i.earned) < 0 ? '' : 'text-[#1f2bd6]'}`}>{fmt(num(i.earned))}</td>
                             </tr>
                         )),
