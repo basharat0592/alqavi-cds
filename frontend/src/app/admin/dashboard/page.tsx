@@ -92,6 +92,8 @@ const MENUS: Menu[] = [
         SEP,
         { label: 'Expense Voucher', href: '/admin/trade/expense-voucher' },
         SEP,
+        { label: 'Credit Card Voucher', href: '/admin/trade/card-voucher' },
+        SEP,
         { label: 'Short / Excess', sub: true, children: [
             { label: 'Stock Excess', href: '/admin/trade/stock-excess' },
             { label: 'Stock Short', href: '/admin/trade/stock-short' },
@@ -259,9 +261,9 @@ function AboutBox({ onClose }: { onClose: () => void }) {
 }
 
 /* ───────────────────────── Action button grid ───────────────────────── */
-type Btn = { name: string; href: string; icon: any; disabled?: boolean };
+type Btn = { name: string; href: string; icon: any; disabled?: boolean; menu?: Btn[] };
 type Theme = { tile: string; icon: string; ring: string };
-type Group = { theme: Theme; buttons: Btn[]; tall?: boolean };
+type Group = { theme: Theme; buttons: Btn[]; tall?: string };   // tall: the column it takes, all 4 rows
 
 /* Colours of the Al-Qavi visiting card: royal blue, green, yellow, sky blue and
    the logo's orange. Each legacy column keeps its own colour. */
@@ -294,10 +296,14 @@ const COLUMNS: Group[] = [
     ] },
     { theme: THEMES.account, buttons: [
         { name: 'Chart of Account', href: '/admin/trade/chart-of-account', icon: BookOpen },
-        { name: 'Receipt Voucher', href: '/admin/trade/receipt-voucher', icon: ArrowDownLeft },
-        { name: 'Payment Voucher', href: '/admin/trade/payment-voucher', icon: Wallet },
-    ] },
-    { theme: THEMES.card, tall: true, buttons: [
+        { name: 'Vouchers', href: '/admin/trade/receipt-voucher', icon: Receipt, menu: [
+            { name: 'Receipt Voucher', href: '/admin/trade/receipt-voucher', icon: ArrowDownLeft },
+            { name: 'Payment Voucher', href: '/admin/trade/payment-voucher', icon: Wallet },
+            { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight },
+            { name: 'Credit Card Voucher', href: '/admin/trade/card-voucher', icon: CreditCard },
+        ] },
+    ], tall: 'lg:col-start-4' },
+    { theme: THEMES.card, tall: 'lg:col-start-5', buttons: [
         { name: 'Credit Card & Reports', href: '/admin/trade/credit-card', icon: CreditCard },
         { name: 'Partnership & Reports', href: '/admin/trade/partnership', icon: Users },
         { name: 'Investors & Reports', href: '/admin/trade/investors', icon: PiggyBank },
@@ -310,7 +316,6 @@ const BOTTOM_ROW: { b: Btn; theme: Theme; span?: boolean }[] = [
     { b: { name: 'Backup Database', href: '/admin/trade/backup', icon: Database }, theme: THEMES.backup },
     { b: { name: 'Donation', href: '/admin/trade/donation', icon: Heart }, theme: THEMES.donation },
     { b: { name: 'Change Password', href: '/admin/trade/change-password', icon: KeyRound }, theme: THEMES.sale },
-    { b: { name: 'Expense Voucher', href: '/admin/trade/expense-voucher', icon: ArrowUpRight }, theme: THEMES.account },
 ];
 
 const REPORTS: Btn[] = [
@@ -322,9 +327,53 @@ const REPORTS: Btn[] = [
     { name: 'Trial Balance / Income Statement', href: '/admin/trade/reports?cat=406&report=trial_balance', icon: BarChart3 },
 ];
 
+/* A tile that opens a list (Vouchers): each item opens its window. */
+function MenuTile({ b, theme, delay = 0 }: { b: Btn; theme: Theme; delay?: number }) {
+    const Icon = b.icon;
+    const perms = usePerms();
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!open) return;
+        const off = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+        const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+        document.addEventListener('mousedown', off); document.addEventListener('keydown', esc);
+        return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc); };
+    }, [open]);
+    const items = b.menu || [];
+    return (
+        <div ref={ref} className="relative lg:h-full">
+            <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} style={{ animationDelay: `${delay}ms` }}
+                className={`aq-tile group flex w-full items-center gap-3 rounded-xl border ${theme.tile} ${theme.ring} px-3 py-2 text-left lg:h-full shadow-[0_1px_2px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_-10px_rgba(15,23,42,0.25)] hover:ring-2`}>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${theme.icon} shadow-sm transition-transform duration-300 group-hover:rotate-[-6deg] group-hover:scale-110`}>
+                    <Icon size={18} strokeWidth={1.9} />
+                </span>
+                <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight tracking-tight">{b.name}</span>
+                <ChevronDown size={16} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <div className="absolute left-2 right-2 top-[calc(100%-6px)] z-30 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-xl lg:top-1/2 lg:-translate-y-1/2">
+                    {items.map((it) => {
+                        const ItIcon = it.icon;
+                        const ok = canOpen(perms, it.href);
+                        return (
+                            <button key={it.href} type="button" disabled={!ok} title={ok ? undefined : 'No permission'}
+                                onClick={() => { setOpen(false); openPopup(it.href); }}
+                                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[14px] font-semibold text-slate-800 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40">
+                                <ItIcon size={16} className="shrink-0 text-[#2B2F8F]" /> {it.name}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: boolean; delay?: number }) {
     const Icon = b.icon;
     const perms = usePerms();
+    if (b.menu) return <MenuTile b={b} theme={theme} delay={delay} />;
     const denied = !b.disabled && !canOpen(perms, b.href);
     if (b.disabled || denied) {
         // Not built yet / no permission — shown greyed out and does nothing.
@@ -475,7 +524,7 @@ export default function AdminDashboard() {
                             {/* Colour-coded button columns (matches the legacy layout) */}
                             <div className="grid shrink-0 grid-cols-2 gap-3 md:grid-cols-5 lg:min-h-0 lg:flex-[4] lg:grid-rows-4 lg:gap-3">
                                 {COLUMNS.map((g, gi) => (
-                                    <div key={gi} className={`flex flex-col gap-3 lg:grid lg:grid-rows-3 lg:gap-3 ${g.tall ? 'lg:col-start-5 lg:row-span-4 lg:row-start-1' : 'lg:row-span-3'}`}>
+                                    <div key={gi} className={`flex flex-col gap-3 lg:grid lg:gap-3 ${g.buttons.length === 2 ? 'lg:grid-rows-2' : 'lg:grid-rows-3'} ${g.tall ? `${g.tall} lg:row-span-4 lg:row-start-1` : 'lg:row-span-3'}`}>
                                         {g.buttons.map((b) => (
                                             <ActionTile key={b.name + b.href} b={b} theme={g.theme} delay={gi * 60 + g.buttons.indexOf(b) * 90} />
                                         ))}

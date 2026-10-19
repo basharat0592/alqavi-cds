@@ -55,6 +55,7 @@ CATALOG = [
     ]},
     {'id': 'money', 'rows': [
         ('receipt_voucher', 'Receipt Voucher', [S, V], ['/admin/trade/receipt-voucher']),
+        ('card_voucher', 'Credit Card Voucher', [S, V], ['/admin/trade/card-voucher']),
         ('payment_voucher', 'Payment Voucher', [S, V], ['/admin/trade/payment-voucher']),
         ('expense_voucher', 'Expanse Voucher', [S, V], ['/admin/trade/expense-voucher']),
         ('bank_deposit', 'Bank Deposite', [S, V], []),
@@ -171,6 +172,8 @@ _crud('sales/trade-financial-years/', 'financial_year')
 _crud('sales/trade-general-vouchers/', 'general_voucher', view_list=True)
 _crud('sales/trade-forward-pl/', 'general_voucher', view_list=True)
 _crud('users/trade-users/', 'new_user', view_list=True)
+RULES += [('GET', r'^sales/trade-cards/payments/$', _vtype('card'), 'card_voucher', V),
+          ('POST', r'^sales/trade-cards/payments/$', _vtype('card'), 'card_voucher', S)]
 RULES += [('GET', r'^sales/trade-cards/payments/$', None, 'credit_card', V),
           ('POST', r'^sales/trade-cards/payments/$', None, 'sale', S)]   # paid by card on the Sale Invoice
 _crud('sales/trade-cards/', 'credit_card')
