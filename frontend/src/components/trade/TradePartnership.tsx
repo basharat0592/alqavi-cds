@@ -37,6 +37,7 @@ type Partner = {
     leaving_date: string | null; share_pct: number | null; notes: string; status: string; account: number; acc_id: string;
     account_name: string; invested: number; profit: number; drawings: number; balance: number; capital_pct: number;
     kind?: 'partner' | 'investor';
+    accrued?: number; posted?: number;
 };
 type Tab = 'partners' | 'capital' | 'profit' | 'report';
 const TABS: { v: Tab; label: string }[] = [
@@ -207,7 +208,7 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                                     <td className={`${TD} text-right font-semibold`}>{fmt(num(p.invested))}</td>
                                     <td className={`${TD} text-right`}>{isInv ? pct(invTotal ? num(p.invested) / invTotal * 100 : 0) : pct(num(p.capital_pct))}</td>
                                     <td className={`${TD} text-right ${isInv && p.share_pct === null && f.id !== p.id ? 'font-bold text-red-600' : ''}`}>{p.share_pct === null ? (isInv ? 'set it' : '—') : pct(num(p.share_pct))}</td>
-                                    <td className={`${TD} text-right ${num(p.profit) < 0 && f.id !== p.id ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}</td>
+                                    <td className={`${TD} text-right ${num(p.profit) < 0 && f.id !== p.id ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}{num(p.accrued) > 0 && <div className="text-[11px] text-[#1f2bd6]" title="Worked out by the agreed % a year — not posted yet (posted with Partnership › Profit Distribution)">{Math.abs(num(p.accrued) - num(p.profit)) < 0.005 ? 'not posted yet' : `${fmt(num(p.accrued))} not posted`}</div>}</td>
                                     <td className={`${TD} text-right`}>{fmt(num(p.drawings))}</td>
                                     <td className={`${TD} text-right font-bold`}>{fmt(num(p.balance))}</td>
                                     <td className={TD}>{p.status === 'active' ? 'Active' : 'Inactive'}</td>
@@ -235,7 +236,7 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                     </table>
                 </div>
                 <p className="shrink-0 text-[12px] text-slate-600">{isInv
-                    ? 'An investor gets the agreed Return % a year on the money invested (counted by days) — paid first from the profit, posted in Partnership › Profit Distribution. The return is not added to the investment; drawings and donations come off the balance.'
+                    ? 'An investor gets the agreed Return % a year on the money invested (counted by days) — paid first from the profit. Return earned = returns posted + the return worked out since the last Profit Distribution (blue: not posted yet; it is posted with Partnership › Profit Distribution). The return is not added to the investment; drawings and donations come off the balance.'
                     : 'Invested = money brought in less capital taken back. Capital = invested + profit kept in the business − drawings (undrawn profit is re-invested). Cap. % = capital as a part of all active partners’ capital. The partners share what is left after the investors’ returns — by capital, or a partner’s agreed %.'}</p>
             </div>
         </div>
@@ -590,7 +591,7 @@ function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.invested))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{isInv ? pct(invTot ? num(p.invested) / invTot * 100 : 0) : pct(num(p.capital_pct))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{p.share_pct === null ? '—' : pct(num(p.share_pct))}</td>
-                                <td className={`border border-slate-300 px-1.5 py-1 text-right ${num(p.profit) < 0 ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}</td>
+                                <td className={`border border-slate-300 px-1.5 py-1 text-right ${num(p.profit) < 0 ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}{num(p.accrued) > 0 && <div className="text-[11px] text-[#1f2bd6]">{Math.abs(num(p.accrued) - num(p.profit)) < 0.005 ? 'not posted yet' : `${fmt(num(p.accrued))} not posted`}</div>}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.drawings))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num((p as any).donations))}</td>
                                 <td className="border border-slate-300 px-1.5 py-1 text-right font-bold">{fmt(num(p.balance))}</td>

@@ -229,8 +229,14 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         from modules.company.models import LedgerAccount
         return scope_to_tenant(self.request.user, LedgerAccount.objects.all(), 'tenant').select_related('group')
 
-    def _row(self, p, total_invested=None, s=None):
-        s = s or partner_stats(p)
+    def _row(self, p, total_invested=None, s=None, accrued=None):
+        s = dict(s or partner_stats(p))
+        if accrued is not None:   # investor: return built up since the last posted distribution
+            in_period, to_date = accrued   # (within From–To, everything not posted up to To)
+            s['posted'] = s['profit']
+            s['accrued'] = in_period
+            s['profit'] = s['profit'] + in_period
+            s['balance'] = s['capital'] = s['balance'] + to_date
         out = {
             'id': p.id, 'name': p.name, 'father_name': p.father_name, 'cnic': p.cnic, 'phone': p.phone, 'address': p.address,
             'joining_date': p.joining_date, 'leaving_date': p.leaving_date, 'share_pct': p.share_pct, 'notes': p.notes,
@@ -254,7 +260,17 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         stats = {p.id: partner_stats(p, upto, since) for p in ps}
         live = lambda p: p.kind == 'partner' and p.status == 'active' and not (upto and p.leaving_date and p.leaving_date < upto)
         total = sum((stats[p.id]['capital'] for p in ps if live(p) and stats[p.id]['capital'] > 0), Z)
-        return Response([self._row(p, total, stats[p.id]) for p in ps])
+        # Investors: the return due (new rules) from the day after the last posted
+        # distribution up to the date — shown before it is posted.
+        from .models import ProfitDistribution
+        last = scope_to_tenant(request.user, ProfitDistribution.objects.all(), 'tenant').order_by('-date_to').values_list('date_to', flat=True).first()
+        end = upto or datetime.date.today()
+        after = last + datetime.timedelta(days=1) if last else datetime.date(1900, 1, 1)
+        start = max(after, since) if since else after
+        due = lambda p, f: _money(investor_due(p, f, end)) if p.share_pct and f <= end else Z
+        def accrued(p):
+            return None if p.kind != 'investor' else (due(p, start), due(p, after))
+        return Response([self._row(p, total, stats[p.id], accrued(p)) for p in ps])
 
     def _apply(self, p, d):
         name = str(d.get('name', p.name) or '').strip()[:150]
