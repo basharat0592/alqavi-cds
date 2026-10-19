@@ -269,8 +269,45 @@ class TradePartnershipViewSet(viewsets.ViewSet):
         start = max(after, since) if since else after
         due = lambda p, f: _money(investor_due(p, f, end)) if p.share_pct and f <= end else Z
         def accrued(p):
-            return None if p.kind != 'investor' else (due(p, start), due(p, after))
+            if p.kind != 'investor':
+                return None
+            if p.status != 'active' and not p.leaving_date:
+                return Z, Z
+            return due(p, start), due(p, after)
         return Response([self._row(p, total, stats[p.id], accrued(p)) for p in ps])
+
+    @action(detail=False, methods=['get'])
+    def investments(self, request):
+        """Each investor's money, one line per amount put in (or taken back), with the
+        return it earned: amount × agreed % a year × its days ÷ 365, for the days inside
+        From (?date_from) – To (?date_to, today). The lines add up to the investor's return."""
+        q = request.query_params
+        try:
+            upto = _day(q.get('date_to')) or datetime.date.today()
+            since = _day(q.get('date_from'))
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        out = []
+        for p in self._partners().filter(kind='investor').order_by('joining_date', 'id'):
+            if p.joining_date > upto:
+                continue
+            rate = _d(p.share_pct)
+            earns = p.status == 'active' or bool(p.leaving_date)
+            if not earns:   # inactive (not left): nothing to show
+                continue
+            end = min(upto, p.leaving_date) if p.leaving_date else upto
+            items = []
+            for d, amt in _money_moves(p):
+                if d > upto or not amt:
+                    continue
+                start = max(d, p.joining_date, since) if since else max(d, p.joining_date)
+                days = max((end - start).days + 1, 0) if earns else 0
+                items.append({'date': d, 'kind': 'in' if amt > 0 else 'out', 'amount': amt, 'from': start, 'to': end,
+                              'days': days, 'earned': _money(amt * rate * days / 100 / YEAR_DAYS)})
+            out.append({'partner': p.id, 'name': p.name, 'acc_id': p.account.acc_id, 'rate': p.share_pct, 'status': p.status,
+                        'items': items, 'invested': sum((i['amount'] for i in items), Z),
+                        'earned': sum((i['earned'] for i in items), Z)})
+        return Response(out)
 
     def _apply(self, p, d):
         name = str(d.get('name', p.name) or '').strip()[:150]

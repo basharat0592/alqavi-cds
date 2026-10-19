@@ -193,7 +193,7 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
             </fieldset>
 
             <div className="flex min-h-0 flex-col gap-2">
-                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
+                <div className={`min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white ${isInv ? 'flex-[5]' : 'flex-1'}`}>
                     <table className="w-full table-fixed border-collapse text-[11.5px]">
                         <colgroup>{(isInv ? [17, 8.5, 12, 7, 9.5, 12, 9.5, 13.5, 8] : [19, 8.5, 12, 7.5, 7.5, 12, 9.5, 14, 8]).map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                         <thead><tr>{(isInv ? ['Investor', 'Joining', 'Invested', 'Share', 'Return / yr', 'Return earned', 'Drawings', 'Balance', 'Status']
@@ -224,7 +224,7 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                                     <td className={`${TD} text-right`}>{fmt(list.filter((p) => p.status === 'active').reduce((s, p) => s + num(p.invested), 0))}</td>
                                     <td className={`${TD} text-right`}>100%</td>
                                     <td className={`${TD} text-right ${!isInv && agreed && Math.abs(agreed - 100) > 0.01 ? 'text-red-600' : ''}`} title={isInv ? 'Average return a year, by investment' : 'Agreed shares should add up to 100%'}>
-                                        {isInv ? (invTotal ? pct(list.filter((p) => p.status === 'active').reduce((s, p) => s + num(p.invested) * num(p.share_pct), 0) / invTotal) : '—') : agreed ? pct(agreed) : '—'}
+                                        {isInv ? <InvRateTotal list={list} /> : agreed ? pct(agreed) : '—'}
                                     </td>
                                     <td className={`${TD} text-right`}>{fmt(list.reduce((s, p) => s + num(p.profit), 0))}</td>
                                     <td className={`${TD} text-right`}>{fmt(list.reduce((s, p) => s + num(p.drawings), 0))}</td>
@@ -235,6 +235,11 @@ function PartnersTab({ kind, partners, capitalAccs, banks, reload, askClose }: {
                         )}
                     </table>
                 </div>
+                {isInv && (
+                    <div className="min-h-0 flex-[4] overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
+                        <InvestDetails key={(partners || []).map((p) => `${p.id}:${p.invested}:${p.share_pct}:${p.status}`).join()} />
+                    </div>
+                )}
                 <p className="shrink-0 text-[12px] text-slate-600">{isInv
                     ? 'An investor gets the agreed Return % a year on the money invested (counted by days) — paid first from the profit. Return earned = returns posted + the return worked out since the last Profit Distribution (blue: not posted yet; it is posted with Partnership › Profit Distribution). The return is not added to the investment; drawings and donations come off the balance.'
                     : 'Invested = money brought in less capital taken back. Capital = invested + profit kept in the business − drawings (undrawn profit is re-invested). Cap. % = capital as a part of all active partners’ capital. The partners share what is left after the investors’ returns — by capital, or a partner’s agreed %.'}</p>
@@ -518,6 +523,74 @@ function ProfitTab({ partners, reload, setAsk }: { partners: Partner[]; reload: 
 }
 
 /* ── Report ── */
+/* Return / yr total: the agreed rates added up, the average by money invested below. */
+function InvRateTotal({ list }: { list: Partner[] }) {
+    const act = list.filter((p) => p.status === 'active');
+    const inv = act.reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
+    const sum = act.reduce((s, p) => s + num(p.share_pct), 0);
+    const avg = inv ? act.reduce((s, p) => s + Math.max(0, num(p.invested)) * num(p.share_pct), 0) / inv : 0;
+    return <span title="Total of the active investors' rates; avg = the average return a year on the money invested">{pct(sum)}<span className="block text-[10px] font-semibold opacity-75">avg {pct(avg)}</span></span>;
+}
+
+/* Investment details: every amount an investor put in (or took back), with the
+   days it was in and the return it earned — amount × rate × days ÷ 365. */
+function InvestDetails({ from, to, print }: { from?: string; to?: string; print?: boolean }) {
+    const [rows, setRows] = useState<any[] | null>(null);
+    useEffect(() => {
+        api.get('v1/sales/trade-partners/investments/', { params: { ...(from ? { date_from: from } : {}), ...(to ? { date_to: to } : {}) } })
+            .then(({ data }) => setRows(data)).catch(() => setRows([]));
+    }, [from, to]);
+    const B = print ? 'border border-slate-300 px-1.5 py-1' : 'border-b border-r border-slate-300 px-1.5 py-[3px]';
+    const H = print ? 'border border-slate-400 bg-[#ececec] px-1.5 py-1' : `${TH}`;
+    const all = (rows || []).filter((r) => r.items.length);
+    return (
+        <div className={print ? '' : 'text-[11.5px]'}>
+            {print
+                ? <div className="text-[15px] font-black">Investment Details <span className="text-[12px] font-semibold text-slate-600">— return on each amount{from ? ` from ${dmy(from)}` : ''} to {dmy(to || today())}</span></div>
+                : <div className="bg-[#f2f2fa] px-1.5 py-1 text-[12px] font-bold text-[#1f2bd6]">Investment details — return on each amount, up to today</div>}
+            <table className={`w-full table-fixed border-collapse tabular-nums ${print ? 'mt-1 text-[11.5px]' : ''}`}>
+                <colgroup>{[22, 11, 14, 11, 11, 8, 9, 14].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                <thead><tr>{['Investor', 'Date', 'Amount', 'From', 'To', 'Days', 'Rate / yr', 'Return earned'].map((h, k) =>
+                    <th key={h} className={`${H} ${[2, 5, 6, 7].includes(k) ? '!text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
+                <tbody>
+                    {!rows && <tr><td colSpan={8} className="px-3 py-4 text-center text-slate-500">Loading…</td></tr>}
+                    {rows && !all.length && <tr><td colSpan={8} className="px-3 py-4 text-center text-slate-500">No investments.</td></tr>}
+                    {all.map((r) => [
+                        ...r.items.map((i: any, k: number) => (
+                            <tr key={`${r.partner}-${k}`} className={`${i.kind === 'out' ? 'text-red-700' : ''} ${r.status !== 'active' ? 'text-slate-400' : ''}`}>
+                                <td className={B}>{k === 0 ? <b>{r.name}</b> : ''}{k === 0 && r.status !== 'active' ? ' (inactive)' : ''}</td>
+                                <td className={B}>{dmy2(i.date)}</td>
+                                <td className={`${B} text-right`}>{i.kind === 'out' ? 'taken back ' : ''}{fmt(Math.abs(num(i.amount)))}</td>
+                                <td className={B}>{i.days ? dmy2(i.from) : '—'}</td>
+                                <td className={B}>{i.days ? dmy2(i.to) : '—'}</td>
+                                <td className={`${B} text-right`}>{i.days}</td>
+                                <td className={`${B} text-right`}>{r.rate === null ? <span className="font-bold text-red-600">set it</span> : pct(num(r.rate))}</td>
+                                <td className={`${B} text-right font-semibold ${num(i.earned) < 0 ? '' : 'text-[#1f2bd6]'}`}>{fmt(num(i.earned))}</td>
+                            </tr>
+                        )),
+                        <tr key={`${r.partner}-t`} className="bg-[#fafafa] font-bold">
+                            <td className={B} colSpan={2}>{r.name} — total</td>
+                            <td className={`${B} text-right`}>{fmt(num(r.invested))}</td>
+                            <td className={B} colSpan={4} />
+                            <td className={`${B} text-right`}>{fmt(num(r.earned))}</td>
+                        </tr>,
+                    ])}
+                </tbody>
+                {all.length > 0 && (
+                    <tfoot className={`${print ? '' : 'sticky bottom-0'} bg-[#e8e8f4] font-bold`}>
+                        <tr>
+                            <td className={B} colSpan={2}>All investors</td>
+                            <td className={`${B} text-right`}>{fmt(all.filter((r) => r.status === 'active').reduce((s, r) => s + num(r.invested), 0))}</td>
+                            <td className={B} colSpan={4} />
+                            <td className={`${B} text-right`}>{fmt(all.reduce((s, r) => s + num(r.earned), 0))}</td>
+                        </tr>
+                    </tfoot>
+                )}
+            </table>
+        </div>
+    );
+}
+
 function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
     const isInv = kind === 'investor';
     const [pid, setPid] = useState('');
@@ -601,7 +674,7 @@ function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
                             <td className="border border-slate-400 px-1.5 py-1" colSpan={2}>Total</td>
                             <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(act.reduce((s, p) => s + num(p.invested), 0))}</td>
                             <td className="border border-slate-400 px-1.5 py-1 text-right">100%</td>
-                            <td className="border border-slate-400" />
+                            <td className="border border-slate-400 px-1.5 py-1 text-right">{isInv ? <InvRateTotal list={act} /> : ''}</td>
                             <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('profit'))}</td>
                             <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('drawings'))}</td>
                             <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(list.reduce((s, p) => s + num((p as any).donations), 0))}</td>
@@ -609,6 +682,8 @@ function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
                         </tr>
                     </tbody>
                 </table>
+
+                {isInv && <InvestDetails key={JSON.stringify(applied)} from={applied.fromOn ? applied.from : undefined} to={applied.to} print />}
 
                 {st && (
                     <div>
