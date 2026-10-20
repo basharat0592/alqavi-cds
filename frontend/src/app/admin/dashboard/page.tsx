@@ -261,7 +261,7 @@ function AboutBox({ onClose }: { onClose: () => void }) {
 }
 
 /* ───────────────────────── Action button grid ───────────────────────── */
-type Btn = { name: string; href: string; icon: any; disabled?: boolean; menu?: Btn[] };
+type Btn = { name: string; href: string; icon: any; disabled?: boolean; menu?: Btn[]; alert?: 'card_bills' };
 type Theme = { tile: string; icon: string; ring: string };
 type Group = { theme: Theme; buttons: Btn[]; tall?: string };   // tall: the column it takes, all 4 rows
 
@@ -304,7 +304,7 @@ const COLUMNS: Group[] = [
         ] },
     ], tall: 'lg:col-start-4' },
     { theme: THEMES.card, tall: 'lg:col-start-5', buttons: [
-        { name: 'Credit Card & Reports', href: '/admin/trade/credit-card', icon: CreditCard },
+        { name: 'Credit Card & Reports', href: '/admin/trade/credit-card', icon: CreditCard, alert: 'card_bills' },
         { name: 'Partnership & Reports', href: '/admin/trade/partnership', icon: Users },
         { name: 'Investors & Reports', href: '/admin/trade/investors', icon: PiggyBank },
     ] },
@@ -370,6 +370,21 @@ function MenuTile({ b, theme, delay = 0 }: { b: Btn; theme: Theme; delay?: numbe
     );
 }
 
+/* Company card bills not paid by their due date (or due within 5 days): a red count on the tile. */
+function CardBillBadge() {
+    const [n, setN] = useState<{ late: number; due: number } | null>(null);
+    useEffect(() => {
+        api.get('v1/sales/trade-cards/bills/').then(({ data }) => setN({ late: data.late, due: data.due })).catch(() => setN(null));
+    }, []);
+    if (!n || !(n.late + n.due)) return null;
+    return (
+        <span title={`${n.late} card bill(s) not paid past the due date, ${n.due} due within 5 days`}
+            className={`shrink-0 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-black text-white ${n.late ? 'animate-pulse' : ''}`}>
+            {n.late ? `${n.late} late` : `${n.due} due`}
+        </span>
+    );
+}
+
 function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: boolean; delay?: number }) {
     const Icon = b.icon;
     const perms = usePerms();
@@ -404,6 +419,7 @@ function ActionTile({ b, theme, big, delay = 0 }: { b: Btn; theme: Theme; big?: 
                 <Icon size={18} strokeWidth={1.9} />
             </span>
             <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight tracking-tight">{b.name}</span>
+            {b.alert === 'card_bills' && <CardBillBadge />}
         </Link>
     );
 }

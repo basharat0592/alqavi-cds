@@ -924,6 +924,11 @@ class TradeCard(models.Model):
     tax_pct = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('1.5'))
     notes = models.CharField(max_length=255, blank=True, default='')
     status = models.CharField(max_length=10, default='active')
+    # Company card's monthly bill: made on bill_day, to be paid by due_day (days of the
+    # month; a due day before the bill day is in the next month). Bills count from bills_from.
+    bill_day = models.PositiveSmallIntegerField(null=True, blank=True)
+    due_day = models.PositiveSmallIntegerField(null=True, blank=True)
+    bills_from = models.DateField(null=True, blank=True)
     tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
                                related_name='tenant_trade_cards')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -931,6 +936,24 @@ class TradeCard(models.Model):
     class Meta:
         db_table = 'trade_card_list'
         ordering = ['holder_type', 'holder_name', 'id']
+
+
+class CardBill(models.Model):
+    """One monthly bill of a company card — marked paid when it is paid."""
+    card = models.ForeignKey(TradeCard, on_delete=models.CASCADE, related_name='bills')
+    bill_date = models.DateField()
+    due_date = models.DateField()
+    amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    paid_on = models.DateField(null=True, blank=True)
+    note = models.CharField(max_length=255, blank=True, default='')
+    tenant = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True,
+                               related_name='tenant_card_bills')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'trade_card_bills'
+        ordering = ['bill_date', 'id']
+        unique_together = [('card', 'bill_date')]
 
 
 class CardPayment(models.Model):

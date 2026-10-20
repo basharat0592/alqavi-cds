@@ -174,6 +174,7 @@ _crud('sales/trade-forward-pl/', 'general_voucher', view_list=True)
 _crud('users/trade-users/', 'new_user', view_list=True)
 RULES += [('GET', r'^sales/trade-cards/payments/$', _vtype('card'), 'card_voucher', V),
           ('POST', r'^sales/trade-cards/payments/$', _vtype('card'), 'card_voucher', S)]
+RULES += [('POST', r'^sales/trade-cards/bills/$', None, 'credit_card', U)]
 RULES += [('GET', r'^sales/trade-cards/payments/$', None, 'credit_card', V),
           ('POST', r'^sales/trade-cards/payments/$', None, 'sale', S)]   # paid by card on the Sale Invoice
 _crud('sales/trade-cards/', 'credit_card')

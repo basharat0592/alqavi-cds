@@ -615,6 +615,18 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'shelf': o.line_shelf, 'net': net,
                 'pre_bal': pre, 'total': pre + net, 'paid': paid, 'balance': pre + net - paid,
             })
+        # Late bills: what is still owed on each bill (from the customer's ledger balance,
+        # newest bills first) once its 15 days are over.
+        from .trade_dues import customer_dues
+        owed = {}
+        for d in customer_dues(request.user, {r['customer_id'] for r in rows if r['customer_id']}).values():
+            for b in d['bills']:
+                owed[b['id']] = b
+        for r in rows:
+            b = owed.get(r['id'])
+            r['owed'] = b['owed'] if b else 0
+            r['late_days'] = b['late_days'] if b else 0
+            r['due'] = b['due'] if b else None
         return Response(rows)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAdminUser])

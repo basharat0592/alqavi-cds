@@ -1414,6 +1414,16 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             .then((b: any) => setPrevBal(num(b?.previous_balance)))
             .catch(() => setPrevBal(0));
     }, [customer]);
+    // Late bills (unpaid 15 days after the bill) — shown in red beside "Sale".
+    const [late, setLate] = useState<null | { balance: number; late_count: number; late_amount: number; opening: number; oldest_days: number; bills: any[] }>(null);
+    useEffect(() => {
+        setLate(null);
+        if (!customer || mode !== 'invoice') return;
+        let live = true;
+        api.get('v1/sales/trade-dues/late-bills/', { params: { customer: customer.id } })
+            .then(({ data }) => { if (live) setLate(data); }).catch(() => { /* no alert */ });
+        return () => { live = false; };
+    }, [customer, mode]);
 
     // Closing the pop-up with the browser's own X (or refreshing) asks first,
     // like every window's own Close / Cancel. Our confirmed closes pass through.
@@ -2193,7 +2203,21 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col gap-1.5 px-3 pb-2 pt-1.5">
-                <h1 className="text-[24px] font-black leading-none tracking-tight text-[#1f2bd6]">Sale</h1>
+                <div className="flex shrink-0 items-baseline gap-4">
+                    <h1 className="text-[24px] font-black leading-none tracking-tight text-[#1f2bd6]">Sale</h1>
+                    {late && num(late.late_amount) > 0 && (() => {
+                        const lb = late.bills.filter((b: any) => b.late_days > 0);
+                        const old = lb[0];
+                        const tip = [...(num(late.opening) > 0 ? [`Old balance ${fmt(num(late.opening))}`] : []),
+                            ...lb.map((b: any) => `${b.no} · ${ymd(b.date)} · ${fmt(num(b.owed))} · ${b.late_days} days late`)].join('\n');
+                        return (
+                            <span className="animate-pulse truncate text-[14px] font-black text-red-600" title={tip}>
+                                ⚠ LATE: {fmt(num(late.late_amount))} not paid on time{lb.length ? ` — ${lb.length} bill${lb.length > 1 ? 's' : ''}` : ''}
+                                {old ? `, oldest ${old.no} ${old.late_days} days late` : num(late.opening) > 0 ? ' (old balance)' : ''} · Balance {fmt(num(late.balance))}
+                            </span>
+                        );
+                    })()}
+                </div>
 
                 {/* Row 1 — customer / product / stock */}
                 <div className="flex shrink-0 items-center gap-2">
@@ -2865,8 +2889,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 <tbody>
                                     {(srRows || []).map((r, i) => (
                                         <tr key={r.sale_id + i} onClick={() => { setSrSel(r.sale_id); setSrChoice('print'); setSrAction(r); }}
-                                            className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'}`}
-                                            title={`${r.sale_id} — click for Print / Sale Return`}>
+                                            className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'} ${num(r.late_days) > 0 ? 'font-semibold text-red-600' : ''}`}
+                                            title={`${r.sale_id}${num(r.late_days) > 0 ? ` — LATE: ${fmt(num(r.owed))} not paid, ${r.late_days} days after the due date ${ymd(r.due)}` : num(r.owed) > 0 ? ` — ${fmt(num(r.owed))} due by ${ymd(r.due)}` : ''} — click for Print / Sale Return`}>
                                             {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, num(r.cartons) ? fmt(num(r.cartons)) : '', fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
                                               fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
                                                 <td key={k} title={tip(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 text-[11px] font-normal tracking-tight">{v}</td>
@@ -2882,7 +2906,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 {srRows && srRows.length > 0 && (
                                     <tfoot className="sticky bottom-0 bg-[#ececfd] text-[11.5px] font-semibold tabular-nums">
                                         <tr>
-                                            <td colSpan={5} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">Totals</td>
+                                            <td colSpan={5} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">
+                                                {srRows.some((r) => num(r.late_days) > 0) && <span className="mr-3 font-black text-red-600">⚠ {srRows.filter((r) => num(r.late_days) > 0).length} late bill(s) · {fmt(srRows.reduce((s2, r) => s2 + (num(r.late_days) > 0 ? num(r.owed) : 0), 0))} not paid on time</span>}
+                                                Totals
+                                            </td>
                                             <td className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r.cartons), 0)) || ''}</td>
                                             {(['amount', 'disc', 'shelf', 'net'] as const).map((k) => (
                                                 <td key={k} className="border-t border-r border-slate-300 px-1.5 py-1.5">{fmt(srRows.reduce((s2, r) => s2 + num(r[k]), 0))}</td>

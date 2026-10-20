@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { openPopup } from '@/lib/popup';
 import {
-    ConfirmBox, LABEL, EDIT, ACTION_BTN, COA_SELECT, ReadBox, guardWindowClose, closeTradeWindow,
+    Modal, ConfirmBox, LABEL, EDIT, ACTION_BTN, COA_SELECT, ReadBox, guardWindowClose, closeTradeWindow,
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
 
@@ -24,19 +24,116 @@ export type Card = {
     id: number; holder_type: 'saleman' | 'customer' | 'company'; holder: string; label: string; staff: number | null;
     customer_acc: number | null; customer_code: string; customer_id: string | null; holder_name: string; bank: string;
     card_no: string; tax_pct: number; notes: string; status: string;
+    bill_day?: number | null; due_day?: number | null; bills_from?: string | null;
 };
+type Bill = { id: number | null; card: number; label: string; bill_date: string; due_date: string; amount: number; paid_on: string | null;
+    note: string; status: 'late' | 'due' | 'open' | 'paid'; days: number };
+const dmyB = (iso: string | null) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
+const todayB = () => new Date().toISOString().slice(0, 10);
 const HOLDER: Record<string, string> = { saleman: 'Saleman', customer: 'Customer', company: 'Company' };
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
+/** Company card bills not paid by their due date: a red alert, and the list to mark them paid. */
+export function CardBillAlert() {
+    const [data, setData] = useState<{ late: number; due: number; rows: Bill[] } | null>(null);
+    const [open, setOpen] = useState(false);
+    const [edit, setEdit] = useState<Record<string, { amount: string; paid_on: string }>>({});
+    const [busy, setBusy] = useState('');
+    const load = () => api.get('v1/sales/trade-cards/bills/').then(({ data }) => setData(data)).catch(() => setData(null));
+    useEffect(() => {
+        load();
+        const f = () => load();
+        window.addEventListener('focus', f);
+        return () => window.removeEventListener('focus', f);
+    }, []);
+    const key = (b: Bill) => `${b.card}:${b.bill_date}`;
+    const mark = async (b: Bill, paid: boolean) => {
+        const e = edit[key(b)] || { amount: b.amount ? String(b.amount) : '', paid_on: b.paid_on || todayB() };
+        setBusy(key(b));
+        try {
+            await api.post('v1/sales/trade-cards/bills/', { card: b.card, bill_date: b.bill_date, paid_on: paid ? e.paid_on : null, amount: e.amount || 0 });
+            toast.success(paid ? `${b.label} bill of ${dmyB(b.bill_date)} marked paid.` : 'Marked not paid.');
+            await load();
+        } catch (err: any) { toast.error(err?.response?.data?.detail || 'Could not save.'); }
+        finally { setBusy(''); }
+    };
+    if (!data || (!data.rows.length && !open)) return null;
+    const n = data.late + data.due;
+    return (
+        <>
+            {n > 0 ? (
+                <button type="button" onClick={() => setOpen(true)} title="Company card bills not paid"
+                    className={`ml-3 h-6 border px-2.5 text-[12px] font-black ${data.late ? 'animate-pulse border-red-600 bg-red-600 text-white' : 'border-red-400 bg-[#ffe1e1] text-red-700'}`}>
+                    ⚠ {data.late ? `${data.late} card bill${data.late > 1 ? 's' : ''} NOT PAID — past due` : ''}{data.late && data.due ? ' · ' : ''}{data.due ? `${data.due} due in ${data.due > 1 ? 'days' : 'a few days'}` : ''}
+                </button>
+            ) : (
+                <button type="button" onClick={() => setOpen(true)} className="ml-3 h-6 border border-[#9da1d8] bg-[#ececfd] px-2.5 text-[12px] font-bold text-slate-700">Card Bills</button>
+            )}
+            {open && (
+                <Modal title="Company Card Bills" onClose={() => setOpen(false)} xl>
+                    <div className="flex min-h-0 flex-1 flex-col gap-2 bg-[#c9c9f9] p-3">
+                        <div className="min-h-[200px] flex-1 overflow-auto border border-slate-500 bg-white">
+                            <table className="w-full table-fixed border-collapse text-[12.5px]">
+                                <colgroup>{[26, 11, 11, 16, 12, 13, 11].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                                <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
+                                    <tr>{['Card', 'Bill Date', 'Due Date', 'Status', 'Bill Amount', 'Paid on', ''].map((h, k) => <th key={k} className="border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
+                                </thead>
+                                <tbody>
+                                    {data.rows.map((b) => {
+                                        const e = edit[key(b)] || { amount: b.amount ? String(b.amount) : '', paid_on: b.paid_on || todayB() };
+                                        const setE = (k: 'amount' | 'paid_on', v: string) => setEdit((x) => ({ ...x, [key(b)]: { ...e, [k]: v } }));
+                                        const red = b.status === 'late' || b.status === 'due';
+                                        return (
+                                            <tr key={key(b)} className={`tabular-nums ${b.status === 'late' ? 'bg-[#ffd9d9] font-semibold text-red-700' : b.status === 'due' ? 'text-red-600' : b.status === 'paid' ? 'text-slate-500' : ''}`}>
+                                                <td className="truncate border-b border-r border-slate-300 px-1.5 py-1" title={b.label}>{b.label}</td>
+                                                <td className="border-b border-r border-slate-300 px-1.5 py-1">{dmyB(b.bill_date)}</td>
+                                                <td className="border-b border-r border-slate-300 px-1.5 py-1">{dmyB(b.due_date)}</td>
+                                                <td className="border-b border-r border-slate-300 px-1.5 py-1">
+                                                    {b.status === 'paid' ? `Paid ${dmyB(b.paid_on)}` : b.status === 'late' ? `NOT PAID · ${-b.days} day${b.days === -1 ? '' : 's'} late`
+                                                        : b.days === 0 ? 'Due TODAY' : `Due in ${b.days} day${b.days === 1 ? '' : 's'}`}
+                                                </td>
+                                                <td className="border-b border-r border-slate-300 px-1 py-0.5">
+                                                    <input value={e.amount} onChange={(ev) => setE('amount', ev.target.value.replace(/[^\d.]/g, ''))} placeholder="Amount"
+                                                        className={`${EDIT} !h-7 w-full text-right`} />
+                                                </td>
+                                                <td className="border-b border-r border-slate-300 px-1 py-0.5">
+                                                    <input type="date" value={e.paid_on} max={todayB()} onChange={(ev) => ev.target.value && setE('paid_on', ev.target.value)} className={`${EDIT} !h-7 w-full`} />
+                                                </td>
+                                                <td className="border-b border-slate-300 px-1 py-0.5">
+                                                    <button type="button" disabled={busy === key(b)} onClick={() => mark(b, b.status !== 'paid')}
+                                                        className={`h-7 w-full border text-[12px] font-bold ${b.status === 'paid' ? 'border-slate-400 bg-white text-slate-700' : red ? 'border-red-500 bg-red-600 text-white' : 'border-blue-500 bg-[#dfe9ff] text-blue-800'}`}>
+                                                        {b.status === 'paid' ? 'Not paid' : 'Mark Paid'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {!data.rows.length && <tr><td colSpan={7} className="px-3 py-6 text-center text-slate-500">No company card bills — set a card&apos;s Bill Date and Due Date in Credit Cards.</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[12.5px] text-slate-700">A company card&apos;s bill is made on its Bill Date each month and must be paid by its Due Date — red when it is not paid by then, or due within 5 days.</span>
+                            <span className="flex-1" />
+                            <button type="button" onClick={() => setOpen(false)} className={ACTION_BTN}><span className="underline">C</span>lose</button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </>
+    );
+}
 
 /** One window for cards: Credit Cards | Credit Card Report (switched in the title bar). */
 export function CardTabs({ on }: { on: 'cards' | 'report' }) {
     const go = (href: string) => window.location.replace(href);
     return (
-        <div className="ml-6 flex gap-1">
+        <div className="ml-6 flex items-center gap-1">
             {([['cards', 'Credit Cards', '/admin/trade/credit-card'], ['report', 'Credit Card Report', '/admin/trade/credit-card-report']] as const).map(([k, label, href]) => (
                 <button key={k} type="button" onClick={() => k !== on && go(href)}
                     className={`h-6 border px-3 text-[12px] font-bold ${k === on ? 'border-[#3b3f8f] bg-[#3b3f8f] text-white' : 'border-[#9da1d8] bg-[#ececfd] text-slate-800 hover:bg-white'}`}>{label}</button>
             ))}
+            <CardBillAlert />
         </div>
     );
 }
@@ -58,7 +155,7 @@ export default function TradeCreditCard() {
     const [accounts, setAccounts] = useState<Acc[] | null>(null);
     useEffect(() => { api.get('v1/company/ledger-accounts/', { params: { group: 1202 } }).then(({ data }) => setAccounts(data)).catch(() => setAccounts([])); }, []);
 
-    const blank = { id: 0, holder_type: 'saleman', staff: '', customer: null as Acc | null, holder_name: '', bank: '', card_no: '', tax_pct: '1.5', notes: '', status: 'active' };
+    const blank = { id: 0, holder_type: 'saleman', staff: '', customer: null as Acc | null, holder_name: '', bank: '', card_no: '', tax_pct: '1.5', notes: '', status: 'active', bill_day: '', due_day: '' };
     const [f, setF] = useState<any>(blank);
     const set = (k: string, v: any) => setF((x: any) => ({ ...x, [k]: v }));
     const [custCode, setCustCode] = useState('');
@@ -66,7 +163,8 @@ export default function TradeCreditCard() {
     const edit = (c: Card) => {
         const acc = (accounts || []).find((a) => a.id === c.customer_acc) || (c.customer_acc ? { id: c.customer_acc, acc_id: c.customer_code, name: c.holder } as Acc : null);
         setF({ id: c.id, holder_type: c.holder_type, staff: c.staff ? String(c.staff) : '', customer: acc, holder_name: c.holder_name, bank: c.bank,
-            card_no: c.card_no, tax_pct: String(c.tax_pct), notes: c.notes, status: c.status });
+            card_no: c.card_no, tax_pct: String(c.tax_pct), notes: c.notes, status: c.status,
+            bill_day: c.bill_day ? String(c.bill_day) : '', due_day: c.due_day ? String(c.due_day) : '' });
         setCustCode(acc?.acc_id || '');
     };
     const reset = () => { setF(blank); setCustCode(''); };
@@ -76,7 +174,8 @@ export default function TradeCreditCard() {
         setBusy(true);
         try {
             const body = { holder_type: f.holder_type, staff: f.staff || null, customer_acc: f.customer?.id || null, holder_name: f.holder_name,
-                bank: f.bank, card_no: f.card_no, tax_pct: f.tax_pct, notes: f.notes, status: f.status };
+                bank: f.bank, card_no: f.card_no, tax_pct: f.tax_pct, notes: f.notes, status: f.status,
+                bill_day: f.holder_type === 'company' ? f.bill_day : '', due_day: f.holder_type === 'company' ? f.due_day : '' };
             if (f.id) await api.patch(`v1/sales/trade-cards/${f.id}/`, body); else await api.post('v1/sales/trade-cards/', body);
             toast.success(f.id ? 'Card updated.' : 'Card added.');
             reset(); load();
@@ -146,6 +245,17 @@ export default function TradeCreditCard() {
                         <input value={f.bank} onChange={(e) => set('bank', e.target.value)} placeholder="e.g. HBL" className={`${EDIT} w-full`} />
                         <span className={L}>Card No</span>
                         <input value={f.card_no} onChange={(e) => set('card_no', e.target.value)} placeholder="e.g. 7219 or the full number" className={`${EDIT} w-full`} />
+                        {f.holder_type === 'company' && (<>
+                            <span className={L} title="The company card's monthly bill: made on this day, to be paid by the due day">Bill / Due Date</span>
+                            <div className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-700">
+                                <input value={f.bill_day} onChange={(e) => set('bill_day', e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="day" inputMode="numeric"
+                                    className={`${EDIT} w-[56px] text-center`} aria-label="Bill day of the month" />
+                                <span>bill, pay by</span>
+                                <input value={f.due_day} onChange={(e) => set('due_day', e.target.value.replace(/\D/g, '').slice(0, 2))} placeholder="day" inputMode="numeric"
+                                    className={`${EDIT} w-[56px] text-center`} aria-label="Due day of the month" />
+                                <span className="whitespace-nowrap">of each month</span>
+                            </div>
+                        </>)}
                         <span className={L}>Card Tax %</span>
                         <input value={f.tax_pct} onChange={(e) => set('tax_pct', e.target.value.replace(/[^\d.]/g, ''))} className={`${EDIT} w-full text-right`} />
                         <span className={L}>Notes</span>

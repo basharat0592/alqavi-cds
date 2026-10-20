@@ -1123,6 +1123,100 @@ def r_return_by_customer(ctx):
     return _return_detail(ctx, 'customer')
 
 
+def r_challan_bills(ctx):
+    """Delivery challan of the invoices, area by area: whom to deliver which bill, to be signed on receipt."""
+    accs = _cust_accounts(ctx)
+    from .models import OrderItem
+    orders = list(_orders(ctx))
+    qty = defaultdict(lambda: [0, 0, 0])
+    for oid, q, b, ctn in OrderItem.objects.filter(order__in=orders).values_list('order_id', 'quantity', 'bonus_quantity', 'product__carton_qty'):
+        a = qty[oid]
+        a[0] += 1; a[1] += (q or 0) + (b or 0)
+        if ctn:
+            a[2] += (q or 0) // ctn
+    by_area = defaultdict(list)
+    for o in orders:
+        code, name, area = _cust_name(o, accs)
+        a = accs.get(o.customer_id)
+        by_area[area or '(no area)'].append((o, code, name, a.cell_no if a else ''))
+    rows, tot, n = [], Z, 0
+    for area in sorted(by_area, key=str.lower):
+        rows.append(R(area, t='g'))
+        sub = Z
+        for o, code, name, cell in sorted(by_area[area], key=lambda x: (x[2].lower(), _odate(x[0]))):
+            q = qty[o.id]
+            rows.append(R(o.tracking_id, _dmy(_odate(o)), code, name, cell or '', q[0], q[1], q[2] or '', _f(o.total_amount), ''))
+            sub += _d(o.total_amount); n += 1
+        rows.append(R(f'{area} total', '', '', f'{len(by_area[area])} bills', '', '', '', '', _f(sub), '', t='s'))
+        tot += sub
+    return _out('Area-Wise Delivery Challan (Bills)', ctx,
+                [('Invoice', 'l'), ('Date', 'l'), ('Acc ID', 'l'), ('Customer', 'l'), ('Cell No', 'l'), ('Items', 'r'), ('Qty', 'r'), ('Ctn', 'r'), ('Net', 'r'), ('Received (sign)', 'l')],
+                rows, ['Total', '', '', f'{n} bills', '', '', '', '', _f(tot), ''],
+                subtitle=ctx.period() + (' · selected areas' if ctx.areas else ''))
+
+
+def _recovery_rows(ctx, company=False):
+    """Recovery challan: area by area, each customer's balance and the bills it is made of
+    (oldest first) — late ones in red — with a column to write what is received."""
+    from .trade_dues import customer_dues
+    upto = ctx.dto or datetime.date.today()
+    dues = customer_dues(ctx.user, upto=upto, staff=ctx.staff)
+    if ctx.areas:
+        dues = {k: v for k, v in dues.items() if v['acc'].area_id in ctx.areas}
+    share = {}
+    if company:   # each bill's goods of this company, and so its part of what is owed
+        from .models import OrderItem
+        ids = [b['id'] for d in dues.values() for b in d['bills']]
+        tot, mine = defaultdict(lambda: Z), defaultdict(lambda: Z)
+        for oid, pr, q, disc, co in OrderItem.objects.filter(order_id__in=ids).values_list(
+                'order_id', 'price', 'quantity', 'discount', 'product__stock__product__company_id'):
+            v = _d(pr) * (q or 0) - _d(disc)
+            tot[str(oid)] += v
+            if str(co) == str(ctx.company):
+                mine[str(oid)] += v
+        share = {k: (mine[k] / tot[k] if tot[k] else Z) for k in tot}
+    by_area = defaultdict(list)
+    for d in dues.values():
+        bills = d['bills']
+        if company:
+            bills = [dict(b, owed=(b['owed'] * share.get(b['id'], Z)).quantize(Decimal('0.01'))) for b in bills if share.get(b['id'])]
+            bills = [b for b in bills if b['owed'] > 0]
+            if not bills:
+                continue
+        elif ctx.staff and not bills:
+            continue
+        a = d['acc']
+        by_area[a.area.name if a.area_id else '(no area)'].append((a, d, bills))
+    rows, total, late_total, n = [], Z, Z, 0
+    for area in sorted(by_area, key=str.lower):
+        rows.append(R(area, t='g'))
+        for a, d, bills in sorted(by_area[area], key=lambda x: x[0].name.lower()):
+            owed = sum((b['owed'] for b in bills), Z) + (Z if (company or ctx.staff) else d['opening'])
+            late = sum((b['owed'] for b in bills if b['late_days'] > 0), Z) + (Z if (company or ctx.staff) else d['opening'])
+            rows.append(R(a.acc_id, a.name, a.cell_no or '', '', '', _f(owed), '', t='s'))
+            if d['opening'] > 0 and not (company or ctx.staff):
+                rows.append(R('', 'Old balance (before these bills)', '', '', 'old', _f(d['opening']), '', t='p'))
+            for b in bills:
+                rows.append(R('', b['no'], _dmy(b['date']), _dmy(b['due']), f"{b['late_days']} days late" if b['late_days'] else 'not due yet',
+                              _f(b['owed']), '', t='p' if b['late_days'] else None))
+            total += owed; late_total += late; n += 1
+    title = 'Recovery Challan (Company-wise)' if company else 'Recovery Challan (Area-wise)'
+    sub = f'Dues as on {_dmy(upto)}' + (f' · {ctx.company_name}' if company else '') + (' · selected areas' if ctx.areas else '') + \
+          f' · late: {_f(late_total)}'
+    return _out(title, ctx, [('Acc ID', 'l'), ('Customer / Bill', 'l'), ('Bill Date', 'l'), ('Due Date', 'l'), ('Late', 'l'), ('Amount Due', 'r'), ('Received', 'l')],
+                rows, ['Total', f'{n} customers', '', '', '', _f(total), ''], subtitle=sub)
+
+
+def r_recovery_challan(ctx):
+    return _recovery_rows(ctx)
+
+
+def r_recovery_company(ctx):
+    if not ctx.company:
+        return _out('Recovery Challan (Company-wise)', ctx, [('', 'l')], [R('Find the company first.')], subtitle='')
+    return _recovery_rows(ctx, company=True)
+
+
 def r_challan_area(ctx):
     """Loading sheet: for each area, the products of the invoices in the period (qty, bonus, cartons)."""
     accs = _cust_accounts(ctx)
@@ -1452,7 +1546,11 @@ CATEGORIES = [
         ('return_by_invoice', 'Sale Return Invoice By Invice No', ['find:invoice'], 'rpt_sale_return'),
         ('return_by_customer', 'Sale Return Invoice By Customer', [F_D, 'find:customer'], 'rpt_sale_return'),
         None,
-        ('challan_area', 'Area-Wise Delivery Challan', [F_D, F_S, F_A], 'rpt_delivery_challan'),
+        ('delivery_invoice', 'Delivery Challan By Invoice No', ['find:invoice'], 'rpt_delivery_challan'),
+        ('challan_area', 'Area-Wise Delivery Challan (Products)', [F_D, F_S, F_A], 'rpt_delivery_challan'),
+        ('challan_bills', 'Area-Wise Delivery Challan (Bills)', [F_D, F_S, F_A], 'rpt_delivery_challan'),
+        ('recovery_challan', 'Recovery Challan (Area-wise)', [F_D, F_S, F_A], 'rpt_account_balances'),
+        ('recovery_company', 'Recovery Challan (Company-wise)', [F_D, F_S, F_A, 'find:company'], 'rpt_account_balances'),
         ('customer_list', 'Area-Wise Customer List', [F_A], 'rpt_customer_list'),
         None,
         ('sale_invoice', 'Sale Invoice List', [F_D, F_S, F_A], 'rpt_sale_invoice'),
@@ -1495,6 +1593,7 @@ _EXTRA = {
     'po_date': _mk_pur('K', 'date'), 'po_invoice': _mk_pur('K', 'invoice'), 'po_supplier': _mk_pur('K', 'supplier'),
     'pur_date': _mk_pur('P', 'date'), 'pur_invoice': _mk_pur('P', 'invoice'), 'pur_product': _mk_pur('P', 'product'), 'pur_supplier': _mk_pur('P', 'supplier'),
     'pret_date': _mk_pur('R', 'date'), 'pret_invoice': _mk_pur('R', 'invoice'), 'pret_product': _mk_pur('R', 'product'), 'pret_supplier': _mk_pur('R', 'supplier'),
+    'delivery_invoice': r_delivery_challan,
     'customer_list': _retitle(r_customer_list, 'Area-Wise Customer List'), 'recovery': _retitle(r_recovery, 'Over all Balances Area-wise'),
     'journal': _retitle(r_journal, 'General Journal by Date'), 'trial_balance': _retitle(r_trial_balance, 'Trial Balance (Detail)'),
     'profit_loss': _retitle(r_profit_loss, 'Income Statement (Detail)'), 'balance_sheet': _retitle(r_balance_sheet, 'Balance Sheet (Detail)'),

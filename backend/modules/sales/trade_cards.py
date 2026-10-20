@@ -20,7 +20,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.scoping import scope_to_tenant, tenant_id_for
-from .models import CardPayment, SalesStaff, TradeCard, Voucher, VoucherLine
+from .models import CardBill, CardPayment, SalesStaff, TradeCard, Voucher, VoucherLine
 
 Z = Decimal('0')
 CARDS_ACC = '12040009'     # Credit Cards: card payments to come in from the bank
@@ -56,8 +56,58 @@ def _card_row(c):
         'staff': c.staff_id, 'customer_acc': c.customer_acc_id, 'customer_code': c.customer_acc.acc_id if c.customer_acc_id else '',
         'customer_id': c.customer_acc.customer_id if c.customer_acc_id else None,
         'holder_name': c.holder_name, 'bank': c.bank, 'card_no': c.card_no, 'tax_pct': c.tax_pct,
-        'notes': c.notes, 'status': c.status,
+        'notes': c.notes, 'status': c.status, 'bill_day': c.bill_day, 'due_day': c.due_day, 'bills_from': c.bills_from,
     }
+
+
+SOON_DAYS = 5   # a bill due within this many days is shown as coming up
+
+
+def _on(y, m, day):
+    """That day of the month (the last day when the month is shorter)."""
+    import calendar
+    while m > 12:
+        y, m = y + 1, m - 12
+    return datetime.date(y, m, min(day, calendar.monthrange(y, m)[1]))
+
+
+def bill_cycles(c, upto):
+    """[(bill_date, due_date)] of a company card's bills from bills_from up to `upto`."""
+    if not (c.bill_day and c.due_day and c.bills_from):
+        return []
+    f = c.bills_from
+    y, m = f.year, f.month
+    if _on(y, m, c.bill_day) > f:   # the bill whose month bills_from is in
+        y, m = (y - 1, 12) if m == 1 else (y, m - 1)
+    out = []
+    while True:
+        bd = _on(y, m, c.bill_day)
+        if bd > upto:
+            break
+        dd = _on(y, m, c.due_day) if c.due_day > c.bill_day else _on(y, m + 1, c.due_day)
+        out.append((bd, dd))
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return out
+
+
+def card_bills(user, upto=None):
+    """Every company card bill up to today: paid / late / due (soon) / open, unpaid first."""
+    today = upto or datetime.date.today()
+    cards = scope_to_tenant(user, TradeCard.objects.filter(status='active', bill_day__isnull=False, due_day__isnull=False), 'tenant') \
+        .select_related('staff', 'customer_acc')
+    saved = {(b.card_id, b.bill_date): b for b in scope_to_tenant(user, CardBill.objects.all(), 'tenant')}
+    rows = []
+    for c in cards:
+        for bd, dd in bill_cycles(c, today):
+            b = saved.get((c.id, bd))
+            left = (dd - today).days
+            st = 'paid' if b and b.paid_on else 'late' if left < 0 else 'due' if left <= SOON_DAYS else 'open'
+            rows.append({'id': b.id if b else None, 'card': c.id, 'label': card_label(c), 'bill_date': bd, 'due_date': dd,
+                         'amount': b.amount if b else Z, 'paid_on': b.paid_on if b else None, 'note': b.note if b else '',
+                         'status': st, 'days': left})
+    order = {'late': 0, 'due': 1, 'open': 2, 'paid': 3}
+    rows.sort(key=lambda r: (order[r['status']], r['due_date']) if r['status'] != 'paid' else (3, -r['due_date'].toordinal()))
+    return rows
 
 
 class TradeCardViewSet(viewsets.ViewSet):
@@ -101,6 +151,27 @@ class TradeCardViewSet(viewsets.ViewSet):
         c.tax_pct = pct
         c.notes = str(d.get('notes', c.notes) or '').strip()[:255]
         c.status = 'inactive' if str(d.get('status', c.status)).lower() == 'inactive' else 'active'
+        for k in ('bill_day', 'due_day'):
+            if k in d:
+                v = d.get(k)
+                if v in (None, ''):
+                    setattr(c, k, None)
+                else:
+                    try:
+                        v = int(v)
+                    except (TypeError, ValueError):
+                        return 'The bill and due dates are days of the month (1 to 31).'
+                    if not 1 <= v <= 31:
+                        return 'The bill and due dates are days of the month (1 to 31).'
+                    setattr(c, k, v)
+        if bool(c.bill_day) != bool(c.due_day):
+            return 'Enter both the Bill Date and the Due Date (days of the month), or neither.'
+        if c.bill_day and c.bill_day == c.due_day:
+            return 'The Due Date cannot be the same day as the Bill Date.'
+        if c.bill_day and not c.bills_from:
+            c.bills_from = datetime.date.today()   # bills count from when the dates are set
+        if not c.bill_day:
+            c.bills_from = None
         return None
 
     def create(self, request):
@@ -131,6 +202,37 @@ class TradeCardViewSet(viewsets.ViewSet):
             return Response({'detail': 'This card has payments — set it Inactive instead.'}, status=400)
         c.delete()
         return Response(status=204)
+
+    @action(detail=False, methods=['get', 'post'])
+    def bills(self, request):
+        """GET: the company cards' bills (unpaid first) and how many are late / due.
+        POST {card, bill_date, paid_on (empty = not paid), amount?, note?}: mark a bill paid."""
+        if request.method == 'GET':
+            rows = card_bills(request.user)
+            return Response({'late': sum(1 for r in rows if r['status'] == 'late'), 'due': sum(1 for r in rows if r['status'] == 'due'),
+                             'rows': rows})
+        d = request.data
+        c = self._cards().filter(pk=d.get('card')).first()
+        if not c:
+            return Response({'detail': 'Card not found.'}, status=404)
+        try:
+            bd = datetime.date.fromisoformat(str(d.get('bill_date'))[:10])
+            paid = datetime.date.fromisoformat(str(d.get('paid_on'))[:10]) if d.get('paid_on') else None
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        cyc = dict(bill_cycles(c, datetime.date.today()))
+        if bd not in cyc:
+            return Response({'detail': 'That is not one of this card\'s bills.'}, status=400)
+        if paid and paid > datetime.date.today():
+            return Response({'detail': 'The paid date cannot be in the future.'}, status=400)
+        b, _ = CardBill.objects.get_or_create(card=c, bill_date=bd, defaults={'due_date': cyc[bd], 'tenant_id': c.tenant_id})
+        b.due_date, b.paid_on = cyc[bd], paid
+        if 'amount' in d:
+            b.amount = _money(d.get('amount'))
+        if 'note' in d:
+            b.note = str(d.get('note') or '').strip()[:255]
+        b.save()
+        return Response({'id': b.id, 'paid_on': b.paid_on})
 
     @action(detail=False, methods=['get', 'post'])
     def payments(self, request):

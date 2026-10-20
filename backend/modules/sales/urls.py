@@ -14,6 +14,7 @@ from .trade_masters import TradeStaffViewSet, TradeCategoryViewSet, TradeDamageV
 from .invoice_share import public_invoice
 from .trade_perms import my_permissions, permission_users, permission_user
 from .trade_reports import report_catalog, report_run
+from .trade_dues import late_bills
 from .reports import (
     report_by_area, report_by_user, report_statements, report_returns_summary,
     report_delivery, report_ledger,
@@ -53,6 +54,7 @@ urlpatterns = [
     path('trade-permissions/me/', my_permissions, name='trade-permissions-me'),
     path('trade-reports/catalog/', report_catalog, name='trade-report-catalog'),
     path('trade-reports/run/', report_run, name='trade-report-run'),
+    path('trade-dues/late-bills/', late_bills, name='trade-late-bills'),
     path('trade-permissions/users/', permission_users, name='trade-permission-users'),
     path('trade-permissions/users/<int:user_id>/', permission_user, name='trade-permission-user'),
     path('reports/by-area/', report_by_area, name='report-by-area'),
