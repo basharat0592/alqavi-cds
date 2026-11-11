@@ -961,7 +961,8 @@ class CardPayment(models.Model):
     credited the full amount — Credit Cards (12040009) Dr / Customer Cr — and the
     card tax is only recorded here, for the Credit Card Report."""
     order = models.ForeignKey('sales.Order', on_delete=models.SET_NULL, null=True, blank=True, related_name='card_payments')
-    voucher = models.OneToOneField(Voucher, on_delete=models.CASCADE, related_name='card_payment')
+    # One voucher can hold several customers' card payments (the Credit Card Voucher).
+    voucher = models.ForeignKey(Voucher, on_delete=models.CASCADE, related_name='card_payments')
     date = models.DateField()
     customer_acc = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='card_payments')
     amount = models.DecimalField(max_digits=14, decimal_places=2)

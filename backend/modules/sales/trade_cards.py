@@ -234,6 +234,61 @@ class TradeCardViewSet(viewsets.ViewSet):
         b.save()
         return Response({'id': b.id, 'paid_on': b.paid_on})
 
+    @action(detail=False, methods=['post'])
+    def voucher(self, request):
+        """Credit Card Voucher (as the Receipt Voucher): one voucher for one or more customers paid
+        by card on the Receiver Card. Body: {date?, receiver_card, staff?, detail?, lines: [{account, amount, note?}]}.
+        Each customer Cr (settling their unpaid invoices, oldest first) / Credit Cards (12040009) Dr the
+        total; each customer's payment goes in the Credit Card Report with its card tax."""
+        from .vouchers import VoucherViewSet, _allocate_to_orders
+        d = request.data
+        cards = self._cards()
+        recv = cards.filter(pk=d.get('receiver_card')).first() if d.get('receiver_card') else None
+        if not recv:
+            return Response({'detail': 'Choose the Receiver Card (the card the money is received on).'}, status=400)
+        accs = self._accounts()
+        lines = []
+        for x in d.get('lines') or []:
+            acc = accs.filter(pk=x.get('account')).first()
+            amt = _money(x.get('amount'))
+            if not acc:
+                return Response({'detail': 'One of the Receipt From accounts was not found.'}, status=400)
+            if not acc.customer_id:
+                return Response({'detail': f'{acc.name} is not a customer — only customers pay by card here.'}, status=400)
+            if amt <= 0:
+                return Response({'detail': f'Enter an amount for {acc.name}.'}, status=400)
+            lines.append((acc, amt, str(x.get('note') or '').strip()[:200]))
+        if not lines:
+            return Response({'detail': 'Add at least one Receipt From customer with an amount.'}, status=400)
+        try:
+            day = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+        except ValueError:
+            return Response({'detail': 'Invalid date.'}, status=400)
+        if day > datetime.date.today():
+            return Response({'detail': 'The voucher date cannot be in the future.'}, status=400)
+        cards_acc = accs.filter(acc_id=CARDS_ACC).first()
+        if not cards_acc:
+            return Response({'detail': 'The Credit Cards account (12040009) is missing in the Chart of Account.'}, status=400)
+        staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+        detail = str(d.get('detail') or '').strip()[:200]
+        total = sum((a for _, a, _ in lines), Z)
+        tid = tenant_id_for(request.user) or recv.tenant_id
+        with transaction.atomic():
+            v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(day), vtype='card_payment', date=day, staff=staff,
+                                       bank=recv.bank[:80], detail=detail or f'Paid by card on {card_label(recv)}'[:255],
+                                       total=total, created_by=request.user, tenant_id=tid)
+            for i, (acc, amt, note) in enumerate(lines, 1):
+                left = _allocate_to_orders(acc.customer_id, amt, v, request.user, 'bank_transfer')
+                det = ' - '.join(x for x in (note, detail) if x) or f'Paid by card - {acc.name}'
+                VoucherLine.objects.create(voucher=v, line=i, account=acc, credit=amt, unallocated=left, detail=det[:255])
+                payer = cards.filter(holder_type='customer', customer_acc=acc, status='active').first()
+                pct = _d(payer.tax_pct if payer else recv.tax_pct)
+                CardPayment.objects.create(voucher=v, date=day, customer_acc=acc, amount=amt, receiver_card=recv, payer_card=payer,
+                                           tax_pct=pct, tax_amount=_money(amt * pct / 100), staff=staff, note=det[:255], tenant_id=tid)
+            VoucherLine.objects.create(voucher=v, line=len(lines) + 1, account=cards_acc, debit=total,
+                                       detail=f'Card {card_label(recv)}'[:255])
+        return Response({'id': v.id, 'voucher_no': v.voucher_no, 'total': total}, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=['get', 'post'])
     def payments(self, request):
         if request.method == 'POST':

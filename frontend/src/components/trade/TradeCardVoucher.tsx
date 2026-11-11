@@ -1,15 +1,17 @@
 "use client";
 
 /*
- * Trade 1.0 — Credit Card Voucher (as the Receipt Voucher, paid by card).
+ * Trade 1.0 — Credit Card Voucher: the Receipt Voucher, paid by card.
  *
  * Receipt From: one or more customers, each with an amount, listed in the grid.
- * Received on: the Receiver Card (a saleman's or the company's own card) the
- * money comes in on, with staff and detail. Save posts one card voucher per
- * customer — Credit Cards (12040009) Dr / Customer Cr, settling their unpaid
- * invoices oldest first — and records it in the Credit Card Report, the card
- * tax kept there (the customer's own card's %, else the receiving card's).
- * View: the card vouchers by voucher no / date range.
+ * Receipt as: the Receiver Card (a saleman's or one of the company's own cards)
+ * the money comes in on — into Credit Cards (12040009) — with staff and detail.
+ * Save posts ONE voucher: each customer Cr (settling their unpaid invoices, oldest
+ * first) / Credit Cards Dr the total; each customer's payment goes in the Credit
+ * Card Report with its card tax (the customer's own card's %, else the receiving
+ * card's) — kept there only, the customer is credited the full amount.
+ * View: "View Credit Card Voucher Detail" — voucher no / date range, every line
+ * with Total Debit / Total Credits.
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -30,6 +32,7 @@ const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; }
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (iso: string | null) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
+const CARDS_ACC = '12040009';   // Credit Cards: card money to come in from the bank
 
 export default function TradeCardVoucher() {
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
@@ -72,14 +75,17 @@ export default function TradeCardVoucher() {
     const amountRef = useRef<HTMLInputElement>(null);
     const fromCodeRef = useRef<HTMLInputElement>(null);
 
-    // Received on (the card)
+    // Receipt as (the card)
     const [recv, setRecv] = useState('');
     const [staffId, setStaffId] = useState('');
     const [detail, setDetail] = useState('');
     const [saving, setSaving] = useState(false);
     const recvCard = cards.find((c) => String(c.id) === recv) || null;
+    const cardsAcc = (accounts || []).find((a) => a.acc_id === CARDS_ACC) || null;
+    const [asBal, setAsBal] = useState<number | null>(null);
 
     const balanceOf = (a: Acc) => api.get('v1/sales/vouchers/balance/', { params: { account: a.id } }).then(({ data }) => num(data.balance)).catch(() => null);
+    useEffect(() => { if (cardsAcc) balanceOf(cardsAcc).then(setAsBal); }, [cardsAcc?.id]); // eslint-disable-line react-hooks/exhaustive-deps
     const [finder, setFinder] = useState<null | { q: string }>(null);
     const pickAccount = async (a: Acc) => {
         setFinder(null);
@@ -101,9 +107,9 @@ export default function TradeCardVoucher() {
     const tax = lines.reduce((s, l) => s + Math.round(l.amount * taxPct(l.account)) / 100, 0);
 
     const addLine = () => {
-        if (!fromAcc) { toast.error('Find the customer first.'); fromCodeRef.current?.focus(); return; }
+        if (!fromAcc) { toast.error('Find the Receipt From account first.'); fromCodeRef.current?.focus(); return; }
         const amt = Math.round(num(amount) * 100) / 100;
-        if (amt <= 0) { toast.error('Enter the amount paid by card.'); amountRef.current?.focus(); return; }
+        if (amt <= 0) { toast.error('Enter the amount received.'); amountRef.current?.focus(); return; }
         if (lines.some((l) => l.account.id === fromAcc.id)) { toast.error(`${fromAcc.name} is already in the list — remove it first to change the amount.`); return; }
         setLines((ls) => [...ls, { account: fromAcc, amount: amt, note: note.trim() }]);
         setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote(''); setSel(-1);
@@ -118,36 +124,31 @@ export default function TradeCardVoucher() {
     const resetForm = () => {
         setLines([]); setSel(-1); setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote('');
         setRecv(''); setStaffId(''); setDetail(''); setDateOn(false); setDate(today()); loadNo();
+        if (cardsAcc) balanceOf(cardsAcc).then(setAsBal);
     };
     const save = () => {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
         setAsk({
-            msg: `Save the Credit Card Voucher${lines.length > 1 ? `s (${lines.length}, one for each customer)` : ` ${voucherNo}`} for ${fmt(total)} on ${recvCard!.label} ?`,
+            msg: `Save Credit Card Voucher ${voucherNo} for ${fmt(total)} on ${recvCard!.label} ?`,
             yes: async () => {
                 setSaving(true);
-                const made: string[] = [];
                 try {
-                    for (const l of lines) {
-                        const { data } = await api.post('v1/sales/trade-cards/payments/', {
-                            customer: l.account.id, amount: l.amount, receiver_card: recvCard!.id, date: dateOn ? date : today(),
-                            staff: staffId || null, note: [l.note, detail.trim()].filter(Boolean).join(' - '),
-                        }, { params: { vtype: 'card' } });
-                        made.push(data.voucher_no);
-                    }
-                    toast.success(`Credit Card Voucher${made.length > 1 ? 's' : ''} ${made.join(', ')} saved — ${fmt(total)}.`, { duration: 6000 });
+                    const { data } = await api.post('v1/sales/trade-cards/voucher/', {
+                        date: dateOn ? date : today(), receiver_card: recvCard!.id, staff: staffId || null, detail: detail.trim(),
+                        lines: lines.map((l) => ({ account: l.account.id, amount: l.amount, note: l.note })),
+                    });
+                    toast.success(`Credit Card Voucher ${data.voucher_no} saved — ${fmt(num(data.total))}.`);
                     resetForm();
                 } catch (err: any) {
                     const d = err?.response?.data;
-                    const done = made.length ? ` (${made.join(', ')} saved — the rest not)` : '';
-                    toast.error(`${String(d?.detail || (d && Object.values(d)[0]) || 'Could not save the voucher.')}${done}`, { duration: 8000 });
-                    if (made.length) { setLines((ls) => ls.slice(made.length)); loadNo(); }
+                    toast.error(String(d?.detail || (d && Object.values(d)[0]) || 'Could not save the voucher.'), { duration: 7000 });
                 } finally { setSaving(false); }
             },
         });
     };
 
-    // View the card vouchers
+    // View Credit Card Voucher Detail
     const [view, setView] = useState<null | { rows: any[] | null; filter: boolean }>(null);
     const [vNo, setVNo] = useState('');
     const [vFromOn, setVFromOn] = useState(false);
@@ -157,22 +158,26 @@ export default function TradeCardVoucher() {
     const runView = async () => {
         setView({ rows: null, filter: false });
         try {
-            const params: any = { vtype: 'card' };
-            if (vNo.trim()) params.q = vNo.trim();
+            const params: any = { vtype: 'card_payment' };
+            if (vNo.trim()) params.voucher_no = vNo.trim();
             if (vFromOn) params.date_from = vFrom;
             if (vToOn) params.date_to = vTo;
-            const { data } = await api.get('v1/sales/trade-cards/payments/', { params });
+            const { data } = await api.get('v1/sales/vouchers/', { params });
             setView({ rows: data, filter: false });
-        } catch { toast.error('Could not load the card vouchers.'); setView({ rows: [], filter: false }); }
+        } catch { toast.error('Could not load vouchers.'); setView({ rows: [], filter: false }); }
     };
     const vRows = view?.rows || [];
-    const vSum = (k: string) => vRows.reduce((s, r) => s + num(r[k]), 0);
+    const totDebit = vRows.reduce((s, r) => s + num(r.debit), 0);
+    const totCredit = vRows.reduce((s, r) => s + num(r.credit), 0);
 
     const closeWindow = () => askClose(closeTradeWindow, lines.length ? 'The voucher is not saved. Do you want to Close the Form ?' : undefined);
+
     const legend = (t: string) => <legend className="px-1.5 text-[17px] font-black tracking-tight text-[#c0192f]">{t}</legend>;
     const findBtn = 'h-8 shrink-0 rounded-md border border-slate-400 bg-gradient-to-b from-white to-[#e6e6ee] px-3 text-[13px] font-bold text-slate-800 shadow-sm hover:to-[#d9d9e6] active:translate-y-px';
     const BAL = `${FIELD} flex items-center justify-end border-sky-300 bg-[#c9f6ff] font-bold text-slate-900`;
+    // Balances move as the amount is typed: the account after this receipt.
     const fromAfter = fromBal === null ? null : fromBal - num(amount);
+    const asAfter = asBal === null ? null : asBal + total;
 
     return (
         <div className="min-h-screen bg-[#dcdcf7] font-sans text-slate-900">
@@ -196,10 +201,12 @@ export default function TradeCardVoucher() {
                         <input type="date" value={date} max={today()} disabled={!dateOn} onChange={(e) => e.target.value && setDate(e.target.value)}
                             className={`${FIELD} w-full ${dateOn ? 'border-emerald-300 bg-[#e3fbe3] text-slate-900' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
 
-                        <button type="button" onClick={() => setFinder({ q: '' })} className={findBtn}><span className="underline">F</span>ind Customer</button>
+                        <button type="button" onClick={() => setFinder({ q: '' })} className={findBtn}><span className="underline">F</span>ind Receipt Acc</button>
                         <input ref={fromCodeRef} value={fromCode} onChange={(e) => { setFromCode(e.target.value); if (fromAcc) { setFromAcc(null); setFromBal(null); } }}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); resolveCode(); } }} placeholder="Account ID" className={`${EDIT} w-full`} />
-                        <span className={`${LABEL} text-[14px]`}>Account Balance</span>
+                        <div className="flex flex-col gap-0.5">
+                            <span className={`${LABEL} text-[14px]`}>Account Balance</span>
+                        </div>
 
                         <span className={`${LABEL} text-[15px]`}>Amount</span>
                         <input ref={amountRef} value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal"
@@ -223,9 +230,9 @@ export default function TradeCardVoucher() {
                 <div className="flex min-h-[230px] flex-col overflow-hidden rounded-lg border border-slate-500 bg-[#8a8a8a]">
                     <div className="min-h-0 flex-1 overflow-auto">
                         <table className="w-full table-fixed border-collapse bg-white text-[13px]">
-                            <colgroup><col style={{ width: '8%' }} /><col style={{ width: '15%' }} /><col style={{ width: '43%' }} /><col style={{ width: '10%' }} /><col style={{ width: '24%' }} /></colgroup>
+                            <colgroup><col style={{ width: '9%' }} /><col style={{ width: '18%' }} /><col style={{ width: '50%' }} /><col style={{ width: '23%' }} /></colgroup>
                             <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                <tr>{['S.No', 'Acc. ID', 'Customer', 'Tax %', 'Amount'].map((h, k) => <th key={h} className={`border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold ${k >= 3 ? 'text-right' : ''}`}>{h}</th>)}</tr>
+                                <tr>{['S.No', 'Acc. ID', 'Account', 'Amount'].map((h) => <th key={h} className="border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
                             </thead>
                             <tbody>
                                 {lines.map((l, i) => (
@@ -235,24 +242,23 @@ export default function TradeCardVoucher() {
                                         <td className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1" title={l.note ? `${l.account.name} — ${l.note}` : l.account.name}>
                                             {l.account.name}{l.note && <span className={sel === i ? 'text-white/80' : 'text-slate-500'}>{`  — ${l.note}`}</span>}
                                         </td>
-                                        <td className="border-b border-r border-slate-300 px-1.5 py-1 text-right" title={ownCard(l.account) ? "The customer's own card" : 'The receiving card'}>{taxPct(l.account)}%</td>
                                         <td className="border-b border-r border-slate-300 px-1.5 py-1 text-right font-semibold">{fmt(l.amount)}</td>
                                     </tr>
                                 ))}
-                                {!lines.length && <tr><td colSpan={5} className="px-3 py-4 text-center text-slate-400">Find the customer, enter the amount paid by card, press Add.</td></tr>}
+                                {!lines.length && <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-400">Find the account, enter the amount, press Add.</td></tr>}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* Received on (card) */}
+                {/* Receipt as — the card */}
                 <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1 lg:col-span-2">
-                    {legend('Received on Card')}
-                    <div className="grid grid-cols-[140px_minmax(0,2fr)_88px_minmax(0,1fr)_132px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5">
+                    {legend('Receipt as')}
+                    <div className="grid grid-cols-[140px_minmax(0,1fr)_88px_minmax(0,1fr)_132px_minmax(0,1fr)_46px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5">
                         <span className={`${LABEL} text-[15px]`}>Receiver Card</span>
                         <select value={recv} title={recvCard?.label || ''}
                             onChange={(e) => { if (e.target.value === 'add') { openPopup('/admin/trade/credit-card'); return; } setRecv(e.target.value); }}
-                            className={COA_SELECT}>
+                            className={`${COA_SELECT} col-span-3`}>
                             <option value="">Select any one</option>
                             {/* The money is received on a saleman's card or one of the company's own cards. */}
                             {([['saleman', 'Saleman cards'], ['company', 'Company cards']] as const).map(([kind, group]) => cards.some((c) => c.holder_type === kind) && (
@@ -262,26 +268,40 @@ export default function TradeCardVoucher() {
                             ))}
                             <option value="add">+ Add Credit Card…</option>
                         </select>
+                        <ReadBox value={cardsAcc ? `${cardsAcc.acc_id}  ${cardsAcc.name}` : `${CARDS_ACC}  Credit Cards`} className="col-span-4" />
+
+                        <span className={`${LABEL} text-right text-[15px]`}>Card No</span>
+                        <ReadBox value={recvCard?.card_no || ''} />
+                        <span className={`${LABEL} text-right text-[15px]`}>Tax %</span>
+                        <ReadBox value={recvCard ? `${num(recvCard.tax_pct)}%` : ''} className="justify-end" />
                         <span className={`${LABEL} text-right text-[15px]`}>Staff</span>
-                        <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className={COA_SELECT}>
+                        <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className={`${COA_SELECT} col-span-3`}>
                             <option value="">Select any one</option>
                             {staff.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                         </select>
+
+                        <span className={`${LABEL} text-right text-[15px]`}>Bank</span>
+                        <ReadBox value={recvCard?.bank || ''} />
+                        <span className={`${LABEL} text-right text-[15px]`}>Detail</span>
+                        <input value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={200} className={`${EDIT} w-full`} />
+                        <span className={`${LABEL} text-right text-[15px]`}>Account Balance</span>
+                        <div className={BAL} title={asBal !== null ? `Credit Cards ${fmt(asBal)}${total ? ` + ${fmt(total)}` : ''}` : undefined}>
+                            {asAfter === null ? '' : fmt(asAfter)}
+                        </div>
                         <span className={`${LABEL} text-right text-[15px]`}>Total</span>
                         <div className={BAL}>{fmt(total)}</div>
 
-                        <span className={`${LABEL} text-[15px]`}>Detail</span>
-                        <input value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={200} className={`${EDIT} w-full`} />
-                        <span className={`${LABEL} text-right text-[15px]`}>Card Tax</span>
-                        <div className={`${BAL} !bg-[#ffe1e1] !text-red-700`} title="Kept in the Credit Card Report only — the customer is credited the full amount">{fmt(tax)}</div>
-                        <span className={`${LABEL} text-right text-[15px]`}>After Card Tax</span>
+                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>Card Tax</span>
+                        <div className={`${BAL} !border-red-300 !bg-[#ffe1e1] !text-red-700`} title="Kept in the Credit Card Report only — the customer is credited the full amount">{fmt(tax)}</div>
+                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>After Tax</span>
                         <div className={BAL}>{fmt(total - tax)}</div>
+                        <span className="col-span-4 text-[13px] font-bold text-slate-500">Card tax kept in the Credit Card Report — the customer is credited the full amount</span>
                     </div>
-                    <p className="mt-2 text-[12px] text-slate-500">Each customer is credited the full amount (Credit Cards 12040009 Dr), settling their unpaid invoices oldest first. The card tax is only kept in the Credit Card Report.</p>
                 </fieldset>
 
                 <div className="flex flex-wrap items-center justify-end gap-3 lg:col-span-2">
-                    {missing.length > 0 ? <span className="mr-auto text-[12.5px] text-slate-500">To save, add {missing.join(' and ')}.</span> : <span className="mr-auto" />}
+                    {missing.length > 0 && <span className="mr-auto text-[12.5px] text-slate-500">To save, add {missing.join(' and ')}.</span>}
+                    {!missing.length && <span className="mr-auto" />}
                     <button type="button" onClick={save} disabled={saving || missing.length > 0} className={ACTION_BTN}>
                         {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                     </button>
@@ -300,42 +320,42 @@ export default function TradeCardVoucher() {
                 <Modal title="Credit Card Voucher" onClose={() => askClose(() => setView(null))} full>
                     <div className="relative flex min-h-0 flex-1 flex-col gap-2 bg-[#c9c9f9] p-3">
                         <div className="min-h-0 flex-1 overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
-                            <table className="w-full table-fixed border-collapse bg-white text-[12px]">
-                                <colgroup>{[9, 7, 8, 17, 18, 8, 7, 8, 9, 9].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                            <table className="w-full min-w-[1100px] table-fixed border-collapse bg-white text-[12px]">
+                                <colgroup>{[10, 8, 9, 20, 25, 10, 9, 9].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                    <tr>{['Voucher No', 'Date', 'Acc. ID', 'Customer', 'Receiver Card', 'Amount', 'Tax %', 'Card Tax', 'After Tax', 'Staff'].map((h, k) =>
-                                        <th key={h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold ${k >= 5 && k <= 8 ? 'text-right' : ''}`}>{h}</th>)}</tr>
+                                    <tr>{['Voucher No', 'Date', 'Acc. ID', 'Account', 'Detail', 'Staff', 'Debit', 'Credit'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
                                 </thead>
                                 <tbody>
-                                    {vRows.map((r) => (
-                                        <tr key={r.id} className="tabular-nums">
-                                            {[r.voucher_no, dmy(r.date), r.customer_code, r.customer + (r.note ? ` — ${r.note}` : ''), r.receiver, fmt(num(r.amount)), `${num(r.tax_pct)}%`, fmt(num(r.tax)), fmt(num(r.net)), r.staff].map((v, k) => (
-                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 5 && k <= 8 ? 'text-right' : ''} ${k === 7 ? 'text-red-700' : ''}`}>{v}</td>
+                                    {vRows.map((r, i) => (
+                                        <tr key={i} className={`tabular-nums ${r.line === 1 && i > 0 ? 'border-t-2 border-t-slate-400' : ''} ${num(r.debit) > 0 ? 'bg-[#eaffea]' : 'bg-white'}`}>
+                                            {[r.voucher_no, dmy(r.date), r.acc_id, r.account, r.detail, r.staff,
+                                              num(r.debit) ? fmt(num(r.debit)) : '', num(r.credit) ? fmt(num(r.credit)) : ''].map((v, k) => (
+                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 6 ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
-                                    {view.rows && !vRows.length && <tr><td colSpan={10} className="px-3 py-6 text-center text-slate-500">No card vouchers for this search.</td></tr>}
-                                    {!view.rows && !view.filter && <tr><td colSpan={10} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
+                                    {view.rows && !vRows.length && <tr><td colSpan={8} className="px-3 py-6 text-center text-slate-500">No credit card vouchers for this search.</td></tr>}
+                                    {!view.rows && !view.filter && <tr><td colSpan={8} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
                                 </tbody>
                             </table>
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center gap-3">
-                            <ReadBox value={<span className="text-[#1f2bd6]">{vRows.length} voucher(s)</span>} className="w-[180px]" />
-                            <span className={`${LABEL} text-[15px]`}>Amount</span><div className={`${BAL} w-[150px]`}>{fmt(vSum('amount'))}</div>
-                            <span className={`${LABEL} text-[15px]`}>Card Tax</span><div className={`${BAL} w-[130px] !text-red-700`}>{fmt(vSum('tax'))}</div>
-                            <span className={`${LABEL} text-[15px]`}>After Tax</span><div className={`${BAL} w-[150px]`}>{fmt(vSum('net'))}</div>
+                            <ReadBox value={<span className="text-[#1f2bd6]">{vRows.length} line(s)</span>} className="w-[220px]" />
+                            <span className={`${LABEL} text-[15px]`}>Total Debit</span><div className={`${BAL} w-[170px]`}>{fmt(totDebit)}</div>
+                            <span className={`${LABEL} text-[15px]`}>Total Credits</span><div className={`${BAL} w-[170px]`}>{fmt(totCredit)}</div>
                             <span className="flex-1" />
                             <button type="button" onClick={() => setView({ rows: view.rows, filter: true })} className={ACTION_BTN}>Search</button>
                             <button type="button" onClick={() => { setView(null); resetForm(); }} className={ACTION_BTN}><span>Add <span className="underline">N</span>ew</span></button>
                             <button type="button" onClick={() => askClose(() => setView(null))} className={ACTION_BTN}><span className="underline">C</span>ancel</button>
                         </div>
 
+                        {/* View Credit Card Voucher Detail — the search box over the grid */}
                         {view.filter && (
                             <div className="absolute inset-0 flex items-center justify-center bg-slate-900/20">
                                 <fieldset className="w-[560px] rounded-md border-2 border-[#1f2bd6] bg-[#e4e4fb] px-6 pb-5 pt-1 shadow-xl">
                                     <legend className="px-2 text-[16px] font-bold text-[#1f2bd6]">View Credit Card Voucher Detail</legend>
                                     <div className="grid grid-cols-[130px_auto_1fr] items-center gap-x-3 gap-y-3">
-                                        <span className={`${LABEL} text-[15px]`}>Voucher / Name</span>
+                                        <span className={`${LABEL} text-[15px]`}>Voucher No</span>
                                         <span />
                                         <input autoFocus value={vNo} onChange={(e) => setVNo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') runView(); }}
                                             placeholder="All" className={`${EDIT} w-full`} />
