@@ -55,7 +55,7 @@ CATALOG = [
     ]},
     {'id': 'money', 'rows': [
         ('receipt_voucher', 'Receipt Voucher', [S, V], ['/admin/trade/receipt-voucher']),
-        ('card_voucher', 'Credit Card Voucher', [S, V], ['/admin/trade/card-voucher']),
+        ('card_voucher', 'Credit Card Voucher', [S, V], ['/admin/trade/card-voucher', '/admin/trade/card-due']),
         ('payment_voucher', 'Payment Voucher', [S, V], ['/admin/trade/payment-voucher']),
         ('expense_voucher', 'Expanse Voucher', [S, V], ['/admin/trade/expense-voucher']),
         ('bank_deposit', 'Bank Deposite', [S, V], []),
@@ -172,6 +172,7 @@ _crud('sales/trade-financial-years/', 'financial_year')
 _crud('sales/trade-general-vouchers/', 'general_voucher', view_list=True)
 _crud('sales/trade-forward-pl/', 'general_voucher', view_list=True)
 _crud('users/trade-users/', 'new_user', view_list=True)
+RULES += [('POST', r'^sales/trade-cards/dues/$', None, 'card_voucher', S)]
 RULES += [('POST', r'^sales/trade-cards/voucher/$', None, 'card_voucher', S),
           ('GET', r'^sales/vouchers/$', _vtype('card_payment'), 'card_voucher', V)]
 RULES += [('GET', r'^sales/trade-cards/payments/$', _vtype('card'), 'card_voucher', V),

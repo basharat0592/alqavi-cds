@@ -56,6 +56,11 @@ class Voucher(models.Model):
     # left out of the ledger and balances (shown in red); 'cashed' counts.
     chq_status = models.CharField(max_length=10, blank=True, default='')
     chq_received = models.DateField(null=True, blank=True)
+    # Credit Card Voucher: the card's credit / billing / due dates; paid on = the card bill settled.
+    card_credit_date = models.DateField(null=True, blank=True)
+    card_bill_date = models.DateField(null=True, blank=True)
+    card_due_date = models.DateField(null=True, blank=True)
+    card_paid_on = models.DateField(null=True, blank=True)
     # Pending: the day it is due to be cashed (alert from then on). Cashed: the day it was.
     chq_cash_date = models.DateField(null=True, blank=True)
     # Imported from the legacy Trade VoucherDetail (re-import replaces only these).
@@ -966,7 +971,9 @@ class CardPayment(models.Model):
     date = models.DateField()
     customer_acc = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, related_name='card_payments')
     amount = models.DecimalField(max_digits=14, decimal_places=2)
-    receiver_card = models.ForeignKey(TradeCard, on_delete=models.PROTECT, related_name='received_payments')
+    receiver_card = models.ForeignKey(TradeCard, on_delete=models.PROTECT, null=True, blank=True, related_name='received_payments')
+    # Credit Card Voucher: the account the money is received in (a credit card account).
+    receiver_acc = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='card_receipts')
     payer_card = models.ForeignKey(TradeCard, on_delete=models.PROTECT, null=True, blank=True, related_name='paid_payments')
     tax_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     tax_amount = models.DecimalField(max_digits=14, decimal_places=2, default=0)

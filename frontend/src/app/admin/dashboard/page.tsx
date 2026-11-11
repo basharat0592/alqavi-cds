@@ -136,7 +136,16 @@ const MENUS: Menu[] = [
     ] },
 ];
 
+const num0 = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
+
 function MenuBar({ counts }: { counts?: { expiry: number; low: number } }) {
+    const [cardDue, setCardDue] = useState<number | null>(null);
+    useEffect(() => {
+        const load = () => api.get('v1/sales/trade-cards/dues/').then(({ data }) => setCardDue(num0(data.alert))).catch(() => setCardDue(null));
+        load();
+        window.addEventListener('focus', load);
+        return () => window.removeEventListener('focus', load);
+    }, []);
     const [open, setOpen] = useState<string | null>(null);
     const router = useRouter();
     const ref = useRef<HTMLDivElement>(null);
@@ -215,6 +224,14 @@ function MenuBar({ counts }: { counts?: { expiry: number; low: number } }) {
                 </div>
             ))}
             <div className="ml-auto flex items-center gap-2">
+                {/* Credit card due dates: red from 4 days before (as the Expiry List). */}
+                {cardDue !== null && (
+                    <button type="button" onClick={() => openPopup('/admin/trade/card-due')} title="Credit card due dates — due within 4 days or late"
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[14px] font-semibold text-white ${cardDue ? 'animate-pulse border-red-300 bg-red-600 hover:bg-red-500' : 'border-white/30 bg-white/10 hover:bg-white/20'}`}>
+                        <CreditCard size={15} /> Card Due
+                        <span className={`min-w-[26px] rounded-full px-1.5 text-center text-[12px] font-bold ${cardDue ? 'bg-white text-red-700' : 'bg-white/25'}`}>{cardDue}</span>
+                    </button>
+                )}
                 {[
                     { label: 'Expiry List', href: '/admin/trade/expiry-list', n: counts?.expiry, Icon: CalendarClock },
                     { label: 'Stock Minimum List', href: '/admin/trade/stock-minimum', n: counts?.low, Icon: Boxes },

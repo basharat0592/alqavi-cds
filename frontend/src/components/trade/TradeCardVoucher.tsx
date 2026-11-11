@@ -4,12 +4,13 @@
  * Trade 1.0 — Credit Card Voucher: the Receipt Voucher, paid by card.
  *
  * Receipt From: one or more customers, each with an amount, listed in the grid.
- * Receipt as: the Receiver Card (a saleman's or one of the company's own cards)
- * the money comes in on — into Credit Cards (12040009) — with staff and detail.
+ * Receipt as: the account the money comes in (the credit card's account, found
+ * as in Receipt From), with the card tax %, staff, detail and the card's Credit /
+ * Billing / Due dates — a due date shows in red on the dashboard 4 days before.
  * Save posts ONE voucher: each customer Cr (settling their unpaid invoices, oldest
- * first) / Credit Cards Dr the total; each customer's payment goes in the Credit
- * Card Report with its card tax (the customer's own card's %, else the receiving
- * card's) — kept there only, the customer is credited the full amount.
+ * first) / Receipt as Dr the total; each customer's payment goes in the Credit
+ * Card Report with its card tax (the customer's own card's %, else the Tax % here)
+ * — kept there only, the customer is credited the full amount.
  * View: "View Credit Card Voucher Detail" — voucher no / date range, every line
  * with Total Debit / Total Credits.
  */
@@ -32,7 +33,6 @@ const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; }
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (iso: string | null) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
-const CARDS_ACC = '12040009';   // Credit Cards: card money to come in from the bank
 
 export default function TradeCardVoucher() {
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
@@ -75,34 +75,42 @@ export default function TradeCardVoucher() {
     const amountRef = useRef<HTMLInputElement>(null);
     const fromCodeRef = useRef<HTMLInputElement>(null);
 
-    // Receipt as (the card)
-    const [recv, setRecv] = useState('');
+    // Receipt as (the card's account)
+    const [asCode, setAsCode] = useState('');
+    const [asAcc, setAsAcc] = useState<Acc | null>(null);
+    const [asBal, setAsBal] = useState<number | null>(null);
+    const [taxIn, setTaxIn] = useState('1.5');
     const [staffId, setStaffId] = useState('');
     const [detail, setDetail] = useState('');
+    const [creditDate, setCreditDate] = useState(today);
+    const [billDate, setBillDate] = useState('');
+    const [dueDate, setDueDate] = useState('');
     const [saving, setSaving] = useState(false);
-    const recvCard = cards.find((c) => String(c.id) === recv) || null;
-    const cardsAcc = (accounts || []).find((a) => a.acc_id === CARDS_ACC) || null;
-    const [asBal, setAsBal] = useState<number | null>(null);
 
     const balanceOf = (a: Acc) => api.get('v1/sales/vouchers/balance/', { params: { account: a.id } }).then(({ data }) => num(data.balance)).catch(() => null);
-    useEffect(() => { if (cardsAcc) balanceOf(cardsAcc).then(setAsBal); }, [cardsAcc?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-    const [finder, setFinder] = useState<null | { q: string }>(null);
-    const pickAccount = async (a: Acc) => {
+    // Find Account (for Receipt From or Receipt as)
+    const [finder, setFinder] = useState<null | { target: 'from' | 'as'; q: string }>(null);
+    const pickAccount = async (a: Acc, target: 'from' | 'as' = 'from') => {
         setFinder(null);
-        setFromAcc(a); setFromCode(a.acc_id); setFromBal(null);
-        setFromBal(await balanceOf(a));
-        setTimeout(() => amountRef.current?.focus(), 0);
+        if (target === 'from') {
+            setFromAcc(a); setFromCode(a.acc_id); setFromBal(null);
+            setFromBal(await balanceOf(a));
+            setTimeout(() => amountRef.current?.focus(), 0);
+        } else {
+            setAsAcc(a); setAsCode(a.acc_id); setAsBal(null);
+            setAsBal(await balanceOf(a));
+        }
     };
-    const resolveCode = () => {
-        const code = fromCode.trim();
+    const resolveCode = (target: 'from' | 'as' = 'from') => {
+        const code = (target === 'from' ? fromCode : asCode).trim();
         const hit = code ? (accounts || []).find((a) => a.acc_id === code) : null;
-        if (hit) pickAccount(hit);
-        else setFinder({ q: /^\d+$/.test(code) ? '' : code });
+        if (hit) pickAccount(hit, target);
+        else setFinder({ target, q: /^\d+$/.test(code) ? '' : code });
     };
 
-    // The card tax: the customer's own card's %, else the receiving card's.
+    // The card tax: the customer's own card's %, else the Tax % entered here.
     const ownCard = (a: Acc) => cards.find((c) => c.holder_type === 'customer' && c.customer_acc === a.id) || null;
-    const taxPct = (a: Acc) => num((ownCard(a) || recvCard)?.tax_pct);
+    const taxPct = (a: Acc) => num(ownCard(a)?.tax_pct ?? taxIn);
     const total = lines.reduce((s, l) => s + l.amount, 0);
     const tax = lines.reduce((s, l) => s + Math.round(l.amount * taxPct(l.account)) / 100, 0);
 
@@ -110,6 +118,7 @@ export default function TradeCardVoucher() {
         if (!fromAcc) { toast.error('Find the Receipt From account first.'); fromCodeRef.current?.focus(); return; }
         const amt = Math.round(num(amount) * 100) / 100;
         if (amt <= 0) { toast.error('Enter the amount received.'); amountRef.current?.focus(); return; }
+        if (asAcc && asAcc.id === fromAcc.id) { toast.error('Receipt From and Receipt as cannot be the same account.'); return; }
         if (lines.some((l) => l.account.id === fromAcc.id)) { toast.error(`${fromAcc.name} is already in the list — remove it first to change the amount.`); return; }
         setLines((ls) => [...ls, { account: fromAcc, amount: amt, note: note.trim() }]);
         setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote(''); setSel(-1);
@@ -120,22 +129,24 @@ export default function TradeCardVoucher() {
         setLines((ls) => ls.filter((_, i) => i !== sel)); setSel(-1);
     };
 
-    const missing = [!lines.length && 'a Receipt From line', !recvCard && 'the Receiver Card'].filter(Boolean) as string[];
+    const missing = [!lines.length && 'a Receipt From line', !asAcc && 'the Receipt as account'].filter(Boolean) as string[];
     const resetForm = () => {
         setLines([]); setSel(-1); setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote('');
-        setRecv(''); setStaffId(''); setDetail(''); setDateOn(false); setDate(today()); loadNo();
-        if (cardsAcc) balanceOf(cardsAcc).then(setAsBal);
+        setAsAcc(null); setAsCode(''); setAsBal(null); setTaxIn('1.5');
+        setStaffId(''); setDetail(''); setCreditDate(today()); setBillDate(''); setDueDate(''); setDateOn(false); setDate(today()); loadNo();
     };
     const save = () => {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
+        if (billDate && dueDate && dueDate < billDate) { toast.error('The Due Date cannot be before the Billing Date.'); return; }
         setAsk({
-            msg: `Save Credit Card Voucher ${voucherNo} for ${fmt(total)} on ${recvCard!.label} ?`,
+            msg: `Save Credit Card Voucher ${voucherNo} for ${fmt(total)} into ${asAcc!.name}${dueDate ? ` — due ${dmy(dueDate)}` : ''} ?`,
             yes: async () => {
                 setSaving(true);
                 try {
                     const { data } = await api.post('v1/sales/trade-cards/voucher/', {
-                        date: dateOn ? date : today(), receiver_card: recvCard!.id, staff: staffId || null, detail: detail.trim(),
+                        date: dateOn ? date : today(), receipt_as: asAcc!.id, tax_pct: taxIn, staff: staffId || null, detail: detail.trim(),
+                        credit_date: creditDate || null, bill_date: billDate || null, due_date: dueDate || null,
                         lines: lines.map((l) => ({ account: l.account.id, amount: l.amount, note: l.note })),
                     });
                     toast.success(`Credit Card Voucher ${data.voucher_no} saved — ${fmt(num(data.total))}.`);
@@ -201,9 +212,9 @@ export default function TradeCardVoucher() {
                         <input type="date" value={date} max={today()} disabled={!dateOn} onChange={(e) => e.target.value && setDate(e.target.value)}
                             className={`${FIELD} w-full ${dateOn ? 'border-emerald-300 bg-[#e3fbe3] text-slate-900' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
 
-                        <button type="button" onClick={() => setFinder({ q: '' })} className={findBtn}><span className="underline">F</span>ind Receipt Acc</button>
+                        <button type="button" onClick={() => setFinder({ target: 'from', q: '' })} className={findBtn}><span className="underline">F</span>ind Receipt Acc</button>
                         <input ref={fromCodeRef} value={fromCode} onChange={(e) => { setFromCode(e.target.value); if (fromAcc) { setFromAcc(null); setFromBal(null); } }}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); resolveCode(); } }} placeholder="Account ID" className={`${EDIT} w-full`} />
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); resolveCode('from'); } }} placeholder="Account ID" className={`${EDIT} w-full`} />
                         <div className="flex flex-col gap-0.5">
                             <span className={`${LABEL} text-[14px]`}>Account Balance</span>
                         </div>
@@ -251,51 +262,45 @@ export default function TradeCardVoucher() {
                     </div>
                 </div>
 
-                {/* Receipt as — the card */}
+                {/* Receipt as — the card's account */}
                 <fieldset className="rounded-lg border border-[#9da1d8] bg-[#ececfd] px-4 pb-4 pt-1 lg:col-span-2">
                     {legend('Receipt as')}
                     <div className="grid grid-cols-[140px_minmax(0,1fr)_88px_minmax(0,1fr)_132px_minmax(0,1fr)_46px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5">
-                        <span className={`${LABEL} text-[15px]`}>Receiver Card</span>
-                        <select value={recv} title={recvCard?.label || ''}
-                            onChange={(e) => { if (e.target.value === 'add') { openPopup('/admin/trade/credit-card'); return; } setRecv(e.target.value); }}
-                            className={`${COA_SELECT} col-span-3`}>
-                            <option value="">Select any one</option>
-                            {/* The money is received on a saleman's card or one of the company's own cards. */}
-                            {([['saleman', 'Saleman cards'], ['company', 'Company cards']] as const).map(([kind, group]) => cards.some((c) => c.holder_type === kind) && (
-                                <optgroup key={kind} label={group}>
-                                    {cards.filter((c) => c.holder_type === kind).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                                </optgroup>
-                            ))}
-                            <option value="add">+ Add Credit Card…</option>
-                        </select>
-                        <ReadBox value={cardsAcc ? `${cardsAcc.acc_id}  ${cardsAcc.name}` : `${CARDS_ACC}  Credit Cards`} className="col-span-4" />
+                        <button type="button" onClick={() => setFinder({ target: 'as', q: '' })} className={findBtn}><span className="underline">F</span>ind Account</button>
+                        <input value={asCode} onChange={(e) => { setAsCode(e.target.value); if (asAcc) { setAsAcc(null); setAsBal(null); } }}
+                            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); resolveCode('as'); } }} placeholder="Card account ID" className={`${EDIT} w-full`} />
+                        <ReadBox value={asAcc ? asAcc.name : ''} className="col-span-6 font-semibold" />
 
-                        <span className={`${LABEL} text-right text-[15px]`}>Card No</span>
-                        <ReadBox value={recvCard?.card_no || ''} />
                         <span className={`${LABEL} text-right text-[15px]`}>Tax %</span>
-                        <ReadBox value={recvCard ? `${num(recvCard.tax_pct)}%` : ''} className="justify-end" />
+                        <input value={taxIn} onChange={(e) => setTaxIn(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal"
+                            title="The card tax % — a customer with their own card uses that card's %" className={`${EDIT} w-full text-right`} />
+                        <span className={`${LABEL} text-right text-[15px]`}>Detail</span>
+                        <input value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={200} className={`${EDIT} w-full`} />
                         <span className={`${LABEL} text-right text-[15px]`}>Staff</span>
                         <select value={staffId} onChange={(e) => setStaffId(e.target.value)} className={`${COA_SELECT} col-span-3`}>
                             <option value="">Select any one</option>
                             {staff.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                         </select>
 
-                        <span className={`${LABEL} text-right text-[15px]`}>Bank</span>
-                        <ReadBox value={recvCard?.bank || ''} />
-                        <span className={`${LABEL} text-right text-[15px]`}>Detail</span>
-                        <input value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={200} className={`${EDIT} w-full`} />
+                        <span className={`${LABEL} text-right text-[15px]`}>Card Tax</span>
+                        <div className={`${BAL} !border-red-300 !bg-[#ffe1e1] !text-red-700`} title="Kept in the Credit Card Report only — the customer is credited the full amount">{fmt(tax)}</div>
+                        <span className={`${LABEL} text-right text-[15px]`}>After Tax</span>
+                        <div className={BAL}>{fmt(total - tax)}</div>
                         <span className={`${LABEL} text-right text-[15px]`}>Account Balance</span>
-                        <div className={BAL} title={asBal !== null ? `Credit Cards ${fmt(asBal)}${total ? ` + ${fmt(total)}` : ''}` : undefined}>
-                            {asAfter === null ? '' : fmt(asAfter)}
+                        <div className={BAL} title={asBal !== null ? `Previous balance ${fmt(asBal)}${total ? ` + ${fmt(total)}` : ''}` : undefined}>
+                            {asAcc ? (asAfter === null ? '…' : fmt(asAfter)) : ''}
                         </div>
                         <span className={`${LABEL} text-right text-[15px]`}>Total</span>
                         <div className={BAL}>{fmt(total)}</div>
 
-                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>Card Tax</span>
-                        <div className={`${BAL} !border-red-300 !bg-[#ffe1e1] !text-red-700`} title="Kept in the Credit Card Report only — the customer is credited the full amount">{fmt(tax)}</div>
-                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>After Tax</span>
-                        <div className={BAL}>{fmt(total - tax)}</div>
-                        <span className="col-span-4 text-[13px] font-bold text-slate-500">Card tax kept in the Credit Card Report — the customer is credited the full amount</span>
+                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>Credit Date</span>
+                        <input type="date" value={creditDate} onChange={(e) => setCreditDate(e.target.value)} className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3]`} />
+                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>Billing Date</span>
+                        <input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3]`} />
+                        <span className={`${LABEL} text-right text-[15px] leading-tight`}>Due Date</span>
+                        <input type="date" value={dueDate} min={billDate || undefined} onChange={(e) => setDueDate(e.target.value)}
+                            title="Shows in red on the dashboard 4 days before" className={`${FIELD} w-full border-red-300 bg-[#ffe9e9] font-semibold text-red-700`} />
+                        <span className="col-span-2 text-[13px] font-bold text-red-600">{dueDate ? 'Red on the dashboard 4 days before the due date' : ''}</span>
                     </div>
                 </fieldset>
 
@@ -312,7 +317,7 @@ export default function TradeCardVoucher() {
 
             {finder && (
                 <FindAccountWindow accounts={accounts} cashOnly={false} initial={finder.q} askClose={askClose}
-                    onPick={(a) => pickAccount(a)} onClose={() => setFinder(null)}
+                    onPick={(a) => pickAccount(a, finder.target)} onClose={() => setFinder(null)}
                     onAddNew={() => openPopup('/admin/trade/chart-of-account')} />
             )}
 

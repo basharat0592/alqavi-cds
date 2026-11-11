@@ -61,6 +61,7 @@ def _card_row(c):
 
 
 SOON_DAYS = 5   # a bill due within this many days is shown as coming up
+DUE_ALERT_DAYS = 4   # a Credit Card Voucher's due date shows in red on the dashboard this many days before
 
 
 def _on(y, m, day):
@@ -238,15 +239,18 @@ class TradeCardViewSet(viewsets.ViewSet):
     def voucher(self, request):
         """Credit Card Voucher (as the Receipt Voucher): one voucher for one or more customers paid
         by card on the Receiver Card. Body: {date?, receiver_card, staff?, detail?, lines: [{account, amount, note?}]}.
-        Each customer Cr (settling their unpaid invoices, oldest first) / Credit Cards (12040009) Dr the
-        total; each customer's payment goes in the Credit Card Report with its card tax."""
+        Body also: receipt_as (the account the money is received in — a credit card account), tax_pct,
+        credit_date / bill_date / due_date (the card's). Each customer Cr (settling their unpaid invoices,
+        oldest first) / Receipt as Dr the total; each customer's payment goes in the Credit Card Report
+        with its card tax."""
         from .vouchers import VoucherViewSet, _allocate_to_orders
         d = request.data
         cards = self._cards()
-        recv = cards.filter(pk=d.get('receiver_card')).first() if d.get('receiver_card') else None
-        if not recv:
-            return Response({'detail': 'Choose the Receiver Card (the card the money is received on).'}, status=400)
         accs = self._accounts()
+        recv = cards.filter(pk=d.get('receiver_card')).first() if d.get('receiver_card') else None
+        recv_acc = accs.filter(pk=d.get('receipt_as')).first() if d.get('receipt_as') else None
+        if not recv_acc and not recv:
+            return Response({'detail': 'Find the Receipt as account (the card account the money is received in).'}, status=400)
         lines = []
         for x in d.get('lines') or []:
             acc = accs.filter(pk=x.get('account')).first()
@@ -257,37 +261,79 @@ class TradeCardViewSet(viewsets.ViewSet):
                 return Response({'detail': f'{acc.name} is not a customer — only customers pay by card here.'}, status=400)
             if amt <= 0:
                 return Response({'detail': f'Enter an amount for {acc.name}.'}, status=400)
+            if recv_acc and acc.pk == recv_acc.pk:
+                return Response({'detail': 'Receipt From and Receipt as cannot be the same account.'}, status=400)
             lines.append((acc, amt, str(x.get('note') or '').strip()[:200]))
         if not lines:
             return Response({'detail': 'Add at least one Receipt From customer with an amount.'}, status=400)
+        dt = lambda k: datetime.date.fromisoformat(str(d.get(k))[:10]) if d.get(k) else None
         try:
-            day = datetime.date.fromisoformat(str(d.get('date'))[:10]) if d.get('date') else datetime.date.today()
+            day = dt('date') or datetime.date.today()
+            credit_date, bill_date, due_date = dt('credit_date'), dt('bill_date'), dt('due_date')
         except ValueError:
             return Response({'detail': 'Invalid date.'}, status=400)
         if day > datetime.date.today():
             return Response({'detail': 'The voucher date cannot be in the future.'}, status=400)
-        cards_acc = accs.filter(acc_id=CARDS_ACC).first()
+        if bill_date and due_date and due_date < bill_date:
+            return Response({'detail': 'The Due Date cannot be before the Billing Date.'}, status=400)
+        cards_acc = recv_acc or accs.filter(acc_id=CARDS_ACC).first()
         if not cards_acc:
             return Response({'detail': 'The Credit Cards account (12040009) is missing in the Chart of Account.'}, status=400)
+        tax_pct = _d(d.get('tax_pct')) if d.get('tax_pct') not in (None, '') else (_d(recv.tax_pct) if recv else Decimal('1.5'))
+        if tax_pct < 0 or tax_pct >= 100:
+            return Response({'detail': 'Enter the card tax % (e.g. 1.5).'}, status=400)
         staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
         detail = str(d.get('detail') or '').strip()[:200]
         total = sum((a for _, a, _ in lines), Z)
-        tid = tenant_id_for(request.user) or recv.tenant_id
+        tid = tenant_id_for(request.user) or cards_acc.tenant_id
+        on = card_label(recv) if recv else cards_acc.name
         with transaction.atomic():
             v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(day), vtype='card_payment', date=day, staff=staff,
-                                       bank=recv.bank[:80], detail=detail or f'Paid by card on {card_label(recv)}'[:255],
+                                       bank=(recv.bank if recv else '')[:80], detail=detail or f'Paid by card on {on}'[:255],
+                                       card_credit_date=credit_date, card_bill_date=bill_date, card_due_date=due_date,
                                        total=total, created_by=request.user, tenant_id=tid)
             for i, (acc, amt, note) in enumerate(lines, 1):
                 left = _allocate_to_orders(acc.customer_id, amt, v, request.user, 'bank_transfer')
                 det = ' - '.join(x for x in (note, detail) if x) or f'Paid by card - {acc.name}'
                 VoucherLine.objects.create(voucher=v, line=i, account=acc, credit=amt, unallocated=left, detail=det[:255])
                 payer = cards.filter(holder_type='customer', customer_acc=acc, status='active').first()
-                pct = _d(payer.tax_pct if payer else recv.tax_pct)
-                CardPayment.objects.create(voucher=v, date=day, customer_acc=acc, amount=amt, receiver_card=recv, payer_card=payer,
-                                           tax_pct=pct, tax_amount=_money(amt * pct / 100), staff=staff, note=det[:255], tenant_id=tid)
+                pct = _d(payer.tax_pct) if payer else tax_pct
+                CardPayment.objects.create(voucher=v, date=day, customer_acc=acc, amount=amt, receiver_card=recv, receiver_acc=recv_acc,
+                                           payer_card=payer, tax_pct=pct, tax_amount=_money(amt * pct / 100), staff=staff,
+                                           note=det[:255], tenant_id=tid)
             VoucherLine.objects.create(voucher=v, line=len(lines) + 1, account=cards_acc, debit=total,
-                                       detail=f'Card {card_label(recv)}'[:255])
+                                       detail=f'Card {on}'[:255])
         return Response({'id': v.id, 'voucher_no': v.voucher_no, 'total': total}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['get', 'post'])
+    def dues(self, request):
+        """GET: Credit Card Vouchers with a due date, not paid yet — `alert` counts those due within
+        DUE_ALERT_DAYS days or past due. POST {voucher, paid_on (empty = not paid)}: mark one paid."""
+        qs = scope_to_tenant(request.user, Voucher.objects.filter(vtype='card_payment', card_due_date__isnull=False), 'tenant')
+        if request.method == 'POST':
+            v = qs.filter(pk=request.data.get('voucher')).first()
+            if not v:
+                return Response({'detail': 'Voucher not found.'}, status=404)
+            try:
+                paid = datetime.date.fromisoformat(str(request.data.get('paid_on'))[:10]) if request.data.get('paid_on') else None
+            except ValueError:
+                return Response({'detail': 'Invalid date.'}, status=400)
+            if paid and paid > datetime.date.today():
+                return Response({'detail': 'The paid date cannot be in the future.'}, status=400)
+            v.card_paid_on = paid
+            v.save(update_fields=['card_paid_on'])
+            return Response({'id': v.id, 'paid_on': paid})
+        today = datetime.date.today()
+        rows = []
+        for v in qs.filter(card_paid_on__isnull=True).prefetch_related('lines__account').order_by('card_due_date', 'id'):
+            ls = list(v.lines.all())
+            debit = next((l for l in ls if l.debit > 0), None)
+            left = (v.card_due_date - today).days
+            rows.append({'id': v.id, 'voucher_no': v.voucher_no, 'date': v.date, 'credit_date': v.card_credit_date,
+                         'bill_date': v.card_bill_date, 'due_date': v.card_due_date, 'amount': v.total, 'days': left,
+                         'alert': left <= DUE_ALERT_DAYS, 'account': f'{debit.account.acc_id} {debit.account.name}' if debit else '',
+                         'customers': ', '.join(l.account.name for l in ls if l.credit > 0)[:200]})
+        return Response({'alert': sum(1 for r in rows if r['alert']), 'rows': rows})
 
     @action(detail=False, methods=['get', 'post'])
     def payments(self, request):
@@ -295,7 +341,7 @@ class TradeCardViewSet(viewsets.ViewSet):
             return self._pay(request)
         q = request.query_params
         qs = (scope_to_tenant(request.user, CardPayment.objects.all(), 'tenant')
-              .select_related('order', 'voucher', 'customer_acc', 'staff', 'receiver_card__staff', 'receiver_card__customer_acc',
+              .select_related('order', 'voucher', 'customer_acc', 'staff', 'receiver_acc', 'receiver_card__staff', 'receiver_card__customer_acc',
                               'payer_card__staff', 'payer_card__customer_acc'))
         if q.get('card'):
             qs = qs.filter(Q(receiver_card_id=q['card']) | Q(payer_card_id=q['card']))
@@ -314,15 +360,16 @@ class TradeCardViewSet(viewsets.ViewSet):
             qs = qs.filter(Q(customer_acc__name__icontains=s) | Q(customer_acc__acc_id__icontains=s) | Q(note__icontains=s)
                            | Q(order__tracking_id__icontains=s) | Q(voucher__voucher_no__icontains=s)
                            | Q(receiver_card__card_no__icontains=s) | Q(payer_card__card_no__icontains=s)
-                           | Q(receiver_card__bank__icontains=s) | Q(payer_card__bank__icontains=s))
+                           | Q(receiver_card__bank__icontains=s) | Q(payer_card__bank__icontains=s) | Q(receiver_acc__name__icontains=s))
         out = []
         for p in qs.order_by('date', 'id')[:5000]:
             out.append({
                 'id': p.id, 'date': p.date, 'voucher_no': p.voucher.voucher_no, 'invoice': p.order.tracking_id if p.order_id else '',
                 'customer': p.customer_acc.name, 'customer_code': p.customer_acc.acc_id, 'amount': p.amount,
                 'tax_pct': p.tax_pct, 'tax': p.tax_amount, 'net': p.amount - p.tax_amount,
-                'receiver': card_label(p.receiver_card), 'receiver_bank': p.receiver_card.bank, 'receiver_no': p.receiver_card.card_no,
-                'receiver_holder': holder_of(p.receiver_card),
+                'receiver': card_label(p.receiver_card) if p.receiver_card_id else (f'{p.receiver_acc.acc_id} {p.receiver_acc.name}' if p.receiver_acc_id else ''),
+                'receiver_bank': p.receiver_card.bank if p.receiver_card_id else '', 'receiver_no': p.receiver_card.card_no if p.receiver_card_id else '',
+                'receiver_holder': holder_of(p.receiver_card) if p.receiver_card_id else (p.receiver_acc.name if p.receiver_acc_id else ''),
                 'payer': card_label(p.payer_card) if p.payer_card_id else '', 'payer_bank': p.payer_card.bank if p.payer_card_id else '',
                 'payer_no': p.payer_card.card_no if p.payer_card_id else '', 'payer_holder': holder_of(p.payer_card) if p.payer_card_id else '',
                 'staff': p.staff.name if p.staff_id else '', 'note': p.note,
