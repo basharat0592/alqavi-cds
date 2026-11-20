@@ -81,6 +81,9 @@ const DEFAULT_PROFILE: Profile = { proprietor: 'Syed Sakhawat & Associates', pho
 
 type Invoice = {
     id: string; invoice_no: string; date: string; time: string; staff: string; staff_cell?: string;
+    // One invoice per company: the company, free Seller / Buyer names, and the bill's other invoices.
+    company?: string; seller?: string; buyer?: string; bill_ref?: string;
+    parts?: { id: string; invoice_no: string; company: string }[];
     region?: { code: string; name: string };
     customer: { acc_id: string; name: string; contact?: string; address: string; area: string; phone: string };
     profile?: Profile;
@@ -467,6 +470,17 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                     </div>
                 </div>
             )}
+            {!token && inv && (inv.parts?.length || 0) > 1 && (
+                <div className="no-print mx-auto mb-4 flex w-fit flex-wrap items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-[13px] font-semibold text-amber-900">
+                    This bill was saved as {inv.parts!.length} invoices, one per company:
+                    {inv.parts!.map((pt) => (
+                        <a key={pt.id} href={`/admin/trade/invoice/${pt.id}?size=${size}${prices ? '' : '&prices=0'}`}
+                            className={`rounded-md border px-2.5 py-1 ${pt.id === inv.id ? 'border-amber-700 bg-amber-700 text-white' : 'border-amber-400 bg-white text-amber-900 hover:bg-amber-100'}`}>
+                            {pt.invoice_no}{pt.company ? ` · ${pt.company}` : ''}
+                        </a>
+                    ))}
+                </div>
+            )}
             {shareMsg && <p className="no-print -mt-2 mb-3 text-center text-[13px] font-semibold text-slate-700">{shareMsg}</p>}
             {err && <p className="no-print text-center text-[14px] font-semibold text-red-600">{err}</p>}
             {!inv && !err && <p className="no-print text-center text-[14px] text-slate-500">Loading invoice…</p>}
@@ -660,6 +674,11 @@ function Sheet({ inv, paper, prices = true }: { inv: Invoice; paper: { w: number
                             {field('Saleman Name:', inv.staff)}
                             {field('Cell No:', inv.staff_cell, '17mm')}
                             {field('Due Date:', <span style={{ color: '#fff', background: due.owing ? '#c62828' : '#2e7d32', fontWeight: 800, fontSize: fs(9), padding: '0.2mm 1.6mm', borderRadius: '0.8mm' }}>{dmy(due.dueDate)}</span>, '17mm')}
+                            {(inv.company || inv.seller || inv.buyer) && <>
+                                {field('Company:', inv.company ? <b style={{ fontWeight: 800 }}>{inv.company}</b> : '')}
+                                {field('Seller:', inv.seller, '17mm')}
+                                {field('Buyer:', inv.buyer, '17mm')}
+                            </>}
                         </div>
     );
     const Thead = (
@@ -841,6 +860,9 @@ function Slip({ inv, widthMm, onHeight, prices = true, fontPt }: { inv: Invoice;
             {kv('Address:', c.address)}
             {kv('Area:', c.area)}
             {kv('Saleman:', inv.staff ? `${inv.staff}${inv.staff_cell ? ` · ${inv.staff_cell}` : ''}` : '')}
+            {inv.company && kv('Company:', <b>{inv.company}</b>)}
+            {inv.seller && kv('Seller:', inv.seller)}
+            {inv.buyer && kv('Buyer:', inv.buyer)}
             {rule}
             {inv.lines.map((l, i) => (
                 <div key={i} style={{ marginBottom: '1.1mm', breakInside: 'avoid' }}>

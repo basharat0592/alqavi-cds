@@ -137,7 +137,7 @@ const FP_HIST_COLS = [
 /* Sale / Sale-Return Records grid (legacy column order). */
 const SR_COLS = [
     { h: 'SaleID', w: '7.5%' }, { h: 'Date Sale', w: '8.5%' }, { h: 'Staff', w: '7%' }, { h: 'Acc.ID', w: '8%' },
-    { h: 'Acc.Name', w: '12.5%' }, { h: 'Carton', w: '4.5%' }, { h: 'Amount', w: '7%' }, { h: 'Special Disc', w: '6%' }, { h: 'Shelf Rent', w: '5.5%' },
+    { h: 'Acc.Name', w: '11%' }, { h: 'Company', w: '7%' }, { h: 'Carton', w: '4.5%' }, { h: 'Amount', w: '7%' }, { h: 'Special Disc', w: '6%' }, { h: 'Shelf Rent', w: '5.5%' },
     { h: 'Net.Amount', w: '7.5%' }, { h: 'Pre. Bal.', w: '6.5%' }, { h: 'Total', w: '7%' }, { h: 'Paid', w: '5.5%' }, { h: 'Balance', w: '7%' },
 ];
 
@@ -202,11 +202,11 @@ export function ReadBox({ value, className = '' }: { value: React.ReactNode; cla
     return <div className={`${READ} ${sized ? '' : 'w-full'} flex items-center overflow-hidden whitespace-nowrap ${className}`}>{value}</div>;
 }
 
-export function Led({ label, value, tone = 'green' }: { label: string; value: string; tone?: 'green' | 'yellow' }) {
+export function Led({ label, value, tone = 'green' }: { label: string; value: string; tone?: 'green' | 'yellow' | 'blue' }) {
     return (
         <div className="min-w-0">
             <div className="mb-0.5 text-[16px] font-black tracking-tight text-[#1b1f4b]">{label}</div>
-            <div className={`flex h-10 items-center justify-end overflow-hidden rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 font-mono text-[22px] font-black tabular-nums shadow-inner ${tone === 'yellow' ? 'text-[#ffe14d]' : 'text-[#3cff5a]'}`}>
+            <div className={`flex h-10 items-center justify-end overflow-hidden rounded-md border border-black bg-gradient-to-b from-[#0b0b0b] to-[#1c1c1c] px-3 font-mono text-[22px] font-black tabular-nums shadow-inner ${tone === 'yellow' ? 'text-[#ffe14d]' : tone === 'blue' ? 'text-[#4db8ff]' : 'text-[#3cff5a]'}`}>
                 {value}
             </div>
         </div>
@@ -930,6 +930,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Add Credit Card). The customer is credited the full amount; the card tax
     // goes to the Credit Card Report only (with the customer's card, if added).
     const [paidCard, setPaidCard] = useState('');
+    // Seller / Buyer: free names printed on the invoice(s) and shown in the company reports.
+    const [sellerName, setSellerName] = useState('');
+    const [buyerName, setBuyerName] = useState('');
     const [cardList, setCardList] = useState<{ id: number; holder_type: string; label: string; staff: number | null; customer_id: string | null; tax_pct: number }[]>([]);
     const [recvCard, setRecvCard] = useState('');
     useEffect(() => {
@@ -1744,12 +1747,15 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const invPurValue = lines.reduce((s, l) => s + lineCost(l), 0);
     const invProfit = netAmount - invPurValue;
     const invProfitPct = invPurValue > 0 ? (invProfit / invPurValue) * 100 : 0;
+    // The bill is saved as one invoice per company.
+    const billCompanies = Array.from(new Set(lines.map((l) => l.company || '(No company)')));
 
     /* ── save ── */
     const resetInvoice = () => {
         setLines([]); setSelected(-1); setEntry({ ...EMPTY_ENTRY });
         setCustomer(null); setCustInput(''); setPrevBal(0);
         setPaidCash(''); setPaidCard(''); setBackDate(false); setSaleDate(today());
+        setSellerName(''); setBuyerName('');
         loadInvoiceNo();
         setTimeout(() => custRef.current?.focus(), 0);
     };
@@ -2085,9 +2091,10 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         printWin?.document.write('<p style="font:14px sans-serif;padding:24px">Saving invoice…</p>');
         setSaving(true);
         try {
-            // Paid Cash settles the invoice fully, partly, or not at all (credit).
-            const payStatus = paid <= 0 ? 'UNPAID' : paid + 0.001 >= netAmount ? 'PAID' : 'PARTIAL';
-            const order: any = await orderService.create({
+            // Saved as one invoice per company (all or none). Paid Cash / Card are shared
+            // out by each invoice's amount; whatever isn't paid now stays on the
+            // customer's balance and is settled later through receipts.
+            const { data: saved } = await api.post('v1/sales/orders/trade_split/', {
                 customer: customer.id,
                 customer_name: custName(customer),
                 shipping_address: customer.address || customer.area_name || '-',
@@ -2095,17 +2102,15 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 notes: 'Trade 1.0 Sale Invoice',
                 status: 'DELIVERED',
                 payment_method: 'SHOP',
-                // Whatever isn't paid now stays on the customer's balance and is
-                // settled later through receipts.
-                payment_status: payStatus,
-                amount_paid: round2(paid),
                 discount: 0,
                 shipping_cost: 0,
                 staff: salesman || null,
                 prev_balance: round2(prevBal),
-                paid_at_sale: round2(paid),
+                paid: round2(paid),
+                card: round2(card),
+                seller_name: sellerName.trim(),
+                buyer_name: buyerName.trim(),
                 sale_date: backDate ? saleDate : today(),
-                sale_invoice: true,
                 items: lines.map((l) => ({
                     id: l.productId, batch_id: l.batchId,
                     quantity: l.qty, bonus_quantity: l.bonus, price: l.tp,
@@ -2113,41 +2118,46 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     shelf_discount: round2(lineShelf(l)),
                     sale_unit: l.unit,
                 })),
-            } as any);
-            const no = order?.order_number || order?.tracking_id || invoiceNo;
-            // A part-payment is recorded as an installment so it shows in the
-            // payment history (same as the POS screen does).
-            if (payStatus === 'PARTIAL' && order?.id) {
-                try {
-                    await installmentService.create({
-                        source_type: 'order', source_id: String(order.id), amount: round2(paid),
-                        method: 'cash', status: 'confirmed', direction: 'inbound',
-                        paid_at: new Date().toISOString(), reference: no,
-                    });
-                } catch {
-                    toast.error('Invoice saved, but recording the cash paid failed — add it from Sale Records.', { duration: 7000 });
+            });
+            const invs: { id: string; tracking_id: string; company: string; net: string; cash: string; card: string }[] = saved?.invoices || [];
+            const order: any = invs[0] ? { id: invs[0].id } : null;
+            for (const inv of invs) {
+                const c = num(inv.cash), k = num(inv.card), nt = num(inv.net);
+                // A part-payment is recorded as an installment so it shows in the
+                // payment history (same as the POS screen does).
+                if (c > 0 && c + 0.001 < nt) {
+                    try {
+                        await installmentService.create({
+                            source_type: 'order', source_id: String(inv.id), amount: round2(c),
+                            method: 'cash', status: 'confirmed', direction: 'inbound',
+                            paid_at: new Date().toISOString(), reference: inv.tracking_id,
+                        });
+                    } catch {
+                        toast.error(`Invoice ${inv.tracking_id} saved, but recording the cash paid failed — add it from Sale Records.`, { duration: 7000 });
+                    }
                 }
-            }
-            // Paid by card: posted against this invoice; the card tax goes to the report only.
-            if (card > 0 && order?.id) {
-                try {
-                    await api.post('v1/sales/trade-cards/payments/', {
-                        order: order.id, amount: round2(card), receiver_card: recvCard,
-                        date: backDate ? saleDate : today(), staff: salesman || null, note: `Sale ${no}`,
-                    });
-                } catch (e: any) {
-                    toast.error(`Invoice saved, but the card payment was not recorded (${e?.response?.data?.detail || 'error'}).`, { duration: 9000 });
+                // Paid by card: posted against this invoice; the card tax goes to the report only.
+                if (k > 0) {
+                    try {
+                        await api.post('v1/sales/trade-cards/payments/', {
+                            order: inv.id, amount: round2(k), receiver_card: recvCard,
+                            date: backDate ? saleDate : today(), staff: salesman || null, note: `Sale ${inv.tracking_id}`,
+                        });
+                    } catch (e: any) {
+                        toast.error(`Invoice ${inv.tracking_id} saved, but the card payment was not recorded (${e?.response?.data?.detail || 'error'}).`, { duration: 9000 });
+                    }
                 }
-            }
-            toast.success(`Invoice ${no} saved.`);
-            // Send the invoice to the customer's WhatsApp from the business number
-            // (only does anything once WhatsApp Business is connected on the server).
-            if (order?.id) {
-                api.post(`v1/sales/orders/${order.id}/send_whatsapp_invoice/`, { base: window.location.origin })
+                // Send the invoice to the customer's WhatsApp from the business number
+                // (only does anything once WhatsApp Business is connected on the server).
+                api.post(`v1/sales/orders/${inv.id}/send_whatsapp_invoice/`, { base: window.location.origin })
                     .then(({ data }) => toast.success(data.message))
                     .catch(() => { /* not connected / no number: share from the invoice page */ });
             }
+            toast.success(invs.length > 1
+                ? `Saved as ${invs.length} invoices, one per company: ${invs.map((i) => `${i.tracking_id} (${i.company || 'No company'})`).join(', ')}.`
+                : `Invoice ${invs[0]?.tracking_id || invoiceNo} saved.`, { duration: invs.length > 1 ? 8000 : 4000 });
             if (print && order?.id) {
+                // The first invoice prints; the print window has buttons for the bill's other invoices.
                 const url = `/admin/trade/invoice/${order.id}?print=1&size=${printSize}${prices ? '' : '&prices=0'}`;
                 if (printWin && !printWin.closed) printWin.location.href = url;
                 else openPopup(url);
@@ -2461,6 +2471,21 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         <input type="date" value={saleDate} disabled={!backDate} max={today()} onChange={(e) => e.target.value && setSaleDate(e.target.value)}
                             className={`${FIELD} w-full ${backDate ? 'border-emerald-300 bg-[#e3fbe3] text-slate-900 focus:ring-2 focus:ring-emerald-200' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`}
                             aria-label="Sale date" />
+                    </div>
+                    {/* Seller / Buyer (free names), and how many invoices the bill is saved as. */}
+                    <label className="col-span-2 flex min-w-0 flex-col gap-0.5">
+                        <span className={`${LABEL} text-[15px]`}>Seller</span>
+                        <input value={sellerName} onChange={(e) => setSellerName(e.target.value)} maxLength={150} placeholder="Who sold"
+                            className={`${EDIT} w-full text-[15px]`} aria-label="Seller" />
+                    </label>
+                    <label className="col-span-2 flex min-w-0 flex-col gap-0.5">
+                        <span className={`${LABEL} text-[15px]`}>Buyer</span>
+                        <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} maxLength={150} placeholder="Who bought"
+                            className={`${EDIT} w-full text-[15px]`} aria-label="Buyer" />
+                    </label>
+                    <div className={`flex min-h-9 items-center rounded-md px-2 text-[12.5px] font-semibold leading-tight ${billCompanies.length > 1 ? 'bg-amber-100 text-amber-900' : 'text-slate-500'}`}
+                        title={billCompanies.join(', ')}>
+                        {billCompanies.length > 1 ? `Saves as ${billCompanies.length} invoices — one per company` : billCompanies.length ? `Company: ${billCompanies[0]}` : ''}
                     </div>
                     {/* The buttons on their own row, so the payment boxes above have room. */}
                     <div className="col-span-5 flex justify-end gap-2">
@@ -2881,7 +2906,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         </fieldset>
 
                         <div className="min-h-[120px] flex-1 overflow-auto border border-slate-500 bg-[#9ea1ad]">
-                            <table className="w-full min-w-[1080px] table-fixed border-collapse bg-white text-[13px]">
+                            <table className="w-full min-w-[1160px] table-fixed border-collapse bg-white text-[13px]">
                                 <colgroup>{SR_COLS.map((c) => <col key={c.h} style={{ width: c.w }} />)}</colgroup>
                                 <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
                                     <tr>{SR_COLS.map((c) => <th key={c.h} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-bold${thFit(c.h)}`}>{c.h}</th>)}</tr>
@@ -2891,7 +2916,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                         <tr key={r.sale_id + i} onClick={() => { setSrSel(r.sale_id); setSrChoice('print'); setSrAction(r); }}
                                             className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'} ${num(r.late_days) > 0 ? 'font-semibold text-red-600' : ''}`}
                                             title={`${r.sale_id}${num(r.late_days) > 0 ? ` — LATE: ${fmt(num(r.owed))} not paid, ${r.late_days} days after the due date ${ymd(r.due)}` : num(r.owed) > 0 ? ` — ${fmt(num(r.owed))} due by ${ymd(r.due)}` : ''} — click for Print / Sale Return`}>
-                                            {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, num(r.cartons) ? fmt(num(r.cartons)) : '', fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
+                                            {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, r.company || '', num(r.cartons) ? fmt(num(r.cartons)) : '', fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
                                               fmt(num(r.net)), fmt(num(r.pre_bal)), fmt(num(r.total)), fmt(num(r.paid)), fmt(num(r.balance))].map((v, k) => (
                                                 <td key={k} title={tip(v)} className="overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 text-[11px] font-normal tracking-tight">{v}</td>
                                             ))}
@@ -2906,7 +2931,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 {srRows && srRows.length > 0 && (
                                     <tfoot className="sticky bottom-0 bg-[#ececfd] text-[11.5px] font-semibold tabular-nums">
                                         <tr>
-                                            <td colSpan={5} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">
+                                            <td colSpan={6} className="border-t border-slate-400 px-1.5 py-1.5 text-right text-[#1f2bd6]">
                                                 {srRows.some((r) => num(r.late_days) > 0) && <span className="mr-3 font-black text-red-600">⚠ {srRows.filter((r) => num(r.late_days) > 0).length} late bill(s) · {fmt(srRows.reduce((s2, r) => s2 + (num(r.late_days) > 0 ? num(r.owed) : 0), 0))} not paid on time</span>}
                                                 Totals
                                             </td>

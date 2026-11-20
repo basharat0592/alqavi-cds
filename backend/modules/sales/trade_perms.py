@@ -213,6 +213,7 @@ for _v, _key in [('receipt', 'receipt_voucher'), ('payment', 'payment_voucher'),
     RULES += [('GET', r'^sales/vouchers/$', _vtype(_v, 'receipt'), _key, V), ('POST', r'^sales/vouchers/$', _vtype(_v, 'receipt'), _key, S)]
 RULES += [
     ('POST', r'^sales/orders/$', None, 'sale', S),
+    ('POST', r'^sales/orders/trade_split/$', None, 'sale', S),   # Sale Invoice, one invoice per company
     ('GET', r'^sales/orders/sale_records/$', None, 'sale', V),
     ('POST', r'^sales/trade-returns/$', None, 'sale_return', S),
     ('GET', r'^products/items/rate_expiry_list/$', None, 'rates_expiry', V),

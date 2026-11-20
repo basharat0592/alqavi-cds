@@ -75,6 +75,14 @@ def account_balance(acc, user):
     return (agg['d'] or Z) - (agg['c'] or Z)
 
 
+def voucher_company(user, pk):
+    """The Company chosen on a voucher (Receipt / Credit Card Voucher), or None."""
+    if not pk:
+        return None
+    from modules.company.models import Company
+    return scope_to_tenant(user, Company.objects.filter(pk=pk), 'tenant').first()
+
+
 def _allocate_to_purchases(supplier_id, amount, voucher, user, method):
     """Settle the supplier's unpaid purchases (oldest first); returns the rest."""
     from modules.payments.models import TransactionPayment
@@ -313,12 +321,15 @@ class VoucherViewSet(viewsets.ViewSet):
         pending = chq_status == 'pending'
         method = 'cheque' if chq_no else ('bank_transfer' if cash.group_id and str(cash.acc_id).startswith('1204') and not cash.name.lower().startswith('cash') else 'cash')
         staff = SalesStaff.objects.filter(pk=d.get('staff')).first() if d.get('staff') else None
+        company = voucher_company(request.user, d.get('company'))
+        if d.get('company') and not company:
+            return Response({'detail': 'Company not found.'}, status=400)
         detail = str(d.get('detail') or '').strip()[:255]
         total = sum((a for _, a, _ in lines), Z)
         tid = tenant_id_for(request.user) or cash.tenant_id
         with transaction.atomic():
             v = Voucher.objects.create(
-                voucher_no=self.next_no(vdate), vtype='receipt', date=vdate, staff=staff,
+                voucher_no=self.next_no(vdate), vtype='receipt', date=vdate, staff=staff, company=company,
                 chq_no=chq_no, chq_date=chq_date, bank=str(d.get('bank') or '').strip()[:80], detail=detail,
                 chq_status=chq_status, chq_received=chq_received, chq_cash_date=chq_cash_date,
                 total=total, created_by=request.user, tenant_id=tid)
@@ -388,6 +399,10 @@ class VoucherViewSet(viewsets.ViewSet):
         qs = self._qs().filter(vtype=p.get('vtype') or 'receipt')
         if p.get('account'):
             qs = qs.filter(lines__account_id=p['account']).distinct()
+        if p.get('company'):
+            qs = qs.filter(company_id=p['company'])
+        if p.get('staff'):
+            qs = qs.filter(staff_id=p['staff'])
         if p.get('voucher_no'):
             qs = qs.filter(voucher_no__icontains=p['voucher_no'].strip())
         if p.get('date_from'):
@@ -397,7 +412,7 @@ class VoucherViewSet(viewsets.ViewSet):
         rows = []
         ids = list(qs.order_by('-date', '-id').values_list('id', flat=True)[:2000])
         for ln in (VoucherLine.objects.filter(voucher_id__in=ids)
-                   .select_related('voucher__staff', 'account').order_by('-voucher__date', '-voucher__id', 'line')):
+                   .select_related('voucher__staff', 'voucher__company', 'account').order_by('-voucher__date', '-voucher__id', 'line')):
             v = ln.voucher
             rows.append({
                 'voucher_id': v.id, 'voucher_no': v.voucher_no, 'date': v.date, 'line': ln.line,
@@ -405,5 +420,6 @@ class VoucherViewSet(viewsets.ViewSet):
                 'chq_no': v.chq_no, 'chq_date': v.chq_date, 'bank': v.bank,
                 'chq_status': v.chq_status, 'chq_received': v.chq_received, 'chq_cash_date': v.chq_cash_date,
                 'staff': v.staff.name if v.staff_id else '', 'debit': ln.debit, 'credit': ln.credit,
+                'company': v.company.name if v.company_id else '',
             })
         return Response(rows)

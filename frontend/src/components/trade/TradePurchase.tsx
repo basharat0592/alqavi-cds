@@ -157,6 +157,13 @@ export default function TradePurchase() {
     const [goods, setGoods] = useState('');
     const [tax, setTax] = useState('');
     const [paid, setPaid] = useState('');
+    // Paid by card (a company credit card): amount, the card's account (credited) and the card tax %.
+    const [cardAmt, setCardAmt] = useState('');
+    const [cardAcc, setCardAcc] = useState('');
+    const [cardPct, setCardPct] = useState('1.5');
+    // Seller / Buyer: free names on the purchase.
+    const [sellerName, setSellerName] = useState('');
+    const [buyerName, setBuyerName] = useState('');
     const [staffId, setStaffId] = useState('');
     const [finder, setFinder] = useState<null | { target: 'sup' | 'view'; q: string }>(null);
     const [vSup, setVSup] = useState<Acc | null>(null);
@@ -193,7 +200,19 @@ export default function TradePurchase() {
     const amtPurchase = lines.reduce((s, l) => s + l.qty * l.pur, 0);
     const amtBonus = lines.reduce((s, l) => s + l.bonus * l.pur, 0);
     const net = amtPurchase - num(extraDisc) + num(freight) + num(fare) + num(goods) + num(tax);
-    const balance = supBal + net - num(paid);
+    const balance = supBal + net - num(paid) - num(cardAmt);
+    // Expected profit at the Sale Rate: paid units AND the company's free bonus units are
+    // sold, only the paid units cost money. Bill total: the sale value less the Net Amount
+    // (so Extra Disc lowers the cost and Freight / Fare / Goods / Tax raise it).
+    const lineProfit = (l: Line) => (l.sale > 0 ? l.sale * (l.qty + l.bonus) - l.pur * l.qty : null);
+    const saleValue = lines.reduce((s, l) => s + (l.sale > 0 ? l.sale * (l.qty + l.bonus) : l.pur * l.qty), 0);
+    const bonusProfit = lines.reduce((s, l) => s + (l.sale > 0 ? l.sale * l.bonus : 0), 0);
+    const billProfit = lines.length ? saleValue - net : 0;
+    const billProfitPct = net > 0 ? (billProfit / net) * 100 : 0;
+    const noSaleRate = lines.filter((l) => !(l.sale > 0)).length;
+    const cardAccounts = useMemo(() => (accounts || []).filter((a) => /card/i.test(a.name) && a.status !== 'inactive'), [accounts]);
+    // The bill is saved as one purchase per company.
+    const billCompanies = Array.from(new Set(lines.map((l) => l.product.company || '(No company)')));
     const totalPieces = lines.reduce((s, l) => s + l.qty, 0);
     const totalBonus = lines.reduce((s, l) => s + l.bonus, 0);
     const cartonsOf = (l: Line) => (l.product.carton > 0 ? Math.floor(l.qty / l.product.carton) : 0);
@@ -218,6 +237,7 @@ export default function TradePurchase() {
     const resetForm = () => {
         setLines([]); setSel(-1); setProd(null); setCode(''); setE({ ...EMPTY }); setSup(null); setSupCode(''); setSupBal(0);
         setBillNo(''); setExtraDisc(''); setFreight(''); setFare(''); setGoods(''); setTax(''); setPaid(''); setStaffId(''); setDate(today()); setHistory([]); loadNo();
+        setCardAmt(''); setCardAcc(''); setSellerName(''); setBuyerName('');
     };
     const [saving, setSaving] = useState(false);
     const printInvoice = (prices = true) => {
@@ -229,8 +249,12 @@ export default function TradePurchase() {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
         if (num(paid) > net + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
+        if (num(paid) + num(cardAmt) > net + 0.001) { toast.error('Paid Cash and Paid by Card are more than the Net Amount.'); return; }
+        if (num(cardAmt) > 0 && !cardAcc) { toast.error('Choose the credit card the purchase is paid with.'); return; }
         setAsk({
-            msg: `Save Purchase ${purNo} from ${sup!.name} for ${fmt(net)} ?`,
+            msg: billCompanies.length > 1
+                ? `Save this purchase from ${sup!.name} for ${fmt(net)} as ${billCompanies.length} purchases, one per company (${billCompanies.join(', ')}) ?`
+                : `Save Purchase ${purNo} from ${sup!.name} for ${fmt(net)} ?`,
             yes: async () => {
                 // Open the print window now (inside the click), or the browser blocks it.
                 const win = print ? window.open('', 'trade:purchase-print', 'popup=yes,width=1000,height=820') : null;
@@ -240,10 +264,15 @@ export default function TradePurchase() {
                     const { data } = await api.post('v1/sales/trade-purchases/', {
                         supplier: sup!.id, date, bill_no: billNo.trim(), extra_disc: num(extraDisc), freight: num(freight), fare: num(fare), goods: num(goods), tax: num(tax),
                         paid: num(paid), staff: staffId || null,
+                        card: num(cardAmt), card_acc: num(cardAmt) > 0 ? cardAcc : null, card_tax_pct: num(cardPct),
+                        seller_name: sellerName.trim(), buyer_name: buyerName.trim(),
                         lines: lines.map((l) => ({ product: l.product.id, qty: l.qty, bonus: l.bonus, expiry_date: l.expiry,
                             pur_rate: l.pur, sale_rate: l.sale, retail_rate: l.retail })),
                     });
-                    toast.success(`Purchase ${data.purchase_no} saved${data.voucher_no ? ` — Voucher ${data.voucher_no}` : ''}.`);
+                    const parts: any[] = data.purchases || [];
+                    toast.success(parts.length > 1
+                        ? `Saved as ${parts.length} purchases, one per company: ${parts.map((x) => `${x.purchase_no} (${x.company || 'No company'})`).join(', ')}.`
+                        : `Purchase ${data.purchase_no} saved${data.voucher_no ? ` — Voucher ${data.voucher_no}` : ''}.`, { duration: parts.length > 1 ? 8000 : 4000 });
                     setLastId(data.id);
                     if (print) {
                         const url = `/admin/trade/purchase-invoice/${data.id}?print=1${prices ? '' : '&prices=0'}`;
@@ -357,6 +386,24 @@ export default function TradePurchase() {
                                         {staff.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                                     </select>
                                 </div>
+                                {/* Paid by card / Seller / Buyer; how many purchases the bill is saved as. */}
+                                <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.7fr)_minmax(0,0.6fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,1.3fr)] items-end gap-2">
+                                    {['Paid by Card', 'Card (paid with)', 'Card Tax %', 'Seller', 'Buyer', ''].map((h, i) => <span key={i} className={lbl}>{h}</span>)}
+                                    <input value={cardAmt} onChange={(ev) => setCardAmt(ev.target.value.replace(/[^\d.]/g, ''))} title="Part of the bill paid with a company credit card" className={SMALL} />
+                                    <select value={cardAcc} onChange={(ev) => setCardAcc(ev.target.value)} disabled={!cardAccounts.length}
+                                        title={cardAccounts.length ? 'The card account is credited; the card tax goes to the Credit Card Profit & Loss' : 'No account with "Card" in its name in the Chart of Account'}
+                                        className={`${COA_SELECT} h-7 !text-[12px] !font-normal ${num(cardAmt) > 0 ? '' : 'opacity-70'}`}>
+                                        <option value="">{cardAccounts.length ? 'Select any one' : 'No card accounts'}</option>
+                                        {cardAccounts.map((a) => <option key={a.id} value={a.id}>{a.acc_id} {a.name}</option>)}
+                                    </select>
+                                    <input value={cardPct} onChange={(ev) => setCardPct(ev.target.value.replace(/[^\d.]/g, ''))} title="Bank's tax on the card payment" className={SMALL} />
+                                    <input value={sellerName} onChange={(ev) => setSellerName(ev.target.value)} maxLength={150} placeholder="Who sold" className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
+                                    <input value={buyerName} onChange={(ev) => setBuyerName(ev.target.value)} maxLength={150} placeholder="Who bought" className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
+                                    <div title={billCompanies.join(', ')}
+                                        className={`flex h-7 items-center truncate rounded px-1.5 text-[11px] font-semibold ${billCompanies.length > 1 ? 'bg-amber-100 text-amber-900' : 'text-slate-500'}`}>
+                                        {billCompanies.length > 1 ? `Saves as ${billCompanies.length} purchases (one per company)` : billCompanies[0] ? `Company: ${billCompanies[0]}` : ''}
+                                    </div>
+                                </div>
                             </div>
                             <button type="button" onClick={showHistory}
                                 className="rounded-md border border-emerald-500 bg-gradient-to-b from-[#d6ffd6] to-[#a8f0a8] px-2 text-[12.5px] font-bold leading-tight text-[#0b3d0b] shadow-sm hover:to-[#8fe68f]">
@@ -367,20 +414,20 @@ export default function TradePurchase() {
                         {/* Lines */}
                         <div className="min-h-0 flex-[3] overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
                             <table className="w-full table-fixed border-collapse bg-white text-[11.5px]">
-                                <colgroup>{[4.5, 7, 22, 6.5, 6, 7, 6, 9.5, 8, 8, 8, 9.5].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                                <colgroup>{[4, 6.5, 20, 5.5, 5, 6.5, 5.5, 8.5, 7.5, 7.5, 7.5, 8.5, 7.5].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                    <tr>{['SNo', 'PID', 'Product Name', 'Carton', 'Pack', 'Qty(U)', 'Bonus', 'Exp.Date', 'Pur.Rate', 'Sale Rate', 'Retail.Rate', 'Sub Total'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1 font-semibold">{h}</th>)}</tr>
+                                    <tr>{['SNo', 'PID', 'Product Name', 'Carton', 'Pack', 'Qty(U)', 'Bonus', 'Exp.Date', 'Pur.Rate', 'Sale Rate', 'Retail.Rate', 'Sub Total', 'Profit'].map((h) => <th key={h} title={h === 'Profit' ? 'Sale Rate × (Qty + Bonus) − Pur.Rate × Qty' : undefined} className={`whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1 font-semibold ${h === 'Profit' ? 'text-[#0b5fd6]' : ''}`}>{h}</th>)}</tr>
                                 </thead>
                                 <tbody>
                                     {lines.map((l, i) => (
                                         <tr key={i} onClick={() => setSel(i)} className={`cursor-pointer tabular-nums ${sel === i ? 'bg-[#2f5bd3] text-white' : 'hover:bg-indigo-50'}`}>
                                             {[i + 1, l.product.code, pn(l.product.name), cartonsOf(l) || '', l.product.packing, fmt(l.qty), l.bonus || '', dmy(l.expiry),
-                                              fmt(l.pur), fmt(l.sale), fmt(l.retail), fmt(l.qty * l.pur)].map((v, k) => (
-                                                <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 && k !== 7 ? 'text-right' : ''} `}>{v}</td>
+                                              fmt(l.pur), fmt(l.sale), fmt(l.retail), fmt(l.qty * l.pur), lineProfit(l) === null ? '—' : fmt(lineProfit(l)!)].map((v, k) => (
+                                                <td key={k} title={tip(v)} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 3 && k !== 7 ? 'text-right' : ''} ${k === 12 && sel !== i ? `font-bold ${(lineProfit(l) ?? 0) < 0 ? 'text-red-600' : 'text-[#0b5fd6]'}` : k === 12 ? 'font-bold' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
-                                    {!lines.length && <tr><td colSpan={12} className="px-3 py-4 text-center text-slate-400">Find the product, enter quantity and rates, press Add.</td></tr>}
+                                    {!lines.length && <tr><td colSpan={13} className="px-3 py-4 text-center text-slate-400">Find the product, enter quantity and rates, press Add.</td></tr>}
                                 </tbody>
                             </table>
                         </div>
@@ -412,7 +459,15 @@ export default function TradePurchase() {
                         <Led label="Amt purchase" value={fmt(amtPurchase)} />
                         <Led label="Amt Bonus" value={fmt(amtBonus)} />
                         <Led label="Net Amount" value={fmt(net)} />
-                        <Led label="Balance" value={sup ? fmt(balance) : fmt(net - num(paid))} tone="yellow" />
+                        <Led label="Balance" value={sup ? fmt(balance) : fmt(net - num(paid) - num(cardAmt))} tone="yellow" />
+                        {/* Expected profit when it is sold at the Sale Rate — the free bonus included. */}
+                        <div title={`Sale value at the Sale Rate (bonus units included) ${fmt(saleValue)} less the Net Amount ${fmt(net)}`}>
+                            <Led label={`Profit${billProfit && net > 0 ? ` (${fmt(billProfitPct)}%)` : ''}`} value={fmt(billProfit)} tone="blue" />
+                            <div className="mt-0.5 text-right text-[11px] font-semibold leading-tight text-[#0b5fd6]">
+                                {bonusProfit > 0 ? `incl. bonus ${fmt(bonusProfit)}` : 'incl. bonus 0'}
+                                {noSaleRate > 0 && <span className="block text-red-600">{noSaleRate} line(s) without a Sale Rate — counted at cost</span>}
+                            </div>
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={addLine} disabled={!prod} className={`${ACTION_BTN} !min-w-0`}><span className="underline">A</span>dd</button>
                             <button type="button" onClick={removeLine} disabled={sel < 0} className={`${ACTION_BTN} !min-w-0`}><span className="underline">R</span>emove</button>

@@ -116,6 +116,7 @@ const MENUS: Menu[] = [
         SEP,
         { label: 'Partnership', href: '/admin/trade/partnership' },
         { label: 'Investors', href: '/admin/trade/investors' },
+        { label: 'Partners & Investors Report', href: '/admin/trade/partnership?tab=report&show=both' },
         { label: 'Donation', href: '/admin/trade/donation' },
     ] },
     { title: 'Setup', items: [

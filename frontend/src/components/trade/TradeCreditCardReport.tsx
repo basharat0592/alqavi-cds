@@ -8,13 +8,14 @@
  * amount the customer was credited, the card tax and what is left after it.
  * The tax is kept here only, for later calculation — never the customer's.
  * Filters: card (paying or receiving), receiver card, payer card, saleman,
- * search, From / To Date. Totals per receiving card. Print (A4), PDF, Excel.
+ * search, From / To Date. Totals per receiving card. Shown page-wise (half A4
+ * pages, as printed); Print, PDF, Excel.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
-import { printSheets } from '@/lib/printWindow';
+import PagedReport, { type PSection } from '@/components/trade/PagedReport';
 import {
     ConfirmBox, ReadBox, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT, guardWindowClose, closeTradeWindow, downloadXlsx,
 } from '@/components/trade/TradeSaleInvoice';
@@ -37,17 +38,6 @@ const COLS: { h: string; w: number; r?: boolean }[] = [
     { h: 'Receiver Card', w: 17 }, { h: 'Amount', w: 9, r: true }, { h: 'Tax %', w: 5.5, r: true }, { h: 'Card Tax', w: 8, r: true },
     { h: 'After Tax', w: 9, r: true }, { h: 'Saleman', w: 8 },
 ];
-
-/* A card in a cell: the holder on top, bank · card no under it — shown in full (wraps). */
-function CardCell({ holder, bank, no }: { holder: string; bank: string; no: string }) {
-    if (!holder && !bank && !no) return <span className="text-slate-400">—</span>;
-    return (
-        <span className="block leading-tight">
-            <b className="font-semibold">{holder}</b>
-            <span className="block text-[0.86em] text-slate-600">{[bank, no].filter(Boolean).join(' · ')}</span>
-        </span>
-    );
-}
 
 export default function TradeCreditCardReport() {
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
@@ -109,59 +99,29 @@ export default function TradeCreditCardReport() {
         q.trim() ? `"${q.trim()}"` : '',
     ].filter(Boolean).join('  ·  ') || 'All card payments';
 
-    const cells = (r: Row) => [
-        dmy(r.date), <span key="v" className="block leading-tight">{r.voucher_no}{r.invoice && <span className="block text-[0.86em] text-slate-600">{r.invoice}</span>}</span>,
-        <span key="c" className="block leading-tight">{r.customer}<span className="block text-[0.86em] text-slate-600">{r.customer_code}</span></span>,
-        <CardCell key="p" holder={r.payer_holder} bank={r.payer_bank} no={r.payer_no} />,
-        <CardCell key="r" holder={r.receiver_holder} bank={r.receiver_bank} no={r.receiver_no} />,
-        fmt(num(r.amount)), `${num(r.tax_pct)}%`, fmt(num(r.tax)), fmt(num(r.net)), r.staff,
-    ];
-    const table = (rs: Row[], fs: string, withTotal: boolean) => (
-        <table className="w-full table-fixed border-collapse" style={{ fontSize: fs }}>
-            <colgroup>{COLS.map((c, i) => <col key={i} style={{ width: `${c.w}%` }} />)}</colgroup>
-            <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                <tr>{COLS.map((c) => <th key={c.h} className={`border border-slate-400 px-1.5 py-1.5 font-semibold leading-tight ${c.r ? 'text-right' : ''}`}>{c.h}</th>)}</tr>
-            </thead>
-            <tbody>
-                {rs.map((r) => (
-                    <tr key={r.id} className="tabular-nums" title={r.note || undefined}>
-                        {cells(r).map((v, k) => (
-                            <td key={k} className={`break-words border border-slate-300 px-1.5 py-1 align-top ${COLS[k].r ? 'text-right' : ''} ${k === 7 ? 'text-red-600' : ''} ${k === 5 ? 'font-semibold' : ''}`}>{v}</td>
-                        ))}
-                    </tr>
-                ))}
-                {withTotal && rs.length > 0 && (
-                    <tr className="bg-[#e8e8f4] font-bold tabular-nums">
-                        <td className="border border-slate-400 px-1.5 py-1" colSpan={5}>Total ({list.length} payment{list.length === 1 ? '' : 's'})</td>
-                        <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(total('amount'))}</td>
-                        <td className="border border-slate-400 px-1.5 py-1 text-right" title="Overall tax % = total card tax ÷ total amount">{pctOf(total('tax'), total('amount'))}</td>
-                        <td className="border border-slate-400 px-1.5 py-1 text-right text-red-700">{fmt(total('tax'))}</td>
-                        <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(total('net'))}</td>
-                        <td className="border border-slate-400" />
-                    </tr>
-                )}
-            </tbody>
-        </table>
-    );
-
-    // Print: half A4 upright pages (148 × 210 mm)
-    const sheetsRef = useRef<HTMLDivElement>(null);
-    const [printing, setPrinting] = useState(false);
-    const PER = 22;
-    const pages = useMemo(() => {
-        const out: Row[][] = [];
-        for (let i = 0; i < Math.max(1, list.length); i += PER) out.push(list.slice(i, i + PER));
-        return out;
-    }, [list]);
-    const print = async (save?: string) => {
-        if (printing || !rows) return;
-        setPrinting(true);
-        try {
-            await new Promise((r) => setTimeout(r, 300));
-            await printSheets(Array.from(sheetsRef.current?.querySelectorAll<HTMLElement>('.cc-page') || []), save, 3);
-        } catch { toast.error('Could not prepare the print.'); }
-        finally { setPrinting(false); }
-    };
+    // The report, page-wise: the payments, then the totals per receiving card.
+    const card = (holder: string, bank: string, no: string) => [holder, bank, no].filter(Boolean).join(' · ') || '—';
+    const [runNo, setRunNo] = useState(0);
+    useEffect(() => { setRunNo((x) => x + 1); }, [rows]);
+    const sections = useMemo<PSection[]>(() => [
+        {
+            columns: COLS.map((c) => ({ h: c.h, a: c.r ? 'r' as const : 'l' as const })),
+            rows: list.map((r) => ({
+                tip: r.note || undefined,
+                c: [dmy(r.date), r.invoice ? `${r.voucher_no} / ${r.invoice}` : r.voucher_no, `${r.customer} (${r.customer_code})`,
+                    card(r.payer_holder, r.payer_bank, r.payer_no), card(r.receiver_holder, r.receiver_bank, r.receiver_no),
+                    fmt(num(r.amount)), `${num(r.tax_pct)}%`, <span key="t" className="text-red-600">{fmt(num(r.tax))}</span>, fmt(num(r.net)), r.staff],
+            })),
+            total: list.length ? [`Total (${list.length} payment${list.length === 1 ? '' : 's'})`, '', '', '', '', fmt(total('amount')),
+                pctOf(total('tax'), total('amount')), fmt(total('tax')), fmt(total('net')), ''] : null,
+            empty: rows ? 'No card payments for this search.' : 'Loading…',
+        },
+        ...(byReceiver.length ? [{
+            title: 'By receiving card',
+            columns: [{ h: 'Receiving card' }, { h: 'Payments', a: 'r' as const }, { h: 'Amount', a: 'r' as const }, { h: 'Tax %', a: 'r' as const }, { h: 'Card Tax', a: 'r' as const }],
+            rows: byReceiver.map((x) => ({ c: [x.label || '—', String(x.n), fmt(x.amount), pctOf(x.tax, x.amount), fmt(x.tax)] })),
+        }] : []),
+    ], [list, byReceiver, rows]); // eslint-disable-line react-hooks/exhaustive-deps
     const excel = () => downloadXlsx('credit-card-report', 'Credit Card Report',
         ['Date', 'Voucher', 'Invoice', 'Customer', 'Acc ID', 'Payer Holder', 'Payer Bank', 'Payer Card No', 'Receiver Holder', 'Receiver Bank', 'Receiver Card No', 'Amount', 'Tax %', 'Card Tax', 'After Tax', 'Saleman', 'Note'],
         list.map((r) => [dmy(r.date), r.voucher_no, r.invoice, r.customer, r.customer_code, r.payer_holder, r.payer_bank, r.payer_no,
@@ -213,23 +173,9 @@ export default function TradeCreditCardReport() {
                     </div>
                 </fieldset>
 
-                <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_260px] gap-2">
-                    <div className="min-h-0 overflow-y-auto overflow-x-hidden rounded border border-slate-500 bg-white">
-                        {table(list, '13px', true)}
-                        {rows && !list.length && <p className="px-3 py-6 text-center text-[14px] text-slate-500">No card payments for this search.</p>}
-                        {!rows && <p className="px-3 py-6 text-center text-[14px] text-slate-500">Loading…</p>}
-                    </div>
-                    <div className="min-h-0 overflow-y-auto rounded border border-slate-500 bg-white">
-                        <div className="sticky top-0 bg-[#e8e8f4] px-2 py-1.5 text-[13px] font-bold">By receiving card</div>
-                        {byReceiver.map((x) => (
-                            <div key={x.label} className="border-b border-slate-200 px-2 py-1.5 text-[13px] leading-tight">
-                                <div className="break-words font-semibold">{x.label}</div>
-                                <div className="mt-0.5 flex justify-between tabular-nums"><span className="text-slate-600">{x.n} payment{x.n === 1 ? '' : 's'}</span><b>{fmt(x.amount)}</b></div>
-                                <div className="flex justify-between tabular-nums text-red-700"><span>Card tax {pctOf(x.tax, x.amount)}</span><span>{fmt(x.tax)}</span></div>
-                            </div>
-                        ))}
-                        {!byReceiver.length && <p className="px-2 py-4 text-center text-[13px] text-slate-500">—</p>}
-                    </div>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-slate-500">
+                    <PagedReport title="Credit Card Report" subtitle={subtitle} sections={sections} version={String(runNo)} loading={!rows || loading}
+                        file="credit-card-report.pdf" onExport={excel} />
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-end gap-3">
@@ -239,37 +185,11 @@ export default function TradeCreditCardReport() {
                         {box(`Card Tax ${pctOf(total('tax'), total('amount'))} (not the customer’s)`, fmt(total('tax')), true)}
                         {box('After Card Tax', fmt(total('net')))}
                     </div>
-                    <button type="button" onClick={() => print()} disabled={!rows || printing} className={ACTION_BTN}>{printing ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">P</span>rint</>}</button>
-                    <button type="button" onClick={() => print('credit-card-report.pdf')} disabled={!rows || printing} className={ACTION_BTN}>PDF</button>
-                    <button type="button" onClick={excel} disabled={!rows} className={ACTION_BTN}>Excel</button>
                     <button type="button" onClick={() => askClose(closeTradeWindow)} className={ACTION_BTN}><span className="underline">C</span>lose</button>
                 </div>
                 <ReadBox value={<span className="text-[#1f2bd6]">{subtitle}</span>} className="shrink-0" />
             </div>
 
-            {rows && (
-                <div ref={sheetsRef} aria-hidden style={{ position: 'fixed', left: -20000, top: 0 }}>
-                    {pages.map((rs, i) => (
-                        <div key={i} className="cc-page bg-white text-slate-900" style={{ width: '148mm', height: '210mm', padding: '6mm', boxSizing: 'border-box', display: 'flex', flexDirection: 'column' }}>
-                            <div className="mb-1.5 flex items-end justify-between border-b-2 border-slate-800 pb-1">
-                                <div>
-                                    <div className="text-[13px] font-black">AL-QAVI TRADERS</div>
-                                    <div className="text-[11px] font-bold">Credit Card Report</div>
-                                    <div className="text-[8px] text-slate-600">{subtitle}</div>
-                                </div>
-                                <div className="text-right text-[8px] text-slate-600">Printed {dmy(today())}<br />Page {i + 1} of {pages.length}</div>
-                            </div>
-                            <div className="min-h-0 flex-1">{table(rs, '6.5px', i === pages.length - 1)}</div>
-                            {i === pages.length - 1 && (
-                                <div className="mt-1.5 flex flex-wrap gap-x-4 border-t border-slate-400 pt-1 text-[8px]">
-                                    <span>Payments <b>{list.length}</b></span><span>Paid by card <b>{fmt(total('amount'))}</b></span>
-                                    <span>Card tax <b>{fmt(total('tax'))}</b> ({pctOf(total('tax'), total('amount'))})</span><span>After tax <b>{fmt(total('net'))}</b></span>
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            )}
             {ask && <ConfirmBox msg={ask.msg} onNo={() => setAsk(null)} onYes={() => { const fn = ask.yes; setAsk(null); fn(); }} />}
         </div>
     );

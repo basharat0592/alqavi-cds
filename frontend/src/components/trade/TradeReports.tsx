@@ -13,18 +13,18 @@
  * (Find opens the finder). Preview opens the report with Print / PDF / Export.
  * ?cat=401&report=<key> opens with that group / report chosen.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Printer, FileDown, Sheet, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Loader2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { openPopup } from '@/lib/popup';
-import { printSheets } from '@/lib/printWindow';
 import {
     FIELD, EDIT, ACTION_BTN, COA_SELECT, closeTradeWindow, downloadXlsx, ConfirmBox, FindCompanyWindow, ReturnFindProductWindow,
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
 import { useOwnPrint } from '@/components/trade/WindowPrintButton';
 import FitStage from '@/components/trade/FitStage';
+import PagedReport, { type PSection } from '@/components/trade/PagedReport';
 
 import { sortByMatch } from '@/lib/searchRank';
 type Rep = { key: string; label: string; filters: string[] };
@@ -88,7 +88,10 @@ export default function TradeReports() {
     const cat = cats?.find((c) => c.code === catCode) || null;
     const rep = (cat?.reports.find((r) => r && r.key === type) as Rep | undefined) || null;
     const uses = (f: string) => !!rep?.filters.includes(f) || (f === 'staff' && !!rep?.filters.includes('staff!'));
-    const find = (rep?.filters.find((f) => f.startsWith('find:')) || '').slice(5);
+    // find:x = must be found first; find?:x = optional (none = all, e.g. all companies).
+    const findF = rep?.filters.find((f) => f.startsWith('find:') || f.startsWith('find?:')) || '';
+    const find = findF.replace(/^find\??:/, '');
+    const findOptional = findF.startsWith('find?:');
     const pickCat = (code: string) => {
         setCatCode(code);
         const c = cats?.find((x) => x.code === code);
@@ -127,41 +130,27 @@ export default function TradeReports() {
             params.invoice = typed.trim();
         } else if (find) {
             const p = picks[find];
-            if (!p) { toast.error(`Find the ${FIND_LABEL[find].toLowerCase()} first.`); setFinder(find); return; }
-            params[find] = find === 'account' ? p.code : p.id;
+            if (!p && !findOptional) { toast.error(`Find the ${FIND_LABEL[find].toLowerCase()} first.`); setFinder(find); return; }
+            if (p) params[find] = find === 'account' ? p.code : p.id;
         }
         if (uses('areas') && !allAreas) {
             if (!picked.size) { toast.error('Tick the areas, or Select all Areas.'); return; }
             params.areas = Array.from(picked).join(',');
         }
         setBusy(true);
-        try { const { data } = await api.get('v1/sales/trade-reports/run/', { params, timeout: 180000 }); setRes(data); }
+        try { const { data } = await api.get('v1/sales/trade-reports/run/', { params, timeout: 180000 }); setRes(data); setRunNo((x) => x + 1); }
         catch (e: any) { toast.error(e?.response?.data?.detail || 'Could not make the report.'); }
         finally { setBusy(false); }
     };
 
-    // Print / PDF: half A4 upright sheets (148 × 210 mm), a header on each and page numbers.
-    const wide = (res?.columns.length || 0) > 6;
-    const perPage = wide ? 30 : 34;
-    const pages = useMemo(() => {
-        if (!res) return [] as Row[][];
-        const out: Row[][] = [];
-        for (let i = 0; i < Math.max(1, res.rows.length); i += perPage) out.push(res.rows.slice(i, i + perPage));
-        return out;
-    }, [res, perPage]);
-    const sheetsRef = useRef<HTMLDivElement>(null);
-    const [printing, setPrinting] = useState(false);
-    const print = async (save?: string) => {
-        if (!res || printing) return;
-        setPrinting(true);
-        try {
-            await new Promise((r) => setTimeout(r, 400));   // let the A4 sheets render
-            const sheets = Array.from(sheetsRef.current?.querySelectorAll<HTMLElement>('.rpt-page') || []);
-            // Text-only pages: a lighter picture keeps long reports small and quick to print.
-            await printSheets(sheets, save, 3);
-        } catch { toast.error('Could not prepare the print.'); }
-        finally { setPrinting(false); }
-    };
+    // The report, page-wise: half A4 pages, one at a time (Print / PDF give the same pages).
+    const [runNo, setRunNo] = useState(0);
+    const sections = useMemo<PSection[]>(() => (res ? [{
+        columns: res.columns.map((c) => ({ h: c.h, a: c.a })),
+        rows: res.rows.map((r) => ({ c: r.t === 'g' ? [r.c[0]] : res.columns.map((_, k) => show(r.c[k])), t: r.t })),
+        total: res.total ? res.columns.map((_, k) => show(res.total![k])) : null,
+        empty: 'Nothing for this selection.',
+    }] : []), [res]);
     const exportXlsx = () => {
         if (!res) return;
         const rows = res.rows.map((r) => (r.t === 'g' ? [r.c[0]] : r.c.map((v) => v ?? '')));
@@ -171,30 +160,6 @@ export default function TradeReports() {
 
     const lbl = (on: boolean) => `whitespace-nowrap text-[16px] ${on ? 'text-[#1b1f4b]' : 'text-slate-400'}`;
     const sel = (on: boolean) => (on ? `${COA_SELECT} h-9 !text-[15px] !font-normal` : OFF);
-    const table = (rows: Row[], fs: string, withTotal: boolean) => res && (
-        <table className="w-full border-collapse" style={{ fontSize: fs }}>
-            <thead>
-                <tr>{res.columns.map((c, i) => <th key={i} className={`border border-slate-500 bg-[#ececec] px-1.5 py-1 font-bold ${c.a === 'r' ? 'text-right' : 'text-left'}`}>{c.h}</th>)}</tr>
-            </thead>
-            <tbody>
-                {rows.map((r, i) => (r.t === 'g' ? (
-                    <tr key={i}><td colSpan={res.columns.length} className="border border-slate-400 bg-[#f2f2fa] px-1.5 py-[3px] font-bold text-[#1f2bd6]">{r.c[0]}</td></tr>
-                ) : (
-                    <tr key={i} className={r.t === 's' ? 'bg-[#fafafa] font-bold' : r.t === 'p' ? 'font-semibold text-red-600' : ''}>
-                        {res.columns.map((c, k) => (
-                            <td key={k} className={`max-w-[60mm] overflow-hidden text-ellipsis whitespace-nowrap border border-slate-300 px-1.5 py-[2px] tabular-nums ${c.a === 'r' ? 'text-right' : ''}`}>{show(r.c[k])}</td>
-                        ))}
-                    </tr>
-                )))}
-                {withTotal && res.total && (
-                    <tr className="bg-[#e8e8f4] font-bold">
-                        {res.columns.map((c, k) => <td key={k} className={`border border-slate-500 px-1.5 py-1 tabular-nums ${c.a === 'r' ? 'text-right' : ''}`}>{show(res.total![k])}</td>)}
-                    </tr>
-                )}
-            </tbody>
-        </table>
-    );
-
     const findOn = !!find;
     const typedFind = find === 'invoice' || find === 'voucher';
     const cur = find && !typedFind ? picks[find] : null;
@@ -245,7 +210,8 @@ export default function TradeReports() {
                                         placeholder={find === 'voucher' ? 'e.g. V26001704' : 'e.g. S26000897'} className={`${IN} !bg-white`} />
                                 ) : (
                                     <div className={`${FIELD} flex h-9 items-center px-2 !text-[15px] !font-normal ${findOn ? 'border-slate-300 bg-white' : 'border-slate-300 bg-[#ececf3] text-slate-400'}`}>
-                                        {cur ? `${cur.code}  ${cur.name}` : ''}
+                                        <span className="min-w-0 flex-1 truncate">{cur ? `${cur.code}  ${cur.name}` : findOptional ? <span className="text-slate-500">All {FIND_LABEL[find].toLowerCase()}s</span> : ''}</span>
+                                        {cur && findOptional && <button type="button" onClick={() => setPicks((x) => ({ ...x, [find]: null }))} title={`Show all ${FIND_LABEL[find].toLowerCase()}s`} className="ml-1 shrink-0 px-1 text-[13px] font-bold text-slate-500 hover:text-red-600">✕ All</button>}
                                     </div>
                                 )}
                             </div>
@@ -292,7 +258,7 @@ export default function TradeReports() {
                 </div>
             </FitStage>
 
-            {/* Preview window */}
+            {/* Preview window — page-wise, as in the old program */}
             {res && (
                 <div className="fixed inset-0 z-50 flex flex-col bg-slate-200">
                     <div className="flex shrink-0 items-center gap-2 border-b border-slate-300 bg-white px-4 py-2 shadow-sm">
@@ -300,41 +266,10 @@ export default function TradeReports() {
                             <div className="truncate text-[16px] font-bold text-[#1f2bd6]">{res.title}</div>
                             <div className="text-[12.5px] text-slate-600">{res.subtitle} · {res.rows.filter((r) => !r.t).length} rows</div>
                         </div>
-                        <button type="button" onClick={() => print()} disabled={printing} className="flex h-8 items-center gap-1.5 bg-emerald-600 px-3 text-[13px] font-bold text-white disabled:opacity-50">
-                            {printing ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />} Print
-                        </button>
-                        <button type="button" onClick={() => print(`${res.title}.pdf`)} disabled={printing} className="flex h-8 items-center gap-1.5 border border-slate-300 px-3 text-[13px] font-semibold"><FileDown size={14} /> PDF</button>
-                        <button type="button" onClick={exportXlsx} className="flex h-8 items-center gap-1.5 border border-slate-300 px-3 text-[13px] font-semibold"><Sheet size={14} /> Export</button>
                         <button type="button" onClick={() => setRes(null)} className="flex h-8 items-center gap-1 border border-slate-300 px-3 text-[13px] font-semibold"><X size={14} /> Close</button>
                     </div>
-                    <div className="min-h-0 flex-1 overflow-auto p-4">
-                        <div className="mx-auto max-w-[1500px] bg-white p-4 shadow">
-                            <div className="mb-2 text-[18px] font-extrabold">AL-QAVI TRADERS</div>
-                            {table(res.rows, '14px', true)}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* A4 sheets for Print / PDF (off screen) */}
-            {res && printing && (
-                <div ref={sheetsRef} aria-hidden style={{ position: 'fixed', left: -20000, top: 0 }}>
-                    {pages.map((rows, pi) => (
-                        <div key={pi} className="rpt-page flex flex-col bg-white" style={{ width: '148mm', height: '210mm', padding: '6mm', boxSizing: 'border-box', color: '#111' }}>
-                            <div className="flex items-end justify-between" style={{ borderBottom: '0.4mm solid #222', paddingBottom: '2mm', marginBottom: '2.5mm' }}>
-                                <div>
-                                    <div style={{ fontSize: '11pt', fontWeight: 800 }}>AL-QAVI TRADERS</div>
-                                    <div style={{ fontSize: '9.5pt', fontWeight: 700, color: '#1f2bd6' }}>{res.title}</div>
-                                    <div style={{ fontSize: '6.5pt', color: '#444' }}>{res.subtitle}</div>
-                                </div>
-                                <div style={{ fontSize: '6.5pt', textAlign: 'right', color: '#444' }}>
-                                    <div>Page {pi + 1} of {pages.length}</div>
-                                    <div>Printed {new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</div>
-                                </div>
-                            </div>
-                            <div className="rpt-half" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>{table(rows, wide ? '5.6pt' : '6.6pt', pi === pages.length - 1)}</div>
-                        </div>
-                    ))}
+                    <PagedReport title={res.title} subtitle={res.subtitle} sections={sections} version={String(runNo)}
+                        file={`${res.title}.pdf`} onExport={exportXlsx} />
                 </div>
             )}
 

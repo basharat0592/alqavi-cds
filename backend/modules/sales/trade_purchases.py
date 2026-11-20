@@ -54,6 +54,8 @@ def _line_row(it, po, supplier_name):
         'pack': it.items_per_carton or 1, 'qty': it.quantity, 'bonus': it.bonus_quantity,
         'expiry_date': it.expiry_date, 'pur_rate': it.price, 'sale_rate': it.selling_price,
         'retail_rate': it.retail_rate, 'sub_total': _d(it.price) * (it.quantity or 0),
+        'company': po.company.name if po.company_id else '', 'seller': po.seller_name, 'buyer': po.buyer_name,
+        'card': po.card_amount, 'card_tax': po.card_tax,
     }
 
 
@@ -82,7 +84,7 @@ class TradePurchaseViewSet(viewsets.ViewSet):
         if not sp:
             return Response([])
         items = (PurchaseOrderItem.objects.filter(product=sp, purchase_order__in=self._qs())
-                 .select_related('purchase_order__supplier__ledger_account', 'product')
+                 .select_related('purchase_order__supplier__ledger_account', 'purchase_order__company', 'product')
                  .order_by('-purchase_order__order_date', '-id')[:200])
         return Response([_line_row(it, it.purchase_order, _supplier_name(it.purchase_order)) for it in items])
 
@@ -102,13 +104,15 @@ class TradePurchaseViewSet(viewsets.ViewSet):
             qs = qs.filter(order_date__date__lte=p['date_to'])
         ids = list(qs.order_by('-order_date', '-id').values_list('id', flat=True)[:500])
         items = (PurchaseOrderItem.objects.filter(purchase_order_id__in=ids)
-                 .select_related('purchase_order__supplier__ledger_account', 'product')
+                 .select_related('purchase_order__supplier__ledger_account', 'purchase_order__company', 'product')
                  .order_by('-purchase_order__order_date', '-purchase_order_id', 'id'))
         return Response([_line_row(it, it.purchase_order, _supplier_name(it.purchase_order)) for it in items])
 
     def create(self, request):
-        """Body: {supplier (ledger account id), date?, bill_no?, extra_disc?, freight?,
-        fare?, goods?, tax?, paid?, staff?, lines: [{product, qty, bonus?, expiry_date?, pur_rate,
+        """Saved as one purchase per company (bill-wide amounts shared out by amount).
+        Body: {supplier (ledger account id), date?, bill_no?, extra_disc?, freight?,
+        fare?, goods?, tax?, paid?, card? (paid by card), card_acc?, card_tax_pct?,
+        seller_name?, buyer_name?, staff?, lines: [{product, qty, bonus?, expiry_date?, pur_rate,
         sale_rate?, retail_rate?}]} — qty and bonus in pieces."""
         from modules.company.models import LedgerAccount
         from modules.products.models import Product, ProductBatch
@@ -124,7 +128,7 @@ class TradePurchaseViewSet(viewsets.ViewSet):
             return Response({'detail': 'Invalid date.'}, status=400)
         if pdate > datetime.date.today():
             return Response({'detail': 'The purchase date cannot be in the future.'}, status=400)
-        products = scope_to_tenant(request.user, Product.objects.all(), 'tenant').select_related('stock__product')
+        products = scope_to_tenant(request.user, Product.objects.all(), 'tenant').select_related('stock__product__company')
         prepared = []
         for x in d.get('lines') or []:
             p = products.filter(pk=x.get('product')).first()
@@ -150,8 +154,8 @@ class TradePurchaseViewSet(viewsets.ViewSet):
         if not prepared:
             return Response({'detail': 'Add at least one product.'}, status=400)
         extra_disc = _d(d.get('extra_disc')); freight = _d(d.get('freight')); tax = _d(d.get('tax')); paid = _d(d.get('paid'))
-        fare = _d(d.get('fare')); goods = _d(d.get('goods'))
-        if min(extra_disc, freight, fare, goods, tax, paid) < 0:
+        fare = _d(d.get('fare')); goods = _d(d.get('goods')); card = _d(d.get('card'))
+        if min(extra_disc, freight, fare, goods, tax, paid, card) < 0:
             return Response({'detail': 'Amounts cannot be negative.'}, status=400)
         amount = sum((pur * qty for _, qty, _, pur, _, _, _ in prepared), Z)
         net = (amount - extra_disc + freight + fare + goods + tax).quantize(Decimal('0.01'))
@@ -159,60 +163,98 @@ class TradePurchaseViewSet(viewsets.ViewSet):
             return Response({'detail': 'Extra Disc is more than the purchase amount.'}, status=400)
         if paid > net:
             return Response({'detail': 'Paid Cash is more than the Net Amount.'}, status=400)
+        if paid + card > net:
+            return Response({'detail': 'Paid Cash and Paid by Card are more than the Net Amount.'}, status=400)
+        card_acc, card_pct = None, Z
+        if card > 0:
+            card_acc = accounts.filter(pk=d.get('card_acc')).first() if d.get('card_acc') else None
+            if not card_acc:
+                return Response({'detail': 'Find the credit card account the purchase is paid from.'}, status=400)
+            if card_acc.pk == sup_acc.pk:
+                return Response({'detail': 'The card account cannot be the supplier.'}, status=400)
+            card_pct = _d(d.get('card_tax_pct')) if d.get('card_tax_pct') not in (None, '') else Decimal('1.5')
+            if card_pct < 0 or card_pct >= 100:
+                return Response({'detail': 'Enter the card tax % (e.g. 1.5).'}, status=400)
         staff = SalesStaff.objects.filter(pk=d.get('staff')).first() if d.get('staff') else None
+        seller = str(d.get('seller_name') or '').strip()[:150]
+        buyer = str(d.get('buyer_name') or '').strip()[:150]
         tid = tenant_id_for(request.user) or sup_acc.tenant_id
 
+        # One purchase per company; the bill-wide amounts shared out by each one's amount.
+        from .trade_company import company_of_product, group_by_company, share
+        groups = group_by_company(prepared, lambda x: company_of_product(x[0]))
+        amts = [sum((pur * qty for _, qty, _, pur, _, _, _ in g), Z) for _, g in groups]
+        split = {k: share(v, amts) for k, v in (('extra_disc', extra_disc), ('freight', freight), ('fare', fare),
+                                                 ('goods', goods), ('tax', tax), ('paid', paid), ('card', card))}
+        bill_no = str(d.get('bill_no') or '').strip()[:50] or None
+        out, ref = [], ''
+        inv_acc = accounts.filter(acc_id='12010001').first()
+        cash_acc = accounts.filter(acc_id='12040001').first()
         with transaction.atomic():
-            po = PurchaseOrder.objects.create(
-                purchase_number=next_purchase_no(pdate), supplier_id=sup_acc.supplier_id,
-                reference_number=str(d.get('bill_no') or '').strip()[:50] or None,
-                warehouse_id=prepared[0][0].warehouse_id, tenant_id=tid, created_by=request.user,
-                total_amount=net, shipping_cost=freight, fare_amount=fare, goods_amount=goods, tax_amount=tax, extra_discount=extra_disc,
-                status='RECEIVED', is_inventory_synced=True, paid_amount=paid,
-                payment_status='PAID' if paid >= net and net > 0 else ('PARTIAL' if paid > 0 else 'UNPAID'),
-                payment_method='CASH', notes=f'Trade Purchase · staff {staff.name}' if staff else 'Trade Purchase')
-            PurchaseOrder.objects.filter(pk=po.pk).update(
-                order_date=datetime.datetime.combine(pdate, datetime.datetime.now().time()))
-            for p, qty, bonus, pur, sale, retail, exp in prepared:
-                stock = p.stock
-                carton = int(p.carton_qty or 0)
-                PurchaseOrderItem.objects.create(
-                    purchase_order=po, product=stock.product, packaging_type='SINGLE',
-                    items_per_carton=carton or stock.items_per_carton or 1, quantity=qty, bonus_quantity=bonus,
-                    price=pur, selling_price=sale, retail_rate=retail, expiry_date=exp)
-                units = qty + bonus
-                ProductBatch.objects.create(product=p, expiry_date=exp, quantity=units, cost_price=pur,
-                                            selling_price=sale or p.selling_price or 0, retail_price=retail or p.original_price or 0)
-                Stock.objects.filter(pk=stock.pk).update(total_quantity=(stock.total_quantity or 0) + units,
-                                                         price_per_item=pur or stock.price_per_item)
-                stock.refresh_from_db()
-                if pur:
-                    p.cost_price = pur
-                if sale:
-                    p.selling_price = sale
-                if retail:
-                    p.original_price = retail
-                nearest = ProductBatch.objects.filter(product=p, quantity__gt=0, expiry_date__isnull=False) \
-                    .aggregate(m=Min('expiry_date'))['m']
-                p.expiry_date = nearest
-                p.save()
-            # Purchase voucher (Inventory / supplier, and the cash paid).
-            inv_acc = accounts.filter(acc_id='12010001').first()
-            cash_acc = accounts.filter(acc_id='12040001').first()
-            vno = ''
-            if inv_acc and net > 0:
-                from .vouchers import VoucherViewSet
-                v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(pdate), vtype='purchase', date=pdate,
-                                           staff=staff, detail=f'Purchase-{po.purchase_number}', total=net,
-                                           created_by=request.user, tenant_id=tid)
-                lines = [(inv_acc, net, Z), (sup_acc, Z, net)]
-                if paid > 0 and cash_acc:
-                    lines += [(sup_acc, paid, Z), (cash_acc, Z, paid)]
-                for i, (acc, dr, cr) in enumerate(lines, 1):
-                    VoucherLine.objects.create(voucher=v, line=i, account=acc, debit=dr, credit=cr,
-                                               detail=f'Purchase-{po.purchase_number}')
-                vno = v.voucher_no
-        return Response({'id': po.id, 'purchase_no': po.purchase_number, 'voucher_no': vno, 'net': net},
+            for gi, ((co, g), amt) in enumerate(zip(groups, amts)):
+                x = {k: v[gi] for k, v in split.items()}
+                g_net = (amt - x['extra_disc'] + x['freight'] + x['fare'] + x['goods'] + x['tax']).quantize(Decimal('0.01'))
+                g_paid = min(x['paid'], max(g_net, Z))
+                g_card = min(x['card'], max(g_net - g_paid, Z))
+                g_tax = (g_card * card_pct / 100).quantize(Decimal('0.01')) if g_card > 0 else Z
+                settled = g_paid + g_card
+                po = PurchaseOrder.objects.create(
+                    purchase_number=next_purchase_no(pdate), supplier_id=sup_acc.supplier_id, reference_number=bill_no,
+                    warehouse_id=g[0][0].warehouse_id, tenant_id=tid, created_by=request.user,
+                    total_amount=g_net, shipping_cost=x['freight'], fare_amount=x['fare'], goods_amount=x['goods'], tax_amount=x['tax'],
+                    extra_discount=x['extra_disc'], status='RECEIVED', is_inventory_synced=True, paid_amount=settled,
+                    payment_status='PAID' if settled >= g_net and g_net > 0 else ('PARTIAL' if settled > 0 else 'UNPAID'),
+                    payment_method='CASH', notes=f'Trade Purchase · staff {staff.name}' if staff else 'Trade Purchase',
+                    company=co, seller_name=seller, buyer_name=buyer,
+                    card_acc=card_acc if g_card > 0 else None, card_amount=g_card,
+                    card_tax_pct=card_pct if g_card > 0 else Z, card_tax=g_tax)
+                ref = ref or po.purchase_number
+                PurchaseOrder.objects.filter(pk=po.pk).update(
+                    order_date=datetime.datetime.combine(pdate, datetime.datetime.now().time()),
+                    bill_ref=ref if len(groups) > 1 else '')
+                for p, qty, bonus, pur, sale, retail, exp in g:
+                    stock = p.stock
+                    carton = int(p.carton_qty or 0)
+                    PurchaseOrderItem.objects.create(
+                        purchase_order=po, product=stock.product, packaging_type='SINGLE',
+                        items_per_carton=carton or stock.items_per_carton or 1, quantity=qty, bonus_quantity=bonus,
+                        price=pur, selling_price=sale, retail_rate=retail, expiry_date=exp)
+                    units = qty + bonus
+                    ProductBatch.objects.create(product=p, expiry_date=exp, quantity=units, cost_price=pur,
+                                                selling_price=sale or p.selling_price or 0, retail_price=retail or p.original_price or 0)
+                    Stock.objects.filter(pk=stock.pk).update(total_quantity=(stock.total_quantity or 0) + units,
+                                                             price_per_item=pur or stock.price_per_item)
+                    stock.refresh_from_db()
+                    if pur:
+                        p.cost_price = pur
+                    if sale:
+                        p.selling_price = sale
+                    if retail:
+                        p.original_price = retail
+                    nearest = ProductBatch.objects.filter(product=p, quantity__gt=0, expiry_date__isnull=False) \
+                        .aggregate(m=Min('expiry_date'))['m']
+                    p.expiry_date = nearest
+                    p.save()
+                # Purchase voucher: Inventory / supplier, the cash paid, and the part paid by
+                # card (supplier Dr / the card's account Cr).
+                vno = ''
+                if inv_acc and g_net > 0:
+                    from .vouchers import VoucherViewSet
+                    label = f'Purchase-{po.purchase_number}'
+                    v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(pdate), vtype='purchase', date=pdate,
+                                               staff=staff, detail=label, total=g_net, company=co,
+                                               created_by=request.user, tenant_id=tid)
+                    lines = [(inv_acc, g_net, Z, label), (sup_acc, Z, g_net, label)]
+                    if g_paid > 0 and cash_acc:
+                        lines += [(sup_acc, g_paid, Z, label), (cash_acc, Z, g_paid, label)]
+                    if g_card > 0:
+                        lines += [(sup_acc, g_card, Z, f'{label} paid by card'), (card_acc, Z, g_card, f'{label} paid by card')]
+                    for i, (acc, dr, cr, det) in enumerate(lines, 1):
+                        VoucherLine.objects.create(voucher=v, line=i, account=acc, debit=dr, credit=cr, detail=det)
+                    vno = v.voucher_no
+                out.append({'id': po.id, 'purchase_no': po.purchase_number, 'voucher_no': vno, 'net': g_net,
+                            'company': co.name if co else '', 'paid': g_paid, 'card': g_card, 'card_tax': g_tax})
+        return Response({**out[0], 'net': net, 'bill_ref': ref if len(groups) > 1 else '', 'purchases': out},
                         status=status.HTTP_201_CREATED)
 
 
@@ -327,7 +369,7 @@ class TradePurchaseReturnViewSet(viewsets.ViewSet):
             qs = qs.filter(order_date__date__lte=p['date_to'])
         ids = list(qs.order_by('-order_date', '-id').values_list('id', flat=True)[:500])
         items = (PurchaseOrderItem.objects.filter(purchase_order_id__in=ids)
-                 .select_related('purchase_order__supplier__ledger_account', 'product')
+                 .select_related('purchase_order__supplier__ledger_account', 'purchase_order__company', 'product')
                  .order_by('-purchase_order__order_date', '-purchase_order_id', 'id'))
         out = []
         for it in items:

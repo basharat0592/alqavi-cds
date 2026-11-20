@@ -12,13 +12,15 @@
  *   Profit Distribution  the period's net profit / loss (from the ledger, or a
  *                  figure entered) shared by capital invested × days or by the
  *                  agreed % × days, then posted to the partners' capital.
- *   Report         partnership summary and one partner's capital statement.
+ *   Report         the partners' and / or investors' summary (each alone, or both
+ *                  together with a combined total) and one person's statement,
+ *                  shown page-wise on half A4 pages.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
-import { printWindow } from '@/lib/printWindow';
+import PagedReport, { type PSection } from '@/components/trade/PagedReport';
 import {
     ConfirmBox, ReadBox, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT, guardWindowClose, closeTradeWindow,
 } from '@/components/trade/TradeSaleInvoice';
@@ -89,7 +91,7 @@ export default function TradePartnership({ kind = 'partner' }: { kind?: Kind }) 
                 {tab === 'partners' && <PartnersTab kind={kind} partners={mine} capitalAccs={capitalAccs} banks={banks} reload={loadPartners} askClose={askClose} />}
                 {tab === 'capital' && <CapitalTab kind={kind} partners={mine || []} banks={banks} reload={loadPartners} setAsk={setAsk} />}
                 {tab === 'profit' && !inv && <ProfitTab partners={partners || []} reload={loadPartners} setAsk={setAsk} />}
-                {tab === 'report' && <ReportTab kind={kind} partners={mine || []} />}
+                {tab === 'report' && <ReportTab kind={kind} all={partners || []} />}
 
             </div>
             {ask && <ConfirmBox msg={ask.msg} onNo={() => setAsk(null)} onYes={() => { const fn = ask.yes; setAsk(null); fn(); }} />}
@@ -641,14 +643,31 @@ function InvestDetails({ from, to, print, only }: { from?: string; to?: string; 
     );
 }
 
-function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
-    const isInv = kind === 'investor';
+type Show = 'partner' | 'investor' | 'both';
+const SHOW_LABEL: Record<Show, string> = { partner: 'Partners', investor: 'Investors', both: 'Partners & Investors' };
+
+/* Return / yr total for the paged summary: the active investors' rates added up, and the average by money invested. */
+function invRateText(act: Partner[]) {
+    const inv = act.reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
+    const r = (p: Partner) => num(p.rate_now != null ? p.rate_now : p.share_pct);
+    const avg = inv ? act.reduce((s, p) => s + Math.max(0, num(p.invested)) * r(p), 0) / inv : 0;
+    return `${pct(act.reduce((s, p) => s + r(p), 0))} (avg ${pct(avg)})`;
+}
+
+/* Report: the partners' and / or the investors' summary — each on its own, or both together
+   with a combined total — and one person's statement, shown page-wise (half A4 pages). */
+function ReportTab({ kind, all }: { kind: Kind; all: Partner[] }) {
+    // ?show=both (dashboard › Partners & Investors Report) opens with both together.
+    const [show, setShow] = useState<Show>(() => {
+        const q = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('show') : null;
+        return q === 'both' || q === 'partner' || q === 'investor' ? q : kind;
+    });
     const [pid, setPid] = useState('');
     const [fromOn, setFromOn] = useState(false);
     const [from, setFrom] = useState(() => `${new Date().getFullYear()}-01-01`);
     const [to, setTo] = useState(today);
     const [st, setSt] = useState<any>(null);
-    const ref = useRef<HTMLDivElement>(null);
+    const [inv, setInv] = useState<any[] | null>(null);
     // The dates take effect on Apply (summary and statement together).
     const [applied, setApplied] = useState<{ fromOn: boolean; from: string; to: string }>(() => ({ fromOn: false, from: `${new Date().getFullYear()}-01-01`, to: today() }));
     const dirty = applied.fromOn !== fromOn || (fromOn && applied.from !== from) || applied.to !== to;
@@ -661,104 +680,128 @@ function ReportTab({ kind, partners }: { kind: Kind; partners: Partner[] }) {
     useEffect(() => {
         setRows(null);
         api.get('v1/sales/trade-partners/', { params }).then(({ data }) => setRows(data)).catch(() => setRows([]));
-    }, [applied, partners]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [applied, all]); // eslint-disable-line react-hooks/exhaustive-deps
+    const people = all.filter((p) => show === 'both' || (p.kind || 'partner') === show);
+    const picked = people.find((p) => String(p.id) === pid);
+    useEffect(() => { if (pid && !picked) setPid(''); }, [show]); // eslint-disable-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (!pid) { setSt(null); return; }
         api.get('v1/sales/trade-partners/statement/', { params: { partner: pid, ...params } })
             .then(({ data }) => setSt(data)).catch(() => setSt(null));
     }, [pid, applied]); // eslint-disable-line react-hooks/exhaustive-deps
-    const list = (rows || []).filter((p) => (p.kind || 'partner') === kind);
-    const act = list.filter((p) => p.status === 'active');
-    const invTot = act.reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
-    const sumOf = (k: keyof Partner) => list.reduce((s, p) => s + num(p[k]), 0);
-    const [printing, setPrinting] = useState(false);
-    const doPrint = async () => {
-        if (!ref.current || printing) return;
-        setPrinting(true);
-        try { await printWindow(ref.current || undefined, 760); } catch { toast.error('Could not prepare the print.'); } finally { setPrinting(false); }
-    };
+    const pickedInv = !!picked && (picked.kind || 'partner') === 'investor';
+    useEffect(() => {
+        if (!pickedInv) { setInv(null); return; }
+        api.get('v1/sales/trade-partners/investments/', { params })
+            .then(({ data }) => setInv(data.filter((r: any) => String(r.partner) === pid))).catch(() => setInv([]));
+    }, [pid, pickedInv, applied]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const period = `Capital as on ${dmy(applied.to)} · Profit / Return and Drawings ${applied.fromOn ? `from ${dmy(applied.from)} to ${dmy(applied.to)}` : `up to ${dmy(applied.to)}`}`;
+    const sections = useMemo<PSection[]>(() => {
+        const out: PSection[] = [];
+        const list = (k: Kind) => (rows || []).filter((p) => (p.kind || 'partner') === k);
+        const totals: { label: string; n: number; invested: number; profit: number; drawings: number; donations: number; balance: number }[] = [];
+        for (const k of (show === 'both' ? ['partner', 'investor'] : [show]) as Kind[]) {
+            const isInv = k === 'investor';
+            const ls = list(k);
+            const act = ls.filter((p) => p.status === 'active');
+            const invTot = act.reduce((s, p) => s + Math.max(0, num(p.invested)), 0);
+            const sum = (f: (p: Partner) => number) => ls.reduce((s, p) => s + f(p), 0);
+            const t = { label: isInv ? 'Investors' : 'Partners', n: act.length, invested: act.reduce((s, p) => s + num(p.invested), 0),
+                profit: sum((p) => num(p.profit)), drawings: sum((p) => num(p.drawings)), donations: sum((p) => num((p as any).donations)), balance: sum((p) => num(p.balance)) };
+            totals.push(t);
+            out.push({
+                title: isInv ? 'Investors Summary' : 'Partnership Summary',
+                note: `${act.length} active ${isInv ? 'investor' : 'partner'}${act.length === 1 ? '' : 's'}`,
+                columns: (isInv
+                    ? ['Investor', 'Joining', 'Invested', 'Share', 'Return / yr', 'Return earned', 'Drawings', 'Donations', 'Balance']
+                    : ['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Donations', 'Capital'])
+                    .map((h, i) => ({ h, a: i >= 2 ? 'r' as const : 'l' as const })),
+                rows: ls.map((p) => ({
+                    cls: p.status !== 'active' ? 'text-slate-400' : num(p.profit) < 0 ? 'text-red-700' : '',
+                    tip: num(p.accrued) > 0 ? `${fmt(num(p.accrued))} of it not posted yet` : undefined,
+                    c: [`${p.name}${p.status !== 'active' ? ' (inactive)' : ''}`, dmy2(p.joining_date), fmt(num(p.invested)),
+                        isInv ? pct(invTot ? num(p.invested) / invTot * 100 : 0) : pct(num(p.capital_pct)),
+                        p.share_pct === null ? '—' : pct(num(isInv && p.rate_now != null ? p.rate_now : p.share_pct)),
+                        `${fmt(num(p.profit))}${num(p.accrued) > 0 ? ' *' : ''}`, fmt(num(p.drawings)), fmt(num((p as any).donations)), fmt(num(p.balance))],
+                })),
+                total: ['Total', '', fmt(t.invested), '100%', isInv ? invRateText(act) : '', fmt(t.profit), fmt(t.drawings), fmt(t.donations), fmt(t.balance)],
+                empty: rows ? `No ${isInv ? 'investors' : 'partners'}.` : 'Loading…',
+            });
+        }
+        if (show === 'both') {
+            out.push({
+                title: 'Partners & Investors — together',
+                note: 'Invested: active partners and investors · * profit / return not posted yet is included',
+                columns: ['', 'Active', 'Invested', 'Profit / Return', 'Drawings', 'Donations', 'Capital / Balance'].map((h, i) => ({ h, a: i ? 'r' as const : 'l' as const })),
+                rows: totals.map((t) => ({ c: [t.label, String(t.n), fmt(t.invested), fmt(t.profit), fmt(t.drawings), fmt(t.donations), fmt(t.balance)] })),
+                total: ['All together', String(totals.reduce((s, t) => s + t.n, 0)), ...(['invested', 'profit', 'drawings', 'donations', 'balance'] as const).map((k) => fmt(totals.reduce((s, t) => s + t[k], 0)))],
+            });
+        }
+        // One investor: each amount put in, its days and the return it earned.
+        if (pickedInv && inv) {
+            const r = inv[0];
+            const items: any[] = r?.items || [];
+            out.push({
+                title: `Investment Details — ${picked!.name}`,
+                note: `Return on each amount${applied.fromOn ? ` from ${dmy(applied.from)}` : ''} to ${dmy(applied.to)}`,
+                columns: ['Date', 'Amount', 'From', 'To', 'Days', 'Rate / yr', 'Return earned'].map((h, i) => ({ h, a: [1, 4, 5, 6].includes(i) ? 'r' as const : 'l' as const })),
+                rows: items.map((i) => ({
+                    cls: i.kind === 'out' ? 'text-red-700' : '',
+                    c: [i.first !== false ? dmy2(i.date) : '', i.first !== false ? `${i.kind === 'out' ? 'taken back ' : ''}${fmt(Math.abs(num(i.amount)))}` : 'rate changed',
+                        i.days ? dmy2(i.from) : '—', i.days ? dmy2(i.to) : '—', String(i.days), pct(num(i.rate ?? r.rate)), fmt(num(i.earned))],
+                })),
+                total: r ? ['Total', fmt(num(r.invested)), '', '', '', '', fmt(num(r.earned))] : null,
+                empty: 'No investments.',
+            });
+        }
+        // One person's capital account.
+        if (st) {
+            out.push({
+                title: `Capital Statement — ${st.partner.name}`,
+                note: `${st.partner.acc_id} ${st.partner.account_name} · joined ${dmy(st.partner.joining_date)}`,
+                columns: ['Date', 'Voucher', 'Entry', 'Detail', 'Debit', 'Credit', 'Balance'].map((h, i) => ({ h, a: i >= 4 ? 'r' as const : 'l' as const })),
+                rows: [
+                    { c: ['', '', 'Opening Balance', '', '', '', fmt(num(st.opening))], cls: 'text-slate-600' },
+                    ...st.rows.map((r: any) => ({
+                        cls: r.kind.includes('Loss') || r.kind === 'Drawings' || r.kind === 'Donation' || r.kind === 'Capital out' ? 'text-red-700'
+                            : r.kind === 'Profit share' || r.kind === 'Investor return' ? 'text-[#1f2bd6]' : '',
+                        c: [dmy2(r.date), r.voucher_no, r.kind, r.detail, num(r.debit) ? fmt(num(r.debit)) : '', num(r.credit) ? fmt(num(r.credit)) : '', fmt(num(r.balance))],
+                    })),
+                ],
+                total: ['Closing Balance', '', '', '', '', '', fmt(num(st.closing))],
+            });
+        }
+        return out;
+    }, [rows, show, st, inv, pickedInv, picked, applied]);
+    const version = `${show}|${pid}|${JSON.stringify(applied)}|${rows ? rows.length : 'x'}|${st ? st.rows.length : '-'}|${inv ? 1 : 0}`;
+    const title = show === 'both' ? 'Partners & Investors Report' : show === 'investor' ? 'Investors Report' : 'Partnership Report';
+
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-2">
             <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-lg border border-[#9da1d8] bg-[#ececfd] px-3 py-2">
-                <span className={`${LABEL} text-[14px]`}>{isInv ? 'Investor' : 'Partner'} Statement</span>
-                <select value={pid} onChange={(e) => setPid(e.target.value)} className={`${COA_SELECT} !w-[240px]`}>
+                <span className={`${LABEL} text-[14px]`}>Show</span>
+                <div className="flex">
+                    {(['partner', 'investor', 'both'] as Show[]).map((v) => (
+                        <button key={v} type="button" onClick={() => setShow(v)}
+                            className={`h-9 border px-3 text-[13.5px] font-bold ${show === v ? 'border-[#3b3f8f] bg-[#3b3f8f] text-white' : 'border-[#9da1d8] bg-white text-slate-800 hover:bg-[#f4f4ff]'}`}>{SHOW_LABEL[v]}</button>
+                    ))}
+                </div>
+                <span className={`${LABEL} text-[14px]`}>Statement</span>
+                <select value={pid} onChange={(e) => setPid(e.target.value)} className={`${COA_SELECT} !w-[220px]`}>
                     <option value="">Summary only</option>
-                    {partners.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    {people.map((p) => <option key={p.id} value={p.id}>{p.name}{show === 'both' ? ` (${(p.kind || 'partner') === 'investor' ? 'investor' : 'partner'})` : ''}</option>)}
                 </select>
                 <label className={`${LABEL} flex items-center gap-1.5 text-[14px]`}><input type="checkbox" checked={fromOn} onChange={(e) => setFromOn(e.target.checked)} className="h-4 w-4 accent-[#3b3f8f]" /> From</label>
-                <input type="date" value={from} disabled={!fromOn} onChange={(e) => e.target.value && setFrom(e.target.value)} className={`${FIELD} w-[160px] ${fromOn ? 'border-emerald-300 bg-[#e3fbe3]' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
+                <input type="date" value={from} disabled={!fromOn} onChange={(e) => e.target.value && setFrom(e.target.value)} className={`${FIELD} w-[150px] ${fromOn ? 'border-emerald-300 bg-[#e3fbe3]' : 'border-slate-300 bg-[#ececf3] text-slate-500'}`} />
                 <span className={`${LABEL} text-[14px]`}>To</span>
-                <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') apply(); }} className={`${EDIT} w-[160px]`} />
-                <button type="button" onClick={apply} title="Show the summary and the statement for these dates"
+                <input type="date" value={to} onChange={(e) => e.target.value && setTo(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') apply(); }} className={`${EDIT} w-[150px]`} />
+                <button type="button" onClick={apply} title="Show the report for these dates"
                     className={`${ACTION_BTN} !min-w-[90px] ${dirty ? '!border-[#3b3f8f] !from-[#3b3f8f] !to-[#2b2f7f] !text-white animate-pulse' : ''}`}><span className="underline">A</span>pply</button>
-                <span className="flex-1" />
-                <button type="button" onClick={doPrint} disabled={printing} className={ACTION_BTN}>{printing ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">P</span>rint</>}</button>
             </div>
-            <div ref={ref} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-white p-3">
-                <div>
-                    <div className="text-[16px] font-black">AL-QAVI TRADERS — {isInv ? 'Investors Summary' : 'Partnership Summary'}</div>
-                    <div className="text-[12px] text-slate-600">
-                        Capital as on {dmy(applied.to)} · {isInv ? 'Return' : 'Profit / Loss'} and Drawings {applied.fromOn ? `from ${dmy(applied.from)} to ${dmy(applied.to)}` : `up to ${dmy(applied.to)}`} · {act.length} active {isInv ? 'investor' : 'partner'}{act.length === 1 ? '' : 's'}
-                    </div>
-                </div>
-                <table className="w-full table-fixed border-collapse text-[11.5px]">
-                    <colgroup>{[19, 8, 12, 7, 7, 13, 10, 10, 14].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                    <thead><tr>{(isInv ? ['Investor', 'Joining', 'Invested', 'Share', 'Return / yr', 'Return earned', 'Drawings', 'Donations', 'Balance']
-                        : ['Partner', 'Joining', 'Invested', 'Cap. %', 'Agreed', 'Profit / Loss', 'Drawings', 'Donations', 'Capital']).map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 2 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
-                    <tbody>
-                        {!rows && <tr><td colSpan={9} className="px-3 py-4 text-center text-slate-500">Loading…</td></tr>}
-                        {list.map((p) => (
-                            <tr key={p.id} className={`tabular-nums ${p.status !== 'active' ? 'text-slate-400' : ''}`}>
-                                <td className="truncate border border-slate-300 px-1.5 py-1">{p.name}</td>
-                                <td className="border border-slate-300 px-1.5 py-1">{dmy2(p.joining_date)}</td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.invested))}</td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-right">{isInv ? pct(invTot ? num(p.invested) / invTot * 100 : 0) : pct(num(p.capital_pct))}</td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-right">{p.share_pct === null ? '—' : pct(num(p.share_pct))}</td>
-                                <td className={`border border-slate-300 px-1.5 py-1 text-right ${num(p.profit) < 0 ? 'text-red-600' : ''}`}>{fmt(num(p.profit))}{num(p.accrued) > 0 && <div className="text-[11px] text-[#1f2bd6]">{Math.abs(num(p.accrued) - num(p.profit)) < 0.005 ? 'not posted yet' : `${fmt(num(p.accrued))} not posted`}</div>}</td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(p.drawings))}</td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num((p as any).donations))}</td>
-                                <td className="border border-slate-300 px-1.5 py-1 text-right font-bold">{fmt(num(p.balance))}</td>
-                            </tr>
-                        ))}
-                        <tr className="bg-[#e8e8f4] font-bold tabular-nums">
-                            <td className="border border-slate-400 px-1.5 py-1" colSpan={2}>Total</td>
-                            <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(act.reduce((s, p) => s + num(p.invested), 0))}</td>
-                            <td className="border border-slate-400 px-1.5 py-1 text-right">100%</td>
-                            <td className="border border-slate-400 px-1.5 py-1 text-right">{isInv ? <InvRateTotal list={act} /> : ''}</td>
-                            <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('profit'))}</td>
-                            <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('drawings'))}</td>
-                            <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(list.reduce((s, p) => s + num((p as any).donations), 0))}</td>
-                            <td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(sumOf('balance'))}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                {isInv && pid && <InvestDetails key={`${pid}:${JSON.stringify(applied)}`} only={Number(pid)} from={applied.fromOn ? applied.from : undefined} to={applied.to} print />}
-
-                {st && (
-                    <div>
-                        <div className="text-[15px] font-black">Capital Statement — {st.partner.name} <span className="text-[12px] font-semibold text-slate-600">({st.partner.acc_id} {st.partner.account_name} · joined {dmy(st.partner.joining_date)})</span></div>
-                        <table className="mt-1 w-full table-fixed border-collapse text-[11.5px]">
-                            <colgroup>{[10, 11, 13, 36, 10, 10, 10].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
-                            <thead><tr>{['Date', 'Voucher', 'Entry', 'Detail', 'Debit', 'Credit', 'Balance'].map((h, k) => <th key={h} className={`border border-slate-400 bg-[#ececec] px-1.5 py-1 ${k >= 4 ? 'text-right' : 'text-left'}`}>{h}</th>)}</tr></thead>
-                            <tbody>
-                                <tr className="tabular-nums text-slate-600"><td className="border border-slate-300 px-1.5 py-1" colSpan={6}>Opening Balance</td><td className="border border-slate-300 px-1.5 py-1 text-right">{fmt(num(st.opening))}</td></tr>
-                                {st.rows.map((r: any, i: number) => (
-                                    <tr key={i} className={`tabular-nums ${r.kind.includes('Loss') || r.kind === 'Drawings' || r.kind === 'Donation' || r.kind === 'Capital out' ? 'text-red-700' : r.kind === 'Profit share' ? 'text-[#1f2bd6]' : ''}`}>
-                                        <td className="border border-slate-300 px-1.5 py-1">{dmy2(r.date)}</td>
-                                        <td className="border border-slate-300 px-1.5 py-1">{r.voucher_no}</td>
-                                        <td className="border border-slate-300 px-1.5 py-1">{r.kind}</td>
-                                        <td className="truncate border border-slate-300 px-1.5 py-1" title={r.detail}>{r.detail}</td>
-                                        <td className="border border-slate-300 px-1.5 py-1 text-right">{num(r.debit) ? fmt(num(r.debit)) : ''}</td>
-                                        <td className="border border-slate-300 px-1.5 py-1 text-right">{num(r.credit) ? fmt(num(r.credit)) : ''}</td>
-                                        <td className="border border-slate-300 px-1.5 py-1 text-right font-semibold">{fmt(num(r.balance))}</td>
-                                    </tr>
-                                ))}
-                                <tr className="bg-[#e8e8f4] font-bold tabular-nums"><td className="border border-slate-400 px-1.5 py-1" colSpan={6}>Closing Balance</td><td className="border border-slate-400 px-1.5 py-1 text-right">{fmt(num(st.closing))}</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                )}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-slate-400">
+                <PagedReport title={title} subtitle={period} sections={sections} version={version} loading={!rows}
+                    file={`${title.replace(/[^\w]+/g, '-').toLowerCase()}.pdf`} />
             </div>
         </div>
     );

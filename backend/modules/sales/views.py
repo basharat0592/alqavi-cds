@@ -439,7 +439,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         and the 80 mm slip): account, address, salesman, per line PID / unit /
         bonus / TP / special discount / shelf rate, and the balances."""
         o = (scope_to_tenant(request.user, Order.objects.all(), 'tenant')
-             .select_related('customer__area__parent__parent', 'staff', 'salesperson').filter(pk=pk).first())
+             .select_related('customer__area__parent__parent', 'staff', 'salesperson', 'company').filter(pk=pk).first())
         if not o:
             return Response({'detail': 'Invoice not found.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(self.trade_invoice_payload(o, request.user))
@@ -508,7 +508,15 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         while district is not None and not str(district.code or '').upper().startswith('D'):
             district = district.parent
         skardu = bool(district and 'skardu' in (district.name or '').lower())
+        # The other invoices of the same bill (saved one per company).
+        parts = []
+        if o.bill_ref:
+            parts = [{'id': str(x.id), 'invoice_no': x.tracking_id, 'company': x.company.name if x.company_id else ''}
+                     for x in Order.objects.filter(bill_ref=o.bill_ref, tenant_id=o.tenant_id).select_related('company')
+                     .order_by('tracking_id')]
         return {
+            'company': o.company.name if o.company_id else '', 'seller': o.seller_name, 'buyer': o.buyer_name,
+            'bill_ref': o.bill_ref, 'parts': parts,
             'id': str(o.id), 'invoice_no': o.tracking_id, 'date': o.sale_date or o.created_at.date(),
             'time': o.created_at, 'staff': staff, 'staff_cell': o.staff.cell if o.staff_id else '',
             'region': {'code': 'SKD', 'name': 'Skardu'} if skardu else {'code': 'GLT', 'name': 'Gilgit'},
@@ -575,7 +583,9 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             return Response(rows)
 
         qs = scope_to_tenant(request.user, Order.objects.exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant') \
-            .filter(tracking_id__startswith='S').select_related('customer', 'staff', 'salesperson')
+            .filter(tracking_id__startswith='S').select_related('customer', 'staff', 'salesperson', 'company')
+        if p.get('company'):
+            qs = qs.filter(company_id=p['company'])
         if date_from:
             qs = qs.filter(Q(sale_date__gte=date_from) | Q(sale_date__isnull=True, created_at__date__gte=date_from))
         if date_to:
@@ -614,6 +624,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 'amount': o.gross, 'disc': o.line_disc - o.line_shelf + Decimal(str(o.discount or 0)),
                 'shelf': o.line_shelf, 'net': net,
                 'pre_bal': pre, 'total': pre + net, 'paid': paid, 'balance': pre + net - paid,
+                'company': o.company.name if o.company_id else '', 'seller': o.seller_name, 'buyer': o.buyer_name,
             })
         # Late bills: what is still owed on each bill (from the customer's ledger balance,
         # newest bills first) once its 15 days are over.
@@ -675,6 +686,64 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         """Preview of the next Trade 1.0 sale invoice number (e.g. S26000912).
         The number is only reserved when the sale is saved."""
         return Response({'invoice_no': Order.next_sale_invoice_no()})
+
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def trade_split(self, request):
+        """Trade 1.0 Sale Invoice, saved as one invoice per company. Body: the
+        Sale Invoice fields (as POST orders/, with sale_invoice) plus paid (cash),
+        card (amount paid by card), seller_name, buyer_name. Cash and card are
+        shared out by each company's amount; each invoice's previous balance
+        carries on from the one before. All are saved, or none.
+        -> {bill_ref, invoices: [{id, tracking_id, company, net, cash, card}]}"""
+        from decimal import Decimal
+        from django.db import transaction
+        from modules.products.models import Product
+        from .trade_company import company_of_product, group_by_company, money, share
+        d = request.data
+        items = d.get('items') or []
+        if not items:
+            return Response({'detail': 'Add at least one product.'}, status=status.HTTP_400_BAD_REQUEST)
+        prods = {str(p.pk): p for p in scope_to_tenant(request.user, Product.objects.filter(pk__in=[i.get('id') for i in items]), 'tenant')
+                 .select_related('stock__product__company')}
+        if any(str(i.get('id')) not in prods for i in items):
+            return Response({'detail': 'One of the products was not found.'}, status=status.HTTP_400_BAD_REQUEST)
+        groups = group_by_company(items, lambda i: company_of_product(prods[str(i.get('id'))]))
+        nets = [sum((money(Decimal(str(i.get('price') or 0)) * int(i.get('quantity') or 0)) - money(i.get('discount'))
+                     for i in g), Decimal('0')) for _, g in groups]
+        total = sum(nets, Decimal('0'))
+        cash, card = money(d.get('paid')), money(d.get('card'))
+        if cash < 0 or card < 0:
+            return Response({'detail': 'Amounts cannot be negative.'}, status=status.HTTP_400_BAD_REQUEST)
+        if cash + card > total + Decimal('0.005'):
+            return Response({'detail': 'Paid Cash and Paid by Card are more than the Net Amount.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Cash + card per invoice by its share, then the cash part of it; card = the rest.
+        pays = share(cash + card, nets)
+        cashes = share(cash, nets)
+        cashes = [min(c, p) for c, p in zip(cashes, pays)]
+        cashes[-1] += cash - sum(cashes, Decimal('0'))
+        cards = [p - c for p, c in zip(pays, cashes)]
+        seller = str(d.get('seller_name') or '').strip()[:150]
+        buyer = str(d.get('buyer_name') or '').strip()[:150]
+        prev = money(d.get('prev_balance'))
+        base = {k: d.get(k) for k in ('customer', 'customer_name', 'shipping_address', 'phone_number', 'whatsapp_number', 'notes',
+                                       'payment_method', 'status', 'warehouse_id', 'discount', 'shipping_cost', 'staff', 'sale_date')
+                if d.get(k) is not None}
+        out, ref = [], ''
+        with transaction.atomic():
+            for (co, g), net, c, k in zip(groups, nets, cashes, cards):
+                body = dict(base, items=g, sale_invoice=True, amount_paid=str(c), paid_at_sale=str(c), prev_balance=str(prev),
+                            payment_status='UNPAID' if c <= 0 else ('PAID' if c >= net else 'PARTIAL'))
+                ser = CreateOrderSerializer(data=body, context={'request': request})
+                ser.is_valid(raise_exception=True)
+                self.perform_create(ser)
+                o = ser.instance
+                ref = ref or o.tracking_id
+                Order.objects.filter(pk=o.pk).update(company=co, bill_ref=ref if len(groups) > 1 else '',
+                                                     seller_name=seller, buyer_name=buyer)
+                out.append({'id': str(o.id), 'tracking_id': o.tracking_id, 'company': co.name if co else '',
+                            'net': net, 'cash': c, 'card': k})
+                prev = prev + net - c - k
+        return Response({'bill_ref': ref if len(groups) > 1 else '', 'invoices': out}, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def customer_balance(self, request):

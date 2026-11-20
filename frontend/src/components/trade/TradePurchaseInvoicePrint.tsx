@@ -29,6 +29,7 @@ const B = '0.3mm solid #222';
 type Pur = {
     purchase_no: string; kind?: 'order' | 'purchase'; date: string; bill_no: string; supplier_acc: string; supplier: string; staff: string;
     amount: any; extra_disc: any; freight: any; fare: any; goods: any; tax: any; net: any; paid: any;
+    company?: string; seller?: string; buyer?: string; card?: any; card_tax?: any; card_tax_pct?: any; card_acc?: string; cash?: any;
     lines: { pid: string; name: string; qty: any; bonus: any; expiry_date: string | null; pur_rate: any; sale_rate: any; retail_rate: any; sub_total: any }[];
 };
 
@@ -67,6 +68,12 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
     const pages: number[][] = [];
     for (let i = 0; i < Math.max(1, p.lines.length); i += ROWS) pages.push(p.lines.slice(i, i + ROWS).map((_, k) => i + k));
     const balance = n(p.net) - n(p.paid);
+    // Expected profit at the Sale Rate: paid + free bonus units sold, only the paid units cost.
+    const lineProfit = (l: any) => (n(l.sale_rate) > 0 ? n(l.sale_rate) * (n(l.qty) + n(l.bonus)) - n(l.pur_rate) * n(l.qty) : null);
+    const saleValue = p.lines.reduce((s, l: any) => s + (n(l.sale_rate) > 0 ? n(l.sale_rate) * (n(l.qty) + n(l.bonus)) : n(l.pur_rate) * n(l.qty)), 0);
+    const bonusProfit = p.lines.reduce((s, l: any) => s + (n(l.sale_rate) > 0 ? n(l.sale_rate) * n(l.bonus) : 0), 0);
+    const billProfit = saleValue - n(p.net);
+    const BLUE = '#0b5fd6';
     const th = (h: string, right = false, w?: string) => <th style={{ border: B, padding: '0.8mm 1.2mm', textAlign: right ? 'right' : 'left', width: w, background: '#ececec' }}>{h}</th>;
     const td = (v: React.ReactNode, right = false, bold = false) => <td style={{ border: B, padding: '0.6mm 1.2mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 600 : 400, fontVariantNumeric: 'tabular-nums' }}>{v}</td>;
     const kv = (k: string, v: React.ReactNode) => (
@@ -119,7 +126,9 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
                             <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1mm 6mm', marginBottom: '2.5mm' }}>
                                 {kv(isOrder ? 'Order No:' : 'Pur. Inv No:', p.purchase_no)}{kv('Date:', dmy(p.date))}
                                 {kv('Supplier:', `${p.supplier_acc}  ${p.supplier}`)}{isOrder ? <span /> : kv('Bill No:', p.bill_no)}
-                                {!isOrder && <>{kv('Staff:', p.staff)}<span /></>}
+                                {!isOrder && <>{kv('Staff:', p.staff)}{kv('Company:', p.company || '')}</>}
+                                {!isOrder && (p.seller || p.buyer) && <>{kv('Seller:', p.seller || '')}{kv('Buyer:', p.buyer || '')}</>}
+                                {!isOrder && n(p.card) > 0 && <>{kv('Paid by Card:', `${money(p.card)} · ${p.card_acc || ''}`)}{kv('Card Tax:', `${money(p.card_tax)} (${n(p.card_tax_pct)}%)`)}</>}
                             </div>
                             <div style={{ flex: 1, minHeight: 0 }}>
                                 {isOrder ? (
@@ -144,18 +153,21 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
                                 ) : (
                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8pt' }}>
                                     <thead><tr>{th('S.No', true, '9mm')}{th('PID', false, '13mm')}{th('Product Name')}{th('Qty', true, prices ? '12mm' : '20mm')}{th('Bonus', true, prices ? '11mm' : '18mm')}{th('Exp.Date', false, prices ? '18mm' : '24mm')}
-                                        {prices && <>{th('Pur.Rate', true, '17mm')}{th('Sale Rate', true, '16mm')}{th('Retail', true, '15mm')}{th('Sub Total', true, '22mm')}</>}</tr></thead>
+                                        {prices && <>{th('Pur.Rate', true, '16mm')}{th('Sale Rate', true, '15mm')}{th('Retail', true, '14mm')}{th('Sub Total', true, '20mm')}
+                                        <th style={{ border: B, padding: '0.8mm 1.2mm', textAlign: 'right', width: '18mm', background: '#ececec', color: BLUE }}>Profit</th></>}</tr></thead>
                                     <tbody>
                                         {idx.map((i) => {
                                             const l = p.lines[i];
                                             return <tr key={i}>{td(i + 1, true)}{td(l.pid)}{td(pn(l.name, '6.5pt'))}{td(qty(l.qty), true, !prices)}{td(n(l.bonus) ? qty(l.bonus) : '', true)}{td(dmy(l.expiry_date))}
-                                                {prices && <>{td(money(l.pur_rate), true)}{td(money(l.sale_rate), true)}{td(money(l.retail_rate), true)}{td(money(l.sub_total), true, true)}</>}</tr>;
+                                                {prices && <>{td(money(l.pur_rate), true)}{td(money(l.sale_rate), true)}{td(money(l.retail_rate), true)}{td(money(l.sub_total), true, true)}
+                                                {td(<span style={{ color: (lineProfit(l) ?? 0) < 0 ? '#c62828' : BLUE, fontWeight: 700 }}>{lineProfit(l) === null ? '—' : money(lineProfit(l))}</span>, true)}</>}</tr>;
                                         })}
                                         {last && (
                                             <tr style={{ background: '#f4f4f4', fontWeight: 700 }}>
                                                 <td colSpan={3} style={{ border: B, padding: '0.8mm 1.2mm' }}>Total ({p.lines.length} item{p.lines.length === 1 ? '' : 's'})</td>
                                                 {td(qty(p.lines.reduce((s, l) => s + n(l.qty), 0)), true, true)}{td(qty(p.lines.reduce((s, l) => s + n(l.bonus), 0)), true, true)}
-                                                {prices ? <><td colSpan={4} style={{ border: B }} />{td(money(p.amount), true, true)}</> : <td style={{ border: B }} />}
+                                                {prices ? <><td colSpan={4} style={{ border: B }} />{td(money(p.amount), true, true)}
+                                                {td(<span style={{ color: BLUE }}>{money(p.lines.reduce((s, l: any) => s + (lineProfit(l) ?? 0), 0))}</span>, true, true)}</> : <td style={{ border: B }} />}
                                             </tr>
                                         )}
                                     </tbody>
@@ -164,7 +176,7 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
                                 {last && !isOrder && prices && (
                                     <table style={{ marginTop: '3mm', marginLeft: 'auto', width: '80mm', borderCollapse: 'collapse', fontSize: '8.5pt' }}>
                                         <tbody>
-                                            {([['Amount', p.amount], ['Extra Disc', p.extra_disc], ['Freight', p.freight], ['Fare', p.fare], ['Goods', p.goods], ['Extra Tax', p.tax], ['Net Amount', p.net], ['Paid Cash', p.paid], ['Balance', balance]] as const)
+                                            {([['Amount', p.amount], ['Extra Disc', p.extra_disc], ['Freight', p.freight], ['Fare', p.fare], ['Goods', p.goods], ['Extra Tax', p.tax], ['Net Amount', p.net], ['Paid Cash', p.cash ?? p.paid], ['Paid by Card', p.card || 0], ['Balance', balance]] as const)
                                                 .filter(([k, v]) => n(v) !== 0 || ['Amount', 'Net Amount', 'Paid Cash', 'Balance'].includes(k))
                                                 .map(([k, v]) => (
                                                     <tr key={k} style={k === 'Net Amount' || k === 'Balance' ? { fontWeight: 800 } : undefined}>
@@ -172,6 +184,17 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
                                                         <td style={{ border: B, padding: '0.8mm 2mm', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(v)}</td>
                                                     </tr>
                                                 ))}
+                                            {/* Expected profit (blue): sale value at the Sale Rate, bonus included, less the Net Amount. */}
+                                            <tr style={{ fontWeight: 800, color: billProfit < 0 ? '#c62828' : BLUE }}>
+                                                <td style={{ border: B, padding: '0.8mm 2mm' }}>Profit (incl. bonus){n(p.net) > 0 ? ` ${(billProfit / n(p.net) * 100).toFixed(1)}%` : ''}</td>
+                                                <td style={{ border: B, padding: '0.8mm 2mm', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(billProfit)}</td>
+                                            </tr>
+                                            {bonusProfit > 0 && (
+                                                <tr style={{ color: BLUE }}>
+                                                    <td style={{ border: B, padding: '0.8mm 2mm' }}>of which free bonus</td>
+                                                    <td style={{ border: B, padding: '0.8mm 2mm', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{money(bonusProfit)}</td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
                                 )}

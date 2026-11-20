@@ -283,13 +283,17 @@ class TradeCardViewSet(viewsets.ViewSet):
         if tax_pct < 0 or tax_pct >= 100:
             return Response({'detail': 'Enter the card tax % (e.g. 1.5).'}, status=400)
         staff = scope_to_tenant(request.user, SalesStaff.objects.all(), 'tenant').filter(pk=d.get('staff')).first() if d.get('staff') else None
+        from .vouchers import voucher_company
+        company = voucher_company(request.user, d.get('company'))
+        if d.get('company') and not company:
+            return Response({'detail': 'Company not found.'}, status=400)
         detail = str(d.get('detail') or '').strip()[:200]
         total = sum((a for _, a, _ in lines), Z)
         tid = tenant_id_for(request.user) or cards_acc.tenant_id
         on = card_label(recv) if recv else cards_acc.name
         with transaction.atomic():
             v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(day), vtype='card_payment', date=day, staff=staff,
-                                       bank=(recv.bank if recv else '')[:80], detail=detail or f'Paid by card on {on}'[:255],
+                                       company=company, bank=(recv.bank if recv else '')[:80], detail=detail or f'Paid by card on {on}'[:255],
                                        card_credit_date=credit_date, card_bill_date=bill_date, card_due_date=due_date,
                                        total=total, created_by=request.user, tenant_id=tid)
             for i, (acc, amt, note) in enumerate(lines, 1):
@@ -420,6 +424,7 @@ class TradeCardViewSet(viewsets.ViewSet):
         tid = tenant_id_for(request.user) or cust.tenant_id
         with transaction.atomic():
             v = Voucher.objects.create(voucher_no=VoucherViewSet.next_no(day), vtype='card_payment', date=day, staff=staff,
+                                       company_id=order.company_id if order else None,
                                        detail=detail, total=amt, created_by=request.user, tenant_id=tid)
             left = _allocate_to_orders(cust.customer_id, amt, v, request.user, 'bank_transfer', first=order.pk if order else None)
             VoucherLine.objects.create(voucher=v, line=1, account=cust, credit=amt, unallocated=left, detail=detail)

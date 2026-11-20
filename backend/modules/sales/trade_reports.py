@@ -1496,6 +1496,355 @@ def _retitle(fn, title):
     return run
 
 
+# ───────────────────────── 407: company-wise invoices, profit & loss, credit card ─────────────────────────
+# A bill is saved as one invoice per company; older bills that hold several
+# companies are shared out to each company by the amount of its lines.
+
+NO_CO = '(No company)'
+
+
+def _sp_co(sp):
+    return (sp.company_id, sp.company.name) if (sp and sp.company_id) else (None, NO_CO)
+
+
+def _item_co(it):
+    """(company id, name) of a sale / sale-return line."""
+    return _sp_co(getattr(getattr(it.product, 'stock', None), 'product', None) if it.product_id else None)
+
+
+def _want(ctx, cid):
+    return not ctx.company or str(cid) == str(ctx.company)
+
+
+def _order_parts(orders):
+    """{order_id: {(cid, name): [net, cost]}} from the sale lines."""
+    from .models import OrderItem
+    out = defaultdict(lambda: defaultdict(lambda: [Z, Z]))
+    co = 'product__stock__product__company'
+    for oid, cid, cname, q, b, price, disc, cost in OrderItem.objects.filter(order__in=orders).values_list(
+            'order_id', f'{co}_id', f'{co}__name', 'quantity', 'bonus_quantity', 'price', 'discount', 'cost_price'):
+        x = out[oid][(cid, cname) if cid else (None, NO_CO)]
+        x[0] += _d(price) * (q or 0) - _d(disc)
+        x[1] += _d(cost) * ((q or 0) + (b or 0))
+    return out
+
+
+def _purchases(ctx, letter='P', status='RECEIVED'):
+    from .models import PurchaseOrder
+    qs = ctx.scope(PurchaseOrder.objects.filter(purchase_number__startswith=letter, status=status))
+    if ctx.dfrom:
+        qs = qs.filter(order_date__date__gte=ctx.dfrom)
+    if ctx.dto:
+        qs = qs.filter(order_date__date__lte=ctx.dto)
+    return qs
+
+
+def _purchase_parts(pos):
+    """{po_id: {(cid, name): [gross, expected margin at the sale rate]}} from the purchase lines."""
+    from .models import PurchaseOrderItem
+    out = defaultdict(lambda: defaultdict(lambda: [Z, Z]))
+    for poid, cid, cname, pack, per, q, b, price, sale in PurchaseOrderItem.objects.filter(purchase_order__in=pos).values_list(
+            'purchase_order_id', 'product__company_id', 'product__company__name', 'packaging_type', 'items_per_carton',
+            'quantity', 'bonus_quantity', 'price', 'selling_price'):
+        x = out[poid][(cid, cname) if cid else (None, NO_CO)]
+        units = (q or 0) * (per or 1) if pack == 'CARTON' else (q or 0)   # PurchaseOrderItem.total_units
+        x[0] += _d(price) * units
+        if _d(sale) > 0:
+            x[1] += _d(sale) * (units + (b or 0)) - _d(price) * units
+    return out
+
+
+def _frac(part, whole):
+    return (part / whole) if whole else Decimal('1')
+
+
+def _subtotal_rows(groups, row_of, sum_cols, label='Total'):
+    """groups: {(sortkey, name): [items]} -> heading / rows / sub-total per company, and the grand totals."""
+    rows, grand = [], defaultdict(lambda: Z)
+    for (_, name), items in sorted(groups.items()):
+        rows.append(R(name, t='g'))
+        sub = defaultdict(lambda: Z)
+        for x in items:
+            r = row_of(x)
+            rows.append(R(*r))
+            for i in sum_cols:
+                sub[i] += _d(r[i])
+        width = len(row_of(items[0]))
+        rows.append(R(*[f'{label} {name}' if i == 0 else (_f(sub[i]) if i in sum_cols else '') for i in range(width)], t='s'))
+        for i in sum_cols:
+            grand[i] += sub[i]
+    return rows, grand
+
+
+def r_company_sales(ctx):
+    """Sale invoices of each company: invoice, date, customer, seller, buyer, saleman, net, paid, balance."""
+    orders = list(_orders(ctx).select_related('staff', 'company'))
+    accs = _cust_accounts(ctx)
+    parts = _order_parts(orders)
+    groups = defaultdict(list)
+    for o in orders:
+        ps = parts.get(o.id) or {((o.company_id, o.company.name) if o.company_id else (None, NO_CO)): [_d(o.total_amount), Z]}
+        whole = sum((v[0] for v in ps.values()), Z)
+        net_total, paid = _d(o.total_amount), _d(o.amount_paid)
+        for (cid, name), (net, _) in ps.items():
+            if _want(ctx, cid):
+                f = _frac(net, whole)
+                groups[(name.lower(), name)].append((o, net_total * f, paid * f))
+    head = ['Invoice', 'Date', 'Acc ID', 'Customer', 'Seller', 'Buyer', 'Saleman', 'Net', 'Paid', 'Balance']
+
+    def row(x):
+        o, net, paid = x
+        code, name, _ = _cust_name(o, accs)
+        return [o.tracking_id, _dmy(_odate(o)), code, name, o.seller_name, o.buyer_name, o.staff.name if o.staff_id else '',
+                _f(net), _f(paid), _f(net - paid)]
+    for v in groups.values():
+        v.sort(key=lambda x: (_odate(x[0]), x[0].tracking_id))
+    rows, g = _subtotal_rows(groups, row, (7, 8, 9))
+    tot = ['Grand Total'] + [''] * 6 + [_f(g[7]), _f(g[8]), _f(g[9])] if rows else None
+    sub = ctx.period() + (f' · {ctx.company_name}' if ctx.company_name else '')
+    return _out('Company-wise Sale Invoices', ctx, [(h, 'r' if i >= 7 else 'l') for i, h in enumerate(head)],
+                rows or [R('No sale invoices in these dates.')], tot, subtitle=sub)
+
+
+def r_company_purchases(ctx):
+    """Purchases of each company: number, date, supplier, seller, buyer, bill no, net, cash, card, card tax, balance."""
+    pos = list(_purchases(ctx).select_related('supplier__ledger_account', 'company'))
+    parts = _purchase_parts(pos)
+    groups = defaultdict(list)
+    for po in pos:
+        ps = parts.get(po.id) or {((po.company_id, po.company.name) if po.company_id else (None, NO_CO)): [_d(po.total_amount), Z]}
+        whole = sum((v[0] for v in ps.values()), Z)
+        for (cid, name), (gross, _) in ps.items():
+            if _want(ctx, cid):
+                groups[(name.lower(), name)].append((po, _frac(gross, whole)))
+
+    def row(x):
+        po, f = x
+        acc = getattr(po.supplier, 'ledger_account', None) if po.supplier_id else None
+        net, card = _d(po.total_amount) * f, _d(po.card_amount) * f
+        cash = (_d(po.paid_amount) - _d(po.card_amount)) * f
+        return [po.purchase_number, _dmy(po.order_date.date() if po.order_date else None),
+                (acc.name if acc else '') or (po.supplier.name if po.supplier_id else ''), po.seller_name, po.buyer_name,
+                po.reference_number or '', _f(net), _f(cash), _f(card), _f(_d(po.card_tax) * f), _f(net - cash - card)]
+    for v in groups.values():
+        v.sort(key=lambda x: (x[0].order_date, x[0].purchase_number))
+    rows, g = _subtotal_rows(groups, row, (6, 7, 8, 9, 10))
+    head = ['Purchase', 'Date', 'Supplier', 'Seller', 'Buyer', 'Bill No', 'Net', 'Cash Paid', 'Card Paid', 'Card Tax', 'Balance']
+    tot = ['Grand Total'] + [''] * 5 + [_f(g[i]) for i in (6, 7, 8, 9, 10)] if rows else None
+    sub = ctx.period() + (f' · {ctx.company_name}' if ctx.company_name else '')
+    return _out('Company-wise Purchases', ctx, [(h, 'r' if i >= 6 else 'l') for i, h in enumerate(head)],
+                rows or [R('No purchases in these dates.')], tot, subtitle=sub)
+
+
+def _card_sale_parts(ctx):
+    """Card payments received from customers, shared out to the companies of the
+    invoices they settled: [{date, ref, party, cid, name, amount, tax, pct, margin}]."""
+    from modules.payments.models import TransactionPayment
+    from .models import CardPayment, Order
+    cps = ctx.scope(CardPayment.objects.all()).select_related('voucher', 'customer_acc', 'order')
+    if ctx.dfrom:
+        cps = cps.filter(date__gte=ctx.dfrom)
+    if ctx.dto:
+        cps = cps.filter(date__lte=ctx.dto)
+    cps = list(cps)
+    vnos = {p.voucher.voucher_no for p in cps}
+    tps = defaultdict(list)
+    for ref, sid, amt in TransactionPayment.objects.filter(source_type='order', status='confirmed', reference__in=vnos) \
+            .values_list('reference', 'source_id', 'amount'):
+        tps[ref].append((sid, _d(amt)))
+    oids = {sid for v in tps.values() for sid, _ in v} | {str(p.order_id) for p in cps if p.order_id}
+    orders = {str(o.pk): o for o in Order.objects.filter(pk__in=oids)}
+    parts = _order_parts(list(orders.values()))
+    # Two lines of one voucher for the same customer share what was applied to their invoices.
+    same = defaultdict(lambda: Z)
+    for p in cps:
+        same[(p.voucher_id, p.customer_acc.customer_id)] += _d(p.amount)
+    out = []
+    for p in cps:
+        cust = p.customer_acc.customer_id
+        scale = _frac(_d(p.amount), same[(p.voucher_id, cust)])
+        allocs = [(orders[sid], a * scale) for sid, a in tps.get(p.voucher.voucher_no, [])
+                  if sid in orders and orders[sid].customer_id == cust]
+        acc = defaultdict(lambda: [Z, Z, Z])   # (cid, name) -> amount, tax, margin
+        applied = Z
+        for o, a in allocs:
+            ps = parts.get(o.id) or {(None, NO_CO): [_d(o.total_amount), _d(o.total_amount)]}
+            whole = sum((v[0] for v in ps.values()), Z)
+            for key, (net, cost) in ps.items():
+                fa = a * _frac(net, whole)
+                acc[key][0] += fa
+                acc[key][2] += (fa * (net - cost) / net) if net else Z
+            applied += a
+        left = _d(p.amount) - applied
+        if left > Decimal('0.004'):
+            acc[(None, '(Advance - no invoice)')][0] += left
+        for key, v in acc.items():
+            v[1] = _d(p.tax_amount) * _frac(v[0], _d(p.amount))
+            invs = ', '.join(sorted({o.tracking_id for o, _ in allocs}))[:60]
+            out.append({'date': p.date, 'ref': p.voucher.voucher_no + (f' ({invs})' if invs else ''),
+                        'party': p.customer_acc.name, 'cid': key[0], 'name': key[1],
+                        'amount': v[0], 'tax': v[1], 'pct': p.tax_pct, 'margin': v[2]})
+    return [x for x in out if _want(ctx, x['cid'])]
+
+
+def _card_purchase_parts(ctx):
+    """Purchases paid with a company card, shared out to their companies:
+    [{date, ref, party, cid, name, amount, tax, pct, exp_margin}]."""
+    pos = list(_purchases(ctx).filter(card_amount__gt=0).select_related('supplier__ledger_account'))
+    parts = _purchase_parts(pos)
+    out = []
+    for po in pos:
+        ps = parts.get(po.id) or {(None, NO_CO): [_d(po.total_amount), Z]}
+        whole = sum((v[0] for v in ps.values()), Z)
+        acc = getattr(po.supplier, 'ledger_account', None) if po.supplier_id else None
+        k = _frac(_d(po.card_amount), _d(po.total_amount))   # the part of the bill paid by card
+        for (cid, name), (gross, exp) in ps.items():
+            if not _want(ctx, cid):
+                continue
+            f = _frac(gross, whole)
+            out.append({'date': po.order_date.date() if po.order_date else None, 'ref': po.purchase_number,
+                        'party': (acc.name if acc else '') or (po.supplier.name if po.supplier_id else ''),
+                        'cid': cid, 'name': name, 'amount': _d(po.card_amount) * f, 'tax': _d(po.card_tax) * f,
+                        'pct': po.card_tax_pct, 'exp_margin': exp * k})
+    return out
+
+
+def _sale_cost_by_company(ctx):
+    """{(cid, name): [net sale, cost, sale return, return cost]} for the period."""
+    from .models import TradeSaleReturn, TradeSaleReturnItem
+    agg = defaultdict(lambda: [Z, Z, Z, Z])
+    for oid, ps in _order_parts(_orders(ctx)).items():
+        for key, (net, cost) in ps.items():
+            agg[key][0] += net; agg[key][1] += cost
+    rets = ctx.scope(TradeSaleReturn.objects.all())
+    if ctx.dfrom:
+        rets = rets.filter(return_date__gte=ctx.dfrom)
+    if ctx.dto:
+        rets = rets.filter(return_date__lte=ctx.dto)
+    # A return's Less Amount comes off its lines by their share (as the Income Statement books it).
+    by_ret = defaultdict(list)
+    for it in TradeSaleReturnItem.objects.filter(sale_return__in=rets).select_related('sale_return', 'product__stock__product__company'):
+        by_ret[it.sale_return_id].append(it)
+    for its in by_ret.values():
+        r = its[0].sale_return
+        nets = [_d(it.price) * (it.quantity or 0) - _d(it.discount) for it in its]
+        whole = sum(nets, Z)
+        less = _d(r.less_amount)
+        for it, net in zip(its, nets):
+            x = agg[_item_co(it)]
+            x[2] += net - (less * net / whole if whole else Z)
+            x[3] += _d(it.cost_price) * ((it.quantity or 0) + (it.bonus_quantity or 0))
+    return agg
+
+
+def r_company_pl(ctx):
+    """Profit and loss of each company: purchases, net sale, returns, cost, gross profit,
+    the card tax on its card sales and card purchases, and the net profit."""
+    agg = _sale_cost_by_company(ctx)
+    pur = defaultdict(lambda: Z)
+    for letter, status, sign in (('P', 'RECEIVED', 1), ('R', 'RETURNED', -1)):
+        pos = list(_purchases(ctx, letter, status))
+        parts = _purchase_parts(pos)
+        for po in pos:
+            ps = parts.get(po.id) or {(None, NO_CO): [_d(po.total_amount), Z]}
+            whole = sum((v[0] for v in ps.values()), Z)
+            for key, (gross, _) in ps.items():
+                pur[key] += sign * _d(po.total_amount) * _frac(gross, whole)
+    tax_s, tax_p = defaultdict(lambda: Z), defaultdict(lambda: Z)
+    for x in _card_sale_parts(ctx):
+        tax_s[(x['cid'], x['name'])] += x['tax']
+    for x in _card_purchase_parts(ctx):
+        tax_p[(x['cid'], x['name'])] += x['tax']
+    keys = [k for k in set(agg) | set(pur) | set(tax_s) | set(tax_p) if _want(ctx, k[0])]
+    rows, tot = [], [Z] * 9
+    for key in sorted(keys, key=lambda k: k[1].lower()):
+        sale, cost, ret, rcost = agg[key] if key in agg else [Z] * 4
+        gp = (sale - ret) - (cost - rcost)
+        net = gp - tax_s[key] - tax_p[key]
+        vals = [pur[key], sale, ret, cost - rcost, gp, tax_s[key], tax_p[key], net]
+        rows.append(R(key[1], *[_f(v) for v in vals], round(float(net / (sale - ret) * 100), 1) if sale - ret else 0))
+        tot = [a + b for a, b in zip(tot, vals + [sale - ret])]
+    cols = [('Company', 'l'), ('Purchases', 'r'), ('Net Sale', 'r'), ('Sale Return', 'r'), ('Cost of Sale', 'r'),
+            ('Gross Profit', 'r'), ('Card Tax (Sale)', 'r'), ('Card Tax (Purchase)', 'r'), ('Net Profit', 'r'), ('Profit %', 'r')]
+    total = ['Total'] + [_f(v) for v in tot[:8]] + [round(float(tot[7] / tot[8] * 100), 1) if tot[8] else 0] if rows else None
+    sub = ctx.period() + (f' · {ctx.company_name}' if ctx.company_name else '') + \
+        ' · Net Profit = Gross Profit less the card tax; shop expenses are not shared to companies'
+    return _out('Company-wise Profit and Loss', ctx, cols, rows or [R('Nothing in these dates.')], total, subtitle=sub)
+
+
+def r_card_pl(ctx):
+    """Credit Card profit and loss, company-wise: what was sold and bought by card, the margin
+    gained on goods sold by card, the card tax deducted on both, and the net."""
+    agg = defaultdict(lambda: [Z] * 6)   # sold, margin, tax sale, bought, tax purchase, expected margin
+    for x in _card_sale_parts(ctx):
+        a = agg[x['name']]; a[0] += x['amount']; a[1] += x['margin']; a[2] += x['tax']
+    for x in _card_purchase_parts(ctx):
+        a = agg[x['name']]; a[3] += x['amount']; a[4] += x['tax']; a[5] += x['exp_margin']
+    rows, tot = [], [Z] * 8
+    for name in sorted(agg, key=str.lower):
+        s, m, ts, b, tp, em = agg[name]
+        vals = [s, m, ts, b, tp, em, ts + tp, m - ts - tp]
+        rows.append(R(name, *[_f(v) for v in vals]))
+        tot = [p + q for p, q in zip(tot, vals)]
+    cols = [('Company', 'l'), ('Sold by Card', 'r'), ('Margin Gained', 'r'), ('Tax on Card Sales', 'r'), ('Bought by Card', 'r'),
+            ('Tax on Card Purchases', 'r'), ('Exp. Margin (bought by card)', 'r'), ('Total Deducted', 'r'), ('Net Card Profit', 'r')]
+    sub = ctx.period() + (f' · {ctx.company_name}' if ctx.company_name else '') + \
+        ' · Net Card Profit = Margin Gained on card sales − card tax on sales and purchases'
+    return _out('Credit Card Profit and Loss (Company-wise)', ctx, cols, rows or [R('No card sales or card purchases in these dates.')],
+                ['Total'] + [_f(v) for v in tot] if rows else None, subtitle=sub)
+
+
+def r_card_pl_detail(ctx):
+    """Every card sale / card purchase, under its company, with the tax and margin."""
+    groups = defaultdict(list)
+    for x in _card_sale_parts(ctx):
+        groups[(x['name'].lower(), x['name'])].append(dict(x, kind='Sale', exp_margin=Z))
+    for x in _card_purchase_parts(ctx):
+        groups[(x['name'].lower(), x['name'])].append(dict(x, kind='Purchase', margin=Z))
+    for v in groups.values():
+        v.sort(key=lambda x: (x['date'] or datetime.date.min, x['ref']))
+
+    def row(x):
+        return [_dmy(x['date']), x['ref'], x['kind'], x['party'], _f(x['amount']), f"{_d(x['pct']):g}%", _f(x['tax']),
+                _f(x['margin']), _f(x['exp_margin']), _f(x['margin'] - x['tax'])]
+    rows, g = _subtotal_rows(groups, row, (4, 6, 7, 8, 9))
+    head = ['Date', 'Ref', 'Type', 'Customer / Supplier', 'Card Amount', 'Tax %', 'Tax Deducted', 'Margin Gained', 'Exp. Margin', 'Net']
+    tot = ['Grand Total', '', '', '', _f(g[4]), '', _f(g[6]), _f(g[7]), _f(g[8]), _f(g[9])] if rows else None
+    sub = ctx.period() + (f' · {ctx.company_name}' if ctx.company_name else '') + \
+        ' · Exp. Margin: at the sale rate on goods bought by card (not in Net)'
+    return _out('Credit Card Profit and Loss (Detail)', ctx, [(h, 'r' if i >= 4 else 'l') for i, h in enumerate(head)],
+                rows or [R('No card sales or card purchases in these dates.')], tot, subtitle=sub)
+
+
+def r_company_receipts(ctx):
+    """Receipt / Credit Card Vouchers of each company, with the saleman."""
+    from .models import VoucherLine
+    qs = ctx.scope(VoucherLine.objects.filter(voucher__vtype__in=['receipt', 'card_payment'], credit__gt=0), 'voucher__tenant') \
+        .select_related('voucher__staff', 'voucher__company', 'account')
+    if ctx.dfrom:
+        qs = qs.filter(voucher__date__gte=ctx.dfrom)
+    if ctx.dto:
+        qs = qs.filter(voucher__date__lte=ctx.dto)
+    if ctx.staff:
+        qs = qs.filter(voucher__staff_id=ctx.staff)
+    if ctx.company:
+        qs = qs.filter(voucher__company_id=ctx.company)
+    groups = defaultdict(list)
+    for ln in qs.order_by('voucher__date', 'voucher__voucher_no', 'line'):
+        co = ln.voucher.company.name if ln.voucher.company_id else NO_CO
+        groups[(co.lower(), co)].append(ln)
+
+    def row(ln):
+        v = ln.voucher
+        kind = 'Card' if v.vtype == 'card_payment' else ('Cheque (pending)' if v.chq_status == 'pending' else 'Cheque' if v.chq_no else 'Receipt')
+        return [v.voucher_no, _dmy(v.date), kind, v.staff.name if v.staff_id else '', ln.account.acc_id, ln.account.name,
+                ln.detail, _f(ln.credit)]
+    rows, g = _subtotal_rows(groups, row, (7,))
+    head = ['Voucher', 'Date', 'Type', 'Saleman', 'Acc ID', 'Received From', 'Detail', 'Amount']
+    return _out('Company-wise Receipt Vouchers', ctx, [(h, 'r' if i == 7 else 'l') for i, h in enumerate(head)],
+                rows or [R('No receipts in these dates.')], ['Grand Total'] + [''] * 6 + [_f(g[7])] if rows else None)
+
+
 F_D, F_S, F_A, F_FY = 'dates', 'staff', 'areas', 'fy'
 CATEGORIES = [
     ('401', '401-Reports Stock', [
@@ -1587,6 +1936,15 @@ CATEGORIES = [
         ('profit_loss', 'Income Statement (Detail)', [F_D, F_FY], 'rpt_profit_loss'),
         ('balance_short', 'Balance Sheet (short)', [F_D, F_FY], 'rpt_balance_sheet'),
         ('balance_sheet', 'Balance Sheet (Detail)', [F_D, F_FY], 'rpt_balance_sheet'),
+    ]),
+    ('407', '407-Company / Credit Card', [
+        ('company_sales', 'Company-wise Sale Invoices', [F_D, F_S, 'find?:company'], 'rpt_sale_company'),
+        ('company_purchases', 'Company-wise Purchases', [F_D, 'find?:company'], 'rpt_purchase_stock'),
+        ('company_receipts', 'Company-wise Receipt Vouchers', [F_D, F_S, 'find?:company'], 'rpt_journal'),
+        None,
+        ('company_pl', 'Company-wise Profit and Loss', [F_D, 'find?:company'], 'rpt_profit_loss'),
+        ('card_pl', 'Credit Card Profit and Loss (Company-wise)', [F_D, 'find?:company'], 'rpt_profit_loss'),
+        ('card_pl_detail', 'Credit Card Profit and Loss (Detail)', [F_D, 'find?:company'], 'rpt_profit_loss'),
     ]),
 ]
 _EXTRA = {

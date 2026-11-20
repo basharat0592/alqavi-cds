@@ -26,6 +26,7 @@ import {
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
 import type { Card } from '@/components/trade/TradeCreditCard';
+import { useCompanies } from '@/components/trade/useCompanies';
 
 type Line = { account: Acc; amount: number; note: string };
 
@@ -81,6 +82,8 @@ export default function TradeCardVoucher() {
     const [asBal, setAsBal] = useState<number | null>(null);
     const [taxIn, setTaxIn] = useState('1.5');
     const [staffId, setStaffId] = useState('');
+    const companies = useCompanies();
+    const [companyId, setCompanyId] = useState('');
     const [detail, setDetail] = useState('');
     const [creditDate, setCreditDate] = useState(today);
     const [billDate, setBillDate] = useState('');
@@ -133,7 +136,7 @@ export default function TradeCardVoucher() {
     const resetForm = () => {
         setLines([]); setSel(-1); setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote('');
         setAsAcc(null); setAsCode(''); setAsBal(null); setTaxIn('1.5');
-        setStaffId(''); setDetail(''); setCreditDate(today()); setBillDate(''); setDueDate(''); setDateOn(false); setDate(today()); loadNo();
+        setStaffId(''); setCompanyId(''); setDetail(''); setCreditDate(today()); setBillDate(''); setDueDate(''); setDateOn(false); setDate(today()); loadNo();
     };
     const save = () => {
         if (saving) return;
@@ -145,7 +148,7 @@ export default function TradeCardVoucher() {
                 setSaving(true);
                 try {
                     const { data } = await api.post('v1/sales/trade-cards/voucher/', {
-                        date: dateOn ? date : today(), receipt_as: asAcc!.id, tax_pct: taxIn, staff: staffId || null, detail: detail.trim(),
+                        date: dateOn ? date : today(), receipt_as: asAcc!.id, tax_pct: taxIn, staff: staffId || null, company: companyId || null, detail: detail.trim(),
                         credit_date: creditDate || null, bill_date: billDate || null, due_date: dueDate || null,
                         lines: lines.map((l) => ({ account: l.account.id, amount: l.amount, note: l.note })),
                     });
@@ -269,7 +272,12 @@ export default function TradeCardVoucher() {
                         <button type="button" onClick={() => setFinder({ target: 'as', q: '' })} className={findBtn}><span className="underline">F</span>ind Account</button>
                         <input value={asCode} onChange={(e) => { setAsCode(e.target.value); if (asAcc) { setAsAcc(null); setAsBal(null); } }}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); resolveCode('as'); } }} placeholder="Card account ID" className={`${EDIT} w-full`} />
-                        <ReadBox value={asAcc ? asAcc.name : ''} className="col-span-6 font-semibold" />
+                        <ReadBox value={asAcc ? asAcc.name : ''} className="col-span-2 font-semibold" />
+                        <span className={`${LABEL} text-right text-[15px]`}>Company</span>
+                        <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className={`${COA_SELECT} col-span-3`} aria-label="Company">
+                            <option value="">Select any one</option>
+                            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
 
                         <span className={`${LABEL} text-right text-[15px]`}>Tax %</span>
                         <input value={taxIn} onChange={(e) => setTaxIn(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal"

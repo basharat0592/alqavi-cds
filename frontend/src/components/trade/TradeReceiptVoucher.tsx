@@ -25,6 +25,7 @@ import {
     Modal, ConfirmBox, ReadBox, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT,
     guardWindowClose, closeTradeWindow,
 } from '@/components/trade/TradeSaleInvoice';
+import { useCompanies } from '@/components/trade/useCompanies';
 
 export type Acc = {
     id: number; acc_id: string; name: string; group: number; group_name: string; level2_name: string;
@@ -146,6 +147,9 @@ export default function TradeReceiptVoucher() {
     const [bank, setBank] = useState('');
     const [detail, setDetail] = useState('');
     const [staffId, setStaffId] = useState('');
+    // The company the money is received for (company reports / recovery).
+    const companies = useCompanies();
+    const [companyId, setCompanyId] = useState('');
     const [chqStatus, setChqStatus] = useState<'pending' | 'cashed'>('pending');
     const [chqReceived, setChqReceived] = useState(today);
     const [chqCashDate, setChqCashDate] = useState(today);
@@ -225,7 +229,7 @@ export default function TradeReceiptVoucher() {
         setLines([]); setSel(-1); setFromAcc(null); setFromCode(''); setFromBal(null); setAmount(''); setNote('');
         setAsAcc(null); setAsCode(''); setAsBal(null); setChqNo(''); setChqDate(today()); setBank(''); setDetail('');
         setChqStatus('pending'); setChqReceived(today()); setChqCashDate(today());
-        setStaffId(''); setDateOn(false); setDate(today()); loadNo();
+        setStaffId(''); setCompanyId(''); setDateOn(false); setDate(today()); loadNo();
     };
     const save = () => {
         if (saving) return;
@@ -236,7 +240,7 @@ export default function TradeReceiptVoucher() {
                 setSaving(true);
                 try {
                     const { data } = await api.post('v1/sales/vouchers/', {
-                        date: dateOn ? date : today(), receipt_as: asAcc!.id, staff: staffId || null,
+                        date: dateOn ? date : today(), receipt_as: asAcc!.id, staff: staffId || null, company: companyId || null,
                         chq_no: chqNo.trim(), chq_date: isChq ? chqDate : null, bank: bank.trim(), detail: detail.trim(),
                         chq_status: isChq ? chqStatus : '', chq_received: isChq ? chqReceived : null, chq_cash_date: isChq ? chqCashDate : null,
                         lines: lines.map((l) => ({ account: l.account.id, amount: l.amount, note: l.note })),
@@ -365,7 +369,12 @@ export default function TradeReceiptVoucher() {
                         <button type="button" onClick={() => setFinder({ target: 'as', q: '' })} className={findBtn}><span className="underline">F</span>ind Account</button>
                         <input value={asCode} onChange={(e) => { setAsCode(e.target.value); if (asAcc) { setAsAcc(null); setAsBal(null); } }}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); resolveCode('as'); } }} placeholder="Cash / bank ID" className={`${EDIT} w-full`} />
-                        <ReadBox value={asAcc ? asAcc.name : ''} className="col-span-6" />
+                        <ReadBox value={asAcc ? asAcc.name : ''} className="col-span-2" />
+                        <span className={`${LABEL} text-right text-[15px]`}>Company</span>
+                        <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className={`${COA_SELECT} col-span-3`} aria-label="Company">
+                            <option value="">Select any one</option>
+                            {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
 
                         <span className={`${LABEL} text-right text-[15px]`}>Chq No</span>
                         <input value={chqNo} onChange={(e) => setChqNo(e.target.value)} maxLength={40} className={`${EDIT} w-full ${tone}`} />
@@ -435,22 +444,22 @@ export default function TradeReceiptVoucher() {
                     <div className="relative flex min-h-0 flex-1 flex-col gap-2 bg-[#c9c9f9] p-3">
                         <div className="min-h-0 flex-1 overflow-auto rounded border border-slate-500 bg-[#8a8a8a]">
                             <table className="w-full min-w-[1100px] table-fixed border-collapse bg-white text-[12px]">
-                                <colgroup>{[9, 7, 8, 17, 17, 7, 7, 8, 6, 6, 8, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
+                                <colgroup>{[8.5, 7, 7.5, 15, 15, 7, 7, 7, 6, 6, 7, 8, 8].map((w, i) => <col key={i} style={{ width: `${w}%` }} />)}</colgroup>
                                 <thead className="sticky top-0 z-10 bg-gradient-to-b from-white to-[#e9e9f1] text-left">
-                                    <tr>{['Voucher No', 'Date', 'Acc. ID', 'Account', 'Detail', 'Chq No', 'Date Chq', 'Bank', 'Chq', 'Staff', 'Debit', 'Credit'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
+                                    <tr>{['Voucher No', 'Date', 'Acc. ID', 'Account', 'Detail', 'Chq No', 'Date Chq', 'Bank', 'Chq', 'Staff', 'Company', 'Debit', 'Credit'].map((h) => <th key={h} className="whitespace-nowrap border-b border-r border-slate-400 px-1.5 py-1.5 font-semibold">{h}</th>)}</tr>
                                 </thead>
                                 <tbody>
                                     {vRows.map((r, i) => (
                                         <tr key={i} className={`tabular-nums ${r.line === 1 && i > 0 ? 'border-t-2 border-t-slate-400' : ''} ${num(r.debit) > 0 ? 'bg-[#eaffea]' : 'bg-white'} ${r.chq_status === 'pending' ? 'font-semibold text-red-600' : r.chq_status === 'cashed' ? 'text-blue-700' : ''}`}>
                                             {[r.voucher_no, dmy(r.date), r.acc_id, r.account, r.detail, r.chq_no, dmy(r.chq_date), r.bank,
-                                              r.chq_status === 'pending' ? 'Pending' : r.chq_status === 'cashed' ? `Cashed ${dmy(r.chq_cash_date)}` : '', r.staff,
+                                              r.chq_status === 'pending' ? 'Pending' : r.chq_status === 'cashed' ? `Cashed ${dmy(r.chq_cash_date)}` : '', r.staff, r.company || '',
                                               num(r.debit) ? fmt(num(r.debit)) : '', num(r.credit) ? fmt(num(r.credit)) : ''].map((v, k) => (
-                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 10 ? 'text-right' : ''}`}>{v}</td>
+                                                <td key={k} title={String(v ?? '')} className={`overflow-hidden text-ellipsis whitespace-nowrap border-b border-r border-slate-300 px-1.5 py-1 ${k >= 11 ? 'text-right' : ''}`}>{v}</td>
                                             ))}
                                         </tr>
                                     ))}
-                                    {view.rows && !vRows.length && <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-500">No receipt vouchers for this search.</td></tr>}
-                                    {!view.rows && !view.filter && <tr><td colSpan={12} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
+                                    {view.rows && !vRows.length && <tr><td colSpan={13} className="px-3 py-6 text-center text-slate-500">No receipt vouchers for this search.</td></tr>}
+                                    {!view.rows && !view.filter && <tr><td colSpan={13} className="px-3 py-6 text-center text-slate-500">Loading…</td></tr>}
                                 </tbody>
                             </table>
                         </div>

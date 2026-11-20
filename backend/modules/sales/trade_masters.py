@@ -1122,7 +1122,7 @@ class TradePurchaseInvoiceView(viewsets.ViewSet):
     def retrieve(self, request, pk=None):
         from .models import PurchaseOrder
         po = (scope_to_tenant(request.user, PurchaseOrder.objects.filter(purchase_number__regex=r'^[PK]'), 'tenant')
-              .select_related('supplier__ledger_account').prefetch_related('items__product').filter(pk=pk).first())
+              .select_related('supplier__ledger_account', 'company', 'card_acc').prefetch_related('items__product').filter(pk=pk).first())
         if not po:
             return Response({'detail': 'Purchase not found.'}, status=404)
         acc = getattr(po.supplier, 'ledger_account', None) if po.supplier_id else None
@@ -1139,6 +1139,13 @@ class TradePurchaseInvoiceView(viewsets.ViewSet):
             'amount': amount, 'extra_disc': po.extra_discount, 'freight': po.shipping_cost, 'fare': po.fare_amount,
             'goods': po.goods_amount, 'tax': po.tax_amount, 'net': po.total_amount, 'paid': po.paid_amount,
             'staff': (po.notes or '').split('staff ', 1)[1] if 'staff ' in (po.notes or '') else '',
+            'company': po.company.name if po.company_id else '', 'seller': po.seller_name, 'buyer': po.buyer_name,
+            'card': po.card_amount, 'card_tax': po.card_tax, 'card_tax_pct': po.card_tax_pct,
+            'card_acc': f'{po.card_acc.acc_id} {po.card_acc.name}' if po.card_acc_id else '',
+            'cash': po.paid_amount - po.card_amount, 'bill_ref': po.bill_ref,
+            'parts': [{'id': x.id, 'purchase_no': x.purchase_number, 'company': x.company.name if x.company_id else ''}
+                      for x in PurchaseOrder.objects.filter(bill_ref=po.bill_ref, tenant_id=po.tenant_id)
+                      .select_related('company').order_by('purchase_number')] if po.bill_ref else [],
             'lines': lines,
         })
 

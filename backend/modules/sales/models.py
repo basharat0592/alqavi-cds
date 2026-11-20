@@ -63,6 +63,8 @@ class Voucher(models.Model):
     card_paid_on = models.DateField(null=True, blank=True)
     # Pending: the day it is due to be cashed (alert from then on). Cashed: the day it was.
     chq_cash_date = models.DateField(null=True, blank=True)
+    # Receipt Voucher: the company the money was received for (company reports / recovery).
+    company = models.ForeignKey('company.Company', on_delete=models.SET_NULL, null=True, blank=True, related_name='vouchers')
     # Imported from the legacy Trade VoucherDetail (re-import replaces only these).
     legacy = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
@@ -267,6 +269,13 @@ class Order(models.Model):
                               related_name='orders')
     prev_balance = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     paid_at_sale = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    # Trade 1.0: a bill is saved as one invoice per company. `company` is that
+    # invoice's company; `bill_ref` (the first invoice's number) ties the parts of
+    # one bill together. Seller / Buyer: free names typed on the invoice.
+    company = models.ForeignKey('company.Company', on_delete=models.SET_NULL, null=True, blank=True, related_name='sale_orders')
+    bill_ref = models.CharField(max_length=20, blank=True, default='', db_index=True)
+    seller_name = models.CharField(max_length=150, blank=True, default='')
+    buyer_name = models.CharField(max_length=150, blank=True, default='')
 
     # Shipping info
     shipping_address = models.TextField()
@@ -442,6 +451,18 @@ class PurchaseOrder(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='handled_purchase_orders'
     )
+    # Trade 1.0 Purchase: one purchase per company (see Order.company / bill_ref),
+    # free Seller / Buyer names, and the part paid with a company credit card —
+    # card_acc is the card's account (credited); the card tax is kept for the
+    # Credit Card Profit & Loss, not posted.
+    company = models.ForeignKey('company.Company', on_delete=models.SET_NULL, null=True, blank=True, related_name='purchase_orders')
+    bill_ref = models.CharField(max_length=20, blank=True, default='', db_index=True)
+    seller_name = models.CharField(max_length=150, blank=True, default='')
+    buyer_name = models.CharField(max_length=150, blank=True, default='')
+    card_acc = models.ForeignKey('company.LedgerAccount', on_delete=models.PROTECT, null=True, blank=True, related_name='card_purchases')
+    card_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    card_tax_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    card_tax = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     is_inventory_synced = models.BooleanField(default=False)
