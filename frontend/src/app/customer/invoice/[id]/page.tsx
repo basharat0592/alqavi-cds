@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { orderService, Order } from '@/lib/api';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Printer, Share2, Check, ChevronRight } from 'lucide-react';
+import { Share2, Check, ChevronRight } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 import { InvoiceHeader, InvoiceFooter, invoiceStylesA5, useA5AutoFit } from '@/components/admin/invoice/InvoiceParts';
@@ -45,7 +45,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
         fetchOrder();
     }, [id]);
 
-    const handlePrint = () => { window.print(); };
 
     const handleShare = async () => {
         const url = window.location.href;
@@ -84,9 +83,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                         <Btn variant="secondary" onClick={handleShare}>
                             {shared ? <Check size={14} className="text-green-600" /> : <Share2 size={14} />}
                             {shared ? 'Copied' : 'Share'}
-                        </Btn>
-                        <Btn onClick={handlePrint}>
-                            <Printer size={14} /> Print
                         </Btn>
                     </div>
                 </div>

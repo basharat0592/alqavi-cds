@@ -1,6 +1,5 @@
 ﻿'use client';
 
-import WindowPrintButton from '@/components/trade/WindowPrintButton';
 import TradePermGuard from '@/components/trade/TradePermGuard';
 import FullTextOnHover from '@/components/trade/FullTextOnHover';
 import EnterToNext from '@/components/trade/EnterToNext';
@@ -224,6 +223,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     // resolved after mount (see lib/popup).
     const [isPopup, setIsPopup] = useState(false);
     useEffect(() => { setIsPopup(isPopupWindow()); }, [pathname]);
+    // Printing is not offered anywhere: Ctrl+P does nothing in the admin.
+    useEffect(() => {
+        const noPrint = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'p') { e.preventDefault(); e.stopPropagation(); }
+        };
+        window.addEventListener('keydown', noPrint, true);
+        return () => window.removeEventListener('keydown', noPrint, true);
+    }, []);
     const isChromeFree = isDashboardRoute || isPopup || !!pathname?.startsWith('/admin/trade/');
     const [isNavigating, setIsNavigating] = useState(false);
     // Desktop sidebar collapse, remembered across visits. Mobile keeps using the
@@ -438,10 +445,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     data-trade-ui={pathname?.startsWith('/admin/trade/') && !pathname.startsWith('/admin/trade/invoice') ? '' : undefined}>
                     <SessionTimer className="hidden" onTimeout={handleSessionTimeout} />
                     <ReadOnlyController />
-                    {/* Print the window as shown (not on the dashboard or the printed invoices). */}
                     <FullTextOnHover />
                     <EnterToNext />
-                    {!isDashboardRoute && !pathname?.startsWith('/admin/trade/invoice') && !pathname?.startsWith('/admin/trade/purchase-invoice') && <WindowPrintButton />}
                     {pathname?.startsWith('/admin/trade/') ? <TradePermGuard path={pathname}>{children}</TradePermGuard> : children}
                 </div>
             </AuthGuard>

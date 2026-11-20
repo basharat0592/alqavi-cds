@@ -98,7 +98,7 @@ CATALOG = [
 ]
 LABELS = {r[0]: r[1] for s in CATALOG for r in s['rows']}
 ALL_PERMS = sorted(f'{r[0]}.{a}' for s in CATALOG for r in s['rows'] for a in r[2])
-ACTION_WORD = {S: 'save', V: 'view', U: 'update', D: 'delete', E: 'export', P: 'print', 'own': 'change',
+ACTION_WORD = {S: 'save', V: 'view', U: 'update', D: 'delete', E: 'export', P: 'open', 'own': 'change',
                'all': 'change', 'backup': 'back up', 'restore': 'restore'}
 
 

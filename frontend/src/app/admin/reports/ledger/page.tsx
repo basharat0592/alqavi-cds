@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Printer, FileSpreadsheet, Loader2, BookUser } from 'lucide-react';
+import { Search, FileSpreadsheet, Loader2, BookUser } from 'lucide-react';
 import api from '@/lib/axios';
 import { companyService } from '@/services/company.service';
 import { exportToExcel, formatCurrency, formatDate } from '@/lib/utils';
@@ -90,7 +90,6 @@ export default function CustomerLedgerReport() {
                         </Button>
                         {data?.rows?.length > 0 && (
                             <>
-                                <Button variant="outline" onClick={() => window.print()}><Printer size={14} /> Print</Button>
                                 <Button variant="outline" onClick={exportXlsx}><FileSpreadsheet size={14} /> Excel</Button>
                             </>
                         )}

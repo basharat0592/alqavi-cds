@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/axios';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Printer, ArrowLeft, Share2, Check, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Share2, Check, ChevronRight } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
 import { InvoiceHeader, InvoiceFooter, invoiceStylesA5, useA5AutoFit } from '@/components/admin/invoice/InvoiceParts';
@@ -47,7 +47,6 @@ export default function CustomerOrderInvoice({ params }: { params: Promise<{ id:
         fetchOrder();
     }, [id]);
 
-    const handlePrint = () => { window.print(); };
 
     const handleShare = async () => {
         const url = window.location.href;
@@ -88,9 +87,6 @@ export default function CustomerOrderInvoice({ params }: { params: Promise<{ id:
                         <Btn variant="secondary" onClick={handleShare}>
                             {shared ? <Check size={14} className="text-green-600" /> : <Share2 size={14} />}
                             {shared ? 'Link Copied' : 'Share Invoice'}
-                        </Btn>
-                        <Btn onClick={handlePrint}>
-                            <Printer size={14} /> Print This Invoice
                         </Btn>
                     </div>
                 </div>

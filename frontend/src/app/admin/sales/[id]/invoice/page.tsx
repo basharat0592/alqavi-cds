@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { orderService, Order } from '@/lib/api';
 import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
-import { Printer, Share2, Check } from 'lucide-react';
+import { Share2, Check } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import { PageHeader, Button, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar } from '@/components/admin/ui';
 import { InvoiceHeader, InvoiceFooter, invoiceStylesA5, useA5AutoFit } from '@/components/admin/invoice/InvoiceParts';
@@ -41,16 +41,11 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                 console.error("Failed to load order", error);
             } finally {
                 setLoading(false);
-                // Auto-print if query param is present
-                if (window.location.search.includes('print=true')) {
-                    setTimeout(() => window.print(), 800);
-                }
             }
         };
         fetchOrder();
     }, [id]);
 
-    const handlePrint = () => { window.print(); };
 
     const handleUpdateStatus = async (newStatus: string) => {
         setUpdatingStatus(true);
@@ -130,9 +125,6 @@ export default function InvoicePage({ params }: { params: Promise<{ id: string }
                             <Button variant="outline" size="sm" onClick={handleShare}>
                                 {shared ? <Check size={14} className="text-emerald-600" /> : <Share2 size={14} />}
                                 {shared ? 'Copied' : 'Share'}
-                            </Button>
-                            <Button variant="primary" size="sm" onClick={handlePrint}>
-                                <Printer size={14} /> Print
                             </Button>
                         </>
                     }

@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Trade 1.0 — printed Sale Invoice.
+ * Trade 1.0 — Sale Invoice (on screen, PDF and the shared WhatsApp link; no printing).
  *
  *   Paper (A4 / A5 / Letter / Legal / Custom W x H): the customer's legacy
  *   invoice layout, drawn at A4 width and scaled to the chosen paper.
@@ -18,13 +18,12 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Printer, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import api from '@/lib/axios';
 import { pn } from '@/lib/productName';
 import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
-import { printImages } from '@/lib/printWindow';
 
 export type InvoiceSize = 'a4' | 'a5' | 'a5s' | 'a4half' | 'letter' | 'legal' | 'custom' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
@@ -128,9 +127,8 @@ const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+
 /* `token`: the public shared link (no login) — read only, no admin buttons. */
 /* Every sheet is captured as an image at ~300 dpi, so nothing can shift or be
    cut off (printing the web page directly let some printers / settings push
-   the content down and drop the footer). Print fits the pictures to the
-   printer's paper (printImages); Save PDF places them on pages of the chosen
-   size; a slip prints as a PDF of its own roll length. */
+   the content down and drop the footer). PDF places them on pages of the
+   chosen size; a slip makes a PDF of its own roll length. */
 const PX_PER_MM = 96 / 25.4;
 /* Turn a page picture a quarter turn clockwise (its top ends up on the right). */
 async function rotateCw(jpeg: string): Promise<string> {
@@ -215,37 +213,11 @@ async function halfA4Pdf() {
     return pdf;
 }
 
-async function captureSheets() {
-    const sheets = Array.from(document.querySelectorAll<HTMLElement>('.inv-page'));
-    if (!sheets.length) throw new Error('Nothing to print yet.');
-    await (document as any).fonts?.ready;
-    const out: string[] = [];
-    for (const el of sheets) {
-        out.push(await toJpeg(el, { quality: 0.95, pixelRatio: 3, backgroundColor: '#ffffff', cacheBust: false, style: { margin: '0', boxShadow: 'none' } }));
-    }
-    return out;
-}
-function printPdfBlob(blob: Blob) {
-    const url = URL.createObjectURL(blob);
-    const frame = document.createElement('iframe');
-    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
-    frame.src = url;
-    frame.onload = () => {
-        setTimeout(() => {
-            try { frame.contentWindow?.focus(); frame.contentWindow?.print(); }
-            catch { window.open(url, '_blank'); }
-        }, 300);
-    };
-    document.body.appendChild(frame);
-    setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 10 * 60 * 1000);
-}
-
 export default function TradeInvoicePrint({ id, token }: { id?: string; token?: string }) {
     const [inv, setInv] = useState<Invoice | null>(null);
     const [err, setErr] = useState('');
     const [size, setSize] = useState<InvoiceSize>('a5');
     const [custom, setCustom] = useState({ w: 210, h: 297 });
-    const [autoPrint, setAutoPrint] = useState(false);
     const [prices, setPrices] = useState(() => typeof window === 'undefined' || new URLSearchParams(window.location.search).get('prices') !== '0');
     // A roll has no fixed page length: the slip's page is exactly as long as
     // its content (measured after layout), so the printer feeds no blank paper.
@@ -300,7 +272,6 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             const c = JSON.parse(localStorage.getItem(CUSTOM_KEY) || 'null');
             if (c && n(c.w) >= 50 && n(c.h) >= 50) setCustom({ w: n(c.w), h: n(c.h) });
         } catch { /* default */ }
-        setAutoPrint(q.has('print'));
         api.get(token ? `v1/sales/public-invoice/${token}/` : `v1/sales/orders/${id}/trade_invoice/`)
             .then(({ data }) => setInv(data))
             .catch((e) => setErr(e?.response?.data?.detail || 'Could not load the invoice.'));
@@ -327,20 +298,6 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             .catch(() => { if (live) setHalfPages([]); });
         return () => { live = false; };
     }, [isHalf, inv, prices]);
-    const printNow = async () => {
-        if (busy) return;
-        setBusy(true);
-        try {
-            // Sheets print fitted to the printer's paper (and turned to suit it);
-            // a slip keeps its own roll-length page.
-            if (isSlip) printPdfBlob((await makePdf()).output('blob'));
-            else if (isHalf) await printImages(await halfA4Pages(), 0.95, { w: 210, h: 297 });
-            // The chosen paper is sent as that size (half A4 upright unless another is chosen).
-            else await printImages(await captureSheets(), 0.95, size === 'a5s' ? { w: paper.h, h: paper.w } : { w: paper.w, h: paper.h }, size === 'a5s');
-        }
-        catch (e: any) { setErr(e?.message || 'Could not prepare the print.'); }
-        finally { setBusy(false); }
-    };
     const downloadPdf = async () => {
         if (busy || !inv) return;
         setBusy(true);
@@ -348,17 +305,6 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
         catch (e: any) { setErr(e?.message || 'Could not make the PDF.'); }
         finally { setBusy(false); }
     };
-    // Print once the data and the Urdu fonts are in (else the first print shows fallbacks).
-    useEffect(() => {
-        if (!inv || !autoPrint || (isSlip && !slipH)) return;
-        let done = false;
-        const go = () => { if (!done) { done = true; setAutoPrint(false); printNow(); } };
-        const imgs = Array.from(document.images).map((im) => (im.complete ? Promise.resolve() : new Promise((r) => { im.onload = im.onerror = () => r(null); })));
-        Promise.all([(document as any).fonts?.ready, ...imgs]).then(() => setTimeout(go, 300));
-        const t = setTimeout(go, 6000);
-        return () => clearTimeout(t);
-    }, [inv, autoPrint, isSlip, slipH]);
-
     const pick = (s: InvoiceSize) => {
         setSize(s);
         try { localStorage.setItem(SIZE_KEY, s); } catch { /* ignore */ }
@@ -441,10 +387,6 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                 <button type="button" onClick={downloadPdf} disabled={!inv || busy}
                     className="h-8 rounded-md border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                     PDF
-                </button>
-                <button type="button" onClick={() => printNow()} disabled={!inv || busy}
-                    className="flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
-                    <Printer size={14} /> {busy ? 'Preparing…' : 'Print'}
                 </button>
                 <button type="button" onClick={() => { if (window.confirm('Do you want to Close the Form ?')) closeTradeWindow(); }} className="flex h-8 items-center gap-1 rounded-md border border-slate-300 px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
                     <X size={14} /> Close

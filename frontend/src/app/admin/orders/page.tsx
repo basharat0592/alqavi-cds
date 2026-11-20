@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Package, Clock, MapPin, LayoutDashboard, Globe, MoreHorizontal, User, Phone, CheckCircle2, XCircle, AlertCircle, AlertTriangle, RefreshCw, Filter, ArrowRight, Eye, Printer, Hash, CreditCard, ShoppingCart, ChevronDown, Loader2, Truck, X, CheckCircle, Info, Lock, Trash2, MessageCircle, Send } from 'lucide-react';
+import { Package, Clock, MapPin, LayoutDashboard, Globe, MoreHorizontal, User, Phone, CheckCircle2, XCircle, AlertCircle, AlertTriangle, RefreshCw, Filter, ArrowRight, Eye, Hash, CreditCard, ShoppingCart, ChevronDown, Loader2, Truck, X, CheckCircle, Info, Lock, Trash2, MessageCircle, Send, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { salesService, orderService, inventoryService } from '@/lib/api';
 import { deliveryService } from '@/services/delivery.service';
@@ -726,7 +726,7 @@ export default function AdminOrdersPage() {
                                 href={`/admin/sales/${selectedOrder.id}/invoice`}
                                 className="flex-1 h-10 bg-[#F59E0B] hover:bg-[#D97706] text-white rounded-lg font-semibold text-[11.5px] flex items-center justify-center gap-2 uppercase tracking-wide shadow-sm shadow-[#F59E0B]/20 transition-all active:scale-[0.98] whitespace-nowrap"
                             >
-                                <Printer size={14} /> Generate Invoice
+                                <FileText size={14} /> Generate Invoice
                             </Link>
                             <Button variant="outline" className="flex-1" onClick={() => setIsViewModalOpen(false)}>
                                 Close Dashboard

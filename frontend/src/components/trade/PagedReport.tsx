@@ -7,8 +7,8 @@
  * pages (148 × 210 mm — the paper it prints on), each with the shop's header
  * and "Page n of N", and shown one page at a time, fitted to the window.
  * First / Previous / Next / Last (or PageUp / PageDown / Home / End, or the
- * mouse wheel) turn the pages; Zoom enlarges the page. Print / PDF give the very
- * same pages.
+ * mouse wheel) turn the pages; Zoom enlarges the page. PDF gives the very same
+ * pages (there is no printing).
  *
  * The report is a list of sections — each a table (columns, rows, total) with
  * an optional title — so several tables (e.g. Partners, then Investors, then a
@@ -16,9 +16,9 @@
  * many as really fit; a table carried onto the next page repeats its headings.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, FileDown, Loader2, Printer, Sheet, ZoomIn, ZoomOut } from 'lucide-react';
+import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight, FileDown, Loader2, Sheet, ZoomIn, ZoomOut } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { printSheets } from '@/lib/printWindow';
+import { saveSheetsPdf } from '@/lib/sheetsPdf';
 
 export type PCol = { h: string; a?: 'l' | 'r'; w?: number };
 // t: g group heading (one cell across), s sub-total, p red (cheque pending), t total line
@@ -249,16 +249,16 @@ export default function PagedReport({ title, subtitle, sections, version = '', f
         go(at + (e.deltaY > 0 ? 1 : -1));
     };
 
-    // ── print / PDF: every page, exactly as shown ──
+    // ── PDF: every page, exactly as shown (there is no printing) ──
     const sheetsRef = useRef<HTMLDivElement>(null);
-    const [printing, setPrinting] = useState<false | 'print' | 'pdf'>(false);
-    const print = async (save?: string) => {
+    const [printing, setPrinting] = useState<false | 'pdf'>(false);
+    const print = async (save: string) => {
         if (printing) return;
-        setPrinting(save ? 'pdf' : 'print');
+        setPrinting('pdf');
         try {
             await new Promise((r) => setTimeout(r, 350));   // let the pages render
-            await printSheets(Array.from(sheetsRef.current?.querySelectorAll<HTMLElement>('.pr-page') || []), save, 3);
-        } catch { toast.error('Could not prepare the print.'); }
+            await saveSheetsPdf(Array.from(sheetsRef.current?.querySelectorAll<HTMLElement>('.pr-page') || []), save, 3);
+        } catch { toast.error('Could not make the PDF.'); }
         finally { setPrinting(false); }
     };
 
@@ -282,9 +282,6 @@ export default function PagedReport({ title, subtitle, sections, version = '', f
                 <button type="button" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))} title="Zoom in" className={btn}><ZoomIn size={15} /></button>
                 <span className="flex-1" />
                 {extra}
-                <button type="button" onClick={() => print()} disabled={!!printing || loading} className="flex h-8 items-center gap-1.5 bg-emerald-600 px-3 text-[13px] font-bold text-white disabled:opacity-50">
-                    {printing === 'print' ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />} Print
-                </button>
                 <button type="button" onClick={() => print(file || 'report.pdf')} disabled={!!printing || loading} className={btn}>
                     {printing === 'pdf' ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} PDF
                 </button>
@@ -313,7 +310,7 @@ export default function PagedReport({ title, subtitle, sections, version = '', f
                     </div>
                 ))}
             </div>
-            {/* Every page, for Print / PDF */}
+            {/* Every page, for the PDF */}
             {printing && (
                 <div ref={sheetsRef} aria-hidden style={{ position: 'fixed', left: -60000, top: 0 }}>
                     {pages.map((ps, i) => <Page key={i} className="pr-page" title={title} subtitle={subtitle} sections={sections} pieces={ps} page={i + 1} pages={n} />)}

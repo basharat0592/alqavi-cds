@@ -436,12 +436,6 @@ export default function SupplierInventory() {
                                 >
                                     <ExternalLink size={14} /> Share
                                 </button>
-                                <button
-                                    onClick={() => window.print()}
-                                    className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm flex items-center gap-2"
-                                >
-                                    <Download size={14} /> Print
-                                </button>
                             </div>
                         </div>
                     </div>

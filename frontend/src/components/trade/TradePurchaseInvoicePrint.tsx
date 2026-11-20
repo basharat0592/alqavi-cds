@@ -5,7 +5,7 @@
  * details, the product lines (about 30 a page, header repeated on each page)
  * and, on the last page, Amount / Extra Disc / Freight / Fare / Goods / Extra
  * Tax / Net Amount / Paid Cash / Balance. Printed through a PDF like the sale
- * invoice, so every printer gives the same page. ?print=1 prints on open.
+ * invoice, so the PDF always gives the same page.
  *
  * A purchase order (K…) prints as "Purchase Order": PID, product and
  * quantity, with Pur.Rate / Sub Total / Amount. Either one "Without prices"
@@ -13,10 +13,10 @@
  * only — no rates, amounts or totals.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Printer, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import api from '@/lib/axios';
 import { pn } from '@/lib/productName';
-import { printSheets } from '@/lib/printWindow';
+import { saveSheetsPdf } from '@/lib/sheetsPdf';
 import { closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
 
 const n = (v: any) => { const x = parseFloat(v); return isFinite(x) ? x : 0; };
@@ -48,19 +48,12 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
     useEffect(() => { if (p) document.title = `${title} ${p.purchase_no}`; }, [p, title]);
 
     const sheets = () => Array.from(root.current?.querySelectorAll<HTMLElement>('.pinv-page') || []);
-    const run = async (save?: string) => {
+    // PDF only (no printing): each A4 sheet fits half A4 upright exactly (× 0.707).
+    const run = async (save: string) => {
         if (busy || !p) return;
         setBusy(true);
-        // each A4 sheet fits half A4 upright exactly (× 0.707)
-        try { await printSheets(sheets(), save); } catch { setErr('Could not prepare the print.'); } finally { setBusy(false); }
+        try { await saveSheetsPdf(sheets(), save); } catch { setErr('Could not make the PDF.'); } finally { setBusy(false); }
     };
-    // Print once the data and the letterhead images are in.
-    const [auto] = useState(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('print'));
-    useEffect(() => {
-        if (!p || !auto) return;
-        const imgs = Array.from(document.images).map((im) => (im.complete ? Promise.resolve() : new Promise((r) => { im.onload = im.onerror = () => r(null); })));
-        Promise.all([(document as any).fonts?.ready, ...imgs]).then(() => setTimeout(() => run(), 400));
-    }, [p, auto]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (err) return <p className="p-6 text-center text-[14px] font-semibold text-red-600">{err}</p>;
     if (!p) return <p className="p-6 text-center text-[14px] text-slate-500">Loading purchase…</p>;
@@ -95,9 +88,6 @@ export default function TradePurchaseInvoicePrint({ id }: { id: string }) {
                     <span className="mx-1 h-6 w-px bg-slate-200" />
                 </>)}
                 <button type="button" onClick={() => run(`${isOrder ? 'Purchase-Order' : 'Purchase'}-${p.purchase_no}${!prices ? '-no-prices' : ''}.pdf`)} disabled={busy} className="h-8 border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">PDF</button>
-                <button type="button" onClick={() => run()} disabled={busy} className="flex h-8 items-center gap-1.5 bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
-                    <Printer size={14} /> {busy ? 'Preparing…' : 'Print'}
-                </button>
                 <button type="button" onClick={() => { if (window.confirm('Do you want to Close the Form ?')) closeTradeWindow(); }} className="flex h-8 items-center gap-1 border border-slate-300 px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
                     <X size={14} /> Close
                 </button>

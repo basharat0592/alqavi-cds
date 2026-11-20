@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Package, Loader2, ShoppingCart, Printer } from 'lucide-react';
+import { Package, Loader2, ShoppingCart, FileText } from 'lucide-react';
 import api from '@/lib/axios';
 import { inventoryService } from '@/services/inventory.service';
 import { purchaseService } from '@/services/purchase.service';
@@ -140,7 +140,7 @@ export default function StockViewPage() {
                             if (dateTo) p.set('to', dateTo);
                             const q = p.toString();
                             router.push(`/admin/inventory/${id}/invoice${q ? '?' + q : ''}`);
-                        }}><Printer size={14} /> Invoice</Button>
+                        }}><FileText size={14} /> Invoice</Button>
                     </>
                 }
             />

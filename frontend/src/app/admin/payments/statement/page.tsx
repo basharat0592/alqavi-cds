@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { PageHeader, Button } from '@/components/admin/ui';
 import { InvoiceHeader, InvoiceFooter, invoiceStyles } from '@/components/admin/invoice/InvoiceParts';
@@ -29,9 +29,6 @@ export default function PaymentsStatementPage() {
             const arr = raw ? JSON.parse(raw) : [];
             setRows(Array.isArray(arr) ? arr : []);
         } catch { setRows([]); }
-        if (typeof window !== 'undefined' && window.location.search.includes('print=true')) {
-            setTimeout(() => window.print(), 900);
-        }
     }, []);
 
     let income = 0, expense = 0;
@@ -48,7 +45,6 @@ export default function PaymentsStatementPage() {
                     actions={
                         <>
                             <Button variant="outline" size="sm" onClick={() => router.push('/admin/payments')}><ArrowLeft size={14} /> Back</Button>
-                            <Button variant="primary" size="sm" onClick={() => window.print()}><Printer size={14} /> Print</Button>
                         </>
                     }
                 />

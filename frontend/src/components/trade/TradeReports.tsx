@@ -10,7 +10,7 @@
  * uses are open (Date from / to, Staff, Cheque Status, Financial Year, Select
  * all Areas), and the Find row turns into what it needs — Invoice No /
  * Voucher No (typed), or Company / Supplier / Product / Customer / Account
- * (Find opens the finder). Preview opens the report with Print / PDF / Export.
+ * (Find opens the finder). Preview opens the report page-wise, with PDF / Export.
  * ?cat=401&report=<key> opens with that group / report chosen.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -22,7 +22,6 @@ import {
     FIELD, EDIT, ACTION_BTN, COA_SELECT, closeTradeWindow, downloadXlsx, ConfirmBox, FindCompanyWindow, ReturnFindProductWindow,
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
-import { useOwnPrint } from '@/components/trade/WindowPrintButton';
 import FitStage from '@/components/trade/FitStage';
 import PagedReport, { type PSection } from '@/components/trade/PagedReport';
 
@@ -44,7 +43,6 @@ const FIND_LABEL: Record<string, string> = {
 };
 
 export default function TradeReports() {
-    useOwnPrint();
     const [ask, setAsk] = useState<null | { msg: string; yes: () => void }>(null);
     const askClose = (fn: () => void, msg = 'Do you want to Close the Form ?') => setAsk({ msg, yes: fn });
     useEffect(() => { document.title = 'AL-QAVI TRADERS  Trade 1.0  ( Reports )'; }, []);

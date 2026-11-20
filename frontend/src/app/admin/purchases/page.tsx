@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
     ShoppingCart, Plus, Search, RefreshCw, Trash2, Edit2,
     X, CheckCircle, AlertTriangle, Package, Loader2, Filter,
-    Users, Clock, CreditCard, FileText, Lock, Calendar, FileSpreadsheet, Printer,
-    ChevronLeft, Truck, History, ListFilter, Building2, MapPin, Mail, Phone,
+    Users, Clock, CreditCard, FileText, Lock, Calendar, FileSpreadsheet, ChevronLeft, Truck, History, ListFilter, Building2, MapPin, Mail, Phone,
     Upload, CheckCircle2, Info, Warehouse as WarehouseIcon, ShieldCheck, Banknote,
     Check, X as XIcon, ChevronDown
 } from 'lucide-react';
@@ -846,7 +845,7 @@ export default function PurchasesPage() {
                                     )}
                                 </div>
 
-                                <Button className="w-full mt-4" onClick={() => router.push(`/admin/purchases/${viewRow.id}/invoice`)}><Printer size={16} /> View Invoice</Button>
+                                <Button className="w-full mt-4" onClick={() => router.push(`/admin/purchases/${viewRow.id}/invoice`)}><FileText size={16} /> View Invoice</Button>
                             </aside>
                         </div>
                     </div>

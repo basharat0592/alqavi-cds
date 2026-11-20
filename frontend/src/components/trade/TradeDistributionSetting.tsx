@@ -3,7 +3,7 @@
 /*
  * Trade 1.0 — Distribution Setting (Setup › Distribution Setting).
  *
- * The "SOLE DISTRIBUTORS of …" line printed at the foot of every sale invoice.
+ * The "SOLE DISTRIBUTORS of …" line at the foot of every sale invoice.
  * ID / Distributions Detail; the grid shows the saved line — click it to bring
  * it into the box, change it, Update. Empty = the built-in text.
  */
@@ -33,13 +33,13 @@ export default function TradeDistributionSetting() {
         if (!changed || busy) return;
         if (!text.trim()) { toast.error('Enter the Distributions Detail.'); return; }
         setAsk({
-            msg: 'Update the Distributions Detail printed on the invoice ?',
+            msg: 'Update the Distributions Detail shown on the invoice ?',
             yes: async () => {
                 setBusy(true);
                 try {
                     const { data } = await api.patch('v1/sales/orders/invoice_profile/', { distribution_detail: text.trim() });
                     setSaved(data.distribution_detail || SOLE_DISTRIBUTORS); setText(''); setPicked(false);
-                    toast.success('Distributions Detail updated — new invoices print it.');
+                    toast.success('Distributions Detail updated — new invoices show it.');
                 } catch (err: any) {
                     const d = err?.response?.data;
                     toast.error(String(d?.error || d?.detail || 'Could not update.'), { duration: 6000 });

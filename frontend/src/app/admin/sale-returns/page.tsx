@@ -343,7 +343,6 @@ export default function SaleReturnsPage() {
                                                     r.status?.toUpperCase() === 'ACCEPTED' && r.refund_status !== 'PAID'
                                                         && { label: 'Settle', onClick: () => setPayReturn(r) },
                                                     { label: 'View', onClick: () => setSelectedReturn(r) },
-                                                    { label: 'Print', onClick: () => { setSelectedReturn(r); setTimeout(() => window.print(), 350); } },
                                                     { label: 'Delete', onClick: () => setReturnToDelete(r), danger: true },
                                                 ]} />
                                             </td>

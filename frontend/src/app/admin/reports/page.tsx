@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense, useRef } from 'react';
 import {
-    BarChart3, Calendar, Printer, FileSpreadsheet,
+    BarChart3, Calendar, FileSpreadsheet,
     ListFilter, Search, Download, ClipboardList, Info, CheckCircle,
     ChevronRight, ChevronLeft, LayoutDashboard, AlertTriangle, Clock,
     ShoppingBag, Package, Boxes, RotateCcw,
@@ -677,9 +677,6 @@ function ReportsEngineInner() {
                                         : exportToExcel(reportResult, 'report', 'Report')}
                                     disabled={reportResult.length === 0 && !profitSummary}>
                                     <FileSpreadsheet size={14} /> Export Excel
-                                </Button>
-                                <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0 && !profitSummary}>
-                                    <Printer size={14} /> Print / PDF
                                 </Button>
                             </>
                         }
