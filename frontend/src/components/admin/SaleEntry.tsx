@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
     Plus, Trash2, X, CheckCircle, Package, ArrowLeft,
     RefreshCw, Search, ChevronDown, User,
-    Loader2, AlertTriangle, ShieldCheck, History, MapPin, Phone, ScanLine
+    Printer, Loader2, AlertTriangle, ShieldCheck, History, MapPin, Phone, ScanLine
 } from 'lucide-react';
 import { productService, orderService, userService, companyService, inventoryService } from '@/lib/api';
 import { installmentService } from '@/services/payment.service';
@@ -957,6 +957,13 @@ const [warehouseId, setWarehouseId] = useState<string>('');
                             <span className="text-[26px] font-black text-slate-900 tabular-nums">{formatCurrency(successOrder.total_amount)}</span>
                         </div>
                     </div>
+                    {/* ?print=true makes the invoice route fire window.print() once loaded. */}
+                    <Btn
+                        className="w-full h-[42px] font-bold mb-3"
+                        onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice?print=true`)}
+                    >
+                        <Printer size={18} /> Print Receipt
+                    </Btn>
                     <div className="flex gap-4">
                         <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={() => router.push(`/admin/sales/${successOrder.id}/invoice`)}>View Invoice</Btn>
                         <Btn variant="secondary" className="flex-1 h-[40px] font-bold" onClick={leaveToSales}><History size={18} /> View Sales</Btn>

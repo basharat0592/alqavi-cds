@@ -7,7 +7,7 @@
  * window: masters (Save / View / Update / Delete / Export), setup (New User,
  * User Permissions, Change Password Own / All, Database Backup / Restore,
  * Distributions Titles), the entry windows (Save / View) and the reports
- * (Open). Select all ticks everything. Save stores the set; from then on the
+ * (Print). Select all ticks everything. Save stores the set; from then on the
  * login sees only what is ticked. A login never given a set — and the main
  * admin, always — has full access.
  */
@@ -22,7 +22,7 @@ import FitStage from '@/components/trade/FitStage';
 type UserRow = { id: number; name: string; owner: boolean; restricted: boolean; perms: string[] };
 
 const ACT_LABEL: Record<string, string> = {
-    save: 'Save', view: 'View', update: 'Update', delete: 'Delete', export: 'Export', print: 'Open',
+    save: 'Save', view: 'View', update: 'Update', delete: 'Delete', export: 'Export', print: 'Print',
     own: 'Own', all: 'All', backup: 'Backup', restore: 'Restore',
 };
 const ACT_COLOR: Record<string, string> = {

@@ -23,6 +23,7 @@ import {
 } from '@/components/trade/TradeSaleInvoice';
 import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
 import FitStage from '@/components/trade/FitStage';
+import { PrintChoiceButton, useOwnPrint } from '@/components/trade/WindowPrintButton';
 
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -68,6 +69,7 @@ export default function TradePurchaseOrder() {
 
     // Viewing a saved order (read only) — Add New takes the place of Save.
     const [viewing, setViewing] = useState<any | null>(null);
+    useOwnPrint();   // Print ▾ below has the order and the current page
 
     // entry
     const [code, setCode] = useState('');
@@ -132,16 +134,20 @@ export default function TradePurchaseOrder() {
     };
     const [saving, setSaving] = useState(false);
     const missing = [!sup && 'the supplier', !lines.length && 'a product'].filter(Boolean) as string[];
-    // Open the order on screen (no printing): the one being viewed, else the last saved.
+    // Print the order: the one being viewed, else the one on screen (saved first), else the last saved.
     const [lastId, setLastId] = useState<number | null>(null);
-    const showOrder = () => {
-        const id = viewing?.id || lastId;
-        if (id) { openPopup(`/admin/trade/purchase-invoice/${id}`); return; }
-        toast.error('Save the order (or open one with View) first.');
+    const printAfter = useRef<boolean | null>(null);
+    const printOrder = (withPrices: boolean) => {
+        const q = `?print=1&prices=${withPrices ? 1 : 0}`;
+        if (viewing?.id) { openPopup(`/admin/trade/purchase-invoice/${viewing.id}${q}`); return; }
+        if (lines.length) { save(withPrices); return; }
+        if (lastId) { openPopup(`/admin/trade/purchase-invoice/${lastId}${q}`); return; }
+        toast.error('Enter the order (or open one with View) first.');
     };
-    const save = () => {
+    const save = (print: boolean | null = null) => {
         if (saving || viewing) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
+        printAfter.current = print;
         setAsk({
             msg: `Save Purchase Order ${orderNo} to ${sup!.name} (${lines.length} item${lines.length === 1 ? '' : 's'}) ?`,
             yes: async () => {
@@ -152,6 +158,7 @@ export default function TradePurchaseOrder() {
                     });
                     toast.success(`Purchase Order ${data.order_no} saved — ${fmt(num(data.amount))}.`);
                     setLastId(data.id);
+                    if (printAfter.current !== null) openPopup(`/admin/trade/purchase-invoice/${data.id}?print=1&prices=${printAfter.current ? 1 : 0}`);
                     addNew();
                 } catch (err: any) {
                     const d = err?.response?.data;
@@ -290,7 +297,10 @@ export default function TradePurchaseOrder() {
                                     {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                                 </button>
                             )}
-                            <button type="button" onClick={showOrder} disabled={!viewing?.id && !lastId} title="Open the order on screen" className={`${ACTION_BTN} w-full`}>Order</button>
+                            <PrintChoiceButton className={`${ACTION_BTN} w-full`} choices={[
+                                { label: 'Order — with prices', onClick: () => printOrder(true), hint: 'Products, quantities, Pur.Rate and Sub Total' },
+                                { label: 'Order — without prices', onClick: () => printOrder(false), hint: 'Products and quantities only' },
+                            ]} />
                             <div className="grid grid-cols-2 gap-2">
                                 <button type="button" onClick={() => setView({ rows: null, filter: true })} className={`${ACTION_BTN} !min-w-0`}><span className="underline">V</span>iew</button>
                                 <button type="button" onClick={closeWindow} className={`${ACTION_BTN} !min-w-0`}><span className="underline">C</span>ancel</button>

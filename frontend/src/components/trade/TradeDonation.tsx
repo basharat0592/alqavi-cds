@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
+import { printWindow } from '@/lib/printWindow';
 import {
     Modal, ConfirmBox, ReadBox, LABEL, FIELD, EDIT, ACTION_BTN, COA_SELECT, guardWindowClose, closeTradeWindow,
 } from '@/components/trade/TradeSaleInvoice';
@@ -134,6 +135,12 @@ export default function TradeDonation() {
         },
     });
     const listRef = useRef<HTMLDivElement>(null);
+    const [printing, setPrinting] = useState(false);
+    const doPrint = async () => {
+        if (!listRef.current || printing) return;
+        setPrinting(true);
+        try { await printWindow(listRef.current || undefined, 760); } catch { toast.error('Could not prepare the print.'); } finally { setPrinting(false); }
+    };
     const [typesOpen, setTypesOpen] = useState(false);
     const L = `${LABEL} text-[14px]`;
     const basisLabel = (r: any) => (r.basis === 'profit' ? `${num(r.pct)}% of profit ${dmy(r.date_from)}–${dmy(r.date_to)}` : r.basis === 'capital' ? `${num(r.pct)}% of capital` : 'Amount');
@@ -245,6 +252,7 @@ export default function TradeDonation() {
                         <span className={L}>From</span><input type="date" value={fFrom} onChange={(e) => setFFrom(e.target.value)} className={`${EDIT} w-[140px]`} />
                         <span className={L}>To</span><input type="date" value={fTo} onChange={(e) => setFTo(e.target.value)} className={`${EDIT} w-[140px]`} />
                         <span className="flex-1" />
+                        <button type="button" onClick={doPrint} disabled={printing} className={`${ACTION_BTN} !min-w-[80px]`}><span className="underline">P</span>rint</button>
                     </div>
                     <div ref={listRef} className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto bg-white p-2">
                         <div className="text-[15px] font-black">AL-QAVI TRADERS — Donations given</div>

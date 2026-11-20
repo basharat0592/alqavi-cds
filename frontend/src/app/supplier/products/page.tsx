@@ -651,6 +651,12 @@ export default function SupplierProducts() {
                                 >
                                     <ExternalLink size={14} /> Share
                                 </button>
+                                <button
+                                    onClick={() => window.print()}
+                                    className="h-[31px] px-4 rounded-[3px] text-[13px] font-medium border bg-gradient-to-b from-[#f7dfa5] to-[#f0c14b] border-[#a88734] hover:from-[#f5d78e] hover:to-[#eeb933] text-[#0f1111] shadow-sm flex items-center gap-2"
+                                >
+                                    <Download size={14} /> Print
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -748,7 +754,7 @@ export default function SupplierProducts() {
                             .print\\:hidden { display: none !important; }
                             body { padding: 0 !important; margin: 0 !important; background: white !important; }
                             .max-w-[850px] { max-width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; }
-                            @page { margin: 1.5cm !important; }
+                            @page { size: 148mm 210mm; margin: 6mm; }
                         }
                     `}</style>
                 </div>

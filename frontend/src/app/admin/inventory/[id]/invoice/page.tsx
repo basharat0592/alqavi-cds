@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, use } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft } from 'lucide-react';
 import api from '@/lib/axios';
 import { inventoryService } from '@/services/inventory.service';
 import { purchaseService } from '@/services/purchase.service';
@@ -38,6 +38,9 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
             setPoMap(map);
         }).finally(() => {
             setLoading(false);
+            if (typeof window !== 'undefined' && window.location.search.includes('print=true')) {
+                setTimeout(() => window.print(), 800);
+            }
         });
     }, [id]);
 
@@ -103,6 +106,7 @@ export default function StockInvoicePage({ params }: { params: Promise<{ id: str
                     actions={
                         <>
                             <Button variant="outline" size="sm" onClick={() => router.push(`/admin/inventory/${id}`)}><ArrowLeft size={14} /> Back</Button>
+                            <Button variant="primary" size="sm" onClick={() => window.print()}><Printer size={14} /> Print</Button>
                         </>
                     }
                 />

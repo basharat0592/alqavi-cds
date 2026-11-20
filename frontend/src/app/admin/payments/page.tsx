@@ -8,7 +8,8 @@ import { authService } from '@/lib/auth';
 import { formatCurrency, formatDate, exportToCSV } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import {
-    Search, RefreshCw, Plus, Wallet, TrendingUp, TrendingDown, Tag, Calendar, Building2, Hash, User, X, Loader2, CheckCircle2, AlertTriangle, Eye, FileText, Download, ExternalLink
+    Search, RefreshCw, Plus, Wallet, TrendingUp, TrendingDown, Tag, Calendar, Building2, Hash, User, Printer,
+    X, Loader2, CheckCircle2, AlertTriangle, Eye, FileText, Download, ExternalLink
 } from 'lucide-react';
 import { PageHeader, Card, Button, Badge, ui, useTableSelection, SelectAllTh, RowCheckboxTd, BulkBar, Modal, Pagination } from '@/components/admin/ui';
 import PaymentPanel, { PaymentModal } from '@/components/admin/PaymentPanel';
@@ -388,11 +389,11 @@ export default function PaymentsPage() {
             source: p.source, source_type: p.source_type,
         }));
         try { sessionStorage.setItem('payments_statement', JSON.stringify(payload)); } catch { }
-        window.open('/admin/payments/statement', '_blank');
+        window.open('/admin/payments/statement?print=true', '_blank');
     };
 
-    // A single payment on the real branded invoice (statement page), on screen.
-    const viewPaymentInvoice = (p: any) => {
+    // Print a single payment on the real branded invoice (statement page).
+    const printPaymentInvoice = (p: any) => {
         const payload = [{
             id: p.id, date: p.date, method: p.method, payer_payee: p.payer_payee,
             category_name: p.category_name, payment_type: p.payment_type,
@@ -400,7 +401,7 @@ export default function PaymentsPage() {
             source: p.source, source_type: p.source_type,
         }];
         try { sessionStorage.setItem('payments_statement', JSON.stringify(payload)); } catch { }
-        window.open('/admin/payments/statement', '_blank');
+        window.open('/admin/payments/statement?print=true', '_blank');
     };
 
     // Single-row delete now goes through a confirmation dialog (was one-click).
@@ -1060,8 +1061,8 @@ export default function PaymentsPage() {
                             <Button type="button" variant="ghost" size="sm" onClick={() => setReviewModalOpen(false)}>Close</Button>
                             <div className="flex gap-2">
                                 {!p.isPending && (
-                                    <Button type="button" variant="outline" size="sm" onClick={() => viewPaymentInvoice(p)}>
-                                        <FileText size={14} /> View Invoice
+                                    <Button type="button" variant="outline" size="sm" onClick={() => printPaymentInvoice(p)}>
+                                        <Printer size={14} /> Print Invoice
                                     </Button>
                                 )}
                                 {p.isPending && (

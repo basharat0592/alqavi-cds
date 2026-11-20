@@ -7,7 +7,7 @@ import { installmentService } from '@/services/payment.service';
 import { inventoryService } from '@/services/inventory.service';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils';
 import {
-    Clock, Warehouse, Wallet, Package, Phone, MapPin, ArrowLeft, Trash2, User, FileText, Paperclip, ExternalLink
+    Clock, Warehouse, Printer, Wallet, Package, Phone, MapPin, ArrowLeft, Trash2, User, FileText, Paperclip, ExternalLink
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';
@@ -190,7 +190,7 @@ export default function SaleDetailView({
                     </div>
                     <div className="flex flex-wrap gap-2.5">
                         <Button variant="outline" className="h-9 text-[12.5px] font-bold" onClick={() => router.push(`/admin/sales/${order.id}/invoice`)}>
-                            <FileText size={14} /> View Invoice
+                            <Printer size={14} /> Print Invoice
                         </Button>
                         {remaining > 0 && (
                             <Button variant="primary" className="h-9 text-[12.5px] font-bold" onClick={() => setShowPayModal(true)}>

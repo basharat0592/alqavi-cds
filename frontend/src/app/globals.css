@@ -176,3 +176,15 @@
 [data-trade-ui] *:not(svg):not(svg *) {
   border-radius: 0 !important;
 }
+
+/* Every print in the system is A5 portrait (148 × 210 mm) with 6 mm margins —
+   compact, high-contrast, one page wherever the content allows. Pages may set
+   their own @page only to the same size. */
+@page {
+  size: 148mm 210mm;
+  margin: 6mm;
+}
+@media print {
+  html, body { background: #fff !important; color: #000; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

@@ -4,7 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { purchaseService } from '@/services/purchase.service';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import { ArrowLeft, Share2, Check, Hash, Calendar, Phone, Mail, Building2, Package, CheckCircle2 } from 'lucide-react';
+import { Printer, ArrowLeft, Share2, Check, Hash, Calendar, Phone, Mail, Building2, Package, CheckCircle2 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import Logo from '@/components/ui/Logo';
 import toast from 'react-hot-toast';
@@ -24,6 +24,10 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
             try {
                 const data = await purchaseService.getById(id);
                 setPurchase(data);
+                // Auto-open the print/save-as-PDF dialog when launched with ?print=true
+                if (typeof window !== 'undefined' && window.location.search.includes('print=true')) {
+                    setTimeout(() => window.print(), 800);
+                }
             } catch (error) {
                 console.error("Failed to load purchase details", error);
                 toast.error("Failed to load record.");
@@ -37,6 +41,7 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
     const lineItems: any[] = (purchase?.items || []).map((it: any, idx: number) => ({ ...it, _rowId: it.id ?? idx }));
     const sel = useTableSelection(lineItems, (it: any) => it._rowId);
 
+    const handlePrint = () => { window.print(); };
 
     const handleShare = async () => {
         const url = window.location.href;
@@ -76,6 +81,9 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
                             <Button variant="secondary" size="sm" onClick={handleShare}>
                                 {shared ? <Check size={14} className="text-emerald-600" /> : <Share2 size={14} />}
                                 {shared ? 'Copied' : 'Share Link'}
+                            </Button>
+                            <Button variant="primary" size="sm" onClick={handlePrint}>
+                                <Printer size={14} /> Print Purchase Order
                             </Button>
                         </>
                     }
@@ -297,30 +305,27 @@ export default function PurchaseInvoicePage({ params }: { params: Promise<{ id: 
 
                 @media print {
                     .print\\:hidden { display: none !important; }
-                    /* Half-page, rotated 90°: the invoice is laid out at LANDSCAPE half-page
-                       size (210 × 148 mm) where the content fits nicely, then rotated 90° to
-                       fill an A5 PORTRAIT sheet. Rotate the printed paper to read it upright. */
+                    /* A5 PORTRAIT (148 × 210 mm), 6 mm margins, upright: the invoice fills the
+                       printable area (136 × 198 mm) on one single page. */
                     html, body {
                         margin: 0 !important; padding: 0 !important; background-color: white !important;
-                        width: 210mm !important; height: 297mm !important; overflow: hidden !important;
+                        width: 136mm !important; height: auto !important; overflow: visible !important;
                     }
-                    /* Normal PORTRAIT sheet; the CONTENT is rotated 90° and placed in the
-                       TOP HALF (the bottom half stays blank) — a clean half-page. */
-                    @page { size: A4 portrait; margin: 0; }
+                    main { padding: 0 !important; margin: 0 !important; overflow: visible !important; height: auto !important; }
+                    @page { size: 148mm 210mm; margin: 6mm; }
                     .invoice-print-scale {
-                        position: fixed !important;
-                        top: 25% !important; left: 50% !important;
+                        position: static !important;
                         box-sizing: border-box !important;
                         display: flex !important; flex-direction: column !important;
-                        width: 148mm !important; max-width: 148mm !important;
-                        height: 205mm !important; min-height: 205mm !important;
-                        padding: 6mm !important;
+                        width: 136mm !important; max-width: 136mm !important;
+                        height: 197mm !important; min-height: 0 !important;
+                        padding: 0 !important;
                         margin: 0 !important;
                         border: none !important; box-shadow: none !important; border-radius: 0 !important;
                         overflow: hidden !important;
-                        transform: translate(-50%, -50%) rotate(90deg);
-                        transform-origin: center center;
-                        font-size: 8.5px !important;
+                        transform: none !important;
+                        font-size: 8px !important;
+                        break-inside: avoid; page-break-inside: avoid;
                     }
                     .invoice-footer { position: static !important; margin-top: auto !important; padding-top: 0 !important; }
                 }

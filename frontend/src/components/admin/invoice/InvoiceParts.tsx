@@ -12,7 +12,7 @@ export const invoiceStyles = `
         .print\\:hidden { display: none !important; }
         body { padding: 0 !important; margin: 0 !important; background-color: white !important; }
         .invoice-footer { position: fixed; bottom: 0; left: 0; right: 0; margin: 0 !important; padding-top: 0 !important; }
-        @page { margin: 1cm; }
+        @page { size: 148mm 210mm; margin: 6mm; }   /* every print: A5 portrait */
     }
 
     body { font-family: 'Inter', sans-serif; }

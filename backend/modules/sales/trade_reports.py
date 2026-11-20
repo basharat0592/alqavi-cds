@@ -1987,5 +1987,5 @@ def report_run(request):
     if t not in RUNNERS:
         return Response({'detail': 'Choose the report.'}, status=400)
     if not allowed(request.user, f'{REPORT_PERM[t]}.print'):
-        return Response({'detail': 'You do not have permission to open this report.'}, status=403)
+        return Response({'detail': 'You do not have permission to print this report.'}, status=403)
     return Response(RUNNERS[t](Ctx(request)))

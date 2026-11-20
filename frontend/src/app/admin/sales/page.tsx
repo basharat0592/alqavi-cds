@@ -7,7 +7,7 @@ import { formatCurrency, formatDate, formatDateTime, exportToCSV } from '@/lib/u
 import {
     ShoppingBag, Search, RefreshCw,
     Plus, Loader2, User, CreditCard, Trash2, AlertTriangle, Clock, Warehouse,
-    Wallet, Package, Phone, MapPin, Calendar, Store, Globe, ChevronDown, X, SlidersHorizontal
+    Printer, Wallet, Package, Phone, MapPin, Calendar, Store, Globe, ChevronDown, X, SlidersHorizontal
 } from 'lucide-react';
 import PageLoader from '@/components/ui/PageLoader';
 import toast from 'react-hot-toast';

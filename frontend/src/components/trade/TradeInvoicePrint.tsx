@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Trade 1.0 — Sale Invoice (on screen, PDF and the shared WhatsApp link; no printing).
+ * Trade 1.0 — printed Sale Invoice.
  *
  *   Paper (A4 / A5 / Letter / Legal / Custom W x H): the customer's legacy
  *   invoice layout, drawn at A4 width and scaled to the chosen paper.
@@ -18,12 +18,13 @@
  */
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { Printer, X } from 'lucide-react';
 import api from '@/lib/axios';
 import { pn } from '@/lib/productName';
 import { toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 import { guardWindowClose, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
+import { printImages, PRINT_MARGIN_MM } from '@/lib/printWindow';
 
 export type InvoiceSize = 'a4' | 'a5' | 'a5s' | 'a4half' | 'letter' | 'legal' | 'custom' | '80' | '58';
 export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
@@ -40,13 +41,12 @@ export const INVOICE_SIZES: { v: InvoiceSize; label: string }[] = [
 const SIZE_KEY = 'trade.invoice.size.v2';   // v2: every print starts on half A4 upright
 const CUSTOM_KEY = 'trade.invoice.custom';
 const isSize = (v: any): v is InvoiceSize => INVOICE_SIZES.some((o) => o.v === v);
-export const savedInvoiceSize = (): InvoiceSize => {
-    try { const v = localStorage.getItem(SIZE_KEY); return isSize(v) ? v : 'a5'; } catch { return 'a5'; }
-};
+/* Every print is A5 portrait (148 × 210 mm) — the other sizes are no longer offered. */
+export const savedInvoiceSize = (): InvoiceSize => 'a5';
 
 /* Paper sizes, portrait, in mm. The layout is designed at A4 width. */
 const PAPER: Record<string, { w: number; h: number; m: number }> = {
-    a4: { w: 210, h: 297, m: 5 }, a5: { w: 148, h: 210, m: 4 },
+    a4: { w: 210, h: 297, m: 5 }, a5: { w: 148, h: 210, m: 1 },
     letter: { w: 216, h: 279, m: 5 }, legal: { w: 216, h: 356, m: 5 },
 };
 const DESIGN_W = 200; // A4 width less 5 mm margins
@@ -127,8 +127,9 @@ const FONTS = `@import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+
 /* `token`: the public shared link (no login) — read only, no admin buttons. */
 /* Every sheet is captured as an image at ~300 dpi, so nothing can shift or be
    cut off (printing the web page directly let some printers / settings push
-   the content down and drop the footer). PDF places them on pages of the
-   chosen size; a slip makes a PDF of its own roll length. */
+   the content down and drop the footer). Print fits the pictures to the
+   printer's paper (printImages); Save PDF places them on pages of the chosen
+   size; a slip prints as a PDF of its own roll length. */
 const PX_PER_MM = 96 / 25.4;
 /* Turn a page picture a quarter turn clockwise (its top ends up on the right). */
 async function rotateCw(jpeg: string): Promise<string> {
@@ -161,7 +162,10 @@ async function buildPdf(paperMm: { w: number; h: number } | null, sideways = fal
         const orientation = pw > ph ? 'landscape' : 'portrait';
         if (!pdf) pdf = new jsPDF({ unit: 'mm', format: [pw, ph], orientation, compress: true });
         else pdf.addPage([pw, ph], orientation);
-        pdf.addImage(img, 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
+        if (paperMm) {   // A5: the sheet fitted inside the print margin, as it prints
+            const m = PRINT_MARGIN_MM, k = Math.min((pw - 2 * m) / pw, (ph - 2 * m) / ph);
+            pdf.addImage(img, 'JPEG', (pw - pw * k) / 2, m, pw * k, ph * k, undefined, 'FAST');
+        } else pdf.addImage(img, 'JPEG', 0, 0, pw, ph, undefined, 'FAST');
     }
     return pdf!;
 }
@@ -213,11 +217,37 @@ async function halfA4Pdf() {
     return pdf;
 }
 
+async function captureSheets() {
+    const sheets = Array.from(document.querySelectorAll<HTMLElement>('.inv-page'));
+    if (!sheets.length) throw new Error('Nothing to print yet.');
+    await (document as any).fonts?.ready;
+    const out: string[] = [];
+    for (const el of sheets) {
+        out.push(await toJpeg(el, { quality: 0.95, pixelRatio: 3, backgroundColor: '#ffffff', cacheBust: false, style: { margin: '0', boxShadow: 'none' } }));
+    }
+    return out;
+}
+function printPdfBlob(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const frame = document.createElement('iframe');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
+    frame.src = url;
+    frame.onload = () => {
+        setTimeout(() => {
+            try { frame.contentWindow?.focus(); frame.contentWindow?.print(); }
+            catch { window.open(url, '_blank'); }
+        }, 300);
+    };
+    document.body.appendChild(frame);
+    setTimeout(() => { frame.remove(); URL.revokeObjectURL(url); }, 10 * 60 * 1000);
+}
+
 export default function TradeInvoicePrint({ id, token }: { id?: string; token?: string }) {
     const [inv, setInv] = useState<Invoice | null>(null);
     const [err, setErr] = useState('');
     const [size, setSize] = useState<InvoiceSize>('a5');
     const [custom, setCustom] = useState({ w: 210, h: 297 });
+    const [autoPrint, setAutoPrint] = useState(false);
     const [prices, setPrices] = useState(() => typeof window === 'undefined' || new URLSearchParams(window.location.search).get('prices') !== '0');
     // A roll has no fixed page length: the slip's page is exactly as long as
     // its content (measured after layout), so the printer feeds no blank paper.
@@ -267,11 +297,13 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
     useEffect(() => {
         const q = new URLSearchParams(window.location.search);
         const s = q.get('size');
-        setSize(isSize(s) ? s : savedInvoiceSize());
+        void s; void isSize; void SIZE_KEY;
+        setSize('a5');   // A5 portrait, always
         try {
             const c = JSON.parse(localStorage.getItem(CUSTOM_KEY) || 'null');
             if (c && n(c.w) >= 50 && n(c.h) >= 50) setCustom({ w: n(c.w), h: n(c.h) });
         } catch { /* default */ }
+        setAutoPrint(q.has('print'));
         api.get(token ? `v1/sales/public-invoice/${token}/` : `v1/sales/orders/${id}/trade_invoice/`)
             .then(({ data }) => setInv(data))
             .catch((e) => setErr(e?.response?.data?.detail || 'Could not load the invoice.'));
@@ -298,6 +330,20 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
             .catch(() => { if (live) setHalfPages([]); });
         return () => { live = false; };
     }, [isHalf, inv, prices]);
+    const printNow = async () => {
+        if (busy) return;
+        setBusy(true);
+        try {
+            // Sheets print fitted to the printer's paper (and turned to suit it);
+            // a slip keeps its own roll-length page.
+            if (isSlip) printPdfBlob((await makePdf()).output('blob'));
+            else if (isHalf) await printImages(await halfA4Pages(), 0.95, { w: 210, h: 297 });
+            // The chosen paper is sent as that size (half A4 upright unless another is chosen).
+            else await printImages(await captureSheets(), 0.95, size === 'a5s' ? { w: paper.h, h: paper.w } : { w: paper.w, h: paper.h }, size === 'a5s');
+        }
+        catch (e: any) { setErr(e?.message || 'Could not prepare the print.'); }
+        finally { setBusy(false); }
+    };
     const downloadPdf = async () => {
         if (busy || !inv) return;
         setBusy(true);
@@ -305,6 +351,17 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
         catch (e: any) { setErr(e?.message || 'Could not make the PDF.'); }
         finally { setBusy(false); }
     };
+    // Print once the data and the Urdu fonts are in (else the first print shows fallbacks).
+    useEffect(() => {
+        if (!inv || !autoPrint || (isSlip && !slipH)) return;
+        let done = false;
+        const go = () => { if (!done) { done = true; setAutoPrint(false); printNow(); } };
+        const imgs = Array.from(document.images).map((im) => (im.complete ? Promise.resolve() : new Promise((r) => { im.onload = im.onerror = () => r(null); })));
+        Promise.all([(document as any).fonts?.ready, ...imgs]).then(() => setTimeout(go, 300));
+        const t = setTimeout(go, 6000);
+        return () => clearTimeout(t);
+    }, [inv, autoPrint, isSlip, slipH]);
+
     const pick = (s: InvoiceSize) => {
         setSize(s);
         try { localStorage.setItem(SIZE_KEY, s); } catch { /* ignore */ }
@@ -343,25 +400,11 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                 }
             `}</style>
 
-            {/* Toolbar (screen only): paper size is chosen here before printing */}
+            {/* Toolbar (screen only): every invoice prints on A5 portrait */}
             <div className="no-print mx-auto mb-4 flex w-fit flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 shadow-sm">
                 <span className="text-[13px] font-bold text-slate-600">Paper</span>
-                {INVOICE_SIZES.map((o) => (
-                    <button key={o.v} type="button" onClick={() => pick(o.v)}
-                        className={`h-8 rounded-md border px-3 text-[13px] font-semibold ${size === o.v ? 'border-[#3d3f95] bg-[#3d3f95] text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}`}>
-                        {o.label}
-                    </button>
-                ))}
-                {size === 'custom' && (
-                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-slate-600">
-                        <input value={custom.w || ''} onChange={(e) => setCustomDim('w', e.target.value)} inputMode="numeric" aria-label="Width in mm"
-                            className="h-8 w-16 rounded-md border border-slate-300 px-2 text-right tabular-nums" />
-                        ×
-                        <input value={custom.h || ''} onChange={(e) => setCustomDim('h', e.target.value)} inputMode="numeric" aria-label="Height in mm"
-                            className="h-8 w-16 rounded-md border border-slate-300 px-2 text-right tabular-nums" />
-                        mm
-                    </span>
-                )}
+                <span className="flex h-8 items-center rounded-md border border-[#3d3f95] bg-[#3d3f95] px-3 text-[13px] font-semibold text-white"
+                    title="Every print is A5 portrait, 148 × 210 mm, with a 6 mm margin">A5 portrait (148 × 210 mm)</span>
                 <span className="mx-1 h-6 w-px bg-slate-200" />
                 {[true, false].map((v) => (
                     <button key={String(v)} type="button" onClick={() => setPrices(v)}
@@ -387,6 +430,10 @@ export default function TradeInvoicePrint({ id, token }: { id?: string; token?: 
                 <button type="button" onClick={downloadPdf} disabled={!inv || busy}
                     className="h-8 rounded-md border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                     PDF
+                </button>
+                <button type="button" onClick={() => printNow()} disabled={!inv || busy}
+                    className="flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
+                    <Printer size={14} /> {busy ? 'Preparing…' : 'Print'}
                 </button>
                 <button type="button" onClick={() => { if (window.confirm('Do you want to Close the Form ?')) closeTradeWindow(); }} className="flex h-8 items-center gap-1 rounded-md border border-slate-300 px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
                     <X size={14} /> Close
@@ -470,9 +517,15 @@ function Sheet({ inv, paper, prices = true }: { inv: Invoice; paper: { w: number
     const compact = paper.w < 170;
     const designW = compact ? A5_DESIGN_W : DESIGN_W;
     const zoom = contentW / designW;
-    const k = compact ? 1.1 : 1;
+    // A5: everything is scaled down (type, padding, spacing) until the invoice fits on a
+    // single page; only a very long bill (below 55 %) still runs onto a second page.
+    const [shrink, setShrink] = useState(1);
+    // false while the size is still being worked out — the overflow safety net below waits for it.
+    const fitted = useRef(false);
+    useEffect(() => { fitted.current = false; setShrink(1); }, [inv, prices]);
+    const k = (compact ? 1.1 : 1) * shrink;
     const fs = (pt: number) => `${+(pt * k).toFixed(2)}pt`;
-    const mm = (a4: number, a5: number) => `${compact ? a5 : a4}mm`;
+    const mm = (a4: number, a5: number) => `${+((compact ? a5 : a4) * (compact ? Math.max(0.75, shrink) : 1)).toFixed(2)}mm`;
     const pageH = paper.h - 1; // a hair under the paper so a sheet never spills onto the next
     // Rows are split into sheets by their measured heights (a hidden copy is laid
     // out first): every sheet gets the header at the top and the footer at the
@@ -503,8 +556,14 @@ function Sheet({ inv, paper, prices = true }: { inv: Invoice; paper: { w: number
             i = j;
             if (i >= rows.length) { out.push([]); break; } // totals alone on a last sheet
         }
+        if (compact && out.length > 1 && shrink > 0.56) {   // more than one sheet — even the totals alone
+            fitted.current = false;
+            setShrink((x) => +(x - 0.05).toFixed(2));   // too long for one A5 page: a bit smaller, measured again
+            return;
+        }
+        fitted.current = true;
         setPages(out.length ? out : [[]]);
-    }, [inv, zoom, pageH, paper.m, layoutTick, prices]);
+    }, [inv, zoom, pageH, paper.m, layoutTick, prices, shrink]);
     // Fonts and images arriving can change heights: measure again when they do.
     useEffect(() => {
         const el = mRef.current;
@@ -520,10 +579,14 @@ function Sheet({ inv, paper, prices = true }: { inv: Invoice; paper: { w: number
     // the next sheet, until every sheet fits. Nothing can run into the footer.
     const bodyRefs = useRef<(HTMLDivElement | null)[]>([]);
     useLayoutEffect(() => {
+        if (!fitted.current) return;   // the pages are still being measured
         for (let pi = 0; pi < pages.length; pi++) {
             const b = bodyRefs.current[pi];
             if (!b || b.scrollHeight <= b.clientHeight + 1) continue;
             if (!pages[pi].length) continue;
+            // A5: still overflowing — make everything a bit smaller (to keep ONE page) before
+            // passing a row on to another sheet.
+            if (compact && shrink > 0.56) { fitted.current = false; setShrink((x) => +(x - 0.05).toFixed(2)); return; }
             const next = pages.map((x) => [...x]);
             const moved = next[pi].pop()!;
             if (pi + 1 < next.length) next[pi + 1].unshift(moved); else next.push([moved]);
@@ -545,11 +608,11 @@ function Sheet({ inv, paper, prices = true }: { inv: Invoice; paper: { w: number
         </div>
     );
     const th = (h: string, right = false, w?: string) => (
-        <th style={{ border: B, padding: compact ? '0.7mm 0.8mm' : '0.8mm 1.1mm', fontWeight: 700, textAlign: right ? 'right' : 'left', width: w, lineHeight: 1.1 }}>{h}</th>
+        <th style={{ border: B, padding: compact ? `${+(0.7 * shrink).toFixed(2)}mm 0.8mm` : '0.8mm 1.1mm', fontWeight: 700, textAlign: right ? 'right' : 'left', width: w, lineHeight: 1.1 }}>{h}</th>
     );
     const td = (v: React.ReactNode, right = false, bold = false) => (
         <td style={{
-            border: B, padding: compact ? '0.5mm 0.8mm' : '0.5mm 1.1mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 600 : 400, verticalAlign: 'top', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25,
+            border: B, padding: compact ? `${+(0.5 * shrink).toFixed(2)}mm 0.8mm` : '0.5mm 1.1mm', textAlign: right ? 'right' : 'left', fontWeight: bold ? 600 : 400, verticalAlign: 'top', fontVariantNumeric: 'tabular-nums', lineHeight: 1.25,
             // Half A4: one line a row (a very long name ends in "…"), so more rows fit.
             ...(compact ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : {}),
         }}>{v}</td>

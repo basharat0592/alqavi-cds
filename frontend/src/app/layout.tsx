@@ -15,6 +15,7 @@ import AppToaster from '@/components/ui/AppToaster';
 import WhatsAppButton from '@/components/ui/WhatsAppButton';
 import CartDrawer from '@/components/layout/CartDrawer';
 import SiteIdentityManager from '@/components/layout/SiteIdentityManager';
+import A5PrintFit from '@/components/A5PrintFit';
 
 export default function RootLayout({
     children,
@@ -24,6 +25,7 @@ export default function RootLayout({
     return (
         <html lang="en" suppressHydrationWarning={true}>
             <body className={`${inter.variable} ${playfair.variable} font-sans`} suppressHydrationWarning={true}>
+                <A5PrintFit />
                 <SiteIdentityManager />
                 <AppToaster />
                 <WhatsAppButton />

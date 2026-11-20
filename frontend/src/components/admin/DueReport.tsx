@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Download, Loader2, AlertTriangle, CalendarClock, Wallet, ArrowRight
+    Download, Printer, Loader2, AlertTriangle, CalendarClock, Wallet, ArrowRight
 } from 'lucide-react';
 import Link from 'next/link';
 import { exportToCSV, formatCurrency } from '@/lib/utils';
@@ -107,6 +107,9 @@ export default function DueReport({ kind }: { kind: 'receivable' | 'payable' }) 
                                 remaining: r.remaining, due_date: r.due_date || '', days_overdue: r.days_overdue,
                             })), `${kind}s.csv`)}>
                                 <Download size={14} /> Export
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => window.print()}>
+                                <Printer size={14} /> Print
                             </Button>
                         </div>
                     }

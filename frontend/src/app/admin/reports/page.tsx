@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense, useRef } from 'react';
 import {
-    BarChart3, Calendar, FileSpreadsheet,
+    BarChart3, Calendar, Printer, FileSpreadsheet,
     ListFilter, Search, Download, ClipboardList, Info, CheckCircle,
     ChevronRight, ChevronLeft, LayoutDashboard, AlertTriangle, Clock,
     ShoppingBag, Package, Boxes, RotateCcw,
@@ -678,6 +678,9 @@ function ReportsEngineInner() {
                                     disabled={reportResult.length === 0 && !profitSummary}>
                                     <FileSpreadsheet size={14} /> Export Excel
                                 </Button>
+                                <Button variant="primary" size="sm" onClick={() => window.print()} disabled={reportResult.length === 0 && !profitSummary}>
+                                    <Printer size={14} /> Print / PDF
+                                </Button>
                             </>
                         }
                     />
@@ -969,7 +972,7 @@ function ReportsEngineInner() {
                                 </div>
                             </div>
                         </Card>
-                        <style jsx global>{`@media print { .no-print { display: none !important; } @page { margin: 1.5cm; } }`}</style>
+                        <style jsx global>{`@media print { .no-print { display: none !important; } @page { size: 148mm 210mm; margin: 6mm; } }`}</style>
                     </div>
                 ) : reportResult.length > 0 ? (
                     <div className="animate-in fade-in duration-700">
@@ -1137,7 +1140,7 @@ function ReportsEngineInner() {
                                 .no-print { display: none !important; }
                                 html, body { height: auto !important; overflow: visible !important; padding: 0 !important; margin: 0 !important; background: white !important; }
                                 .max-w-[1440px] { max-width: 100% !important; padding: 0 !important; margin: 0 !important; height: auto !important; overflow: visible !important; }
-                                @page { margin: 1.5cm; }
+                                @page { size: 148mm 210mm; margin: 6mm; }
                                 .hidden.print\\:block { display: block !important; height: auto !important; overflow: visible !important; }
                             }
 

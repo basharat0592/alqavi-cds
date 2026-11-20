@@ -230,6 +230,27 @@ export function exportToExcel(data: any[], filename = 'export', sheetName = 'She
     XLSX.writeFile(wb, filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`);
 }
 
+/** Export a titled table to PDF via a print window (no external service). */
+export function exportToPDF(title: string, columns: string[], rows: (string | number | null)[][]) {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const style = `<style>
+        body{font-family:Arial,Helvetica,sans-serif;padding:28px;color:#0f172a;}
+        h1{font-size:18px;margin:0 0 4px;} .meta{color:#64748b;font-size:11px;margin-bottom:16px;}
+        table{width:100%;border-collapse:collapse;font-size:11px;}
+        th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left;}
+        th{background:#f1f5f9;text-transform:uppercase;font-size:10px;letter-spacing:.04em;color:#475569;}
+        tr:nth-child(even) td{background:#f8fafc;}
+    </style>`;
+    const esc = (v: any) => String(v ?? '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c] as string));
+    const thead = `<tr>${columns.map(c => `<th>${esc(c)}</th>`).join('')}</tr>`;
+    const tbody = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
+    w.document.write(`<html><head><title>${esc(title)}</title>${style}</head><body>
+        <h1>${esc(title)}</h1><div class="meta">${rows.length} row(s)</div>
+        <table><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+        <script>window.onload=function(){window.print();}</script></body></html>`);
+    w.document.close();
+}
 
 
 

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     TrendingUp, Loader2, Search, Eye, Trash2, RefreshCw, X, AlertTriangle,
     CreditCard, Receipt, CheckCircle2, ChevronRight, Check, X as XIcon, 
-    ShieldCheck, Calendar, History, Download, Filter, Clock, Activity, FileText
+    ShieldCheck, Calendar, History, Download, Filter, Printer, Clock, Activity, FileText
 } from 'lucide-react';
 import api from '@/lib/axios';
 import { purchaseService } from '@/services/purchase.service';
@@ -595,9 +595,9 @@ export default function SupplierFinancialRegistry() {
                                                     <button
                                                         onClick={() => { window.location.href = `/supplier/sales/${o.id}/invoice`; }}
                                                         className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-bold text-slate-600 hover:text-slate-900 rounded-md transition-colors"
-                                                        title="Invoice"
+                                                        title="Print Invoice"
                                                     >
-                                                        <FileText size={13} /> Invoice
+                                                        <Printer size={13} /> Print
                                                     </button>
                                                     <button
                                                         onClick={() => setDeleteTarget(o)}

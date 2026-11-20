@@ -12,7 +12,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Search, X, Loader2, Save } from 'lucide-react';
+import { Search, X, Loader2, Printer, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { pn, tip } from '@/lib/productName';
@@ -21,6 +21,8 @@ import { orderService, installmentService } from '@/lib/api';
 import { openPopup } from '@/lib/popup';
 import { getImageUrl } from '@/lib/utils';
 import FitStage from '@/components/trade/FitStage';
+import { PrintChoiceButton, useOwnPrint } from '@/components/trade/WindowPrintButton';
+import { INVOICE_SIZES, savedInvoiceSize, type InvoiceSize } from '@/components/trade/TradeInvoicePrint';
 
 import { sortByMatch } from '@/lib/searchRank';
 /* ───────────────────────── types & helpers ───────────────────────── */
@@ -180,7 +182,7 @@ function FitBox({ w, h, children }: { w: number; h: number; children: React.Reac
 /* Keyboard shortcuts shown in the grid footer. */
 const SHORTCUTS: [string, string][] = [
     ['F2', 'Find Customer'], ['F3', 'Find Product'], ['Enter', 'Next field / Add'],
-    ['Dbl-click', 'Edit line'], ['F9', 'Preview'], ['Ctrl+S', 'Save'],
+    ['Dbl-click', 'Edit line'], ['F9', 'Preview'], ['Ctrl+S', 'Save'], ['Ctrl+P', 'Save & Print'],
 ];
 
 /* Sale grid columns — legacy order and proportions (as % of the grid width, so
@@ -913,6 +915,13 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         });
     };
     const [showPV, setShowPV] = useState(false);
+    // Printed invoice size: Half A4 landscape or a thermal slip (remembered per browser).
+    const [printSize, setPrintSize] = useState<InvoiceSize>('a5');
+    useEffect(() => { setPrintSize(savedInvoiceSize()); }, []);
+    const choosePrintSize = (v: InvoiceSize) => {
+        setPrintSize(v);
+        try { localStorage.setItem('trade.invoice.size', v); } catch { /* ignore */ }
+    };
     const [saving, setSaving] = useState(false);
 
     // Bottom bar: Paid Cash / Paid by Card / Saleman / Sale Date
@@ -1775,14 +1784,14 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const [srSel, setSrSel] = useState('');
     // Clicking a record opens the legacy action box.
     const [srAction, setSrAction] = useState<any | null>(null);
-    const [srChoice, setSrChoice] = useState<'view' | 'view_np' | 'return_all' | 'return_some'>('view');
+    const [srChoice, setSrChoice] = useState<'print' | 'print_np' | 'return_all' | 'return_some'>('print');
     const runSrAction = () => {
         const r = srAction;
         if (!r) return;
         setSrAction(null);
-        if (srChoice === 'view' || srChoice === 'view_np') {
-            if (!r.id) { toast.error('This record has no invoice to open.'); return; }
-            openPopup(`/admin/trade/invoice/${r.id}${srChoice === 'view_np' ? '?prices=0' : ''}`);
+        if (srChoice === 'print' || srChoice === 'print_np') {
+            if (!r.id) { toast.error('This record has no printable invoice.'); return; }
+            openPopup(`/admin/trade/invoice/${r.id}?print=1${srChoice === 'print_np' ? '&prices=0' : ''}`);
         } else if (!r.id) {
             toast.error('Pick a sale (not a return) to make a return from.');
         } else if (srChoice === 'return_all') {
@@ -2070,12 +2079,16 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     ].filter(Boolean) as string[];
     const saveHint = saveMissing.length ? `To save, fill in: ${saveMissing.join(', ')}` : 'Save the invoice';
 
-    const saveInvoice = async () => {
+    const saveInvoice = async (print: boolean, prices = true) => {
         if (saving) return;
         if (saveMissing.length) { toast.error(saveHint); return; }
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
         if (paid + card > netAmount + 0.001) { toast.error('Paid Cash and Paid by Card are more than the Net Amount.'); return; }
         if (card > 0 && !recvCard) { toast.error(cardList.length ? 'Choose the Receiver Card (the card the money is received on).' : 'Add the cards first: Receiver Card › “+ Add Credit Card…”.', { duration: 7000 }); return; }
+        // Opened now, while the click still counts as a user action, so the
+        // browser does not block it; it is pointed at the invoice once saved.
+        const printWin = print ? window.open('', 'trade:invoice-print', 'popup=yes,width=1100,height=820') : null;
+        printWin?.document.write('<p style="font:14px sans-serif;padding:24px">Saving invoice…</p>');
         setSaving(true);
         try {
             // Saved as one invoice per company (all or none). Paid Cash / Card are shared
@@ -2143,9 +2156,16 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             toast.success(invs.length > 1
                 ? `Saved as ${invs.length} invoices, one per company: ${invs.map((i) => `${i.tracking_id} (${i.company || 'No company'})`).join(', ')}.`
                 : `Invoice ${invs[0]?.tracking_id || invoiceNo} saved.`, { duration: invs.length > 1 ? 8000 : 4000 });
+            if (print && order?.id) {
+                // The first invoice prints; the print window has buttons for the bill's other invoices.
+                const url = `/admin/trade/invoice/${order.id}?print=1&size=${printSize}${prices ? '' : '&prices=0'}`;
+                if (printWin && !printWin.closed) printWin.location.href = url;
+                else openPopup(url);
+            }
             setShowPV(false);
             resetInvoice();
         } catch (err: any) {
+            printWin?.close();
             const d = err?.response?.data;
             const msg = typeof d === 'string' ? d : (d?.detail || d?.error || (Array.isArray(d) ? d[0] : Object.values(d || {})[0]) || 'Could not save the invoice.');
             toast.error(String(msg), { duration: 6000 });
@@ -2159,7 +2179,8 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             if (e.key === 'F2') { e.preventDefault(); setShowFindCust(true); }
             else if (e.key === 'F3') { e.preventDefault(); openFpRef.current(); }
             else if (e.key === 'F9') { e.preventDefault(); setShowPV(true); }
-            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveRef.current(); }
+            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') { e.preventDefault(); printRef.current(); }
+            else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveRef.current(false); }
         };
         window.addEventListener('keydown', h);
         return () => window.removeEventListener('keydown', h);
@@ -2167,6 +2188,9 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     // Keyboard handler is bound once; route Ctrl+S to the latest saveInvoice.
     const saveRef = useRef(saveInvoice);
     saveRef.current = saveInvoice;
+    useOwnPrint(mode === 'invoice');
+    const printRef = useRef(() => {});
+    printRef.current = () => { if (!saving && !saveMissing.length) saveInvoice(true); };
 
     const onEnter = (next: () => void) => (e: React.KeyboardEvent) => {
         if (e.key === 'Enter') { e.preventDefault(); next(); }
@@ -2466,9 +2490,16 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                     {/* The buttons on their own row, so the payment boxes above have room. */}
                     <div className="col-span-5 flex justify-end gap-2">
                         <button type="button" onClick={newInvoice} className={ACTION_BTN}><span className="underline">N</span>ew Invoice</button>
-                        <button type="button" onClick={() => saveInvoice()} disabled={saving || saveMissing.length > 0} title={saveHint} className={ACTION_BTN}>
+                        <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint} className={ACTION_BTN}>
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}
                         </button>
+                        {/* Save & Print straight from the window (no preview step); every print is A5 portrait. */}
+                        <span className="flex h-9 items-center px-1 text-[12px] font-semibold text-slate-600" title="Every print is A5 portrait, 148 × 210 mm">A5 portrait</span>
+                        {/* Print: the invoice (saves it first, Ctrl+P) or the window as shown. */}
+                        <PrintChoiceButton className={ACTION_BTN} choices={[
+                            { label: 'Invoice — with prices', onClick: () => saveInvoice(true), disabled: saving || saveMissing.length > 0, hint: saveHint || 'Save and print the invoice (Ctrl+P)' },
+                            { label: 'Invoice — without prices', onClick: () => saveInvoice(true, false), disabled: saving || saveMissing.length > 0, hint: saveHint || 'Save and print products and quantities only' },
+                        ]} />
                         <button type="button" onClick={() => openSaleRecords()} className={ACTION_BTN}><span className="underline">V</span>iew</button>
                         <button type="button" onClick={closeWindow} className={ACTION_BTN}><span className="underline">C</span>lose</button>
                     </div>
@@ -2801,11 +2832,19 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         </div>
                     </div>
                     <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 print:hidden">
+                        <label className="mr-auto flex items-center gap-2 text-[13px] font-semibold text-slate-600">
+                            Print size
+                            <span className="font-bold text-slate-800">A5 portrait (148 × 210 mm)</span>
+                        </label>
                         <button type="button" onClick={() => askClose(() => setShowPV(false))} disabled={saving}
                             className="h-9 rounded-md border border-slate-300 bg-white px-4 text-[13px] font-semibold text-slate-700 hover:bg-slate-100">Close</button>
-                        <button type="button" onClick={() => saveInvoice()} disabled={saving || saveMissing.length > 0} title={saveHint}
-                            className="ml-auto flex h-9 items-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600 px-4 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
+                        <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint}
+                            className="flex h-9 items-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600 px-4 text-[13px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Invoice
+                        </button>
+                        <button type="button" onClick={() => saveInvoice(true)} disabled={saving || saveMissing.length > 0} title={saveHint}
+                            className="flex h-9 items-center gap-1.5 rounded-md border border-[#3b3f8f] bg-[#3b3f8f] px-4 text-[13px] font-bold text-white hover:bg-[#2f3278] disabled:opacity-50">
+                            <Printer size={14} /> Save &amp; Print
                         </button>
                     </div>
                 </Modal>
@@ -2868,7 +2907,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                                 </thead>
                                 <tbody>
                                     {(srRows || []).map((r, i) => (
-                                        <tr key={r.sale_id + i} onClick={() => { setSrSel(r.sale_id); setSrChoice('view'); setSrAction(r); }}
+                                        <tr key={r.sale_id + i} onClick={() => { setSrSel(r.sale_id); setSrChoice('print'); setSrAction(r); }}
                                             className={`cursor-pointer tabular-nums ${srSel === r.sale_id ? 'bg-[#7dfa7d]' : 'hover:bg-indigo-50'} ${num(r.late_days) > 0 ? 'font-semibold text-red-600' : ''}`}
                                             title={`${r.sale_id}${num(r.late_days) > 0 ? ` — LATE: ${fmt(num(r.owed))} not paid, ${r.late_days} days after the due date ${ymd(r.due)}` : num(r.owed) > 0 ? ` — ${fmt(num(r.owed))} due by ${ymd(r.due)}` : ''} — click for Print / Sale Return`}>
                                             {[r.sale_id, ymd(r.date), r.staff, r.acc_id, r.acc_name, r.company || '', num(r.cartons) ? fmt(num(r.cartons)) : '', fmt(num(r.amount)), num(r.disc) ? fmt(num(r.disc)) : '0', num(r.shelf) ? fmt(num(r.shelf)) : '0',
@@ -2912,7 +2951,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 <Modal title={`Sale Records — ${srAction.sale_id}`} onClose={() => askClose(() => setSrAction(null))} small>
                     <div className="flex items-center gap-4 bg-[#e4e4fb] p-5">
                         <div className="flex flex-1 flex-col gap-3 rounded-lg border-2 border-[#3b3f8f] bg-[#ececfd] px-5 py-4">
-                            {([['view', 'View Sale Invoice'], ['view_np', 'View Sale Invoice (without prices)'], ['return_all', 'Sale Return Complete Bill'], ['return_some', 'Sale Return Random']] as const).map(([v, label]) => (
+                            {([['print', 'Print Sale Invoice'], ['print_np', 'Print Sale Invoice (without prices)'], ['return_all', 'Sale Return Complete Bill'], ['return_some', 'Sale Return Random']] as const).map(([v, label]) => (
                                 <label key={v} className="flex cursor-pointer items-center gap-3 text-[16px] font-bold text-slate-800">
                                     <input type="radio" name="sr-action" checked={srChoice === v} onChange={() => setSrChoice(v)}
                                         className="h-4 w-4 accent-[#3b3f8f]" />
