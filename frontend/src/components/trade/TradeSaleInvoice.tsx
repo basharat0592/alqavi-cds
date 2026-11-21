@@ -924,31 +924,14 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     };
     const [saving, setSaving] = useState(false);
 
-    // Bottom bar: Paid Cash / Paid by Card / Saleman / Sale Date
+    // Bottom bar: Paid Cash / Saleman / Sale Date. Card payments are not taken here —
+    // credit cards are kept to the credit card payments (Credit Card Voucher).
     const [paidCash, setPaidCash] = useState('');
-    // Paid by card: the amount and the card it is received on (the saleman's,
-    // Add Credit Card). The customer is credited the full amount; the card tax
-    // goes to the Credit Card Report only (with the customer's card, if added).
-    const [paidCard, setPaidCard] = useState('');
     // Seller / Buyer: free names printed on the invoice(s) and shown in the company reports.
     const [sellerName, setSellerName] = useState('');
     const [buyerName, setBuyerName] = useState('');
-    const [cardList, setCardList] = useState<{ id: number; holder_type: string; label: string; staff: number | null; customer_id: string | null; tax_pct: number }[]>([]);
-    const [recvCard, setRecvCard] = useState('');
-    useEffect(() => {
-        const load = () => api.get('v1/sales/trade-cards/').then(({ data }) => setCardList((data || []).filter((c: any) => c.status === 'active')))
-            .catch(() => setCardList([]));
-        load();
-        window.addEventListener('focus', load);   // a card added in Add Credit Card shows up on return
-        return () => window.removeEventListener('focus', load);
-    }, []);
     const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
     const [salesman, setSalesman] = useState('');
-    // The saleman's card receives — picked for you when he has one.
-    useEffect(() => {
-        const mine = cardList.find((c) => c.holder_type === 'saleman' && String(c.staff) === salesman);
-        if (mine) setRecvCard(String(mine.id));
-    }, [salesman, cardList]);
 
     const [backDate, setBackDate] = useState(false);
     const today = () => new Date().toISOString().slice(0, 10);
@@ -1742,7 +1725,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const totalBonus = lines.reduce((s, l) => s + l.bonus, 0);
     const netAmount = amountBilled - totalDisc;
     const paid = Math.max(0, num(paidCash));
-    const card = Math.max(0, num(paidCard));
+    const card = 0;   // paid by card: Credit Card Voucher only
     const netBalance = prevBal + netAmount - paid - card;
     const invPurValue = lines.reduce((s, l) => s + lineCost(l), 0);
     const invProfit = netAmount - invPurValue;
@@ -1754,7 +1737,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
     const resetInvoice = () => {
         setLines([]); setSelected(-1); setEntry({ ...EMPTY_ENTRY });
         setCustomer(null); setCustInput(''); setPrevBal(0);
-        setPaidCash(''); setPaidCard(''); setBackDate(false); setSaleDate(today());
+        setPaidCash(''); setBackDate(false); setSaleDate(today());
         setSellerName(''); setBuyerName('');
         loadInvoiceNo();
         setTimeout(() => custRef.current?.focus(), 0);
@@ -2075,7 +2058,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         !salesman && 'Saleman',
         !backDate && 'Sale Date (tick it)',
         // Cash or card is enough; 0 in Paid Cash for a sale fully on credit.
-        paidCash.trim() === '' && paidCard.trim() === '' && 'Paid Cash or Paid by Card (0 for credit)',
+        paidCash.trim() === '' && 'Paid Cash (0 for credit)',
     ].filter(Boolean) as string[];
     const saveHint = saveMissing.length ? `To save, fill in: ${saveMissing.join(', ')}` : 'Save the invoice';
 
@@ -2083,8 +2066,6 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
         if (saving) return;
         if (saveMissing.length) { toast.error(saveHint); return; }
         if (paid > netAmount + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
-        if (paid + card > netAmount + 0.001) { toast.error('Paid Cash and Paid by Card are more than the Net Amount.'); return; }
-        if (card > 0 && !recvCard) { toast.error(cardList.length ? 'Choose the Receiver Card (the card the money is received on).' : 'Add the cards first: Receiver Card › “+ Add Credit Card…”.', { duration: 7000 }); return; }
         // Opened now, while the click still counts as a user action, so the
         // browser does not block it; it is pointed at the invoice once saved.
         const printWin = print ? window.open('', 'trade:invoice-print', 'popup=yes,width=1100,height=820') : null;
@@ -2122,7 +2103,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
             const invs: { id: string; tracking_id: string; company: string; net: string; cash: string; card: string }[] = saved?.invoices || [];
             const order: any = invs[0] ? { id: invs[0].id } : null;
             for (const inv of invs) {
-                const c = num(inv.cash), k = num(inv.card), nt = num(inv.net);
+                const c = num(inv.cash), nt = num(inv.net);
                 // A part-payment is recorded as an installment so it shows in the
                 // payment history (same as the POS screen does).
                 if (c > 0 && c + 0.001 < nt) {
@@ -2134,17 +2115,6 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         });
                     } catch {
                         toast.error(`Invoice ${inv.tracking_id} saved, but recording the cash paid failed — add it from Sale Records.`, { duration: 7000 });
-                    }
-                }
-                // Paid by card: posted against this invoice; the card tax goes to the report only.
-                if (k > 0) {
-                    try {
-                        await api.post('v1/sales/trade-cards/payments/', {
-                            order: inv.id, amount: round2(k), receiver_card: recvCard,
-                            date: backDate ? saleDate : today(), staff: salesman || null, note: `Sale ${inv.tracking_id}`,
-                        });
-                    } catch (e: any) {
-                        toast.error(`Invoice ${inv.tracking_id} saved, but the card payment was not recorded (${e?.response?.data?.detail || 'error'}).`, { duration: 9000 });
                     }
                 }
                 // Send the invoice to the customer's WhatsApp from the business number
@@ -2426,34 +2396,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                 </div>
 
                 {/* Bottom bar — Paid Cash / Saleman / Sale Date / actions */}
-                <div className="grid shrink-0 grid-cols-[0.85fr_0.85fr_1.6fr_1.15fr_1fr] items-end gap-x-3 gap-y-2">
+                <div className="grid shrink-0 grid-cols-[1fr_1.4fr_1fr] items-end gap-x-3 gap-y-2">
                     <label className="flex flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Paid Cash</span>
                         <input value={paidCash} onChange={(e) => setPaidCash(e.target.value)} inputMode="decimal" placeholder="0"
                             className={`${EDIT} w-full text-right text-[15px]`} aria-label="Paid cash" />
                     </label>
-                    <label className="flex min-w-0 flex-col gap-0.5" title="Paid by card — the customer is credited the full amount; the card tax is kept in the Credit Card Report">
-                        <span className={`${LABEL} text-[15px]`}>Paid by Card</span>
-                        <input value={paidCard} onChange={(e) => setPaidCard(e.target.value.replace(/[^\d.]/g, ''))} inputMode="decimal" placeholder="0"
-                            className={`${EDIT} w-full text-right text-[15px]`} aria-label="Paid by card" />
-                    </label>
-                    {([['Receiver Card', recvCard, setRecvCard, 'saleman']] as const).map(([label, val, setVal, own]) => (
-                        <label key={label} className="flex min-w-0 flex-col gap-0.5">
-                            <span className={`${LABEL} text-[15px]`}>{label}</span>
-                            <select value={val} title={cardList.find((c) => String(c.id) === val)?.label || ''}
-                                onChange={(e) => { if (e.target.value === 'add') { openPopup('/admin/trade/credit-card'); return; } setVal(e.target.value); }}
-                                className={`${FIELD} w-full border-emerald-300 bg-[#e3fbe3] !px-1.5 !text-[13px] text-slate-900 ${num(paidCard) > 0 ? '' : 'opacity-70'}`} aria-label={label}>
-                                <option value="">Select any one</option>
-                                {/* The money is received on a saleman's card or one of the company's own cards. */}
-                                {([[own, 'Saleman cards'], ['company', 'Company cards']] as const).map(([kind, group]) => cardList.some((c) => c.holder_type === kind) && (
-                                    <optgroup key={kind} label={group}>
-                                        {cardList.filter((c) => c.holder_type === kind).map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                                    </optgroup>
-                                ))}
-                                <option value="add">+ Add Credit Card…</option>
-                            </select>
-                        </label>
-                    ))}
                     <label className="flex flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Saleman</span>
                         <select value={salesman} onChange={(e) => setSalesman(e.target.value)}
@@ -2473,12 +2421,12 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                             aria-label="Sale date" />
                     </div>
                     {/* Seller / Buyer (free names), and how many invoices the bill is saved as. */}
-                    <label className="col-span-2 flex min-w-0 flex-col gap-0.5">
+                    <label className="flex min-w-0 flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Seller</span>
                         <input value={sellerName} onChange={(e) => setSellerName(e.target.value)} maxLength={150} placeholder="Who sold"
                             className={`${EDIT} w-full text-[15px]`} aria-label="Seller" />
                     </label>
-                    <label className="col-span-2 flex min-w-0 flex-col gap-0.5">
+                    <label className="flex min-w-0 flex-col gap-0.5">
                         <span className={`${LABEL} text-[15px]`}>Buyer</span>
                         <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} maxLength={150} placeholder="Who bought"
                             className={`${EDIT} w-full text-[15px]`} aria-label="Buyer" />
@@ -2488,7 +2436,7 @@ export default function TradeSaleInvoice({ mode = 'invoice' }: { mode?: 'invoice
                         {billCompanies.length > 1 ? `Saves as ${billCompanies.length} invoices — one per company` : billCompanies.length ? `Company: ${billCompanies[0]}` : ''}
                     </div>
                     {/* The buttons on their own row, so the payment boxes above have room. */}
-                    <div className="col-span-5 flex justify-end gap-2">
+                    <div className="col-span-3 flex justify-end gap-2">
                         <button type="button" onClick={newInvoice} className={ACTION_BTN}><span className="underline">N</span>ew Invoice</button>
                         <button type="button" onClick={() => saveInvoice(false)} disabled={saving || saveMissing.length > 0} title={saveHint} className={ACTION_BTN}>
                             {saving ? <Loader2 size={14} className="animate-spin" /> : <><span className="underline">S</span>ave</>}

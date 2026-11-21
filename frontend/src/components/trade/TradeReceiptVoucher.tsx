@@ -37,8 +37,11 @@ const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; }
 const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
 const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (iso: string | null) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
-// Money is received into Cash-Bank-Cheque (1204) or a bank / card account (2203).
-export const isCashBank = (a: Acc) => a.group === 1204 || a.group === 2203;
+/* Credit card accounts (any account named "… Card …", and 12040009 Credit Cards) are kept
+   to the credit card payments only — the Credit Card Voucher / Credit Card screens. */
+export const isCardAcc = (a: Acc) => a.acc_id === '12040009' || /\bcards?\b/i.test(a.name);
+// Money is received into Cash-Bank-Cheque (1204) or a bank account (2203) — never a card account.
+export const isCashBank = (a: Acc) => (a.group === 1204 || a.group === 2203) && !isCardAcc(a);
 
 /* Legacy Find Account: Account ID | Account Name | Area | Acc. 2nd Level | Acc. 3rd Level. */
 export function FindAccountWindow({ accounts, cashOnly, initial, askClose, onPick, onClose, onAddNew }: {

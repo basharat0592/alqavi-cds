@@ -157,10 +157,6 @@ export default function TradePurchase() {
     const [goods, setGoods] = useState('');
     const [tax, setTax] = useState('');
     const [paid, setPaid] = useState('');
-    // Paid by card (a company credit card): amount, the card's account (credited) and the card tax %.
-    const [cardAmt, setCardAmt] = useState('');
-    const [cardAcc, setCardAcc] = useState('');
-    const [cardPct, setCardPct] = useState('1.5');
     // Seller / Buyer: free names on the purchase.
     const [sellerName, setSellerName] = useState('');
     const [buyerName, setBuyerName] = useState('');
@@ -200,7 +196,7 @@ export default function TradePurchase() {
     const amtPurchase = lines.reduce((s, l) => s + l.qty * l.pur, 0);
     const amtBonus = lines.reduce((s, l) => s + l.bonus * l.pur, 0);
     const net = amtPurchase - num(extraDisc) + num(freight) + num(fare) + num(goods) + num(tax);
-    const balance = supBal + net - num(paid) - num(cardAmt);
+    const balance = supBal + net - num(paid);
     // Expected profit at the Sale Rate: paid units AND the company's free bonus units are
     // sold, only the paid units cost money. Bill total: the sale value less the Net Amount
     // (so Extra Disc lowers the cost and Freight / Fare / Goods / Tax raise it).
@@ -210,7 +206,6 @@ export default function TradePurchase() {
     const billProfit = lines.length ? saleValue - net : 0;
     const billProfitPct = net > 0 ? (billProfit / net) * 100 : 0;
     const noSaleRate = lines.filter((l) => !(l.sale > 0)).length;
-    const cardAccounts = useMemo(() => (accounts || []).filter((a) => /card/i.test(a.name) && a.status !== 'inactive'), [accounts]);
     // The bill is saved as one purchase per company.
     const billCompanies = Array.from(new Set(lines.map((l) => l.product.company || '(No company)')));
     const totalPieces = lines.reduce((s, l) => s + l.qty, 0);
@@ -237,7 +232,7 @@ export default function TradePurchase() {
     const resetForm = () => {
         setLines([]); setSel(-1); setProd(null); setCode(''); setE({ ...EMPTY }); setSup(null); setSupCode(''); setSupBal(0);
         setBillNo(''); setExtraDisc(''); setFreight(''); setFare(''); setGoods(''); setTax(''); setPaid(''); setStaffId(''); setDate(today()); setHistory([]); loadNo();
-        setCardAmt(''); setCardAcc(''); setSellerName(''); setBuyerName('');
+        setSellerName(''); setBuyerName('');
     };
     const [saving, setSaving] = useState(false);
     const printInvoice = (prices = true) => {
@@ -249,8 +244,6 @@ export default function TradePurchase() {
         if (saving) return;
         if (missing.length) { toast.error(`Add ${missing.join(' and ')}.`); return; }
         if (num(paid) > net + 0.001) { toast.error('Paid Cash is more than the Net Amount.'); return; }
-        if (num(paid) + num(cardAmt) > net + 0.001) { toast.error('Paid Cash and Paid by Card are more than the Net Amount.'); return; }
-        if (num(cardAmt) > 0 && !cardAcc) { toast.error('Choose the credit card the purchase is paid with.'); return; }
         setAsk({
             msg: billCompanies.length > 1
                 ? `Save this purchase from ${sup!.name} for ${fmt(net)} as ${billCompanies.length} purchases, one per company (${billCompanies.join(', ')}) ?`
@@ -264,7 +257,6 @@ export default function TradePurchase() {
                     const { data } = await api.post('v1/sales/trade-purchases/', {
                         supplier: sup!.id, date, bill_no: billNo.trim(), extra_disc: num(extraDisc), freight: num(freight), fare: num(fare), goods: num(goods), tax: num(tax),
                         paid: num(paid), staff: staffId || null,
-                        card: num(cardAmt), card_acc: num(cardAmt) > 0 ? cardAcc : null, card_tax_pct: num(cardPct),
                         seller_name: sellerName.trim(), buyer_name: buyerName.trim(),
                         lines: lines.map((l) => ({ product: l.product.id, qty: l.qty, bonus: l.bonus, expiry_date: l.expiry,
                             pur_rate: l.pur, sale_rate: l.sale, retail_rate: l.retail })),
@@ -386,17 +378,9 @@ export default function TradePurchase() {
                                         {staff.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
                                     </select>
                                 </div>
-                                {/* Paid by card / Seller / Buyer; how many purchases the bill is saved as. */}
-                                <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.7fr)_minmax(0,0.6fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_minmax(0,1.3fr)] items-end gap-2">
-                                    {['Paid by Card', 'Card (paid with)', 'Card Tax %', 'Seller', 'Buyer', ''].map((h, i) => <span key={i} className={lbl}>{h}</span>)}
-                                    <input value={cardAmt} onChange={(ev) => setCardAmt(ev.target.value.replace(/[^\d.]/g, ''))} title="Part of the bill paid with a company credit card" className={SMALL} />
-                                    <select value={cardAcc} onChange={(ev) => setCardAcc(ev.target.value)} disabled={!cardAccounts.length}
-                                        title={cardAccounts.length ? 'The card account is credited; the card tax goes to the Credit Card Profit & Loss' : 'No account with "Card" in its name in the Chart of Account'}
-                                        className={`${COA_SELECT} h-7 !text-[12px] !font-normal ${num(cardAmt) > 0 ? '' : 'opacity-70'}`}>
-                                        <option value="">{cardAccounts.length ? 'Select any one' : 'No card accounts'}</option>
-                                        {cardAccounts.map((a) => <option key={a.id} value={a.id}>{a.acc_id} {a.name}</option>)}
-                                    </select>
-                                    <input value={cardPct} onChange={(ev) => setCardPct(ev.target.value.replace(/[^\d.]/g, ''))} title="Bank's tax on the card payment" className={SMALL} />
+                                {/* Seller / Buyer; how many purchases the bill is saved as. (Paid by card: Credit Card Voucher only.) */}
+                                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.3fr)] items-end gap-2">
+                                    {['Seller', 'Buyer', ''].map((h, i) => <span key={i} className={lbl}>{h}</span>)}
                                     <input value={sellerName} onChange={(ev) => setSellerName(ev.target.value)} maxLength={150} placeholder="Who sold" className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
                                     <input value={buyerName} onChange={(ev) => setBuyerName(ev.target.value)} maxLength={150} placeholder="Who bought" className={`${EDIT} h-7 w-full !text-[12px] !font-normal`} />
                                     <div title={billCompanies.join(', ')}
@@ -459,7 +443,7 @@ export default function TradePurchase() {
                         <Led label="Amt purchase" value={fmt(amtPurchase)} />
                         <Led label="Amt Bonus" value={fmt(amtBonus)} />
                         <Led label="Net Amount" value={fmt(net)} />
-                        <Led label="Balance" value={sup ? fmt(balance) : fmt(net - num(paid) - num(cardAmt))} tone="yellow" />
+                        <Led label="Balance" value={sup ? fmt(balance) : fmt(net - num(paid))} tone="yellow" />
                         {/* Expected profit when it is sold at the Sale Rate — the free bonus included. */}
                         <div title={`Sale value at the Sale Rate (bonus units included) ${fmt(saleValue)} less the Net Amount ${fmt(net)}`}>
                             <Led label={`Profit${billProfit && net > 0 ? ` (${fmt(billProfitPct)}%)` : ''}`} value={fmt(billProfit)} tone="blue" />

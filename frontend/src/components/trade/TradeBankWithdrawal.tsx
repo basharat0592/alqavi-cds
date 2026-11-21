@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
 import api from '@/lib/axios';
 import { openPopup } from '@/lib/popup';
 import { ConfirmBox, ReadBox, FIELD, EDIT, ACTION_BTN, COA_SELECT, closeTradeWindow } from '@/components/trade/TradeSaleInvoice';
-import { FindAccountWindow, type Acc } from '@/components/trade/TradeReceiptVoucher';
+import { FindAccountWindow, isCardAcc, type Acc } from '@/components/trade/TradeReceiptVoucher';
 import FitStage from '@/components/trade/FitStage';
 
 const num = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
@@ -22,7 +22,8 @@ const fmt = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-US', {
 const today = () => new Date().toISOString().slice(0, 10);
 const dmy = (iso: string | null | undefined) => (iso ? String(iso).slice(0, 10).split('-').reverse().join('-') : '');
 // Banks: Cash-Bank-Cheque (1204) other than Cash and Chq Amount, and Bank (2203).
-export const isBankAcc = (a: Acc) => (a.group === 1204 && a.acc_id !== '12040001' && a.acc_id !== '12040002') || a.group === 2203;
+// Banks only — credit card accounts stay in the credit card payments.
+export const isBankAcc = (a: Acc) => ((a.group === 1204 && a.acc_id !== '12040001' && a.acc_id !== '12040002') || a.group === 2203) && !isCardAcc(a);
 
 const IN = `${EDIT} h-8 w-full !text-[13px] !font-normal`;
 const RO = `${FIELD} flex h-8 w-full items-center border-slate-300 bg-[#e1e1e8] px-2 !text-[13px] !font-normal text-slate-700`;
