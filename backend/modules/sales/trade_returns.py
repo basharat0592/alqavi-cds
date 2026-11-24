@@ -154,7 +154,7 @@ class TradeSaleReturnViewSet(viewsets.ViewSet):
         rows = []
         for r in qs[:3000]:
             c = r.customer
-            code = c.username[4:] if (c and str(c.username).startswith('cust')) else ''
+            code = (c.username[4:] if str(c.username).startswith('cust') else getattr(getattr(c, 'ledger_account', None), 'acc_id', '')) if c else ''
             pre = r.prev_balance or Z
             rows.append({
                 'id': r.id, 'return_no': r.return_no, 'kind': r.kind, 'date': r.return_date,

@@ -45,6 +45,8 @@ router.register(r'trade-staff', TradeStaffViewSet, basename='trade-staff')
 router.register(r'trade-categories', TradeCategoryViewSet, basename='trade-category')
 router.register(r'trade-damage', TradeDamageViewSet, basename='trade-damage')
 router.register(r'purchases', PurchaseViewSet, basename='purchase')
+from .trade_shop import OnlineOrderViewSet
+router.register(r'trade-online-orders', OnlineOrderViewSet, basename='trade-online-orders')
 router.register(r'purchase-returns', PurchaseReturnViewSet, basename='purchase-return')
 router.register(r'supplier/dashboard', SupplierDashboardViewSet, basename='supplier-dashboard')
 

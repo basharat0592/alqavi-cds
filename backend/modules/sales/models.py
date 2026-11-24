@@ -276,6 +276,9 @@ class Order(models.Model):
     bill_ref = models.CharField(max_length=20, blank=True, default='', db_index=True)
     seller_name = models.CharField(max_length=150, blank=True, default='')
     buyer_name = models.CharField(max_length=150, blank=True, default='')
+    # A shop (online) order confirmed in Trade › Online Orders: the Trade sale invoice(s)
+    # it became (e.g. "S26000913, S26000914"). Such an order never moves stock or money itself.
+    trade_invoices = models.CharField(max_length=120, blank=True, default='')
 
     # Shipping info
     shipping_address = models.TextField()

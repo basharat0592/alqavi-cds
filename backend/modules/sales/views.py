@@ -469,7 +469,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
     def trade_invoice_payload(o, user=None):
         from decimal import Decimal
         c = o.customer
-        acc_id = c.username[4:] if (c and str(c.username).startswith('cust')) else ''
+        acc_id = (c.username[4:] if str(c.username).startswith('cust') else getattr(getattr(c, 'ledger_account', None), 'acc_id', '')) if c else ''
         z = Decimal('0')
         lines = []
         for it in o.items.select_related('product__stock', 'batch').order_by('id'):
@@ -554,7 +554,7 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         z = Decimal('0')
 
         def cust_cols(c, fallback_name):
-            code = c.username[4:] if (c and str(c.username).startswith('cust')) else ''
+            code = (c.username[4:] if str(c.username).startswith('cust') else getattr(getattr(c, 'ledger_account', None), 'acc_id', '')) if c else ''
             return code, (f"{c.first_name or ''} {c.last_name or ''}".strip() if c else '') or fallback_name
 
         if p.get('type') == 'return':
@@ -695,27 +695,37 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         shared out by each company's amount; each invoice's previous balance
         carries on from the one before. All are saved, or none.
         -> {bill_ref, invoices: [{id, tracking_id, company, net, cash, card}]}"""
+        try:
+            out = self.save_bill(request, request.data)
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(out, status=status.HTTP_201_CREATED)
+
+    def save_bill(self, request, d, first_extra=None):
+        """The Sale Invoice bill saved as one Trade invoice per company (all or none) —
+        used by the Sale Invoice and by Online Orders (a confirmed shop order).
+        `first_extra`: fields for the first invoice only (e.g. the delivery charge).
+        Raises ValueError with the message for the user."""
         from decimal import Decimal
         from django.db import transaction
         from modules.products.models import Product
         from .trade_company import company_of_product, group_by_company, money, share
-        d = request.data
         items = d.get('items') or []
         if not items:
-            return Response({'detail': 'Add at least one product.'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueError('Add at least one product.')
         prods = {str(p.pk): p for p in scope_to_tenant(request.user, Product.objects.filter(pk__in=[i.get('id') for i in items]), 'tenant')
                  .select_related('stock__product__company')}
         if any(str(i.get('id')) not in prods for i in items):
-            return Response({'detail': 'One of the products was not found.'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueError('One of the products was not found.')
         groups = group_by_company(items, lambda i: company_of_product(prods[str(i.get('id'))]))
         nets = [sum((money(Decimal(str(i.get('price') or 0)) * int(i.get('quantity') or 0)) - money(i.get('discount'))
                      for i in g), Decimal('0')) for _, g in groups]
         total = sum(nets, Decimal('0'))
         cash, card = money(d.get('paid')), money(d.get('card'))
         if cash < 0 or card < 0:
-            return Response({'detail': 'Amounts cannot be negative.'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueError('Amounts cannot be negative.')
         if cash + card > total + Decimal('0.005'):
-            return Response({'detail': 'Paid Cash and Paid by Card are more than the Net Amount.'}, status=status.HTTP_400_BAD_REQUEST)
+            raise ValueError('Paid Cash and Paid by Card are more than the Net Amount.')
         # Cash + card per invoice by its share, then the cash part of it; card = the rest.
         pays = share(cash + card, nets)
         cashes = share(cash, nets)
@@ -730,9 +740,11 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                 if d.get(k) is not None}
         out, ref = [], ''
         with transaction.atomic():
-            for (co, g), net, c, k in zip(groups, nets, cashes, cards):
+            for gi, ((co, g), net, c, k) in enumerate(zip(groups, nets, cashes, cards)):
                 body = dict(base, items=g, sale_invoice=True, amount_paid=str(c), paid_at_sale=str(c), prev_balance=str(prev),
                             payment_status='UNPAID' if c <= 0 else ('PAID' if c >= net else 'PARTIAL'))
+                if gi == 0 and first_extra:
+                    body.update(first_extra)
                 ser = CreateOrderSerializer(data=body, context={'request': request})
                 ser.is_valid(raise_exception=True)
                 self.perform_create(ser)
@@ -742,8 +754,8 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
                                                      seller_name=seller, buyer_name=buyer)
                 out.append({'id': str(o.id), 'tracking_id': o.tracking_id, 'company': co.name if co else '',
                             'net': net, 'cash': c, 'card': k})
-                prev = prev + net - c - k
-        return Response({'bill_ref': ref if len(groups) > 1 else '', 'invoices': out}, status=status.HTTP_201_CREATED)
+                prev = prev + net - c - k + (money((first_extra or {}).get('shipping_cost')) if gi == 0 else 0)
+        return {'bill_ref': ref if len(groups) > 1 else '', 'invoices': out}
 
     @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
     def customer_balance(self, request):
@@ -758,7 +770,8 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
         exclude_id = request.query_params.get('exclude')
         if not cust_id:
             return Response({'previous_balance': 0, 'due_date': None})
-        qs = Order.objects.filter(customer_id=cust_id).exclude(status__in=['CANCELLED', 'REJECTED'])
+        # Trade sale invoices only (S…) — a shop order waiting in Online Orders is not owed yet.
+        qs = Order.objects.filter(customer_id=cust_id, tracking_id__startswith='S').exclude(status__in=['CANCELLED', 'REJECTED'])
         if exclude_id:
             qs = qs.exclude(id=exclude_id)
         qs = scope_to_tenant(request.user, qs, 'tenant')
@@ -1017,7 +1030,11 @@ class OrderViewSet(BranchScopedQuerysetMixin, viewsets.ModelViewSet):
             order = self.get_object()
             if order.status == "DELIVERED":
                 return Response({"error": "Delivered orders are locked and cannot be modified."}, status=status.HTTP_400_BAD_REQUEST)
-            
+            if order.trade_invoices:
+                # A shop order already made Trade invoice(s): stock and money moved there.
+                return Response({"error": f"This online order is invoiced in Trade ({order.trade_invoices}) — update it in Trade › Online Orders."},
+                                status=status.HTTP_400_BAD_REQUEST)
+
             new_status = request.data.get("status", "").upper()
             old_status = order.status.upper()
 

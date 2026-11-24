@@ -54,7 +54,7 @@ export default function Footer({ settings }: { settings?: any }) {
                                 { Icon: Instagram, color: 'hover:bg-[#E4405F]', url: siteSettings?.instagram_url },
                                 { Icon: TikTokIcon, color: 'hover:bg-[#000000]', url: siteSettings?.tiktok_url, label: 'TikTok' },
                                 { Icon: Youtube, color: 'hover:bg-[#FF0000]', url: siteSettings?.youtube_url }
-                            ].map((item, i) => (
+                            ].filter((item) => !!item.url).map((item, i) => (   // no link set = no icon
                                 <Link
                                     key={i}
                                     href={item.url || "#"}

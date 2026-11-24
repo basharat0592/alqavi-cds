@@ -86,6 +86,18 @@ class ProductSerializer(serializers.ModelSerializer):
             return obj.total_quantity
         return obj.available_quantity
 
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        request = self.context.get('request')
+        if not (request and getattr(request, 'user', None) and request.user.is_staff):
+            # The shop shows (and charges) the RETAIL price; the trade rates stay with the admin.
+            from modules.sales.trade_shop import retail_price
+            data['selling_price'] = str(retail_price(obj))
+            data['original_price'] = None
+            data['cost_price'] = None
+            data['profit_margin'] = None
+        return data
+
     def get_profit_margin(self, obj):
         if obj.selling_price and obj.cost_price and obj.selling_price > 0:
             margin = ((obj.selling_price - obj.cost_price) / obj.selling_price) * 100

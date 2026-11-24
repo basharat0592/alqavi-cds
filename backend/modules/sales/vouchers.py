@@ -48,7 +48,8 @@ def account_balance(acc, user):
     if acc.customer_id:
         from .trade_returns import customer_return_credit
         total = Z
-        orders = scope_to_tenant(user, Order.objects.filter(customer_id=acc.customer_id)
+        # Only Trade sale invoices (S…): a shop order waiting in Online Orders is not a sale yet.
+        orders = scope_to_tenant(user, Order.objects.filter(customer_id=acc.customer_id, tracking_id__startswith='S')
                                  .exclude(status__in=['CANCELLED', 'REJECTED']), 'tenant')
         for o in orders.only('total_amount', 'amount_paid'):
             rem = _d(o.total_amount) - _d(o.amount_paid)

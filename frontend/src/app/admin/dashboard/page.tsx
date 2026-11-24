@@ -15,7 +15,7 @@ import {
     Package, Boxes, CalendarClock, ShoppingCart, ScanLine, RefreshCcw,
     TrendingUp, RotateCcw, ClipboardList, CreditCard, ArrowDownLeft, ArrowUpRight,
     BookOpen, Database, KeyRound, Receipt, Wallet, BarChart3, FileText, Users,
-    ChevronDown, ChevronRight, X, Heart, PiggyBank } from 'lucide-react';
+    ChevronDown, ChevronRight, X, Heart, PiggyBank, ShoppingBag } from 'lucide-react';
 import { authService } from '@/lib/auth';
 import { productService } from '@/lib/api';
 import api from '@/lib/axios';
@@ -117,6 +117,8 @@ const MENUS: Menu[] = [
         { label: 'Partnership', href: '/admin/trade/partnership' },
         { label: 'Investors', href: '/admin/trade/investors' },
         { label: 'Partners & Investors Report', href: '/admin/trade/partnership?tab=report&show=both' },
+        SEP,
+        { label: 'Online Orders (shop)', href: '/admin/trade/online-orders' },
         { label: 'Donation', href: '/admin/trade/donation' },
     ] },
     { title: 'Setup', items: [
@@ -141,8 +143,12 @@ const num0 = (v: any) => { const n = parseFloat(v); return isFinite(n) ? n : 0; 
 
 function MenuBar({ counts }: { counts?: { expiry: number; low: number } }) {
     const [cardDue, setCardDue] = useState<number | null>(null);
+    const [shopNew, setShopNew] = useState<number | null>(null);   // shop orders waiting in Online Orders
     useEffect(() => {
-        const load = () => api.get('v1/sales/trade-cards/dues/').then(({ data }) => setCardDue(num0(data.alert))).catch(() => setCardDue(null));
+        const load = () => {
+            api.get('v1/sales/trade-cards/dues/').then(({ data }) => setCardDue(num0(data.alert))).catch(() => setCardDue(null));
+            api.get('v1/sales/trade-online-orders/', { params: { show: 'new' } }).then(({ data }) => setShopNew(num0(data.waiting))).catch(() => setShopNew(null));
+        };
         load();
         window.addEventListener('focus', load);
         return () => window.removeEventListener('focus', load);
@@ -225,6 +231,14 @@ function MenuBar({ counts }: { counts?: { expiry: number; low: number } }) {
                 </div>
             ))}
             <div className="ml-auto flex items-center gap-2">
+                {/* The shop's new orders, waiting to be confirmed in Online Orders. */}
+                {shopNew !== null && (
+                    <button type="button" onClick={() => openPopup('/admin/trade/online-orders')} title="Orders from the shop — confirm them into sale invoices"
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[14px] font-semibold text-white ${shopNew ? 'animate-pulse border-emerald-300 bg-emerald-600 hover:bg-emerald-500' : 'border-white/30 bg-white/10 hover:bg-white/20'}`}>
+                        <ShoppingBag size={15} /> Online Orders
+                        <span className={`min-w-[26px] rounded-full px-1.5 text-center text-[12px] font-bold ${shopNew ? 'bg-white text-emerald-700' : 'bg-white/25'}`}>{shopNew}</span>
+                    </button>
+                )}
                 {/* Credit card due dates: red from 4 days before (as the Expiry List). */}
                 {cardDue !== null && (
                     <button type="button" onClick={() => openPopup('/admin/trade/card-due')} title="Credit card due dates — due within 4 days or late"

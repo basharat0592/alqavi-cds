@@ -146,6 +146,9 @@ class CreateOrderSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         user_obj = None
         customer_obj = None
+        # A shop (storefront) order: placed by a customer or a guest — not by staff.
+        _who = getattr(request, 'user', None) if request else None
+        storefront = not (_who is not None and getattr(_who, 'is_authenticated', False) and getattr(_who, 'is_staff', False))
         
         # Manual Customer Selection (for POS/Admin)
         manual_customer_id = validated_data.get('customer')
@@ -154,7 +157,9 @@ class CreateOrderSerializer(serializers.ModelSerializer):
             customer_obj = Customer.objects.filter(id=manual_customer_id.id if hasattr(manual_customer_id, 'id') else manual_customer_id).first()
             user_obj = None # Prefer linked Customer
         
-        if not customer_obj and request and hasattr(request, 'user') and request.user.is_authenticated:
+        # Only a shop customer is matched to a Customer record — never a staff login (whose
+        # user id could equal an unrelated customer's id).
+        if not customer_obj and request and hasattr(request, 'user') and request.user.is_authenticated and storefront:
             # Identify the real identity of the user
             from modules.customer.models import Customer
             
@@ -244,6 +249,16 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                 elif user_obj:
                     params['user'] = user_obj
                 
+                if storefront:
+                    # Shop order: waits in Trade › Online Orders. Not a sale, nothing paid, no
+                    # discount and no invoice number until it is confirmed there.
+                    from .trade_shop import shop_tenant_id
+                    sale_invoice = False
+                    status_val = 'PENDING'
+                    params.update(status='PENDING', payment_status='UNPAID', amount_paid=0, discount=0,
+                                  paid_at_sale=None, prev_balance=None, staff=None, salesperson=None, sale_date=None)
+                    if not params.get('tenant_id'):
+                        params['tenant_id'] = shop_tenant_id()
                 if sale_invoice:
                     params['tracking_id'] = Order.next_sale_invoice_no(params.get('sale_date'))
                 order = Order.objects.create(**params)
@@ -258,6 +273,15 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                         quantity = int(item.get('quantity', 1))
                         bonus = int(item.get('bonus_quantity', 0) or 0)
                         line_discount = float(item.get('discount', 0) or 0)
+                        if storefront:
+                            # The shop charges the retail price, worked out here (never the browser's).
+                            from .trade_shop import retail_price
+                            price = float(retail_price(product))
+                            bonus = 0
+                            line_discount = 0
+                            item = dict(item, shelf_discount=0, batch_id=None)
+                            if quantity < 1:
+                                continue
                         # Shelf Rate is part of the line discount, never more than it.
                         shelf_discount = min(max(float(item.get('shelf_discount', 0) or 0), 0), line_discount)
                         sale_unit = str(item.get('sale_unit') or '').upper()[:10]
@@ -389,6 +413,10 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                 
                 from decimal import Decimal
                 dec_discount = Decimal(str(order.discount or 0))
+                if storefront:
+                    # The shop's delivery charge, as checkout shows it: free above PKR 5,000, else 350.
+                    from .trade_shop import shop_shipping
+                    order.shipping_cost = shop_shipping(Decimal(str(total_amount)))
                 dec_shipping = Decimal(str(order.shipping_cost or 0))
                 order.total_amount = Decimal(str(total_amount)) + dec_shipping - dec_discount
                 # Full (PAID) sales are settled in full at the counter — record the
@@ -398,6 +426,9 @@ class CreateOrderSerializer(serializers.ModelSerializer):
                 if str(order.payment_status).upper() == 'PAID':
                     order.amount_paid = order.total_amount
                 order.save()
+                if storefront and customer_obj is not None:
+                    from .trade_shop import ensure_customer_account
+                    ensure_customer_account(customer_obj)   # every shop customer has a Chart of Account
                 return order
                 
         except serializers.ValidationError as e:

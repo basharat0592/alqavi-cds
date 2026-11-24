@@ -811,7 +811,13 @@ def signup(request):
         postal_code=request.data.get('postal_code', ''),
         avatar=request.FILES.get('avatar')
     )
-    
+    # Every shop customer gets an account in Trade's Chart of Account (receivables 1202).
+    try:
+        from modules.sales.trade_shop import ensure_customer_account
+        ensure_customer_account(customer)
+    except Exception:
+        pass   # the account is made on their first order instead
+
     return Response({
         'message': 'Account created successfully',
         'id': customer.id,
