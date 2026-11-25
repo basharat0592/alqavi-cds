@@ -39,7 +39,7 @@ export default function Navbar({ settings }: { settings?: any }) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [announcementVisible, setAnnouncementVisible] = useState(true);
-    // "Deliver to" city picker â€” cities come from the dashboard's Areas.
+    // "Deliver to" city picker — cities come from the dashboard's Areas.
     const [cities, setCities] = useState<string[]>([]);
     const [selectedCity, setSelectedCity] = useState('');
     const [cityOpen, setCityOpen] = useState(false);
@@ -86,7 +86,7 @@ export default function Navbar({ settings }: { settings?: any }) {
 
         if (settings) setSiteSettings(settings);
 
-        // Cities that have at least one ACTIVE branch (deduped) â€” the single source
+        // Cities that have at least one ACTIVE branch (deduped) — the single source
         // for both the "Deliver to" picker and the search "All" city dropdown.
         inventoryService.getPublicBranches().then(list => {
             const arr = Array.isArray(list) ? list : [];
@@ -102,7 +102,7 @@ export default function Navbar({ settings }: { settings?: any }) {
             else if (match && match !== saved) { try { localStorage.setItem('deliver_to_city', match); } catch { } }
             setSelectedCity(match || '');
             // Auto-drop the compact prompt once per browser session (sessionStorage
-            // clears on browser close, so a fresh session re-shows it â€” now carrying
+            // clears on browser close, so a fresh session re-shows it — now carrying
             // the previously-saved city).
             try {
                 if (sessionStorage.getItem('city_prompt_seen') !== '1' && cityNames.length > 0) {
@@ -234,7 +234,7 @@ export default function Navbar({ settings }: { settings?: any }) {
 
     return (
         <header className="z-[9999] relative w-full font-sans">
-            {/* â”€â”€ ANNOUNCEMENT BAR â”€â”€ */}
+            {/* ── ANNOUNCEMENT BAR ── */}
             {siteSettings?.show_announcement && announcementVisible && (
                 <div
                     className="w-full transition-all duration-500 ease-in-out overflow-hidden"
@@ -264,13 +264,13 @@ export default function Navbar({ settings }: { settings?: any }) {
                             <div className="marquee-content font-black uppercase text-[12px] tracking-[0.2em] w-full justify-around">
                                 <Link href={siteSettings.announcement_link || "#"} className="hover:underline flex items-center gap-12 text-center" style={{ color: siteSettings.announcement_text_color || '#ffffff' }}>
                                     <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! ðŸšš'}</span>
-                                    <span>â€¢</span>
+                                    <span>•</span>
                                     <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! ðŸšš'}</span>
-                                    <span>â€¢</span>
+                                    <span>•</span>
                                     <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! ðŸšš'}</span>
-                                    <span>â€¢</span>
+                                    <span>•</span>
                                     <span>{siteSettings.announcement_text || 'Free Delivery on all orders over Rs. 5000! ðŸšš'}</span>
-                                    <span>â€¢</span>
+                                    <span>•</span>
                                 </Link>
                             </div>
                         </div>
@@ -288,7 +288,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                 </div>
             )}
 
-            {/* â”€â”€ TOP HEADER (AMAZON NAVY) â”€â”€ */}
+            {/* ── TOP HEADER (AMAZON NAVY) ── */}
             <div className="bg-[#131921] py-2 md:py-0 px-2 flex flex-col md:flex-row items-center gap-2 md:gap-4 lg:gap-8">
                 {/* Row 1: Logo & mobile actions */}
                 <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
@@ -299,10 +299,10 @@ export default function Navbar({ settings }: { settings?: any }) {
                         </Link>
                     </div>
 
-                    {/* Deliver To â€” city picker driven by the dashboard's Areas (mobile + desktop) */}
+                    {/* Deliver To — city picker driven by the dashboard's Areas (mobile + desktop) */}
                     <div ref={cityRef} className="relative flex flex-col text-white p-1 px-2 rounded-sm cursor-pointer leading-tight hover:bg-white/5"
                         onClick={() => { setCityPromptOpen(false); setCityOpen(o => !o); }}>
-                        {/* Trigger â€” kept above the blur backdrop so the "Deliver to" icon stays visible */}
+                        {/* Trigger — kept above the blur backdrop so the "Deliver to" icon stays visible */}
                         <div className="relative z-[9997]">
                             <span className="hidden lg:block text-[12px] text-slate-300 ml-4">Deliver to</span>
                             <div className="flex items-center gap-1">
@@ -311,7 +311,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                 <ChevronDown size={14} className={`text-white transition-transform shrink-0 ${cityOpen ? 'rotate-180' : ''}`} />
                             </div>
                         </div>
-                        {/* â”€â”€ Simple city dropdown (opens on click of "Deliver to") â”€â”€ */}
+                        {/* ── Simple city dropdown (opens on click of "Deliver to") ── */}
                         <AnimatePresence>
                             {cityOpen && (
                                 <>
@@ -360,7 +360,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                             )}
                         </AnimatePresence>
 
-                        {/* â”€â”€ Compact prompt (auto-drops on load; shows the saved city after choosing) â”€â”€ */}
+                        {/* ── Compact prompt (auto-drops on load; shows the saved city after choosing) ── */}
                         <AnimatePresence>
                             {cityPromptOpen && !cityOpen && (
                                 <>
@@ -385,7 +385,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                     {/* Caret connecting the popup to the control */}
                                     <div className="absolute -top-[6px] left-9 w-3.5 h-3.5 bg-[#0b6f86] rotate-45 rounded-[2px]" />
                                     <div className="relative rounded-2xl overflow-hidden ring-1 ring-black/5 shadow-[0_28px_70px_-16px_rgba(2,15,35,0.6)] text-slate-800">
-                                        {/* â”€â”€ Vibrant gradient header â”€â”€ */}
+                                        {/* ── Vibrant gradient header ── */}
                                         <div className="relative px-4 pt-4 pb-4 bg-gradient-to-br from-[#0b6f86] via-[#119AB8] to-[#18c6e4] text-white overflow-hidden">
                                             <div className="pointer-events-none absolute -top-10 -right-8 w-32 h-32 rounded-full bg-white/20 blur-2xl" />
                                             <div className="pointer-events-none absolute -bottom-14 -left-6 w-28 h-28 rounded-full bg-cyan-200/25 blur-2xl" />
@@ -417,7 +417,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                                             </div>
                                         </div>
 
-                                        {/* â”€â”€ CTA â”€â”€ */}
+                                        {/* ── CTA ── */}
                                         <div className="p-3 bg-white">
                                             <button
                                                 type="button"
@@ -875,7 +875,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                 </div>
             </div>
 
-            {/* â”€â”€ SUB HEADER (AMAZON LIGHT NAVY) â”€â”€ */}
+            {/* ── SUB HEADER (AMAZON LIGHT NAVY) ── */}
             {!pathname.startsWith('/customer/dashboard') && (
                 <div className="bg-[#232f3e] h-10 flex items-center px-2 md:px-4 gap-1 md:gap-2 text-white text-sm font-medium w-full max-w-full">
                     {/* Mobile scroll-left arrow */}
@@ -927,7 +927,7 @@ export default function Navbar({ settings }: { settings?: any }) {
                 </div>
             )}
 
-            {/* â”€â”€ BROWSE MENU DRAWER (matches CartDrawer design) â”€â”€ */}
+            {/* ── BROWSE MENU DRAWER (matches CartDrawer design) ── */}
             <AnimatePresence>
                 {mobileOpen && (
                     <>

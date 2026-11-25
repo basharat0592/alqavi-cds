@@ -29,12 +29,18 @@ function ShopContent() {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
     useEffect(() => {
-        productService.getAll()
-            .then(d => {
-                const api = Array.isArray(d) ? d : (d as any).results || [];
-                setProducts(api);
-            })
-            .finally(() => setLoading(false));
+        // Every product (the server sends pages of up to 100): the shop's search, filters and
+        // sorting work on the whole catalogue, not just the first page.
+        (async () => {
+            const all: any[] = [];
+            for (let page = 1; page <= 50; page++) {
+                const d: any = await productService.getAll({ page, page_size: 100 });
+                if (Array.isArray(d)) { all.push(...d); break; }
+                all.push(...(d?.results || []));
+                if (!d?.next) break;
+            }
+            setProducts(all);
+        })().finally(() => setLoading(false));
     }, []);
 
     useEffect(() => {

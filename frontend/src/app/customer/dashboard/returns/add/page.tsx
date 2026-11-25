@@ -173,11 +173,11 @@ export default function AddReturnPage() {
                                                                             <p className="text-xs font-bold text-[#111] line-clamp-1">{item.product_name}</p>
                                                                             {(item.weight || item.size) && (
                                                                                 <span className="text-[9px] text-[#119AB8] font-black uppercase tracking-tight shrink-0">
-                                                                                    {item.weight}{item.weight && item.size ? ' â€¢ ' : ''}{item.size}
+                                                                                    {item.weight}{item.weight && item.size ? ' • ' : ''}{item.size}
                                                                                 </span>
                                                                             )}
                                                                         </div>
-                                                                        <p className="text-[10px] text-gray-500">Order #{item.order_number} â€¢ {new Date(item.purchased_at).toLocaleDateString()}</p>
+                                                                        <p className="text-[10px] text-gray-500">Order #{item.order_number} • {new Date(item.purchased_at).toLocaleDateString()}</p>
                                                                     </div>
                                                                     <p className="text-xs font-bold text-[#111] shrink-0">Rs. {item.price.toLocaleString()}</p>
                                                                 </div>
@@ -203,11 +203,11 @@ export default function AddReturnPage() {
                                                         <p className="text-sm font-bold text-[#111]">{selectedItem.product_name}</p>
                                                         {(selectedItem.weight || selectedItem.size) && (
                                                             <span className="text-[10px] text-[#119AB8] font-black uppercase tracking-tight border border-[#119AB8]/20 px-1 rounded-sm bg-[#119AB8]/5">
-                                                                {selectedItem.weight}{selectedItem.weight && selectedItem.size ? ' â€¢ ' : ''}{selectedItem.size}
+                                                                {selectedItem.weight}{selectedItem.weight && selectedItem.size ? ' • ' : ''}{selectedItem.size}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-xs text-gray-600">Unit Price: Rs. {selectedItem.price.toLocaleString()} â€¢ Purchased: {new Date(selectedItem.purchased_at).toLocaleDateString()}</p>
+                                                    <p className="text-xs text-gray-600">Unit Price: Rs. {selectedItem.price.toLocaleString()} • Purchased: {new Date(selectedItem.purchased_at).toLocaleDateString()}</p>
                                                     <p className="text-xs text-emerald-600 font-bold mt-0.5 flex items-center gap-1"><CheckCircle2 size={12} /> Order #{selectedItem.order_number}</p>
                                                 </div>
                                             </div>
